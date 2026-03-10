@@ -2,8 +2,8 @@ import { Router, type Request, type Response, type NextFunction } from 'express'
 import { z } from 'zod';
 import type pino from 'pino';
 
-import { GetSessionUseCase } from '@/application/use-cases/session/get-session.use-case';
-import { ListSessionsUseCase } from '@/application/use-cases/session/list-sessions.use-case';
+import type { GetSessionUseCase } from '@/application/use-cases/session/get-session.use-case';
+import type { ListSessionsUseCase } from '@/application/use-cases/session/list-sessions.use-case';
 import { GetSessionInputSchema, ListSessionsInputSchema } from '@/application/dto';
 
 export interface AppRequest extends Request {

@@ -1,5 +1,6 @@
+import type { Request, Response } from 'express';
+
 import { LeccionController } from '@/infrastructure/adapters/http/controllers/LeccionController';
-import { Request, Response } from 'express';
 
 describe('LeccionController', () => {
   let controller: LeccionController;

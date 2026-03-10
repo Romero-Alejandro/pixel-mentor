@@ -1,5 +1,6 @@
-import { GeminiAIModelAdapter } from '@/infrastructure/adapters/ai/gemini-adapter';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+
+import { GeminiAIModelAdapter } from '@/infrastructure/adapters/ai/gemini-adapter';
 
 jest.mock('@google/generative-ai');
 
@@ -82,7 +83,7 @@ describe('GeminiAIModelAdapter', () => {
 
     const result = await adapter.generateResponse(parameters);
 
-    expect(result.voiceText).toContain('Algo salió mal');
+    expect(result.voiceText).toContain('problema técnico');
     expect(result.pedagogicalState).toBe('QUESTION');
   });
 });

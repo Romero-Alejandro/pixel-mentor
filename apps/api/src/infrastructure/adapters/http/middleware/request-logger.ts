@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-import pino from 'pino';
+import type pino from 'pino';
 
 export function requestLoggerMiddleware(logger: pino.Logger) {
   return (req: Request, res: Response, next: NextFunction): void => {

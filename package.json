@@ -16,7 +16,7 @@
     "@pixel-mentor/prettier-config-custom": "workspace:*",
     "@types/jest": "^30.0.0",
     "@types/supertest": "^7.2.0",
-    "eslint": "^10.0.3",
+    "eslint": "^8.57.0",
     "eslint-import-resolver-typescript": "^4.4.4",
     "globals": "^17.4.0",
     "jest": "^30.2.0",

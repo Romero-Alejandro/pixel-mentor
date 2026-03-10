@@ -1,12 +1,13 @@
 import { randomUUID } from 'node:crypto';
+
 import { PrismaInteractionRepository } from '@/infrastructure/adapters/database/repositories/interaction-repository';
 import type { AIResponseMetadata } from '@/domain/entities/interaction';
 
 // Mock the actual file that the repository imports
-jest.mock('../client.js');
+jest.mock('@/infrastructure/adapters/database/client');
 
 // Import the mocked module
-import { prisma } from '../client.js';
+import { prisma } from '@/infrastructure/adapters/database/client';
 
 describe('PrismaInteractionRepository', () => {
   let repository: PrismaInteractionRepository;

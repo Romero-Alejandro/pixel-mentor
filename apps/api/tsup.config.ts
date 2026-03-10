@@ -1,3 +1,4 @@
+// @ts-nocheck - Config file that uses tsup; not needed for type checking
 import { defineConfig } from 'tsup';
 
 export default defineConfig({

@@ -1,13 +1,16 @@
-import {
+import { prisma } from '../client.js';
+
+import type {
   AdvisoryLockId,
   AdvisoryLockManager,
+  LockAcquisitionOptions,
+} from '@/domain/ports/advisory-lock.js';
+import {
   DEFAULT_LOCK_OPTIONS,
   LockAcquisitionError,
-  LockAcquisitionOptions,
   lockIdToBigInt,
   LockTimeoutError,
 } from '@/domain/ports/advisory-lock.js';
-import { prisma } from '../client.js';
 
 export class PostgresAdvisoryLockManager implements AdvisoryLockManager {
   private static instance: PostgresAdvisoryLockManager;

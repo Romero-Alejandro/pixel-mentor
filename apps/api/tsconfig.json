@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist",
-    /* Seteamos rootDir al nivel de la API para incluir los .config.ts sin errores */
+
     "rootDir": ".",
     "baseUrl": ".",
     "module": "ESNext",
@@ -12,10 +12,9 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "paths": {
-      "@/*": ["./src/*"],
-    },
-    /* Eliminamos typeRoots por completo para que TS use su lógica estándar de búsqueda */
+      "@/*": ["./src/*"]
+    }
   },
   "include": ["src/**/*", "tsup.config.ts", "prisma.config.ts"],
-  "exclude": ["node_modules", "dist"],
+  "exclude": ["node_modules", "dist"]
 }

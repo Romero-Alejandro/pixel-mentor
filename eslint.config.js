@@ -1,26 +1,30 @@
 import eslintConfigPrettier from 'eslint-config-prettier';
 import prettierPlugin from 'eslint-plugin-prettier';
-import baseConfig from '@pixel-mentor/eslint-config-custom';
-import reactConfig from '@pixel-mentor/eslint-config-custom/react';
-import serverConfig from '@pixel-mentor/eslint-config-custom/server';
+import { base, reactConfig, server } from '@pixel-mentor/eslint-config-custom';
 
 export default [
-  ...baseConfig,
+  // Base TypeScript rules for entire monorepo
+  ...base,
 
+  // React/Next.js frontend applications
   {
-    files: ['apps/web/**/*.ts', 'apps/web/**/*.tsx', 'packages/ui/**/*.ts', 'packages/ui/**/*.tsx'],
-    ...reactConfig[reactConfig.length - 1],
+    files: [
+      'apps/web/**/*.{ts,tsx}',
+      'apps/web/**/*.{js,jsx}',
+      'packages/ui/**/*.{ts,tsx}',
+      'packages/ui/**/*.{js,jsx}',
+    ],
+    ...reactConfig,
   },
 
-  {
+  // Backend Node.js API
+  // server is an array of configs; we apply each with files restricted to api/
+  ...server.map((conf) => ({
     files: ['apps/api/**/*.ts'],
-    ...serverConfig[serverConfig.length - 1],
-  },
-  {
-    files: ['apps/api/**/*.ts'],
-    ...serverConfig[serverConfig.length - 2],
-  },
+    ...conf,
+  })),
 
+  // Test files: relax rules
   {
     files: ['**/*.{spec,test}.{ts,tsx}'],
     rules: {
@@ -31,6 +35,7 @@ export default [
     },
   },
 
+  // Prettier integration
   {
     plugins: {
       prettier: prettierPlugin,

@@ -1,5 +1,5 @@
+import type { LessonRepository } from '@/domain/ports/lesson-repository';
 import {
-  LessonRepository,
   LessonNotFoundError,
   LessonInactiveError,
   getLessonOrError,

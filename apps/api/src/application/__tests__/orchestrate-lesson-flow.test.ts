@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+
 import { OrchestrateLessonUseCase } from '@/application/use-cases/orchestrate-lesson.use-case';
 import type { SessionRepository } from '@/domain/ports/session-repository';
 import type { InteractionRepository } from '@/domain/ports/interaction-repository';

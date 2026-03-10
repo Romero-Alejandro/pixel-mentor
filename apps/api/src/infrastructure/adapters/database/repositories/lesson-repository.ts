@@ -1,7 +1,8 @@
+import { prisma } from '../client';
+
 import type { Analogy, CommonError, Concept, Lesson, Question } from '@/domain/entities/lesson';
 import type { LessonChunk } from '@/domain/entities/lesson-chunk';
 import type { LessonRepository } from '@/domain/ports/lesson-repository';
-import { prisma } from '../client';
 
 type PrismaLesson = NonNullable<Awaited<ReturnType<typeof prisma.leccion.findUnique>>>;
 type PrismaLessonChunk = NonNullable<Awaited<ReturnType<typeof prisma.lessonChunk.findFirst>>>;

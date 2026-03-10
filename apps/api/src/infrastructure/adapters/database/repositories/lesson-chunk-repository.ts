@@ -1,10 +1,9 @@
-import { LessonChunk } from '@/domain/entities/lesson-chunk.js';
 import { prisma } from '../client.js';
-import {
-  LessonChunkNotFoundError,
-  LessonChunkRepository,
-} from '@/domain/ports/lesson-chunk-repository.js';
 import { handlePrismaError } from '../error-handler.js';
+
+import type { LessonChunk } from '@/domain/entities/lesson-chunk.js';
+import type { LessonChunkRepository } from '@/domain/ports/lesson-chunk-repository.js';
+import { LessonChunkNotFoundError } from '@/domain/ports/lesson-chunk-repository.js';
 
 type PrismaLessonChunk = NonNullable<Awaited<ReturnType<typeof prisma.lessonChunk.findUnique>>>;
 

@@ -1,8 +1,9 @@
 import { randomUUID } from 'node:crypto';
+
 import { PrismaSessionRepository } from '@/infrastructure/adapters/database/repositories/session-repository';
 
 // Mock the actual file that the repository imports
-jest.mock('../client.js', () => ({
+jest.mock('@/infrastructure/adapters/database/client', () => ({
   prisma: {
     session: {
       findUnique: jest.fn(),
@@ -16,7 +17,7 @@ jest.mock('../client.js', () => ({
 }));
 
 // Import the mocked module
-import { prisma } from '../client.js';
+import { prisma } from '@/infrastructure/adapters/database/client';
 
 describe('PrismaSessionRepository', () => {
   let repository: PrismaSessionRepository;

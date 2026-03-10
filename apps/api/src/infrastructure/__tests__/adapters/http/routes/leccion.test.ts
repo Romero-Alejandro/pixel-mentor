@@ -1,7 +1,8 @@
 import request from 'supertest';
+import type { Express } from 'express';
+
 import { createApp } from '@/infrastructure/adapters/http/server';
 import { OrchestrateLessonUseCase } from '@/application/use-cases/orchestrate-lesson.use-case';
-import type { Express } from 'express';
 
 jest.mock('@/application/use-cases/orchestrate-lesson.use-case');
 

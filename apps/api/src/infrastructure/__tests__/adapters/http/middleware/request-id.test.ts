@@ -1,6 +1,7 @@
 // Test for Request ID Middleware
+import type { Request, Response } from 'express';
+
 import { requestIdMiddleware } from '@/infrastructure/adapters/http/middleware/request-id';
-import { Request, Response } from 'express';
 
 describe('requestIdMiddleware', () => {
   let mockRequest: Partial<Request>;

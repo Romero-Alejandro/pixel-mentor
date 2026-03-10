@@ -13,7 +13,6 @@
 
 ## File & Import Rules
 
-- PROHIBITED: Barrel files (`index.ts` that just re-export).
 - **Imports:** Mandatory `@/` alias inside each package.
 
 ## Naming Conventions

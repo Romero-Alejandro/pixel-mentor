@@ -5,7 +5,7 @@ import {
   getAllowedTransitions,
   isTransitionAllowed,
 } from '@/domain/state/state-machine';
-import { PedagogicalState } from '@/domain/entities/pedagogical-state';
+import type { PedagogicalState } from '@/domain/entities/pedagogical-state';
 
 describe('StateMachine', () => {
   it('should initialize with correct initial state', () => {

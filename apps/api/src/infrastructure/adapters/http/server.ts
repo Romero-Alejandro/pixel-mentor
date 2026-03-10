@@ -1,15 +1,18 @@
-import express, { Express, Request, Response, NextFunction } from 'express';
+import type { Express, Request, Response, NextFunction } from 'express';
+import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
+import type pino from 'pino';
+
 import { createLeccionRouter } from './routes/leccion';
 import { createLessonsRouter } from './routes/lessons';
 import { createSessionsRouter } from './routes/sessions';
 import { requestIdMiddleware } from './middleware/request-id';
 import { timeoutMiddleware } from './middleware/timeout';
 import { requestLoggerMiddleware } from './middleware/request-logger';
-import type pino from 'pino';
-import { PrismaClient } from '@/infrastructure/adapters/database/client.js';
+
+import type { PrismaClient } from '@/infrastructure/adapters/database/client.js';
 import type { OrchestrateLessonUseCase } from '@/application/use-cases/orchestrate-lesson.use-case';
 import type { GetLessonUseCase } from '@/application/use-cases/lesson/get-lesson.use-case';
 import type { ListLessonsUseCase } from '@/application/use-cases/lesson/list-lessons.use-case';

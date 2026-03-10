@@ -1,5 +1,4 @@
 import type { Prisma } from '../client.js';
-
 import { prisma } from '../client.js';
 import { handlePrismaError } from '../error-handler.js';
 

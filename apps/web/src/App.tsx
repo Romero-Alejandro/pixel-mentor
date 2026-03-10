@@ -15,9 +15,9 @@ function App() {
           <div className="text-center p-8 bg-primary-50 rounded-xl">
             <div className="text-6xl mb-4">{isListening ? '🎤' : isSpeaking ? '🔊' : '🎯'}</div>
             <p className="text-lg font-medium text-primary-800">
-              {currentState === 'EXPLICACION' && 'Escuchando...'}
-              {currentState === 'PREGUNTA' && '¿Qué quieres aprender?'}
-              {currentState === 'EVALUACION' && 'Evaluando...'}
+              {currentState === 'EXPLICACION' ? 'Escuchando...' : null}
+              {currentState === 'PREGUNTA' ? '¿Qué quieres aprender?' : null}
+              {currentState === 'EVALUACION' ? 'Evaluando...' : null}
             </p>
           </div>
 

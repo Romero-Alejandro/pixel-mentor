@@ -1,7 +1,8 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import { z } from 'zod';
 import type pino from 'pino';
-import { OrchestrateLessonUseCase } from '@/application/use-cases/orchestrate-lesson.use-case';
+
+import type { OrchestrateLessonUseCase } from '@/application/use-cases/orchestrate-lesson.use-case';
 import { StartLessonInputSchema, InteractLessonInputSchema } from '@/application/dto';
 
 export interface AppRequest extends Request {

@@ -1,18 +1,5 @@
-import 'dotenv/config';
-import { z } from 'zod';
 import pino from 'pino';
 
-import { prisma } from '@/infrastructure/adapters/database/client.js';
-import { PrismaLessonRepository } from '@/infrastructure/adapters/database/repositories/lesson-repository.js';
-import { PrismaSessionRepository } from '@/infrastructure/adapters/database/repositories/session-repository.js';
-import { PrismaInteractionRepository } from '@/infrastructure/adapters/database/repositories/interaction-repository.js';
-import { PrismaTeacherReviewTicketRepository } from '@/infrastructure/adapters/database/repositories/teacher-review-ticket-repository.js';
-import { PostgresAdvisoryLockManager } from '@/infrastructure/adapters/database/repositories/advisory-lock.js';
-import { GeminiAIModelAdapter } from '@/infrastructure/adapters/ai/gemini-adapter.js';
-
-import { OrchestrateLessonUseCase } from '@/application/use-cases/orchestrate-lesson.use-case.js';
-
-import { createApp } from '@/infrastructure/adapters/http/server.js';
 import {
   GetLessonUseCase,
   GetSessionUseCase,
@@ -20,27 +7,14 @@ import {
   ListSessionsUseCase,
 } from './application/use-cases';
 
-const envSchema = z.object({
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('production'),
-  PORT: z.coerce.number().int().positive().default(3001),
-  DATABASE_URL: z.string().url().min(1),
-  GEMINI_API_KEY: z.string().min(1),
-  CORS_ORIGIN: z.string().url().min(1),
-  LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
-  RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60000),
-  RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
-  RATE_LIMIT_MAX_INTERACT: z.coerce.number().int().positive().default(5),
-  REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
-});
-
-let config: z.infer<typeof envSchema>;
-
-try {
-  config = envSchema.parse(process.env);
-} catch (error) {
-  console.error('Invalid environment configuration:', error);
-  process.exit(1);
-}
+import { config } from '@/config';
+import { prisma } from '@/infrastructure/adapters/database/client.js';
+import { PrismaLessonRepository } from '@/infrastructure/adapters/database/repositories/lesson-repository.js';
+import { PrismaSessionRepository } from '@/infrastructure/adapters/database/repositories/session-repository.js';
+import { PrismaInteractionRepository } from '@/infrastructure/adapters/database/repositories/interaction-repository.js';
+import { GeminiAIModelAdapter } from '@/infrastructure/adapters/ai/gemini-adapter.js';
+import { OrchestrateLessonUseCase } from '@/application/use-cases/orchestrate-lesson.use-case.js';
+import { createApp } from '@/infrastructure/adapters/http/server.js';
 
 const logger = pino({
   level: config.LOG_LEVEL,
@@ -62,8 +36,6 @@ function initializeContainer() {
   const lessonRepository = new PrismaLessonRepository();
   const sessionRepository = new PrismaSessionRepository();
   const interactionRepository = new PrismaInteractionRepository();
-  const teacherReviewTicketRepository = new PrismaTeacherReviewTicketRepository();
-  const advisoryLockManager = PostgresAdvisoryLockManager.getInstance();
   const aiModel = new GeminiAIModelAdapter(config.GEMINI_API_KEY);
 
   return {

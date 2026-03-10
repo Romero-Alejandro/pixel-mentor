@@ -1,11 +1,12 @@
 import request from 'supertest';
+import pino from 'pino';
+
 import { createApp } from '@/infrastructure/adapters/http/server';
 import type { OrchestrateLessonUseCase } from '@/application/use-cases/orchestrate-lesson.use-case';
 import type { GetLessonUseCase } from '@/application/use-cases/lesson/get-lesson.use-case';
 import type { ListLessonsUseCase } from '@/application/use-cases/lesson/list-lessons.use-case';
 import type { GetSessionUseCase } from '@/application/use-cases/session/get-session.use-case';
 import type { ListSessionsUseCase } from '@/application/use-cases/session/list-sessions.use-case';
-import pino from 'pino';
 
 // Mock the Prisma client
 jest.mock('@/infrastructure/adapters/database/client');

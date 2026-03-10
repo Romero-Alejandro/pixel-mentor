@@ -1,8 +1,9 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import { z } from 'zod';
 import type pino from 'pino';
-import { GetLessonUseCase } from '@/application/use-cases/lesson/get-lesson.use-case';
-import { ListLessonsUseCase } from '@/application/use-cases/lesson/list-lessons.use-case';
+
+import type { GetLessonUseCase } from '@/application/use-cases/lesson/get-lesson.use-case';
+import type { ListLessonsUseCase } from '@/application/use-cases/lesson/list-lessons.use-case';
 import { GetLessonInputSchema, ListLessonsInputSchema } from '@/application/dto';
 
 export interface AppRequest extends Request {

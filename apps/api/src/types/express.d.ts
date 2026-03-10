@@ -1,5 +1,5 @@
 import 'express-serve-static-core';
-import pino from 'pino';
+import type pino from 'pino';
 
 declare module 'express-serve-static-core' {
   interface Request {
