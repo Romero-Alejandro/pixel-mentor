@@ -1,0 +1,44 @@
+opencollection: 1.0.0
+
+info:
+  name: Pixel Mentor API
+  description: Complete API testing collection for Pixel Mentor
+
+bundled: false
+
+extensions:
+  bruno:
+    ignore:
+      - node_modules
+      - .git
+
+variables:
+  base_url: http://localhost:3001
+  lesson_id: 00000000-0000-0000-0000-000000000000
+  student_id: 11111111-1111-1111-1111-111111111111
+  session_id: ''
+
+requests:
+  - name: Health Check
+    file: ./Health Check.yml
+
+  - name: API Info
+    file: ./API Info.yml
+
+  - name: List Lessons
+    file: ./List Lessons.yml
+
+  - name: Get Lesson
+    file: ./Get Lesson.yml
+
+  - name: List Sessions
+    file: ./List Sessions.yml
+
+  - name: Get Session
+    file: ./Get Session.yml
+
+  - name: Start Lesson
+    file: ./Start Lesson.yml
+
+  - name: Interact
+    file: ./Interact.yml

@@ -8,7 +8,7 @@
 
 > **Plataforma EdTech de tutoría vocal interactiva para niños de 6 a 12 años.**
 
-Pixel Mentor es un proyecto de arquitectura hexagonal estricta (Domain-Driven Design) diseñado para proporcionar sesiones de tutoría personalizadas mediante IA generativa (Google Gemini) y procesamiento de lenguaje natural. La aplicación gestiona el estado de la sesión, el historial de interacciones y la lógica pedagógica de forma robusta y segura.
+Pixel Mentor es una aplicación web que gestiona sesiones de tutoría pedagógica asistidas por inteligencia artificial, ofreciendo apoyo educativo personalizado en un entorno seguro y utilizando información relevante para mejorar la calidad de las respuestas y la experiencia de aprendizaje.
 
 ---
 

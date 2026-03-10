@@ -1,0 +1,29 @@
+info:
+  name: Interact
+  type: http
+  seq: 8
+
+http:
+  method: POST
+  url: http://localhost:3001/api/leccion/interact
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "sessionId": "{{session_id}}",
+        "studentInput": "Que me estas enseñando?"
+      }
+
+runtime:
+  variables:
+    - name: session_id
+      value: 08477a02-52b8-4905-a179-4ea4e4a882b4
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

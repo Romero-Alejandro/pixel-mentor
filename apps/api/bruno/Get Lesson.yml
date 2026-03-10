@@ -1,0 +1,24 @@
+info:
+  name: Get Lesson
+  type: http
+  seq: 4
+
+http:
+  method: GET
+  url: http://localhost:3001/api/lessons/00000000-0000-0000-0000-000000000000
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+tests: |-
+  if (response.status !== 200) throw new Error(`Expected 200, got ${response.status}`);
+  const required = ['id','title','description','concepts','questions','active'];
+  for (const field of required) {
+    if (!(field in response.body)) throw new Error(`Missing field '${field}'`);
+  }
+  if (!Array.isArray(response.body.concepts) || response.body.concepts.length === 0) throw new Error('No concepts');
+  if (!Array.isArray(response.body.questions) || response.body.questions.length === 0) throw new Error('No questions');
+  bru.log(`✅ Lesson: ${response.body.title}`, { questions: response.body.questions.length });

@@ -2,6 +2,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { z } from 'zod';
 
 import type { AIService, GeneratedResponse, PromptParameters } from '@/domain/ports/ai-service';
+import { generateWithTimeout, AIGenerationError } from '@/domain/ports/ai-service';
 import type { QuestionClassification } from '@/domain/entities/question-classification';
 import type {
   ClassificationPayload,
@@ -33,51 +34,31 @@ const ComprehensionSchema = z.object({
 
 export class GeminiAIModelAdapter implements AIService {
   private client: GoogleGenerativeAI;
-  private model: ReturnType<GoogleGenerativeAI['getGenerativeModel']>;
+
+  private readonly standardModels = ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash'];
+
+  private readonly fastModels = [
+    'gemini-2.5-flash-lite',
+    'gemini-2.0-flash-lite',
+    'gemini-2.5-flash',
+  ];
 
   constructor(apiKey: string) {
     this.client = new GoogleGenerativeAI(apiKey);
-    this.model = this.client.getGenerativeModel({
-      model: 'gemini-1.5-flash',
-    });
   }
 
   async generateResponse(parameters: PromptParameters): Promise<GeneratedResponse> {
     const systemPrompt = this.buildSystemPrompt(parameters);
     const userPrompt = this.buildUserPrompt(parameters);
-
-    const fullPrompt = `${systemPrompt}
-
-${userPrompt}
-
-Responde en JSON con este esquema exacto:
-{
-  "voiceText": "texto que escuchará el niño",
-  "pedagogicalState": "EXPLANATION" | "QUESTION" | "EVALUATION",
-  "feedback": "retroalimentación opcional",
-  "isCorrect": true/false (solo en EVALUATION),
-  "extraExplanation": "explicación adicional opcional",
-  "chainOfThought": "tu razonamiento interno"
-}`;
+    const schemaInstruction = `\nResponde ÚNICAMENTE con un JSON válido usando este esquema exacto:\n{"voiceText": "texto","pedagogicalState": "EXPLANATION" | "QUESTION" | "EVALUATION","feedback": "texto opcional","isCorrect": true,"extraExplanation": "texto opcional","chainOfThought": "razonamiento"}`;
+    const fullPrompt = `${systemPrompt}\n\n${userPrompt}${schemaInstruction}`;
 
     try {
-      const result = await this.model.generateContent(fullPrompt);
-      const responseText = result.response.text();
-      const parsed = JSON.parse(responseText);
-      const validated = GeminiResponseSchema.parse(parsed);
-
-      return {
-        voiceText: validated.voiceText,
-        pedagogicalState: validated.pedagogicalState,
-        feedback: validated.feedback,
-        isCorrect: validated.isCorrect,
-        extraExplanation: validated.extraExplanation,
-        chainOfThought: validated.chainOfThought,
-      };
+      return await this.executeWithFallback(fullPrompt, GeminiResponseSchema, this.standardModels);
     } catch (error) {
-      console.error('Failed to parse Gemini response:', error);
+      console.error('[GeminiAdapter] generateResponse error:', error);
       return {
-        voiceText: 'Algo salió mal. ¿Podrías repetir lo que dijiste?',
+        voiceText: 'Hubo un pequeño problema técnico. ¿Podrías repetir lo que dijiste?',
         pedagogicalState: 'QUESTION',
       };
     }
@@ -95,29 +76,13 @@ Responde en JSON con este esquema exacto:
       };
     }
 
-    const prompt = `Explica el concepto "${concept.title}" de forma clara y sencilla para un niño de 6-11 años.
-
-Título: ${concept.title}
-Descripción: ${concept.description}
-${concept.example ? `Ejemplo: ${concept.example}` : ''}
-
-Responde en JSON con:
-{
-  "voiceText": "explicación en voz",
-  "pedagogicalState": "EXPLANATION",
-  "chainOfThought": "tu razonamiento"
-}`;
+    const schemaInstruction = `\nResponde ÚNICAMENTE en JSON con este esquema:\n{"voiceText": "explicación","pedagogicalState": "EXPLANATION","chainOfThought": "razonamiento"}`;
+    const prompt = `Explica el concepto "${concept.title}" de forma amigable, educativa y muy concisa para un niño de 6 a 11 años. El texto será leído por un sintetizador de voz. PROHIBIDO usar emojis, viñetas o caracteres especiales.\n\nTítulo: ${concept.title}\nDescripción: ${concept.description}\n${concept.example ? `Ejemplo: ${concept.example}` : ''}${schemaInstruction}`;
 
     try {
-      const result = await this.model.generateContent(prompt);
-      const parsed = JSON.parse(result.response.text());
-      const validated = GeminiResponseSchema.parse(parsed);
-      return {
-        voiceText: validated.voiceText,
-        pedagogicalState: validated.pedagogicalState,
-        chainOfThought: validated.chainOfThought,
-      };
+      return await this.executeWithFallback(prompt, GeminiResponseSchema, this.standardModels);
     } catch (error) {
+      console.error('[GeminiAdapter] generateExplanation error:', error);
       return {
         voiceText: `El concepto ${concept.title} es importante. ${concept.description}`,
         pedagogicalState: 'EXPLANATION',
@@ -129,33 +94,15 @@ Responde en JSON con:
     question: { text: string; expectedAnswer: string };
     studentAnswer: string;
   }): Promise<GeneratedResponse> {
-    const prompt = `Evalúa si la respuesta del estudiante es correcta.
-
-Pregunta: ${parameters.question.text}
-Respuesta esperada: ${parameters.question.expectedAnswer}
-Respuesta del estudiante: ${parameters.studentAnswer}
-
-Responde en JSON:
-{
-  "voiceText": "retroalimentación en voz para el niño",
-  "pedagogicalState": "EVALUATION",
-  "isCorrect": true/false,
-  "feedback": "retroalimentación detallada"
-}`;
+    const schemaInstruction = `\nResponde ÚNICAMENTE en JSON con este esquema:\n{"voiceText": "retroalimentación","pedagogicalState": "EVALUATION","isCorrect": true/false,"feedback": "texto"}`;
+    const prompt = `Evalúa si la respuesta del estudiante es correcta. Sé muy conciso, motivador y puramente auditivo (sin emojis ni caracteres de formato).\n\nPregunta: ${parameters.question.text}\nRespuesta esperada: ${parameters.question.expectedAnswer}\nRespuesta del estudiante: ${parameters.studentAnswer}${schemaInstruction}`;
 
     try {
-      const result = await this.model.generateContent(prompt);
-      const parsed = JSON.parse(result.response.text());
-      const validated = GeminiResponseSchema.parse(parsed);
-      return {
-        voiceText: validated.voiceText,
-        pedagogicalState: validated.pedagogicalState,
-        isCorrect: validated.isCorrect,
-        feedback: validated.feedback,
-      };
+      return await this.executeWithFallback(prompt, GeminiResponseSchema, this.standardModels);
     } catch (error) {
+      console.error('[GeminiAdapter] evaluateResponse error:', error);
       return {
-        voiceText: 'Gracias por tu respuesta. Continuemos con la siguiente pregunta.',
+        voiceText: 'Gracias por tu respuesta. Continuemos.',
         pedagogicalState: 'EVALUATION',
         isCorrect: false,
       };
@@ -163,73 +110,90 @@ Responde en JSON:
   }
 
   async classifyQuestion(payload: ClassificationPayload): Promise<QuestionClassification> {
-    const prompt = `Clasifica si el siguiente texto del estudiante es una pregunta, una respuesta, una afirmación, un saludo u otra cosa.
-
-Historial de conversación:
-${payload.lastTurns.map((t) => `${t.role === 'user' ? 'Estudiante' : 'Tutor'}: ${t.content}`).join('\n')}
-
-Texto actual del estudiante: "${payload.transcript}"
-
-${payload.lessonMetadata ? `Lección: ${payload.lessonMetadata.title}\nConceptos: ${payload.lessonMetadata.concepts.join(', ')}` : ''}
-
-Responde en JSON:
-{
-  "intent": "question" | "answer" | "statement" | "greeting" | "other",
-  "confidence": 0.0-1.0,
-  "reasoning": "explicación breve de tu clasificación"
-}`;
+    const history = payload.lastTurns
+      .map((t) => `${t.role === 'user' ? 'Estudiante' : 'Tutor'}: ${t.content}`)
+      .join('\n');
+    const meta = payload.lessonMetadata
+      ? `Lección: ${payload.lessonMetadata.title}\nConceptos: ${payload.lessonMetadata.concepts.join(', ')}`
+      : '';
+    const schemaInstruction = `\nResponde ÚNICAMENTE en JSON con este esquema:\n{"intent": "question" | "answer" | "statement" | "greeting" | "other","confidence": 0.9,"reasoning": "motivo"}`;
+    const prompt = `Clasifica el texto del estudiante.\n\nHistorial:\n${history}\n\nTexto actual: "${payload.transcript}"\n\n${meta}${schemaInstruction}`;
 
     try {
-      const result = await this.model.generateContent(prompt);
-      const parsed = JSON.parse(result.response.text());
-      const validated = ClassificationSchema.parse(parsed);
-      return {
-        intent: validated.intent,
-        confidence: validated.confidence,
-        reasoning: validated.reasoning,
-      };
+      return await this.executeWithFallback(prompt, ClassificationSchema, this.fastModels);
     } catch (error) {
+      console.error('[GeminiAdapter] classifyQuestion error:', error);
       return {
         intent: 'other',
         confidence: 0.5,
-        reasoning: 'Error en la clasificación',
+        reasoning: 'Error de contingencia en clasificación',
       };
     }
   }
 
   async evaluateComprehension(payload: ComprehensionPayload): Promise<ComprehensionEvaluation> {
-    const prompt = `Evalúa la comprensión del estudiante después de una respuesta.
-
-Pregunta de verificación: ${payload.microQuestion}
-Respuesta esperada: ${payload.expectedAnswer}
-Respuesta del estudiante: ${payload.studentAnswer}
-Número de intento: ${payload.attemptNumber}
-
-Responde en JSON:
-{
-  "result": "correct" | "partial" | "incorrect",
-  "confidence": 0.0-1.0,
-  "hint": "pista adicional si es partial o incorrect",
-  "shouldEscalate": true/false
-}`;
+    const schemaInstruction = `\nResponde ÚNICAMENTE en JSON con este esquema:\n{"result": "correct" | "partial" | "incorrect","confidence": 0.9,"hint": "pista","shouldEscalate": false}`;
+    const prompt = `Evalúa la comprensión del estudiante.\n\nPregunta: ${payload.microQuestion}\nEsperada: ${payload.expectedAnswer}\nEstudiante: ${payload.studentAnswer}\nIntento: ${payload.attemptNumber}${schemaInstruction}`;
 
     try {
-      const result = await this.model.generateContent(prompt);
-      const parsed = JSON.parse(result.response.text());
-      const validated = ComprehensionSchema.parse(parsed);
-      return {
-        result: validated.result,
-        confidence: validated.confidence,
-        hint: validated.hint,
-        shouldEscalate: validated.shouldEscalate,
-      };
+      return await this.executeWithFallback(prompt, ComprehensionSchema, this.fastModels);
     } catch (error) {
+      console.error('[GeminiAdapter] evaluateComprehension error:', error);
       return {
         result: 'incorrect',
         confidence: 0.5,
         shouldEscalate: false,
       };
     }
+  }
+
+  private async executeWithFallback<T>(
+    prompt: string,
+    schema: z.ZodType<T>,
+    modelSelection: string[],
+  ): Promise<T> {
+    let lastError: unknown;
+
+    for (const modelId of modelSelection) {
+      try {
+        const model = this.client.getGenerativeModel({
+          model: modelId,
+          generationConfig: {
+            responseMimeType: 'application/json',
+          },
+        });
+
+        const generationPromise = model.generateContent(prompt);
+        const result = await generateWithTimeout(generationPromise);
+
+        let responseText = result.response.text();
+        responseText = responseText
+          .replace(/```json/gi, '')
+          .replace(/```/g, '')
+          .trim();
+
+        const parsedJson = JSON.parse(responseText);
+        return schema.parse(parsedJson);
+      } catch (error: any) {
+        lastError = error;
+
+        if (error.name === 'AITimeoutError') {
+          console.warn(`[GeminiAdapter] Timeout on model ${modelId}, trying next...`);
+          continue;
+        }
+
+        if (error.status === 429 || error.status === 503 || error.status === 404) {
+          console.warn(
+            `[GeminiAdapter] Status ${error.status} on model ${modelId}, trying next...`,
+          );
+          continue;
+        }
+
+        throw new AIGenerationError(error.message || 'Error parsing or generating AI content');
+      }
+    }
+
+    throw lastError;
   }
 
   private buildSystemPrompt(parameters: PromptParameters): string {
@@ -241,7 +205,7 @@ Responde en JSON:
       .map((e) => `- ${e.incorrectConcept}: ${e.correctionExplanation}`)
       .join('\n');
 
-    return `Eres Pixel Mentor, un tutor interactivo para niños de 6-11 años.
+    return `Eres Pixel Mentor, un tutor interactivo para niños de 6 a 11 años.
 
 Lección: "${parameters.lesson.title}"
 ${parameters.lesson.description ? `Descripción: ${parameters.lesson.description}` : ''}
@@ -260,11 +224,11 @@ ${parameters.lesson.baseExplanation}
 
 Estado pedagógico actual: ${parameters.currentState}
 
-Instrucciones:
-- Responde en español de forma clara y sencilla para niños de 6-11 años
-- Usa analogías que los niños puedan entender
-- Sé amigable, positivo y motivador
-- Usa emojis apropiado para mantener el interés`;
+Instrucciones vitales para tu respuesta:
+1. AUDIO PRIMERO: El texto será dictado por voz. Escribe exactamente como hablarías en una conversación natural.
+2. CERO EMOJIS: Está estrictamente prohibido usar emojis, asteriscos, guiones, hashtags o formato Markdown.
+3. CONCISIÓN: Sé directo y elimina cualquier palabra de relleno. Respuestas cortas mantienen la atención.
+4. TONO: Sé muy amable, paciente y educativo. Guía al niño hacia la respuesta con preguntas breves en lugar de darle la solución de inmediato. Utiliza solo comas, puntos y signos de interrogación o exclamación.`;
   }
 
   private buildUserPrompt(parameters: PromptParameters): string {

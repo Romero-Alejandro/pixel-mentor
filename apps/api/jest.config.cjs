@@ -1,11 +1,10 @@
 module.exports = {
-  preset: 'ts-jest',
   testEnvironment: 'node',
   roots: ['<rootDir>/src'],
   moduleFileExtensions: ['ts', 'js', 'json', 'node'],
   testMatch: ['**/__tests__/**/*.test.ts'],
   transform: {
-    '^.+\\.ts$': 'ts-jest',
+    '^.+\\.ts$': '@swc/jest',
   },
   moduleNameMapper: {
     '^@/(.*)\\.js$': '<rootDir>/src/$1.ts',
