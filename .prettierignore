@@ -1,0 +1,23 @@
+# Common ignores
+node_modules
+dist
+.turbo
+coverage
+
+# IDE / editor ignores
+.idea
+.vscode
+
+# Build outputs
+apps/*/dist
+packages/*/dist
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# pnpm-lock.yaml
+pnpm-lock.yaml

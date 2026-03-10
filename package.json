@@ -1,0 +1,34 @@
+{
+  "name": "pixel-mentor",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "Plataforma EdTech de tutorías interactivas para niños de 6-12 años",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "eslint . --ignore-pattern '.agents/**' --ignore-pattern '**/dist/**' --ignore-pattern '**/*.d.ts' --ignore-pattern '**/*.D.ts' --ignore-pattern 'node_modules/'",
+    "format": "prettier . --write --ignore-path .prettierignore",
+    "test": "turbo test",
+    "typecheck": "turbo typecheck"
+  },
+  "devDependencies": {
+    "@pixel-mentor/eslint-config-custom": "workspace:*",
+    "@pixel-mentor/prettier-config-custom": "workspace:*",
+    "@types/jest": "^30.0.0",
+    "@types/supertest": "^7.2.0",
+    "eslint": "^10.0.3",
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "globals": "^17.4.0",
+    "jest": "^30.2.0",
+    "jest-mock-extended": "^4.0.0",
+    "prettier": "^3.8.1",
+    "ts-jest": "^29.4.6",
+    "turbo": "^2.8.14",
+    "typescript": "^5.9.3"
+  },
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "@pixel-mentor/prettier-config-custom",
+  "version": "1.0.0",
+  "main": "index.json",
+  "private": true
+}

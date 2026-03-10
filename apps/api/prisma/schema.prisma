@@ -1,0 +1,207 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/infrastructure/adapters/database/generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  // La URL ya no va aquí
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(STUDENT)
+  age       Int?
+  quota     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions Session[]
+  apiKeys  ApiKey[]
+}
+
+enum Role {
+  STUDENT
+  TEACHER
+  ADMIN
+}
+
+model Leccion {
+  id              String   @id @default(uuid())
+  titulo          String
+  descripcion     String?
+  metadata        Json?
+  conceptos       Json[]
+  analogias       Json[]
+  erroresComunes  Json[]
+  explicacionBase String
+  activa          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  preguntas Pregunta[]
+  chunks    LessonChunk[]
+  sessions  Session[]
+}
+
+model Pregunta {
+  id          String   @id @default(uuid())
+  leccionId   String
+  texto       String
+  respuestaOk String
+  explicacion String?
+  orden       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  leccion Leccion @relation(fields: [leccionId], references: [id])
+}
+
+model LessonChunk {
+  id          String   @id @default(uuid())
+  lessonId    String
+  index       Int
+  chunkText   String   @db.Text
+  embedding   Json? // Store as JSON array for MVP: [0.1, 0.2, ...]
+  tsvector    String? // tsvector for full-text search
+  version     Int      @default(1)
+  isImmutable Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  lesson Leccion @relation(fields: [lessonId], references: [id])
+
+  @@index([lessonId])
+  @@map("lesson_chunks")
+}
+
+model Session {
+  id                   String        @id @default(uuid())
+  studentId            String
+  lessonId             String
+  status               SessionStatus @default(idle)
+  stateCheckpoint      Json
+  currentInteractionId String?
+  startedAt            DateTime      @default(now())
+  lastActivityAt       DateTime      @updatedAt
+  completedAt          DateTime?
+  escalatedAt          DateTime?
+  version              Int           @default(1)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  student      User          @relation(fields: [studentId], references: [id])
+  lesson       Leccion       @relation(fields: [lessonId], references: [id])
+  interactions Interaction[]
+
+  @@index([studentId])
+  @@index([lessonId])
+  @@index([status])
+  @@map("sessions")
+}
+
+enum SessionStatus {
+  idle
+  active
+  paused_for_question
+  awaiting_confirmation
+  paused_idle
+  completed
+  escalated
+}
+
+model Interaction {
+  id                     String   @id @default(uuid())
+  sessionId              String
+  turnNumber             Int
+  transcript             String   @db.Text
+  aiResponse             Json?
+  comprehensionConfirmed Boolean  @default(false)
+  questionAsked          Boolean  @default(false)
+  pausedForQuestion      Boolean  @default(false)
+  flaggedForReview       Boolean  @default(false)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  session Session @relation(fields: [sessionId], references: [id])
+
+  @@unique([sessionId, turnNumber])
+  @@index([sessionId])
+  @@map("interactions")
+}
+
+model ApiKey {
+  id         String    @id @default(uuid())
+  keyHash    String    @unique
+  userId     String?
+  lastUsedAt DateTime?
+  usageCount Int       @default(0)
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("api_keys")
+}
+
+model TeacherReviewTicket {
+  id           String           @id @default(uuid())
+  sessionId    String
+  studentId    String
+  lessonId     String
+  status       TicketStatus     @default(PENDING)
+  reason       EscalationReason
+  snapshot     Json
+  teacherNotes String?
+  createdAt    DateTime         @default(now())
+  resolvedAt   DateTime?
+  updatedAt    DateTime         @updatedAt
+
+  @@index([sessionId])
+  @@index([studentId])
+  @@index([status])
+  @@map("teacher_review_tickets")
+}
+
+enum TicketStatus {
+  PENDING
+  IN_REVIEW
+  RESOLVED
+  DISMISSED
+}
+
+enum EscalationReason {
+  MAX_ATTEMPTS_EXCEEDED
+  SAFETY_FLAG
+  OUT_OF_SCOPE
+  CRITICAL_VALIDATION_ERROR
+}
+
+model ParentalConsent {
+  id          String        @id @default(uuid())
+  studentId   String
+  parentEmail String
+  status      ConsentStatus @default(PENDING)
+  expiresAt   DateTime
+  consentedAt DateTime?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([studentId])
+  @@index([status])
+  @@map("parental_consents")
+}
+
+enum ConsentStatus {
+  PENDING
+  APPROVED
+  EXPIRED
+  REVOKED
+}

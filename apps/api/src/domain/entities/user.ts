@@ -1,0 +1,37 @@
+export type UserRole = 'STUDENT' | 'TEACHER' | 'ADMIN';
+
+export interface User {
+  readonly id: string;
+  readonly email: string;
+  readonly name: string;
+  readonly role: UserRole;
+  readonly age?: number; // Only for students
+  readonly parentalConsentId: string | null;
+  readonly quota: number;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
+}
+
+export function isAdmin(user: User): boolean {
+  return user.role === 'ADMIN';
+}
+
+export function isTeacher(user: User): boolean {
+  return user.role === 'TEACHER' || user.role === 'ADMIN';
+}
+
+export function isStudent(user: User): boolean {
+  return user.role === 'STUDENT';
+}
+
+export function canCreateLessons(user: User): boolean {
+  return isTeacher(user);
+}
+
+export function canViewStatistics(user: User): boolean {
+  return isTeacher(user);
+}
+
+export function canDeleteLessons(user: User): boolean {
+  return isAdmin(user);
+}
