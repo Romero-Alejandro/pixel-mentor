@@ -1,53 +1,66 @@
 import { z } from 'zod';
 
-// ==================== Lesson Orchestration ====================
-export const StartLessonInputSchema = z.object({
-  lessonId: z
-    .string()
-    .regex(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/),
-  studentId: z
+// ==================== Recipe Orchestration ====================
+export const StartRecipeInputSchema = z.object({
+  recipeId: z
     .string()
     .regex(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/),
 });
-export type StartLessonInput = z.infer<typeof StartLessonInputSchema>;
+export type StartRecipeInput = z.infer<typeof StartRecipeInputSchema>;
 
-export const StartLessonOutputSchema = z.object({
+export const StartRecipeOutputSchema = z.object({
   sessionId: z.string().uuid(),
   voiceText: z.string(),
-  pedagogicalState: z.enum(['EXPLANATION', 'QUESTION', 'EVALUATION']),
+  pedagogicalState: z.enum([
+    'ACTIVE_CLASS',
+    'RESOLVING_DOUBT',
+    'CLARIFYING',
+    'QUESTION',
+    'EVALUATION',
+    'COMPLETED',
+    'EXPLANATION',
+  ]),
 });
-export type StartLessonOutput = z.infer<typeof StartLessonOutputSchema>;
+export type StartRecipeOutput = z.infer<typeof StartRecipeOutputSchema>;
 
-export const InteractLessonInputSchema = z.object({
+export const InteractRecipeInputSchema = z.object({
   sessionId: z
     .string()
     .regex(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/),
   studentInput: z.string().min(1).max(1000),
 });
-export type InteractLessonInput = z.infer<typeof InteractLessonInputSchema>;
+export type InteractRecipeInput = z.infer<typeof InteractRecipeInputSchema>;
 
-export const InteractLessonOutputSchema = z.object({
+export const InteractRecipeOutputSchema = z.object({
   voiceText: z.string(),
-  pedagogicalState: z.enum(['EXPLANATION', 'QUESTION', 'EVALUATION']),
+  pedagogicalState: z.enum([
+    'ACTIVE_CLASS',
+    'RESOLVING_DOUBT',
+    'CLARIFYING',
+    'QUESTION',
+    'EVALUATION',
+    'COMPLETED',
+    'EXPLANATION',
+  ]),
   sessionCompleted: z.boolean().optional(),
   feedback: z.string().optional(),
-  isCorrect: z.boolean().optional(),
+  isCorrect: z.boolean().nullish(),
   extraExplanation: z.string().optional(),
 });
-export type InteractLessonOutput = z.infer<typeof InteractLessonOutputSchema>;
+export type InteractRecipeOutput = z.infer<typeof InteractRecipeOutputSchema>;
 
-// ==================== Lesson Read ====================
-export const GetLessonInputSchema = z.object({
-  lessonId: z
+// ==================== Recipe Read ====================
+export const GetRecipeInputSchema = z.object({
+  recipeId: z
     .string()
     .regex(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/),
 });
-export type GetLessonInput = z.infer<typeof GetLessonInputSchema>;
+export type GetRecipeInput = z.infer<typeof GetRecipeInputSchema>;
 
-export const ListLessonsInputSchema = z.object({
+export const ListRecipesInputSchema = z.object({
   activeOnly: z.boolean().optional().default(true),
 });
-export type ListLessonsInput = z.infer<typeof ListLessonsInputSchema>;
+export type ListRecipesInput = z.infer<typeof ListRecipesInputSchema>;
 
 // ==================== Session Read ====================
 export const GetSessionInputSchema = z.object({
@@ -60,7 +73,8 @@ export type GetSessionInput = z.infer<typeof GetSessionInputSchema>;
 export const ListSessionsInputSchema = z.object({
   studentId: z
     .string()
-    .regex(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/),
+    .regex(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)
+    .optional(),
   activeOnly: z.boolean().optional().default(false),
 });
 export type ListSessionsInput = z.infer<typeof ListSessionsInputSchema>;

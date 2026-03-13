@@ -52,7 +52,7 @@ export const ExchangeSchema = z.object({
   content: z.string().min(1).max(5000),
   pedagogicalState: PedagogicalStateSchema,
   timestamp: z.string().datetime(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const StudentProgressSchema = z.object({

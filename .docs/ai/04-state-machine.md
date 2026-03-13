@@ -1,17 +1,17 @@
-# Session State Machine & Concurrency
+# Session State Machine
 
-## Orquestación Transaccional
+<ai_invariants>
+[STATE_MACHINE_RULES]
 
-- **Concurrencia:** Garantizar la transaccionalidad en toda mutación de estado de la `Session` mediante bloqueos consultivos (advisory locks) en PostgreSQL para prevenir condiciones de carrera durante interrupciones concurrentes.
-- **Idempotencia:** Implementar control de concurrencia optimista (Optimistic Locking) utilizando columnas de versionado o timestamps en los registros críticos.
+- Isolation: State mutations MUST be encapsulated in `application/use-cases/`.
+- Validation: Ensure Optimistic Locking version matches before mutating.
 
-## Máquina de Estados de la Sesión
+[PERMITTED_TRANSITIONS]
 
-Transicionar el estado lógico de la `Session` estrictamente según las siguientes rutas permitidas:
-
-1. `idle` -> (Inicia lección) -> `active`
-2. `active` -> (Interrupción clasificada con alta confianza) -> `paused_for_question`
-3. `paused_for_question` -> (Respuesta RAG generada y validada) -> `awaiting_confirmation`
-4. `awaiting_confirmation` -> (Respuesta de verificación correcta) -> `active`
-5. `awaiting_confirmation` -> (Timeout de 30s sin respuesta) -> `paused_idle`
-6. `active` -> (Fin de contenido de la lección) -> `completed`
+1. `idle` -> (Start Lesson event) -> `active`
+2. `active` -> (High confidence interaction) -> `paused_for_question`
+3. `paused_for_question` -> (Validated RAG response) -> `awaiting_confirmation`
+4. `awaiting_confirmation` -> (Correct verification) -> `active`
+5. `awaiting_confirmation` -> (30s Timeout trigger) -> `paused_idle`
+6. `active` -> (Lesson content exhausted) -> `completed`
+   </ai_invariants>

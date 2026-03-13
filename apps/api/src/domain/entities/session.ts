@@ -1,124 +1,94 @@
+import type { PedagogicalState } from './pedagogical-state';
+
 export type SessionStatus =
-  | 'idle'
-  | 'active'
-  | 'paused_for_question'
-  | 'awaiting_confirmation'
-  | 'paused_idle'
-  | 'completed'
-  | 'escalated';
+  | 'IDLE'
+  | 'ACTIVE'
+  | 'PAUSED_FOR_QUESTION'
+  | 'AWAITING_CONFIRMATION'
+  | 'PAUSED_IDLE'
+  | 'COMPLETED'
+  | 'ESCALATED';
+
+export interface SessionCheckpoint {
+  readonly currentState: PedagogicalState;
+  readonly currentStepIndex: number;
+  readonly savedStepIndex?: number;
+  readonly doubtContext?: {
+    readonly question: string;
+    readonly stepIndex: number;
+  };
+}
 
 export interface Session {
   readonly id: string;
   readonly studentId: string;
-  readonly lessonId: string;
+  readonly recipeId: string;
   readonly status: SessionStatus;
-  readonly stateCheckpoint: Record<string, unknown>;
-  readonly currentInteractionId: string | null;
+  readonly stateCheckpoint: SessionCheckpoint;
+  readonly safetyFlag?: string | null;
+  readonly outOfScope?: boolean;
+  readonly failedAttempts?: number;
   readonly startedAt: Date;
   readonly lastActivityAt: Date;
   readonly completedAt: Date | null;
   readonly escalatedAt: Date | null;
-  readonly version: number;
-  readonly createdAt: Date;
-  readonly updatedAt: Date;
+  readonly meta?: any;
 }
 
 export function createSession(parameters: {
   id: string;
   studentId: string;
-  lessonId: string;
-  stateCheckpoint?: Record<string, unknown>;
+  recipeId: string;
+  stateCheckpoint?: SessionCheckpoint;
+  meta?: any;
 }): Session {
   const now = new Date();
   return {
     id: parameters.id,
     studentId: parameters.studentId,
-    lessonId: parameters.lessonId,
-    status: 'idle',
-    stateCheckpoint: parameters.stateCheckpoint ?? {},
-    currentInteractionId: null,
+    recipeId: parameters.recipeId,
+    status: 'IDLE',
+    stateCheckpoint: parameters.stateCheckpoint ?? {
+      currentState: 'ACTIVE_CLASS',
+      currentStepIndex: 0,
+    },
     startedAt: now,
     lastActivityAt: now,
     completedAt: null,
     escalatedAt: null,
-    version: 1,
-    createdAt: now,
-    updatedAt: now,
+    meta: parameters.meta,
   };
 }
 
 export function startSession(session: Session): Session {
-  return {
-    ...session,
-    status: 'active',
-    updatedAt: new Date(),
-  };
+  return { ...session, status: 'ACTIVE', lastActivityAt: new Date() };
 }
 
-export function pauseForQuestion(session: Session, checkpoint: Record<string, unknown>): Session {
+export function pauseForQuestion(session: Session, checkpoint: SessionCheckpoint): Session {
   return {
     ...session,
-    status: 'paused_for_question',
+    status: 'PAUSED_FOR_QUESTION',
     stateCheckpoint: checkpoint,
-    updatedAt: new Date(),
+    lastActivityAt: new Date(),
   };
 }
 
 export function awaitConfirmation(session: Session): Session {
-  return {
-    ...session,
-    status: 'awaiting_confirmation',
-    updatedAt: new Date(),
-  };
+  return { ...session, status: 'AWAITING_CONFIRMATION', lastActivityAt: new Date() };
 }
 
 export function pauseIdle(session: Session): Session {
-  return {
-    ...session,
-    status: 'paused_idle',
-    updatedAt: new Date(),
-  };
+  return { ...session, status: 'PAUSED_IDLE', lastActivityAt: new Date() };
 }
 
 export function resumeSession(session: Session): Session {
-  return {
-    ...session,
-    status: 'active',
-    updatedAt: new Date(),
-  };
+  return { ...session, status: 'ACTIVE', lastActivityAt: new Date() };
 }
 
 export function completeSession(session: Session): Session {
-  return {
-    ...session,
-    status: 'completed',
-    completedAt: new Date(),
-    updatedAt: new Date(),
-  };
+  return { ...session, status: 'COMPLETED', completedAt: new Date(), lastActivityAt: new Date() };
 }
 
 export function escalateSession(session: Session): Session {
-  return {
-    ...session,
-    status: 'escalated',
-    escalatedAt: new Date(),
-    updatedAt: new Date(),
-  };
-}
-
-export function setCurrentInteraction(session: Session, interactionId: string): Session {
-  return {
-    ...session,
-    currentInteractionId: interactionId,
-    lastActivityAt: new Date(),
-    updatedAt: new Date(),
-  };
-}
-
-export function incrementVersion(session: Session): Session {
-  return {
-    ...session,
-    version: session.version + 1,
-    updatedAt: new Date(),
-  };
+  return { ...session, status: 'ESCALATED', escalatedAt: new Date(), lastActivityAt: new Date() };
 }

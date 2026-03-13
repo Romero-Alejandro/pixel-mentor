@@ -1,0 +1,478 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/infrastructure/adapters/database/generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  TEACHER
+  ADMIN
+}
+
+enum SessionStatus {
+  IDLE
+  ACTIVE
+  PAUSED_FOR_QUESTION
+  AWAITING_CONFIRMATION
+  PAUSED_IDLE
+  COMPLETED
+  ESCALATED
+}
+
+enum TicketStatus {
+  PENDING
+  IN_REVIEW
+  RESOLVED
+  DISMISSED
+}
+
+enum EscalationReason {
+  MAX_ATTEMPTS_EXCEEDED
+  SAFETY_FLAG
+  OUT_OF_SCOPE
+  CRITICAL_VALIDATION_ERROR
+}
+
+enum ConsentStatus {
+  PENDING
+  APPROVED
+  EXPIRED
+  REVOKED
+}
+
+enum AtomType {
+  MICROLECTURE
+  DEMO
+  MINI_ACTIVITY
+  HINT
+  MINI_QUIZ
+  REMEDIAL
+  INTERACTIVE
+  MANIPULATIVE
+  DRAGDROP
+  MCQ
+}
+
+enum EventType {
+  START_LESSON
+  COMPONENT_PLAY
+  ACTIVITY_ATTEMPT
+  HINT_USED
+  LESSON_COMPLETE
+  REMEDIATION_TRIGGERED
+  TTS_PLAY
+  OTHER
+}
+
+enum ProgressStatus {
+  LOCKED
+  UNLOCKED
+  IN_PROGRESS
+  MASTERED
+  NEEDS_REMEDIATION
+  FAILED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique @db.VarChar(255)
+  passwordHash String @db.VarChar(255)
+  name      String   @db.VarChar(255)
+  role      Role     @default(STUDENT)
+  age       Int?     @db.SmallInt
+  quota     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions           Session[]
+  apiKeys            ApiKey[]
+  attempts           ActivityAttempt[]
+  progressEntries   UserProgress[]
+  competencies       CompetencyMastery[]
+  events             EventLog[]
+  consent            ParentalConsent?
+
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+model ApiKey {
+  id         String    @id @default(uuid())
+  keyHash    String    @unique @db.VarChar(255)
+  userId     String?
+  lastUsedAt DateTime?
+  usageCount Int       @default(0)
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+  @@map("api_keys")
+}
+
+model ParentalConsent {
+  id          String        @id @default(uuid())
+  studentId   String        @unique
+  parentEmail String        @db.VarChar(255)
+  status      ConsentStatus @default(PENDING)
+  expiresAt   DateTime
+  consentedAt DateTime?
+  ipAddress   String?       @db.VarChar(45)
+  userAgent   String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@map("parental_consents")
+}
+
+model Level {
+  id        String   @id @default(uuid())
+  slug      String   @unique @db.VarChar(100)
+  name      String   @db.VarChar(255)
+  minAge    Int?     @db.SmallInt
+  maxAge    Int?     @db.SmallInt
+  modules   Module[]
+  createdAt DateTime @default(now())
+
+  @@map("levels")
+}
+
+model Module {
+  id        String   @id @default(uuid())
+  slug      String   @unique @db.VarChar(100)
+  name      String   @db.VarChar(255)
+  levelId   String
+  recipes   Recipe[]
+  createdAt DateTime @default(now())
+
+  level Level @relation(fields: [levelId], references: [id], onDelete: Cascade)
+
+  @@index([levelId])
+  @@map("modules")
+}
+
+model Recipe {
+  id                     String   @id @default(uuid())
+  canonicalId            String   @unique @db.VarChar(100)
+  title                  String   @db.VarChar(255)
+  description            String?
+  expectedDurationMinutes Int?    @db.SmallInt
+  version                String   @default("1.0.0") @db.VarChar(20)
+  published              Boolean  @default(false)
+  moduleId               String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  module          Module?           @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  steps           RecipeStep[]
+  tags            RecipeTag[]
+  sessions        Session[]
+  progressEntries UserProgress[]
+  attachments     AssetAttachment[]
+
+  @@index([published, moduleId])
+  @@map("recipes")
+}
+
+model RecipeStep {
+  id        String   @id @default(uuid())
+  recipeId  String
+  atomId    String
+  order     Int      @db.SmallInt
+  condition Json?
+  onCondition String? @db.VarChar(100)
+  createdAt DateTime @default(now())
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  atom   Atom   @relation(fields: [atomId], references: [id], onDelete: Restrict)
+
+  @@unique([recipeId, order])
+  @@index([recipeId])
+  @@map("recipe_steps")
+}
+
+model Atom {
+  id                   String    @id @default(uuid())
+  canonicalId          String    @unique @db.VarChar(100)
+  title                String    @db.VarChar(255)
+  description          String?
+  type                 AtomType
+  ssmlChunks           Json?
+  content              Json?
+  locale               String    @default("es-AR") @db.VarChar(10)
+  durationSeconds      Int?      @db.SmallInt
+  difficulty           Int       @default(1) @db.SmallInt
+  version              String    @default("1.0.0") @db.VarChar(20)
+  published            Boolean   @default(false)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  options              AtomOption[]
+  recipeSteps          RecipeStep[]
+  competencies         AtomCompetency[]
+  attachments          AssetAttachment[]
+  attempts             ActivityAttempt[]
+  progressEntries      UserProgress[]
+  knowledgeChunks      KnowledgeChunk[]
+
+  @@index([published, locale, difficulty])
+  @@map("atoms")
+}
+
+model AtomOption {
+  id        String   @id @default(uuid())
+  atomId    String
+  text      String   @db.VarChar(500)
+  isCorrect Boolean  @default(false)
+  order     Int      @db.SmallInt
+  feedback  String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  atom Atom @relation(fields: [atomId], references: [id], onDelete: Cascade)
+  attempts ActivityAttempt[]
+
+  @@index([atomId, isCorrect])
+  @@map("atom_options")
+}
+
+model KnowledgeChunk {
+  id         String   @id @default(uuid())
+  atomId     String
+  index      Int      @db.SmallInt
+  chunkText  String   @db.Text
+  embedding  Json?
+  tsvector   String?
+  version    Int      @default(1)
+  isImmutable Boolean @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  atom Atom @relation(fields: [atomId], references: [id], onDelete: Cascade)
+
+  @@index([atomId, index])
+  @@map("knowledge_chunks")
+}
+
+model Session {
+  id                 String        @id @default(uuid())
+  studentId          String
+  recipeId           String
+  status             SessionStatus @default(IDLE)
+  stateCheckpoint    Json
+  meta               Json?
+  startedAt          DateTime      @default(now())
+  lastActivityAt     DateTime      @updatedAt
+  completedAt        DateTime?
+  escalatedAt        DateTime?
+
+  student            User          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  recipe             Recipe        @relation(fields: [recipeId], references: [id], onDelete: Restrict)
+  interactions       Interaction[]
+  eventLogs          EventLog[]
+  tickets            TeacherReviewTicket[]
+
+  @@index([studentId, status])
+  @@index([recipeId])
+  @@map("sessions")
+}
+
+model Interaction {
+  id                 String   @id @default(uuid())
+  sessionId          String
+  turnNumber         Int      @db.SmallInt
+  transcript         String   @db.Text
+  aiResponse         Json?
+  comprehensionConfirmed Boolean @default(false)
+  questionAsked      Boolean @default(false)
+  pausedForQuestion  Boolean @default(false)
+  flaggedForReview   Boolean @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, turnNumber])
+  @@map("interactions")
+}
+
+model TeacherReviewTicket {
+  id           String           @id @default(uuid())
+  sessionId    String
+  studentId    String
+  status       TicketStatus     @default(PENDING)
+  reason       EscalationReason
+  snapshot     Json
+  teacherNotes String?          @db.Text
+  createdAt    DateTime         @default(now())
+  resolvedAt   DateTime?
+  updatedAt    DateTime         @updatedAt
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([studentId, status])
+  @@map("teacher_review_tickets")
+}
+
+model Asset {
+  id        String   @id @default(uuid())
+  key       String   @unique @db.VarChar(255)
+  url       String   @db.VarChar(512)
+  mime      String?  @db.VarChar(50)
+  size      Int?
+  meta      Json?
+  uploadedAt DateTime @default(now())
+
+  attachments AssetAttachment[]
+
+  @@map("assets")
+}
+
+model AssetAttachment {
+  id       String   @id @default(uuid())
+  assetId  String
+  atomId   String?
+  recipeId String?
+  createdAt DateTime @default(now())
+
+  asset  Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  atom   Atom?  @relation(fields: [atomId], references: [id], onDelete: Cascade)
+  recipe Recipe? @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@index([atomId])
+  @@index([recipeId])
+  @@index([assetId])
+  @@map("asset_attachments")
+}
+
+model Competency {
+  id          String   @id @default(uuid())
+  code        String   @unique @db.VarChar(50)
+  name        String   @db.VarChar(255)
+  description String?
+  createdAt   DateTime @default(now())
+
+  atoms        AtomCompetency[]
+  mastery      CompetencyMastery[]
+
+  @@map("competencies")
+}
+
+model AtomCompetency {
+  id           String   @id @default(uuid())
+  atomId       String
+  competencyId String
+  weight       Float    @default(1.0)
+
+  atom       Atom       @relation(fields: [atomId], references: [id], onDelete: Cascade)
+  competency Competency @relation(fields: [competencyId], references: [id], onDelete: Cascade)
+
+  @@unique([atomId, competencyId])
+  @@index([competencyId])
+  @@map("atom_competencies")
+}
+
+model Tag {
+  id        String   @id @default(uuid())
+  name      String   @unique @db.VarChar(100)
+  recipes   RecipeTag[]
+
+  @@map("tags")
+}
+
+model RecipeTag {
+  id        String   @id @default(uuid())
+  recipeId  String
+  tagId     String
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  tag     Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([recipeId, tagId])
+  @@index([tagId])
+  @@map("recipe_tags")
+}
+
+model UserProgress {
+  id            String        @id @default(uuid())
+  userId        String
+  recipeId      String?
+  atomId        String?
+  status        ProgressStatus @default(LOCKED)
+  score         Float?
+  attempts      Int           @default(0) @db.SmallInt
+  lastAttemptAt DateTime?
+  updatedAt     DateTime      @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe  Recipe? @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  atom    Atom?   @relation(fields: [atomId], references: [id], onDelete: Cascade)
+
+  @@index([userId, recipeId, atomId])
+  @@index([userId, status])
+  @@map("user_progress")
+}
+
+model ActivityAttempt {
+  id            String   @id @default(uuid())
+  userId        String
+  atomId        String
+  atomOptionId  String?
+  attemptNo     Int      @default(1) @db.SmallInt
+  response      Json?
+  correct       Boolean?
+  elapsedMs     Int?
+  hintUsed      Int      @default(0) @db.SmallInt
+  meta          Json?
+  createdAt     DateTime @default(now())
+
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  atom           Atom          @relation(fields: [atomId], references: [id], onDelete: Cascade)
+  selectedOption AtomOption?   @relation(fields: [atomOptionId], references: [id], onDelete: SetNull)
+
+  @@index([userId, atomId, createdAt])
+  @@map("activity_attempts")
+}
+
+model CompetencyMastery {
+  id            String   @id @default(uuid())
+  userId        String
+  competencyId  String
+  mastery       Float    @default(0)
+  lastUpdated   DateTime @updatedAt
+
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  competency Competency    @relation(fields: [competencyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, competencyId])
+  @@index([userId, mastery])
+  @@map("competency_masteries")
+}
+
+model EventLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  sessionId String?
+  eventType EventType
+  data      Json
+  timestamp DateTime @default(now())
+
+  user    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  session Session? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([userId, eventType, timestamp])
+  @@index([sessionId])
+  @@map("event_logs")
+}

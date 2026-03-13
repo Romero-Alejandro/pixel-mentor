@@ -14,7 +14,6 @@ const mapTicketToDomain = (entity: PrismaTicket): TeacherReviewTicket => {
     id: entity.id,
     sessionId: entity.sessionId,
     studentId: entity.studentId,
-    lessonId: entity.lessonId,
     status: entity.status as TicketStatus,
     reason: entity.reason as any,
     snapshot: {
@@ -76,7 +75,6 @@ export class PrismaTeacherReviewTicketRepository implements TeacherReviewTicketR
         id: ticket.id,
         sessionId: ticket.sessionId,
         studentId: ticket.studentId,
-        lessonId: ticket.lessonId,
         status: 'PENDING',
         reason: ticket.reason as unknown as any,
         snapshot: ticket.snapshot as unknown as any,

@@ -10,7 +10,6 @@ export interface TeacherReviewTicket {
   readonly id: string;
   readonly sessionId: string;
   readonly studentId: string;
-  readonly lessonId: string;
   readonly status: TicketStatus;
   readonly reason: EscalationReason;
   readonly snapshot: {
@@ -33,7 +32,6 @@ export function createTeacherReviewTicket(parameters: {
   id: string;
   sessionId: string;
   studentId: string;
-  lessonId: string;
   reason: EscalationReason;
   snapshot: TeacherReviewTicket['snapshot'];
 }): TeacherReviewTicket {
@@ -42,7 +40,6 @@ export function createTeacherReviewTicket(parameters: {
     id: parameters.id,
     sessionId: parameters.sessionId,
     studentId: parameters.studentId,
-    lessonId: parameters.lessonId,
     status: 'PENDING',
     reason: parameters.reason,
     snapshot: parameters.snapshot,

@@ -1,4 +1,4 @@
-import { Router, type Request, type Response, type NextFunction } from 'express';
+import { type Request, type Response, type NextFunction } from 'express';
 import { z } from 'zod';
 import type pino from 'pino';
 
@@ -57,11 +57,4 @@ export class SessionsController {
       next(error);
     }
   }
-}
-
-export function createSessionsRouter(controller: SessionsController): Router {
-  const router = Router();
-  router.get('/:id', controller.get.bind(controller));
-  router.get('/', controller.list.bind(controller));
-  return router;
 }

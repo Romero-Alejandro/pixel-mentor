@@ -2,7 +2,8 @@ import type { Prisma } from '../client.js';
 import { prisma } from '../client.js';
 import { handlePrismaError } from '../error-handler.js';
 
-import type { Session, SessionStatus } from '@/domain/entities/session';
+import type { Session, SessionStatus, SessionCheckpoint } from '@/domain/entities/session';
+import type { PedagogicalState } from '@/domain/entities/pedagogical-state';
 import type { SessionRepository } from '@/domain/ports/session-repository';
 import {
   SessionNotFoundError,
@@ -11,20 +12,49 @@ import {
 
 type PrismaSession = NonNullable<Awaited<ReturnType<typeof prisma.session.findUnique>>>;
 
+function serializeCheckpoint(checkpoint: SessionCheckpoint): Prisma.InputJsonValue {
+  return {
+    currentState: checkpoint.currentState,
+    currentStepIndex: checkpoint.currentStepIndex,
+    savedStepIndex: checkpoint.savedStepIndex ?? null,
+    doubtContext: checkpoint.doubtContext
+      ? {
+          question: checkpoint.doubtContext.question,
+          stepIndex: checkpoint.doubtContext.stepIndex,
+        }
+      : null,
+  } as Prisma.InputJsonValue;
+}
+
+function normalizeCheckpoint(raw: Record<string, unknown> | null | undefined): SessionCheckpoint {
+  const data = raw ?? {};
+  return {
+    currentState: (data.currentState as PedagogicalState) ?? 'ACTIVE_CLASS',
+    currentStepIndex: Number(data.currentStepIndex ?? 0),
+    savedStepIndex: data.savedStepIndex ? Number(data.savedStepIndex) : undefined,
+    doubtContext: data.doubtContext
+      ? (() => {
+          const ctx = data.doubtContext as any;
+          return {
+            question: ctx.question,
+            stepIndex: Number(ctx.stepIndex),
+          };
+        })()
+      : undefined,
+  };
+}
+
 const mapSessionToDomain = (entity: PrismaSession): Session => ({
   id: entity.id,
   studentId: entity.studentId,
-  lessonId: entity.lessonId,
+  recipeId: entity.recipeId,
   status: entity.status as SessionStatus,
-  stateCheckpoint: entity.stateCheckpoint as Record<string, unknown>,
-  currentInteractionId: entity.currentInteractionId,
+  stateCheckpoint: normalizeCheckpoint(entity.stateCheckpoint as Record<string, unknown>),
   startedAt: entity.startedAt,
   lastActivityAt: entity.lastActivityAt,
   completedAt: entity.completedAt,
   escalatedAt: entity.escalatedAt,
-  version: entity.version,
-  createdAt: entity.createdAt,
-  updatedAt: entity.updatedAt,
+  meta: entity.meta ?? undefined,
 });
 
 export class PrismaSessionRepository implements SessionRepository {
@@ -33,9 +63,9 @@ export class PrismaSessionRepository implements SessionRepository {
     return session ? mapSessionToDomain(session) : null;
   }
 
-  async findByStudentAndLesson(studentId: string, lessonId: string): Promise<Session | null> {
+  async findByStudentAndRecipe(studentId: string, recipeId: string): Promise<Session | null> {
     const session = await prisma.session.findFirst({
-      where: { studentId, lessonId },
+      where: { studentId, recipeId },
     });
     return session ? mapSessionToDomain(session) : null;
   }
@@ -52,7 +82,7 @@ export class PrismaSessionRepository implements SessionRepository {
     const sessions = await prisma.session.findMany({
       where: {
         studentId,
-        status: { in: ['active', 'paused_for_question', 'awaiting_confirmation', 'paused_idle'] },
+        status: { in: ['ACTIVE', 'PAUSED_FOR_QUESTION', 'AWAITING_CONFIRMATION', 'PAUSED_IDLE'] },
       },
       orderBy: { lastActivityAt: 'desc' },
     });
@@ -60,19 +90,18 @@ export class PrismaSessionRepository implements SessionRepository {
   }
 
   async create(
-    session: Omit<Session, 'startedAt' | 'createdAt' | 'updatedAt' | 'version'>,
+    session: Omit<Session, 'startedAt' | 'lastActivityAt' | 'completedAt' | 'escalatedAt' | 'meta'>,
   ): Promise<Session> {
+    const now = new Date();
     const created = await prisma.session.create({
       data: {
         id: session.id,
         studentId: session.studentId,
-        lessonId: session.lessonId,
+        recipeId: session.recipeId,
         status: session.status,
-        stateCheckpoint: session.stateCheckpoint as Prisma.InputJsonValue,
-        currentInteractionId: session.currentInteractionId,
-        lastActivityAt: session.lastActivityAt,
-        completedAt: session.completedAt,
-        escalatedAt: session.escalatedAt,
+        stateCheckpoint: serializeCheckpoint(session.stateCheckpoint),
+        startedAt: now,
+        lastActivityAt: now,
       },
     });
     return mapSessionToDomain(created);
@@ -90,23 +119,11 @@ export class PrismaSessionRepository implements SessionRepository {
     }
   }
 
-  async updateCheckpoint(sessionId: string, checkpoint: Record<string, unknown>): Promise<Session> {
+  async updateCheckpoint(sessionId: string, checkpoint: SessionCheckpoint): Promise<Session> {
     try {
       const updated = await prisma.session.update({
         where: { id: sessionId },
-        data: { stateCheckpoint: checkpoint as Prisma.InputJsonValue },
-      });
-      return mapSessionToDomain(updated);
-    } catch (error) {
-      handlePrismaError(error, SessionNotFoundError, sessionId);
-    }
-  }
-
-  async setCurrentInteraction(sessionId: string, interactionId: string | null): Promise<Session> {
-    try {
-      const updated = await prisma.session.update({
-        where: { id: sessionId },
-        data: { currentInteractionId: interactionId },
+        data: { stateCheckpoint: serializeCheckpoint(checkpoint) },
       });
       return mapSessionToDomain(updated);
     } catch (error) {
@@ -121,12 +138,12 @@ export class PrismaSessionRepository implements SessionRepository {
     });
 
     if (!session) throw new SessionNotFoundError(sessionId);
-    if (session.status === 'completed') throw new SessionAlreadyCompletedError(sessionId);
+    if (session.status === 'COMPLETED') throw new SessionAlreadyCompletedError(sessionId);
 
     const updated = await prisma.session.update({
       where: { id: sessionId },
       data: {
-        status: 'completed',
+        status: 'COMPLETED',
         completedAt: new Date(),
       },
     });
@@ -139,7 +156,7 @@ export class PrismaSessionRepository implements SessionRepository {
       const updated = await prisma.session.update({
         where: { id: sessionId },
         data: {
-          status: 'escalated',
+          status: 'ESCALATED',
           escalatedAt: new Date(),
         },
       });
@@ -149,11 +166,31 @@ export class PrismaSessionRepository implements SessionRepository {
     }
   }
 
-  async incrementVersion(sessionId: string): Promise<Session> {
+  async incrementFailedAttempts(sessionId: string): Promise<Session> {
     try {
       const updated = await prisma.session.update({
         where: { id: sessionId },
-        data: { version: { increment: 1 } },
+        data: {
+          failedAttempts: { increment: 1 },
+        },
+      });
+      return mapSessionToDomain(updated);
+    } catch (error) {
+      handlePrismaError(error, SessionNotFoundError, sessionId);
+    }
+  }
+
+  async resetProgress(sessionId: string): Promise<Session> {
+    try {
+      const updated = await prisma.session.update({
+        where: { id: sessionId },
+        data: {
+          stateCheckpoint: {
+            currentState: 'ACTIVE_CLASS',
+            currentStepIndex: 0,
+          },
+          status: 'IDLE',
+        },
       });
       return mapSessionToDomain(updated);
     } catch (error) {

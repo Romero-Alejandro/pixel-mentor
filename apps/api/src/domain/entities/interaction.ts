@@ -1,17 +1,9 @@
-export interface AIResponseMetadata {
-  readonly text: string;
-  readonly responseType: 'explanation' | 'answer' | 'hint' | 'repeat';
-  readonly microQuestion?: string;
-  readonly citations?: readonly string[];
-  readonly chainOfThought?: string;
-}
-
 export interface Interaction {
   readonly id: string;
   readonly sessionId: string;
   readonly turnNumber: number;
   readonly transcript: string;
-  readonly aiResponse: AIResponseMetadata | null;
+  readonly aiResponse?: any; // JSON flexible según el nuevo schema
   readonly comprehensionConfirmed: boolean;
   readonly questionAsked: boolean;
   readonly pausedForQuestion: boolean;
@@ -25,7 +17,7 @@ export function createInteraction(parameters: {
   sessionId: string;
   turnNumber: number;
   transcript: string;
-  aiResponse?: AIResponseMetadata | null;
+  aiResponse?: any;
   questionAsked?: boolean;
   pausedForQuestion?: boolean;
 }): Interaction {
@@ -35,7 +27,7 @@ export function createInteraction(parameters: {
     sessionId: parameters.sessionId,
     turnNumber: parameters.turnNumber,
     transcript: parameters.transcript,
-    aiResponse: parameters.aiResponse ?? null,
+    aiResponse: parameters.aiResponse,
     comprehensionConfirmed: false,
     questionAsked: parameters.questionAsked ?? false,
     pausedForQuestion: parameters.pausedForQuestion ?? false,
@@ -45,37 +37,18 @@ export function createInteraction(parameters: {
   };
 }
 
-export function setAIResponse(
-  interaction: Interaction,
-  aiResponse: AIResponseMetadata,
-): Interaction {
-  return {
-    ...interaction,
-    aiResponse,
-    updatedAt: new Date(),
-  };
+export function setAIResponse(interaction: Interaction, aiResponse: any): Interaction {
+  return { ...interaction, aiResponse, updatedAt: new Date() };
 }
 
 export function confirmComprehension(interaction: Interaction): Interaction {
-  return {
-    ...interaction,
-    comprehensionConfirmed: true,
-    updatedAt: new Date(),
-  };
+  return { ...interaction, comprehensionConfirmed: true, updatedAt: new Date() };
 }
 
 export function flagForReview(interaction: Interaction): Interaction {
-  return {
-    ...interaction,
-    flaggedForReview: true,
-    updatedAt: new Date(),
-  };
+  return { ...interaction, flaggedForReview: true, updatedAt: new Date() };
 }
 
 export function markAsQuestion(interaction: Interaction): Interaction {
-  return {
-    ...interaction,
-    questionAsked: true,
-    updatedAt: new Date(),
-  };
+  return { ...interaction, questionAsked: true, updatedAt: new Date() };
 }

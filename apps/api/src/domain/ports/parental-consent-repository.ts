@@ -6,7 +6,7 @@ export interface ParentalConsentRepository {
   findByStudent(studentId: string): Promise<ParentalConsent | null>;
 
   create(
-    consent: Omit<ParentalConsent, 'consentDate' | 'createdAt' | 'updatedAt'>,
+    consent: Omit<ParentalConsent, 'consentedAt' | 'createdAt' | 'updatedAt'>,
   ): Promise<ParentalConsent>;
 
   updateStatus(consentId: string, status: ConsentStatus): Promise<ParentalConsent>;

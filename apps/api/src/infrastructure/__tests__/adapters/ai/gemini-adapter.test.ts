@@ -1,89 +1,76 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-import { GeminiAIModelAdapter } from '@/infrastructure/adapters/ai/gemini-adapter';
+import { GeminiAIModelAdapter } from '@/infrastructure/adapters/ai/gemini/gemini-adapters.js';
+import type { PromptRepository } from '@/domain/ports/prompt-repository.js';
 
 jest.mock('@google/generative-ai');
 
 describe('GeminiAIModelAdapter', () => {
   let adapter: GeminiAIModelAdapter;
   let mockGenerateContent: jest.Mock;
+  const mockPromptRepo = {} as jest.Mocked<PromptRepository>;
 
   beforeEach(() => {
-    mockGenerateContent = jest.fn().mockResolvedValue({
-      response: {
-        text: () => '{"voiceText": "Mocked response", "pedagogicalState": "EXPLANATION"}',
-      },
-    });
-
+    mockGenerateContent = jest.fn();
     (GoogleGenerativeAI as jest.Mock).mockImplementation(() => ({
       getGenerativeModel: jest.fn().mockReturnValue({
         generateContent: mockGenerateContent,
       }),
     }));
-
-    adapter = new GeminiAIModelAdapter('mock-api-key');
+    mockPromptRepo.getPrompt = jest.fn().mockReturnValue('Mocked prompt');
+    adapter = new GeminiAIModelAdapter(mockPromptRepo, 'fake-api-key');
   });
 
-  it('should initialize with API key', () => {
+  it('should initialize', () => {
     expect(adapter).toBeDefined();
   });
 
-  it('should generate response successfully', async () => {
-    const parameters = {
-      lesson: {
-        id: 'lesson-1',
-        title: 'Test Lesson',
-        description: 'Test Description',
-        concepts: [],
-        analogies: [],
-        commonErrors: [],
-        baseExplanation: 'Test Explanation',
-        questions: [],
-        chunks: [],
-        active: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+  it('should generate structured response successfully', async () => {
+    const jsonResponse = {
+      explanation: 'This is an explanation',
+      supportQuotes: ['Quote 1', 'Quote 2'],
+      verificationQuestion: 'What is 2+2?',
+      microInteraction: { type: 'HOOK', text: 'Ready for more?' },
+    };
+
+    mockGenerateContent.mockResolvedValue({
+      response: {
+        text: () => JSON.stringify(jsonResponse),
       },
-      currentState: 'EXPLANATION' as const,
+    });
+
+    const params = {
+      lesson: { title: 'Test Lesson' },
+      currentState: 'ACTIVE_CLASS',
       conversationHistory: [],
     };
 
-    const result = await adapter.generateResponse(parameters);
+    const result = await adapter.generateResponse(params);
 
-    expect(mockGenerateContent).toHaveBeenCalled();
-    expect(result.voiceText).toBe('Mocked response');
-    expect(result.pedagogicalState).toBe('EXPLANATION');
+    expect(result.explanation).toBe('This is an explanation');
+    expect(result.supportQuotes).toEqual(['Quote 1', 'Quote 2']);
+    expect(result.verificationQuestion).toBe('What is 2+2?');
+    expect(result.microInteraction).toEqual({ type: 'HOOK', text: 'Ready for more?' });
+    expect(result.pedagogicalState).toBe('ACTIVE_CLASS');
   });
 
-  it('should handle errors gracefully', async () => {
+  it('should handle invalid JSON gracefully', async () => {
     mockGenerateContent.mockResolvedValue({
       response: {
         text: () => 'Invalid JSON',
       },
     });
 
-    const parameters = {
-      lesson: {
-        id: 'lesson-1',
-        title: 'Test Lesson',
-        description: 'Test Description',
-        concepts: [],
-        analogies: [],
-        commonErrors: [],
-        baseExplanation: 'Test Explanation',
-        questions: [],
-        chunks: [],
-        active: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      currentState: 'EXPLANATION' as const,
+    const params = {
+      lesson: { title: 'Test Lesson' },
+      currentState: 'EXPLANATION',
       conversationHistory: [],
     };
 
-    const result = await adapter.generateResponse(parameters);
+    const result = await adapter.generateResponse(params);
 
-    expect(result.voiceText).toContain('problema técnico');
-    expect(result.pedagogicalState).toBe('QUESTION');
+    expect(result.explanation).toBe('Tuve un problema técnico, ¿puedes intentarlo de nuevo?');
+    expect(result.supportQuotes).toEqual([]);
+    expect(result.pedagogicalState).toBe('EXPLANATION');
   });
 });

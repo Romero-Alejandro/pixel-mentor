@@ -1,0 +1,40 @@
+export interface ActivityAttempt {
+  readonly id: string;
+  readonly userId: string;
+  readonly atomId: string;
+  readonly atomOptionId?: string;
+  readonly attemptNo: number;
+  readonly response?: any;
+  readonly correct?: boolean;
+  readonly elapsedMs?: number;
+  readonly hintUsed: number;
+  readonly meta?: any;
+  readonly createdAt: Date;
+}
+
+export function createActivityAttempt(parameters: {
+  id: string;
+  userId: string;
+  atomId: string;
+  attemptNo?: number;
+  atomOptionId?: string;
+  response?: any;
+  correct?: boolean;
+  elapsedMs?: number;
+  hintUsed?: number;
+  meta?: any;
+}): ActivityAttempt {
+  return {
+    id: parameters.id,
+    userId: parameters.userId,
+    atomId: parameters.atomId,
+    atomOptionId: parameters.atomOptionId,
+    attemptNo: parameters.attemptNo ?? 1,
+    response: parameters.response,
+    correct: parameters.correct,
+    elapsedMs: parameters.elapsedMs,
+    hintUsed: parameters.hintUsed ?? 0,
+    meta: parameters.meta,
+    createdAt: new Date(),
+  };
+}

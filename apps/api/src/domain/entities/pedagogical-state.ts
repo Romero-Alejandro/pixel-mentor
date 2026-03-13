@@ -1,9 +1,21 @@
-export type PedagogicalState = 'EXPLANATION' | 'QUESTION' | 'EVALUATION';
+export type PedagogicalState =
+  | 'ACTIVE_CLASS'
+  | 'RESOLVING_DOUBT'
+  | 'CLARIFYING'
+  | 'QUESTION'
+  | 'EVALUATION'
+  | 'COMPLETED'
+  // Legacy states for backward compatibility
+  | 'EXPLANATION';
 
 export const PEDAGOGICAL_STATES: readonly PedagogicalState[] = [
-  'EXPLANATION',
+  'ACTIVE_CLASS',
+  'RESOLVING_DOUBT',
+  'CLARIFYING',
   'QUESTION',
   'EVALUATION',
+  'COMPLETED',
+  'EXPLANATION',
 ] as const;
 
 export function isPedagogicalState(value: unknown): value is PedagogicalState {
@@ -12,12 +24,22 @@ export function isPedagogicalState(value: unknown): value is PedagogicalState {
 
 export function getStateDescription(state: PedagogicalState): string {
   switch (state) {
+    case 'ACTIVE_CLASS':
+      return 'Mission active: delivering gamified content';
+    case 'RESOLVING_DOUBT':
+      return 'Solving student doubt';
+    case 'CLARIFYING':
+      return 'Requesting clarification from student';
+    case 'QUESTION':
+      return 'Formal question posed to student';
+    case 'EVALUATION':
+      return 'Evaluating student answer';
+    case 'COMPLETED':
+      return 'Lesson completed';
     case 'EXPLANATION':
       return 'The tutor explains a concept to the student';
-    case 'QUESTION':
-      return 'The tutor asks a question to the student';
-    case 'EVALUATION':
-      return 'The tutor evaluates the student response';
+    default:
+      return 'Unknown state';
   }
 }
 

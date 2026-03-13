@@ -278,27 +278,6 @@ curl -X POST http://localhost:3001/api/leccion/start \
 Los endpoints protegidos requieren un token JWT en el header:
 `Authorization: Bearer <token>`
 
----
-
-## 🤝 Contribución
-
-Consulte el archivo [AGENTS.md](AGENTS.md) para directrices específicas sobre la arquitectura y el flujo de trabajo con IA.
-
-1.  **Clona el repositorio**: `git clone ...`
-2.  **Crea una rama**: `git checkout -b feature/nueva-funcionalidad`
-3.  **Realiza cambios**: Sigue los estándares de código (Prettier/ESLint).
-4.  **Ejecuta pruebas**: Asegúrate de que todos los tests pasen.
-5.  **Commitea**: Sigue el convencional commits.
-6.  **Push y PR**: Abre un Pull Request hacia `main`.
-
-### Directrices de Código
-
-- **TypeScript Estricto**: Tipado explícito y estricto.
-- **Principio SRP**: Funciones y clases con una única responsabilidad.
-- **Hexagonal Architecture**: Mantén la separación de dominios, aplicación e infraestructura.
-
----
-
 ## 📜 Licencia
 
 Distribuido bajo la licencia MIT. Consulte el archivo [LICENSE](LICENSE) para más detalles.

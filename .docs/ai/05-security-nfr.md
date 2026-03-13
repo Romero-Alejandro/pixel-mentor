@@ -1,21 +1,27 @@
 # Security, Resiliency & NFRs
 
-## RNF1: Seguridad y Privacidad (Zero-Audio)
+Políticas no funcionales y de seguridad para proteger a los usuarios menores de edad y asegurar la disponibilidad del sistema contra fallos de las APIs de Google.
 
-- **RNF1.1:** Prohibir estrictamente la recepción, el procesamiento o el almacenamiento de blobs de audio en el servidor, delegando las funciones de STT/TTS al entorno del cliente.
-- **RNF1.2:** Aplicar una política de retención temporal (TTL configurable) a las transcripciones almacenadas.
-- **RNF1.3:** Proveer endpoints estandarizados para el borrado definitivo y la exportación de datos, garantizando el cumplimiento normativo.
+---
 
-## RNF2: Resiliencia de Infraestructura Externa (LLM)
+<ai_invariants>
+[ZERO_AUDIO_PRIVACY]
 
-- **RNF2.1:** Enrutar toda comunicación externa con proveedores LLM obligatoriamente a través del `ApiKeyRotatorService`.
-- **RNF2.2:** Implementar en el rotador de claves una estrategia Round-Robin equilibrada.
-- **RNF2.3:** Implementar el patrón _Circuit Breaker_ (ej. 5 errores en 60s) para aislar proactivamente claves degradadas o con cuota excedida.
-- **RNF2.4:** Ejecutar health-checks periódicos para monitorear la latencia del proveedor.
+- Server-Side: STRICTLY PROHIBITED to receive, process, or store audio blobs.
+- Infrastructure: STT/TTS must run entirely client-side.
+- Data Retention: Apply strict TTL to stored text transcripts. Provide wipe endpoints.
 
-## RNF3: Escalado Humano (Fallback)
+[LLM_RESILIENCY]
 
-- **RNF3.1:** Generar de forma asíncrona un ticket de revisión humana (`teacher_review`) que adjunte el snapshot del estado de la sesión bajo las siguientes condiciones:
-  - Agotar el límite configurado de reintentos pedagógicos.
-  - Detectar contenido inseguro a través de las banderas de seguridad (Safety Flags) del proveedor LLM.
-  - Fallar las validaciones de contrato de esquema (Zod) de forma repetitiva.
+- Routing: ALL Gemini calls MUST route through `ApiKeyRotatorService`.
+- Strategy: Balanced Round-Robin.
+- Circuit Breaker: Trip after 5 errors in 60 seconds. Isolate degraded keys.
+- Health: Periodic latency checks required.
+
+[ESCALATION_FALLBACK]
+
+- Trigger async `teacher_review` ticket creation IF:
+  - Pedagogical retry limits are exhausted.
+  - LLM Safety Flags detect unsafe content.
+  - Zod schema validation fails repetitively.
+    </ai_invariants>

@@ -32,7 +32,11 @@ describe('PrismaSessionRepository', () => {
     studentId: randomUUID(),
     lessonId: randomUUID(),
     status: 'active',
-    stateCheckpoint: { currentState: 'EXPLANATION', currentQuestionIndex: 0 },
+    stateCheckpoint: {
+      currentState: 'ACTIVE_CLASS',
+      currentSegmentIndex: 0,
+      currentQuestionIndex: 0,
+    },
     currentInteractionId: null,
     startedAt: new Date(),
     lastActivityAt: new Date(),
@@ -132,7 +136,11 @@ describe('PrismaSessionRepository', () => {
         studentId: mockSession.studentId,
         lessonId: mockSession.lessonId,
         status: 'idle' as const,
-        stateCheckpoint: { currentState: 'EXPLANATION', currentQuestionIndex: 0 },
+        stateCheckpoint: {
+          currentState: 'ACTIVE_CLASS' as const,
+          currentSegmentIndex: 0,
+          currentQuestionIndex: 0,
+        },
         currentInteractionId: null,
         lastActivityAt: new Date(),
         completedAt: null,
@@ -172,17 +180,38 @@ describe('PrismaSessionRepository', () => {
 
   describe('updateCheckpoint', () => {
     it('should update session checkpoint', async () => {
-      const checkpoint = { currentState: 'QUESTION', currentQuestionIndex: 1 };
+      const checkpoint = {
+        currentState: 'ACTIVE_CLASS' as const,
+        currentSegmentIndex: 0,
+        currentQuestionIndex: 1,
+        savedSegmentIndex: undefined,
+        doubtContext: undefined,
+      };
       const updatedSession = { ...mockSession, stateCheckpoint: checkpoint };
       (prisma.session.update as jest.Mock).mockResolvedValueOnce(updatedSession);
 
       const result = await repository.updateCheckpoint(mockSession.id, checkpoint);
 
+      // serializeCheckpoint converts undefined to null for Prisma JSON
+      const serializedCheckpoint = {
+        currentState: checkpoint.currentState,
+        currentSegmentIndex: checkpoint.currentSegmentIndex,
+        currentQuestionIndex: checkpoint.currentQuestionIndex,
+        savedSegmentIndex: null,
+        doubtContext: null,
+      };
+
       expect(prisma.session.update).toHaveBeenCalledWith({
         where: { id: mockSession.id },
-        data: { stateCheckpoint: checkpoint },
+        data: { stateCheckpoint: serializedCheckpoint },
       });
-      expect(result.stateCheckpoint).toEqual(checkpoint);
+      expect(result.stateCheckpoint).toEqual({
+        currentState: checkpoint.currentState,
+        currentSegmentIndex: checkpoint.currentSegmentIndex,
+        currentQuestionIndex: checkpoint.currentQuestionIndex,
+        savedSegmentIndex: undefined,
+        doubtContext: undefined,
+      });
     });
   });
 

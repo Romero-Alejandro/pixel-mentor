@@ -1,20 +1,22 @@
 # Architecture & Tech Stack
 
-## Stack
+<ai_invariants>
+[STACK]
 
-- **Frontend:** React (Vite, NO Next.js), Zustand, Tailwind CSS, Web Speech API, SpeechSynthesis API.
-- **Backend:** Node.js (LTS), Express, PostgreSQL, Prisma.
-- **AI/LLM:** Gemini Flash (via custom ApiKeyRotatorService).
+- Frontend: React (Vite), Zustand, Tailwind, Web Speech API. NO Next.js.
+- Backend: Node.js (LTS), Express, PostgreSQL, Prisma.
+- AI/LLM: Gemini Flash (routed via ApiKeyRotatorService).
 
-## Backend Strict Hexagonal Rules (apps/api/src/)
+[HEXAGONAL_RULES]
 
-1. `domain/`: ZERO external dependencies. Use opaque types for IDs. CANNOT import from Application or Infrastructure.
-2. `application/`: Can ONLY import from `domain/`. Contains business use cases.
-3. `infrastructure/`: Express adapters, Prisma repositories, Gemini API integrations.
+- `domain/`: ZERO external dependencies. Use opaque types for IDs. CANNOT import from Application or Infrastructure.
+- `application/`: Can ONLY import from `domain/`. Contains business use cases.
+- `infrastructure/`: Express adapters, Prisma repositories, Gemini API integrations.
 
-## Database & Concurrency Constraints
+[DATABASE_CONSTRAINTS]
 
-- **Vectors:** Use `numeric[]` for embeddings (MVP). Plan for vector DB migration later.
-- **Concurrency:** Resolve locks and consistency using PostgreSQL advisory locks for `session_id`.
-- **Locking:** Use optimistic locking via `version` / `updated_at` columns for idempotent updates.
-- **Security:** Argon2id for passwords. Request/Response validation via Zod.
+- Vectors: Use `numeric[]` for embeddings.
+- Concurrency: MUST use PostgreSQL advisory locks mapped to `session_id`.
+- Locking: Implement Optimistic Locking via `version` / `updated_at` columns.
+- Security: Hash passwords via Argon2id. Validate requests/responses strictly via Zod.
+  </ai_invariants>

@@ -5,19 +5,26 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import type pino from 'pino';
 
-import { createLeccionRouter } from './routes/leccion';
-import { createLessonsRouter } from './routes/lessons';
-import { createSessionsRouter } from './routes/sessions';
-import { requestIdMiddleware } from './middleware/request-id';
-import { timeoutMiddleware } from './middleware/timeout';
-import { requestLoggerMiddleware } from './middleware/request-logger';
+import { createRecipeRouter } from './routes/recipe.js';
+import { createRecipesRouter } from './routes/recipes.js';
+import { createSessionsRouter } from './routes/sessions.js';
+import { createAuthRouter } from './routes/auth.js';
+import { requestIdMiddleware } from './middleware/request-id.js';
+import { timeoutMiddleware } from './middleware/timeout.js';
+import { requestLoggerMiddleware } from './middleware/request-logger.js';
+import { authMiddleware } from './middleware/auth.js';
 
 import type { PrismaClient } from '@/infrastructure/adapters/database/client.js';
-import type { OrchestrateLessonUseCase } from '@/application/use-cases/orchestrate-lesson.use-case';
-import type { GetLessonUseCase } from '@/application/use-cases/lesson/get-lesson.use-case';
-import type { ListLessonsUseCase } from '@/application/use-cases/lesson/list-lessons.use-case';
-import type { GetSessionUseCase } from '@/application/use-cases/session/get-session.use-case';
-import type { ListSessionsUseCase } from '@/application/use-cases/session/list-sessions.use-case';
+import type { OrchestrateRecipeUseCase } from '@/application/use-cases';
+import type { GetRecipeUseCase } from '@/application/use-cases/recipe/get-recipe.use-case.js';
+import type { ListRecipesUseCase } from '@/application/use-cases/recipe/list-recipes.use-case.js';
+import type { GetSessionUseCase } from '@/application/use-cases/session/get-session.use-case.js';
+import type { ListSessionsUseCase } from '@/application/use-cases/session/list-sessions.use-case.js';
+import type { ResetSessionUseCase } from '@/application/use-cases/session/reset-session.use-case.js';
+import type { UserRepository } from '@/domain/ports/user-repository.js';
+import type { RegisterUseCase } from '@/application/use-cases/auth/register.use-case.js';
+import type { LoginUseCase } from '@/application/use-cases/auth/login.use-case.js';
+import type { VerifyTokenUseCase } from '@/application/use-cases/auth/verify-token.use-case.js';
 
 export interface ServerDependencies {
   config: {
@@ -29,26 +36,37 @@ export interface ServerDependencies {
     RATE_LIMIT_MAX: number;
     RATE_LIMIT_MAX_INTERACT: number;
     REQUEST_TIMEOUT_MS: number;
+    JWT_SECRET: string;
   };
   logger: pino.Logger;
-  orchestrateUseCase: OrchestrateLessonUseCase;
   prisma: PrismaClient;
-  getLessonUseCase: GetLessonUseCase;
-  listLessonsUseCase: ListLessonsUseCase;
+  userRepo: UserRepository;
+  orchestrateUseCase: OrchestrateRecipeUseCase;
+  getRecipeUseCase: GetRecipeUseCase;
+  listRecipesUseCase: ListRecipesUseCase;
   getSessionUseCase: GetSessionUseCase;
   listSessionsUseCase: ListSessionsUseCase;
+  resetSessionUseCase: ResetSessionUseCase;
+  registerUseCase: RegisterUseCase;
+  loginUseCase: LoginUseCase;
+  verifyTokenUseCase: VerifyTokenUseCase;
 }
 
 export function createApp(deps: ServerDependencies): Express {
   const {
     config,
     logger,
-    orchestrateUseCase,
     prisma,
-    getLessonUseCase,
-    listLessonsUseCase,
+    userRepo,
+    orchestrateUseCase,
+    getRecipeUseCase,
+    listRecipesUseCase,
     getSessionUseCase,
     listSessionsUseCase,
+    resetSessionUseCase,
+    registerUseCase,
+    loginUseCase,
+    verifyTokenUseCase,
   } = deps;
   const app = express();
 
@@ -135,9 +153,26 @@ export function createApp(deps: ServerDependencies): Express {
     });
   });
 
-  app.use('/api/leccion', createLeccionRouter(orchestrateUseCase));
-  app.use('/api/lessons', createLessonsRouter(getLessonUseCase, listLessonsUseCase));
-  app.use('/api/sessions', createSessionsRouter(getSessionUseCase, listSessionsUseCase));
+  // Auth routes (no authentication required)
+  app.use(
+    '/api/auth',
+    createAuthRouter(userRepo, registerUseCase, loginUseCase, verifyTokenUseCase),
+  );
+
+  const protectedMiddleware = authMiddleware(userRepo, verifyTokenUseCase);
+
+  // Protected routes
+  app.use('/api/recipe', protectedMiddleware, createRecipeRouter(orchestrateUseCase));
+  app.use(
+    '/api/recipes',
+    protectedMiddleware,
+    createRecipesRouter(getRecipeUseCase, listRecipesUseCase),
+  );
+  app.use(
+    '/api/sessions',
+    protectedMiddleware,
+    createSessionsRouter(getSessionUseCase, listSessionsUseCase, resetSessionUseCase),
+  );
 
   app.use((_req: Request, res: Response) => {
     res.status(404).json({ error: 'Not found' });

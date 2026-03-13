@@ -1,122 +1,100 @@
-import type { PedagogicalState } from '@/domain/entities/pedagogical-state';
+import type { PedagogicalState } from '../entities/pedagogical-state';
 
-export type StateTransition =
-  | 'START_LESSON'
-  | 'EXPLAIN_CONCEPT'
+export type StateEventType =
+  | 'EXPLAIN'
+  | 'ANSWER'
+  | 'ADVANCE'
+  | 'COMPLETE'
+  | 'EVALUATE'
+  | 'RAISE_HAND'
+  | 'RESUME_CLASS'
+  | 'CONTINUE'
   | 'ASK_QUESTION'
-  | 'RECEIVE_ANSWER'
-  | 'EVALUATE_ANSWER'
-  | 'ADVANCE_QUESTION'
-  | 'COMPLETE_LESSON'
-  | 'RETRY_CONCEPT';
+  | 'VALIDATE'
+  | 'CLARIFY';
 
-export type StateEvent =
-  | { type: 'START'; lessonId: string }
-  | { type: 'EXPLAIN'; conceptIndex: number }
-  | { type: 'ASK'; questionIndex: number }
-  | { type: 'ANSWER'; answer: string }
-  | { type: 'EVALUATE'; isCorrect: boolean }
-  | { type: 'ADVANCE' }
-  | { type: 'COMPLETE' }
-  | { type: 'RETRY' };
-
-export interface ValidTransition {
-  readonly from: PedagogicalState;
-  readonly to: PedagogicalState;
-  readonly event: StateEvent['type'];
-  readonly isValid: boolean;
+export interface StateEvent {
+  type: StateEventType;
+  conceptIndex?: number;
+  answer?: string;
+  isCorrect?: boolean;
 }
 
-export const TRANSITION_MAP: ReadonlyMap<
-  PedagogicalState,
-  ReadonlyArray<ValidTransition>
-> = new Map([
-  [
-    'EXPLANATION',
-    [
-      { from: 'EXPLANATION', to: 'QUESTION', event: 'EXPLAIN', isValid: true },
-      { from: 'EXPLANATION', to: 'EXPLANATION', event: 'RETRY', isValid: true },
-    ],
-  ],
-  [
-    'QUESTION',
-    [
-      { from: 'QUESTION', to: 'EVALUATION', event: 'ANSWER', isValid: true },
-      { from: 'QUESTION', to: 'EXPLANATION', event: 'RETRY', isValid: true },
-    ],
-  ],
-  [
-    'EVALUATION',
-    [
-      { from: 'EVALUATION', to: 'QUESTION', event: 'ADVANCE', isValid: true },
-      { from: 'EVALUATION', to: 'EXPLANATION', event: 'RETRY', isValid: true },
-      { from: 'EVALUATION', to: 'QUESTION', event: 'COMPLETE', isValid: true },
-    ],
-  ],
-]);
+const transitions: Record<PedagogicalState, Partial<Record<StateEventType, PedagogicalState>>> = {
+  ACTIVE_CLASS: {
+    RAISE_HAND: 'RESOLVING_DOUBT',
+    CONTINUE: 'ACTIVE_CLASS',
+    ASK_QUESTION: 'QUESTION',
+    CLARIFY: 'CLARIFYING',
+  },
+  RESOLVING_DOUBT: {
+    RESUME_CLASS: 'ACTIVE_CLASS',
+  },
+  CLARIFYING: {
+    RESUME_CLASS: 'ACTIVE_CLASS',
+  },
+  QUESTION: {
+    ANSWER: 'EVALUATION',
+  },
+  EVALUATION: {
+    ADVANCE: 'QUESTION',
+    COMPLETE: 'COMPLETED',
+    VALIDATE: 'ACTIVE_CLASS', // Si es última pregunta, se mapea a COMPLETED en lógica
+  },
+  COMPLETED: {},
+  EXPLANATION: {
+    EXPLAIN: 'QUESTION',
+  },
+};
 
-export function getAllowedTransitions(
+export const getNextState = (
   currentState: PedagogicalState,
-): ReadonlyArray<ValidTransition> {
-  return TRANSITION_MAP.get(currentState) ?? [];
-}
+  event: StateEvent,
+): PedagogicalState => {
+  return transitions[currentState]?.[event.type] || currentState;
+};
 
-export function isTransitionAllowed(
-  currentState: PedagogicalState,
-  event: StateEvent['type'],
-): boolean {
-  const transitions = TRANSITION_MAP.get(currentState);
-  if (!transitions) {
-    return false;
-  }
-  return transitions.some((t) => t.event === event && t.isValid);
-}
+export const getAllowedTransitions = (state: PedagogicalState): StateEventType[] => {
+  return Object.keys(transitions[state] || {}) as StateEventType[];
+};
 
-export function getNextState(currentState: PedagogicalState, event: StateEvent): PedagogicalState {
-  if (!isTransitionAllowed(currentState, event.type)) {
-    return currentState;
-  }
-
-  switch (event.type) {
-    case 'START':
-      return 'EXPLANATION';
-    case 'EXPLAIN':
-      return 'QUESTION';
-    case 'ANSWER':
-      return 'EVALUATION';
-    case 'EVALUATE':
-      return event.isCorrect ? 'QUESTION' : 'EXPLANATION';
-    case 'ADVANCE':
-      return 'QUESTION';
-    case 'COMPLETE':
-      return 'EVALUATION';
-    case 'RETRY':
-      return 'EXPLANATION';
-    default:
-      return currentState;
-  }
-}
+export const isTransitionAllowed = (
+  state: PedagogicalState,
+  eventType: StateEventType,
+): boolean => {
+  return getAllowedTransitions(state).includes(eventType);
+};
 
 export class InvalidTransitionError extends Error {
-  constructor(
-    public readonly currentState: PedagogicalState,
-    public readonly attemptedEvent: StateEvent['type'],
-  ) {
-    super(`Invalid transition: cannot execute '${attemptedEvent}' from state '${currentState}'`);
+  constructor(currentState: PedagogicalState, eventType: StateEventType) {
+    super(`Invalid transition from ${currentState} with event ${eventType}`);
     this.name = 'InvalidTransitionError';
   }
 }
 
-export function attemptTransition(
+export const attemptTransition = (
   currentState: PedagogicalState,
   event: StateEvent,
-): PedagogicalState {
+): PedagogicalState => {
   if (!isTransitionAllowed(currentState, event.type)) {
     throw new InvalidTransitionError(currentState, event.type);
   }
   return getNextState(currentState, event);
-}
+};
 
-export function getTransitionDescription(from: PedagogicalState, to: PedagogicalState): string {
-  return `Transition from ${from} to ${to}`;
+export class PedagogicalStateMachine {
+  private state: PedagogicalState;
+
+  constructor(initialState: PedagogicalState) {
+    this.state = initialState;
+  }
+
+  transition(event: StateEventType): PedagogicalState {
+    this.state = attemptTransition(this.state, { type: event });
+    return this.state;
+  }
+
+  getCurrentState(): PedagogicalState {
+    return this.state;
+  }
 }

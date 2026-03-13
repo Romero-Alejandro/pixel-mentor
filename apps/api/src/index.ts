@@ -1,19 +1,44 @@
 import pino from 'pino';
 
 import {
-  GetLessonUseCase,
+  GetRecipeUseCase,
   GetSessionUseCase,
-  ListLessonsUseCase,
+  ListRecipesUseCase,
   ListSessionsUseCase,
+  OrchestrateRecipeUseCase,
 } from './application/use-cases';
+import { ResetSessionUseCase } from './application/use-cases/session/reset-session.use-case.js';
+import { RegisterUseCase } from './application/use-cases/auth/register.use-case.js';
+import { LoginUseCase } from './application/use-cases/auth/login.use-case.js';
+import { VerifyTokenUseCase } from './application/use-cases/auth/verify-token.use-case.js';
+import {
+  StartRecipeUseCase,
+  AttemptActivityUseCase,
+  TrackProgressUseCase,
+  LogEventUseCase,
+} from './application/use-cases';
+import { ProgressService } from './domain/services/progress.service.js';
+import { EventService } from './domain/services/event.service.js';
+import { CompetencyService } from './domain/services/competency.service.js';
 
 import { config } from '@/config';
 import { prisma } from '@/infrastructure/adapters/database/client.js';
-import { PrismaLessonRepository } from '@/infrastructure/adapters/database/repositories/lesson-repository.js';
+import { PrismaRecipeRepository } from '@/infrastructure/adapters/database/repositories/recipe-repository.js';
 import { PrismaSessionRepository } from '@/infrastructure/adapters/database/repositories/session-repository.js';
 import { PrismaInteractionRepository } from '@/infrastructure/adapters/database/repositories/interaction-repository.js';
-import { GeminiAIModelAdapter } from '@/infrastructure/adapters/ai/gemini-adapter.js';
-import { OrchestrateLessonUseCase } from '@/application/use-cases/orchestrate-lesson.use-case.js';
+import { PrismaKnowledgeChunkRepository } from '@/infrastructure/adapters/database/repositories/knowledge-chunk-repository.js';
+import { PrismaUserRepository } from '@/infrastructure/adapters/database/repositories/user-repository.js';
+import { PrismaAtomRepository } from '@/infrastructure/adapters/database/repositories/atom-repository.js';
+import { PrismaActivityAttemptRepository } from '@/infrastructure/adapters/database/repositories/activity-attempt-repository.js';
+import { PrismaProgressRepository } from '@/infrastructure/adapters/database/repositories/progress-repository.js';
+import { PrismaEventLogRepository } from '@/infrastructure/adapters/database/repositories/event-log-repository.js';
+import { PrismaCompetencyRepository } from '@/infrastructure/adapters/database/repositories/competency-repository.js';
+import { PrismaTagRepository } from '@/infrastructure/adapters/database/repositories/tag-repository.js';
+import { PrismaRecipeTagRepository } from '@/infrastructure/adapters/database/repositories/recipe-tag-repository.js';
+import { PrismaCompetencyMasteryRepository } from '@/infrastructure/adapters/database/repositories/competency-mastery-repository.js';
+import { AIAdapterFactory } from '@/infrastructure/adapters/ai/ai-adapter-factory.js';
+import { FileSystemPromptRepository } from '@/infrastructure/adapters/prompts/file-system-prompt-repository.js';
+import { PostgresAdvisoryLockManager } from '@/infrastructure/adapters/database/repositories/advisory-lock.js';
 import { createApp } from '@/infrastructure/adapters/http/server.js';
 
 const logger = pino({
@@ -33,22 +58,80 @@ async function initializeDependencies(): Promise<void> {
 }
 
 function initializeContainer() {
-  const lessonRepository = new PrismaLessonRepository();
+  const recipeRepository = new PrismaRecipeRepository();
+  const atomRepository = new PrismaAtomRepository();
+  const knowledgeChunkRepository = new PrismaKnowledgeChunkRepository();
   const sessionRepository = new PrismaSessionRepository();
   const interactionRepository = new PrismaInteractionRepository();
-  const aiModel = new GeminiAIModelAdapter(config.GEMINI_API_KEY);
+  const userRepo = new PrismaUserRepository();
+  const activityAttemptRepo = new PrismaActivityAttemptRepository();
+  const progressRepo = new PrismaProgressRepository();
+  const eventLogRepo = new PrismaEventLogRepository();
+  const competencyRepo = new PrismaCompetencyRepository();
+  const tagRepo = new PrismaTagRepository();
+  const recipeTagRepo = new PrismaRecipeTagRepository();
+  const competencyMasteryRepo = new PrismaCompetencyMasteryRepository();
+  const promptRepo = new FileSystemPromptRepository();
+  const { aiModel, questionClassifier, comprehensionEvaluator, ragService } =
+    AIAdapterFactory.create({
+      provider: config.LLM_PROVIDER,
+      geminiApiKey: config.GEMINI_API_KEY,
+      openRouterApiKey: config.OPENROUTER_API_KEY,
+      defaultModelOpenRouter: config.DEFAULT_MODEL_OPENROUTER,
+      promptRepo,
+      knowledgeChunkRepository,
+      logger,
+    });
+  const advisoryLockManager = PostgresAdvisoryLockManager.getInstance();
+
+  const registerUseCase = new RegisterUseCase(userRepo);
+  const loginUseCase = new LoginUseCase(userRepo);
+  const verifyTokenUseCase = new VerifyTokenUseCase(userRepo);
+  const resetSessionUseCase = new ResetSessionUseCase(sessionRepository, interactionRepository);
+
+  const startRecipeUseCase = new StartRecipeUseCase(recipeRepository, sessionRepository);
+  const attemptActivityUseCase = new AttemptActivityUseCase(activityAttemptRepo, atomRepository);
+  const trackProgressUseCase = new TrackProgressUseCase(progressRepo);
+  const logEventUseCase = new LogEventUseCase(eventLogRepo);
+  const progressService = new ProgressService(progressRepo);
+  const eventService = new EventService(eventLogRepo);
+  const competencyService = new CompetencyService(atomRepository);
 
   return {
-    orchestrateUseCase: new OrchestrateLessonUseCase(
+    userRepo,
+    registerUseCase,
+    loginUseCase,
+    verifyTokenUseCase,
+    resetSessionUseCase,
+    orchestrateUseCase: new OrchestrateRecipeUseCase(
       sessionRepository,
       interactionRepository,
-      lessonRepository,
+      recipeRepository,
+      atomRepository,
       aiModel,
+      questionClassifier,
+      ragService,
+      comprehensionEvaluator,
+      advisoryLockManager,
     ),
-    getLessonUseCase: new GetLessonUseCase(lessonRepository),
-    listLessonsUseCase: new ListLessonsUseCase(lessonRepository),
+    getRecipeUseCase: new GetRecipeUseCase(recipeRepository),
+    listRecipesUseCase: new ListRecipesUseCase(recipeRepository),
     getSessionUseCase: new GetSessionUseCase(sessionRepository),
     listSessionsUseCase: new ListSessionsUseCase(sessionRepository),
+    activityAttemptRepo,
+    progressRepo,
+    eventLogRepo,
+    competencyRepo,
+    startRecipeUseCase,
+    attemptActivityUseCase,
+    trackProgressUseCase,
+    logEventUseCase,
+    progressService,
+    eventService,
+    competencyService,
+    tagRepo,
+    recipeTagRepo,
+    competencyMasteryRepo,
   };
 }
 

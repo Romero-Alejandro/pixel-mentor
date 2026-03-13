@@ -6,8 +6,8 @@ export interface User {
   readonly name: string;
   readonly role: UserRole;
   readonly age?: number; // Only for students
-  readonly parentalConsentId: string | null;
   readonly quota: number;
+  readonly passwordHash?: string; // Only for authentication, not exposed in domain logic
   readonly createdAt: Date;
   readonly updatedAt: Date;
 }

@@ -4,6 +4,7 @@ import type pino from 'pino';
 
 import type { GetSessionUseCase } from '@/application/use-cases/session/get-session.use-case';
 import type { ListSessionsUseCase } from '@/application/use-cases/session/list-sessions.use-case';
+import type { ResetSessionUseCase } from '@/application/use-cases/session/reset-session.use-case';
 import { GetSessionInputSchema, ListSessionsInputSchema } from '@/application/dto';
 
 export interface AppRequest extends Request {
@@ -15,6 +16,7 @@ export interface AppRequest extends Request {
 export function createSessionsRouter(
   getSessionUseCase: GetSessionUseCase,
   listSessionsUseCase: ListSessionsUseCase,
+  resetSessionUseCase: ResetSessionUseCase,
 ): Router {
   const router = Router();
 
@@ -22,9 +24,15 @@ export function createSessionsRouter(
     '/:id',
     async (request: Request, response: Response, next: NextFunction): Promise<void> => {
       try {
-        const validated = GetSessionInputSchema.parse({ sessionId: request.params.id });
+        const sessionId = request.params.id as string;
+        const validated = GetSessionInputSchema.parse({ sessionId });
 
         const session = await getSessionUseCase.execute(validated.sessionId);
+
+        if (!session) {
+          response.status(404).json({ error: 'Session not found' });
+          return;
+        }
 
         response.json(session);
       } catch (error) {
@@ -41,13 +49,20 @@ export function createSessionsRouter(
     '/',
     async (request: Request, response: Response, next: NextFunction): Promise<void> => {
       try {
-        const studentId =
-          typeof request.query.studentId === 'string' ? request.query.studentId : undefined;
-        const query: { studentId?: string; activeOnly?: boolean } = { studentId };
-        if (request.query.activeOnly !== undefined) {
-          const val = Array.isArray(request.query.activeOnly)
-            ? request.query.activeOnly[0]
-            : request.query.activeOnly;
+        // Normalize query params (Express can give string or string[])
+        const rawStudentId = request.query.studentId as string | string[] | undefined;
+        const studentId = Array.isArray(rawStudentId)
+          ? rawStudentId[0]
+          : typeof rawStudentId === 'string'
+            ? rawStudentId
+            : undefined;
+
+        const query: { studentId?: string; activeOnly?: boolean } = {};
+        if (studentId) query.studentId = studentId;
+
+        const rawActiveOnly = request.query.activeOnly as string | string[] | boolean | undefined;
+        if (rawActiveOnly !== undefined) {
+          const val = Array.isArray(rawActiveOnly) ? rawActiveOnly[0] : rawActiveOnly;
           query.activeOnly = val === 'true';
         }
 
@@ -64,6 +79,19 @@ export function createSessionsRouter(
           response.status(400).json({ error: 'Validation error', details: error.issues });
           return;
         }
+        next(error);
+      }
+    },
+  );
+
+  router.post(
+    '/:id/replay',
+    async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+      try {
+        const sessionId = request.params.id as string;
+        const result = await resetSessionUseCase.execute(sessionId);
+        response.json(result);
+      } catch (error) {
         next(error);
       }
     },

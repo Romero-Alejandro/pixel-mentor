@@ -1,23 +1,22 @@
 # Coding Standards
 
-## Languages
+<ai_invariants>
+[LANGUAGES]
 
-- **Source Code:** Strictly English (Variables, functions, comments, logs).
-- **User-Facing:** Visible UI strings and LLM prompts MUST be in Spanish.
+- Source Code: STRICTLY English (Variables, functions, comments, logs).
+- User-Facing: Visible UI strings and LLM prompts MUST be in Spanish.
 
-## TypeScript Constraints
+[TYPESCRIPT_CONSTRAINTS]
 
-- Enforce `readonly` by default for data structures.
-- Favor discriminated unions for state management.
-- PROHIBITED: `any`. Use `unknown` and narrow the type.
+- Mutability: Enforce `readonly` by default for data structures.
+- State: Favor discriminated unions.
+- Strictness: PROHIBITED: `any`. Use `unknown` and narrow the type.
 
-## File & Import Rules
+[FILE_CONVENTIONS]
 
-- **Imports:** Mandatory `@/` alias inside each package.
-
-## Naming Conventions
-
-- **Files:** `kebab-case.ts`
-- **Components/Interfaces:** `PascalCase`
-- **Hooks:** `camelCase` (e.g., `useSession`)
-- **Constants:** `SCREAMING_SNAKE_CASE`
+- Imports: Mandatory `@/` alias inside each package.
+- Files: `kebab-case.ts`
+- Components/Interfaces: `PascalCase`
+- Hooks: `camelCase` (e.g., `useSession`)
+- Constants: `SCREAMING_SNAKE_CASE`
+  </ai_invariants>
