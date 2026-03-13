@@ -1,12 +1,24 @@
 import request from 'supertest';
 import type { Express } from 'express';
+import jwt from 'jsonwebtoken';
 
 import { createApp } from '@/infrastructure/adapters/http/server';
-import { OrchestrateLessonUseCase } from '@/application/use-cases/orchestrate-lesson.use-case';
+import { OrchestrateRecipeUseCase } from '@/application/use-cases/orchestrate-recipe.use-case';
 
-jest.mock('@/application/use-cases/orchestrate-lesson.use-case');
+jest.mock('@/application/use-cases/orchestrate-recipe.use-case');
 
-describe('Leccion Routes', () => {
+const TEST_USER_ID = '123e4567-e89b-12d3-a456-426614174001';
+const TEST_JWT_SECRET = 'test-secret-key';
+
+const generateTestToken = () => {
+  return jwt.sign(
+    { userId: TEST_USER_ID, email: 'test@test.com', role: 'STUDENT' },
+    TEST_JWT_SECRET,
+    { expiresIn: '1h' },
+  );
+};
+
+describe('Recipe Routes', () => {
   let mockUseCase: any;
   let app: Express;
 
@@ -16,7 +28,7 @@ describe('Leccion Routes', () => {
       interact: jest.fn(),
     };
 
-    (OrchestrateLessonUseCase as jest.Mock).mockReturnValue(mockUseCase);
+    (OrchestrateRecipeUseCase as jest.Mock).mockReturnValue(mockUseCase);
 
     const mockLogger = {
       ...console,
@@ -33,14 +45,32 @@ describe('Leccion Routes', () => {
         RATE_LIMIT_MAX: 100,
         RATE_LIMIT_MAX_INTERACT: 10,
         REQUEST_TIMEOUT_MS: 10000,
+        JWT_SECRET: 'test-secret-key',
       },
       logger: mockLogger as any,
       orchestrateUseCase: mockUseCase,
       prisma: {} as any,
-      getLessonUseCase: {} as any,
-      listLessonsUseCase: {} as any,
+      getRecipeUseCase: {} as any,
+      listRecipesUseCase: {} as any,
       getSessionUseCase: {} as any,
       listSessionsUseCase: {} as any,
+      resetSessionUseCase: { execute: jest.fn() } as any,
+      userRepo: {
+        findById: jest.fn().mockResolvedValue({
+          id: '123e4567-e89b-12d3-a456-426614174001',
+          email: 'test@test.com',
+          name: 'Test User',
+          role: 'STUDENT',
+          quota: 10,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }),
+      } as any,
+      registerUseCase: {} as any,
+      loginUseCase: {} as any,
+      verifyTokenUseCase: {
+        execute: jest.fn().mockResolvedValue({ userId: '123e4567-e89b-12d3-a456-426614174001' }),
+      } as any,
     };
 
     app = createApp(mockDeps);
@@ -49,18 +79,21 @@ describe('Leccion Routes', () => {
   it('should start a lesson', async () => {
     mockUseCase.start.mockResolvedValue({
       sessionId: 'session-1',
-      voiceText: 'Lesson started',
+      voiceText: 'Recipe started',
       pedagogicalState: 'EXPLANATION',
     });
 
-    const response = await request(app).post('/api/leccion/start').send({
-      lessonId: '123e4567-e89b-12d3-a456-426614174000',
-      studentId: '123e4567-e89b-12d3-a456-426614174001',
-    });
+    const token = generateTestToken();
+    const response = await request(app)
+      .post('/api/recipe/start')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        recipeId: '123e4567-e89b-12d3-a456-426614174000',
+      });
 
     expect(response.status).toBe(201);
     expect(response.body).toHaveProperty('sessionId');
-    expect(response.body.voiceText).toBe('Lesson started');
+    expect(response.body.voiceText).toBe('Recipe started');
   });
 
   it('should interact with a lesson', async () => {
@@ -70,10 +103,14 @@ describe('Leccion Routes', () => {
       sessionCompleted: false,
     });
 
-    const response = await request(app).post('/api/leccion/interact').send({
-      sessionId: '123e4567-e89b-12d3-a456-426614174002',
-      studentInput: 'Test input',
-    });
+    const token = generateTestToken();
+    const response = await request(app)
+      .post('/api/recipe/interact')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        sessionId: '123e4567-e89b-12d3-a456-426614174002',
+        studentInput: 'Test input',
+      });
 
     expect(response.status).toBe(200);
     expect(response.body.voiceText).toBe('Test response');
@@ -81,8 +118,20 @@ describe('Leccion Routes', () => {
   });
 
   it('should return 400 for invalid input', async () => {
-    const response = await request(app).post('/api/leccion/start').send({});
+    const token = generateTestToken();
+    const response = await request(app)
+      .post('/api/recipe/start')
+      .set('Authorization', `Bearer ${token}`)
+      .send({});
 
     expect(response.status).toBe(400);
+  });
+
+  it('should return 401 without auth token', async () => {
+    const response = await request(app).post('/api/recipe/start').send({
+      recipeId: '123e4567-e89b-12d3-a456-426614174000',
+    });
+
+    expect(response.status).toBe(401);
   });
 });
