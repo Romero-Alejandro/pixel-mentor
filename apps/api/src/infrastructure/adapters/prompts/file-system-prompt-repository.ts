@@ -19,6 +19,7 @@ export class FileSystemPromptRepository implements PromptRepository {
 
   private loadTemplates(): StateTemplateMap {
     const states: PedagogicalState[] = [
+      'AWAITING_START',
       'ACTIVE_CLASS',
       'RESOLVING_DOUBT',
       'CLARIFYING',
