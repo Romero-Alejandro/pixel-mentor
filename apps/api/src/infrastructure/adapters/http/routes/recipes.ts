@@ -26,6 +26,7 @@ export function createRecipesRouter(
 
         const recipe = await getRecipeUseCase.execute(validated.recipeId);
 
+        response.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
         response.json(recipe);
       } catch (error) {
         if (error instanceof z.ZodError) {
@@ -52,6 +53,7 @@ export function createRecipesRouter(
 
         const recipes = await listRecipesUseCase.execute(validated.activeOnly);
 
+        response.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
         response.json(recipes);
       } catch (error) {
         if (error instanceof z.ZodError) {

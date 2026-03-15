@@ -1,5 +1,14 @@
 import type { Recipe, RecipeStep } from '../entities/recipe';
 
+export interface RecipeWithConcepts extends Recipe {
+  readonly concepts?: readonly any[];
+}
+
+export interface RecipeStepWithContent extends RecipeStep {
+  readonly concept?: any;
+  readonly activity?: any;
+}
+
 export interface RecipeRepository {
   findById(id: string): Promise<Recipe | null>;
   findAll(): Promise<Recipe[]>;
@@ -8,6 +17,7 @@ export interface RecipeRepository {
   update(id: string, data: Partial<Recipe>): Promise<Recipe>;
   delete(id: string): Promise<void>;
   findStepsByRecipeId(recipeId: string): Promise<RecipeStep[]>;
+  findStepsWithContent(recipeId: string): Promise<RecipeStepWithContent[]>;
   createStep(step: Omit<RecipeStep, 'createdAt'>): Promise<RecipeStep>;
   updateStep(stepId: string, step: Partial<RecipeStep>): Promise<RecipeStep>;
   deleteStep(stepId: string): Promise<void>;

@@ -8,9 +8,11 @@ import {
   OrchestrateRecipeUseCase,
 } from './application/use-cases';
 import { ResetSessionUseCase } from './application/use-cases/session/reset-session.use-case.js';
+import { CompleteSessionUseCase } from './application/use-cases/session/complete-session.use-case.js';
 import { RegisterUseCase } from './application/use-cases/auth/register.use-case.js';
 import { LoginUseCase } from './application/use-cases/auth/login.use-case.js';
 import { VerifyTokenUseCase } from './application/use-cases/auth/verify-token.use-case.js';
+import { QuestionAnsweringUseCase } from './application/use-cases/question/question-answering.use-case.js';
 import {
   StartRecipeUseCase,
   AttemptActivityUseCase,
@@ -24,6 +26,8 @@ import { CompetencyService } from './domain/services/competency.service.js';
 import { config } from '@/config';
 import { prisma } from '@/infrastructure/adapters/database/client.js';
 import { PrismaRecipeRepository } from '@/infrastructure/adapters/database/repositories/recipe-repository.js';
+import { PrismaConceptRepository } from '@/infrastructure/adapters/database/repositories/concept-repository.js';
+import { PrismaActivityRepository } from '@/infrastructure/adapters/database/repositories/activity-repository.js';
 import { PrismaSessionRepository } from '@/infrastructure/adapters/database/repositories/session-repository.js';
 import { PrismaInteractionRepository } from '@/infrastructure/adapters/database/repositories/interaction-repository.js';
 import { PrismaKnowledgeChunkRepository } from '@/infrastructure/adapters/database/repositories/knowledge-chunk-repository.js';
@@ -39,6 +43,7 @@ import { PrismaCompetencyMasteryRepository } from '@/infrastructure/adapters/dat
 import { AIAdapterFactory } from '@/infrastructure/adapters/ai/ai-adapter-factory.js';
 import { FileSystemPromptRepository } from '@/infrastructure/adapters/prompts/file-system-prompt-repository.js';
 import { PostgresAdvisoryLockManager } from '@/infrastructure/adapters/database/repositories/advisory-lock.js';
+import { TTSProviderFactory } from '@/infrastructure/adapters/tts/tts-factory.js';
 import { createApp } from '@/infrastructure/adapters/http/server.js';
 
 const logger = pino({
@@ -59,6 +64,8 @@ async function initializeDependencies(): Promise<void> {
 
 function initializeContainer() {
   const recipeRepository = new PrismaRecipeRepository();
+  const conceptRepository = new PrismaConceptRepository();
+  const activityRepository = new PrismaActivityRepository();
   const atomRepository = new PrismaAtomRepository();
   const knowledgeChunkRepository = new PrismaKnowledgeChunkRepository();
   const sessionRepository = new PrismaSessionRepository();
@@ -88,6 +95,12 @@ function initializeContainer() {
   const loginUseCase = new LoginUseCase(userRepo);
   const verifyTokenUseCase = new VerifyTokenUseCase(userRepo);
   const resetSessionUseCase = new ResetSessionUseCase(sessionRepository, interactionRepository);
+  const completeSessionUseCase = new CompleteSessionUseCase(sessionRepository);
+  const questionAnsweringUseCase = new QuestionAnsweringUseCase(
+    recipeRepository,
+    conceptRepository,
+    aiModel,
+  );
 
   const startRecipeUseCase = new StartRecipeUseCase(recipeRepository, sessionRepository);
   const attemptActivityUseCase = new AttemptActivityUseCase(activityAttemptRepo, atomRepository);
@@ -97,17 +110,30 @@ function initializeContainer() {
   const eventService = new EventService(eventLogRepo);
   const competencyService = new CompetencyService(atomRepository);
 
+  // Initialize TTS service
+  const ttsProvider = (process.env.TTS_PROVIDER as 'google-free' | 'mock') || 'google-free';
+
+  const ttsService = TTSProviderFactory.create({
+    provider: ttsProvider,
+    googleFreeConfig: { logger },
+    logger,
+  });
+
   return {
     userRepo,
     registerUseCase,
     loginUseCase,
     verifyTokenUseCase,
     resetSessionUseCase,
+    completeSessionUseCase,
     orchestrateUseCase: new OrchestrateRecipeUseCase(
       sessionRepository,
       interactionRepository,
       recipeRepository,
+      conceptRepository,
+      activityRepository,
       atomRepository,
+      userRepo,
       aiModel,
       questionClassifier,
       ragService,
@@ -132,6 +158,8 @@ function initializeContainer() {
     tagRepo,
     recipeTagRepo,
     competencyMasteryRepo,
+    questionAnsweringUseCase,
+    ttsService,
   };
 }
 

@@ -11,7 +11,7 @@ export const envSchema = z.object({
   DEFAULT_MODEL_GEMINI: z.string().default('gemini-3.1-flash-lite-preview'),
   DEFAULT_MODEL_OPENROUTER: z.string().default('stepfun/step-3.5-flash'),
   JWT_SECRET: z.string().min(1).default('change-me-in-development'),
-  CORS_ORIGIN: z.string().url().min(1),
+  CORS_ORIGIN: z.string().min(1), // Can be comma-separated URLs or wildcard
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60000),
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),

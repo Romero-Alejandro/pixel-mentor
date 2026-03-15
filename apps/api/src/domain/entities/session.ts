@@ -9,6 +9,15 @@ export type SessionStatus =
   | 'COMPLETED'
   | 'ESCALATED';
 
+/**
+ * Determines if a session status is terminal (not resumable)
+ * @param status - The session status to check
+ * @returns true if status is COMPLETED or ESCALATED
+ */
+export function isTerminalStatus(status: SessionStatus): boolean {
+  return status === 'COMPLETED' || status === 'ESCALATED';
+}
+
 export interface SessionCheckpoint {
   readonly currentState: PedagogicalState;
   readonly currentStepIndex: number;
@@ -17,6 +26,11 @@ export interface SessionCheckpoint {
     readonly question: string;
     readonly stepIndex: number;
   };
+  // Nuevos campos para el flujo mejorado
+  readonly questionCount?: number;
+  readonly lastQuestionTime?: string | null;
+  readonly skippedActivities?: string[];
+  readonly failedAttempts?: number;
 }
 
 export interface Session {

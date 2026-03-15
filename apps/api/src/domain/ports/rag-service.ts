@@ -11,7 +11,6 @@ export interface RAGService {
     totalAvailable: number;
     retrievalMethod: string;
   }>;
-
   generateEmbedding(text: string): Promise<number[]>;
 }
 

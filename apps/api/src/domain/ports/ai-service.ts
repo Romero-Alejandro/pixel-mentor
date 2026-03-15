@@ -13,6 +13,10 @@ export interface AIResponse {
   extraExplanation?: string;
 }
 
+export interface AIAnswerResponse {
+  answer: string;
+}
+
 export interface AIService {
   generateResponse(params: {
     recipe: Recipe;
@@ -25,6 +29,11 @@ export interface AIService {
     totalSegments?: number;
     historySummary?: string;
   }): Promise<AIResponse>;
+  generateAnswer(params: {
+    question: string;
+    context: string;
+    recipeTitle: string;
+  }): Promise<AIAnswerResponse>;
   generateExplanation(params: {
     recipe: Recipe;
     conceptIndex: number;

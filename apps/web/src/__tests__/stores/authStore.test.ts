@@ -17,6 +17,8 @@ describe('authStore', () => {
       isAuthenticated: false,
       isLoading: false,
       error: null,
+      isHydrated: false,
+      isValidating: false,
     });
   });
 
@@ -194,6 +196,45 @@ describe('authStore', () => {
       useAuthStore.getState().clearError();
 
       expect(useAuthStore.getState().error).toBeNull();
+    });
+  });
+
+  describe('hydration behavior', () => {
+    it('should set isHydrated to false initially', () => {
+      expect(useAuthStore.getState().isHydrated).toBe(false);
+    });
+
+    it('should set isHydrated to true on _setHydrated', () => {
+      useAuthStore.getState()._setHydrated(true);
+      expect(useAuthStore.getState().isHydrated).toBe(true);
+    });
+
+    it('should set isValidating to true during checkAuth', async () => {
+      localStorage.setItem('token', 'valid-token');
+      useAuthStore.setState({ token: 'valid-token', isHydrated: true });
+
+      const checkAuthPromise = useAuthStore.getState().checkAuth();
+
+      expect(useAuthStore.getState().isValidating).toBe(true);
+
+      await checkAuthPromise;
+      expect(useAuthStore.getState().isValidating).toBe(false);
+    });
+
+    it('should reset isHydrated on logout', () => {
+      useAuthStore.setState({ isHydrated: true, isAuthenticated: true });
+      useAuthStore.getState().logout();
+      expect(useAuthStore.getState().isHydrated).toBe(false);
+    });
+
+    it('should set isAuthenticated false and isValidating false on checkAuth with no token', async () => {
+      localStorage.clear();
+      useAuthStore.setState({ isHydrated: true });
+
+      await useAuthStore.getState().checkAuth();
+
+      expect(useAuthStore.getState().isAuthenticated).toBe(false);
+      expect(useAuthStore.getState().isValidating).toBe(false);
     });
   });
 });

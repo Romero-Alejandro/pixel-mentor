@@ -1,6 +1,6 @@
 import { prisma } from '../client';
 import type { Recipe, RecipeStep } from '@/domain/entities/recipe';
-import type { RecipeRepository } from '@/domain/ports/recipe-repository';
+import type { RecipeRepository, RecipeStepWithContent } from '@/domain/ports/recipe-repository';
 
 export class PrismaRecipeRepository implements RecipeRepository {
   async findById(id: string): Promise<Recipe | null> {
@@ -62,6 +62,22 @@ export class PrismaRecipeRepository implements RecipeRepository {
     return steps.map(this.mapRecipeStep);
   }
 
+  async findStepsWithContent(recipeId: string): Promise<RecipeStepWithContent[]> {
+    const steps = await prisma.recipeStep.findMany({
+      where: { recipeId },
+      orderBy: { order: 'asc' },
+      include: {
+        concept: true,
+        activity: true,
+      },
+    });
+    return steps.map((step) => ({
+      ...this.mapRecipeStep(step),
+      concept: step.concept || null,
+      activity: step.activity || null,
+    }));
+  }
+
   async createStep(step: Omit<RecipeStep, 'createdAt'>): Promise<RecipeStep> {
     const raw = await prisma.recipeStep.create({
       data: {
@@ -120,6 +136,11 @@ export class PrismaRecipeRepository implements RecipeRepository {
       condition: raw.condition,
       onCondition: raw.onCondition,
       createdAt: raw.createdAt,
+      // New fields
+      conceptId: raw.conceptId || undefined,
+      activityId: raw.activityId || undefined,
+      script: raw.script || undefined,
+      stepType: raw.stepType || undefined,
     };
   }
 }

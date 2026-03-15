@@ -5,6 +5,7 @@ import type { SessionRepository } from '@/domain/ports/session-repository';
 import type { InteractionRepository } from '@/domain/ports/interaction-repository';
 import type { RecipeRepository } from '@/domain/ports/recipe-repository';
 import type { AtomRepository } from '@/domain/ports/atom-repository';
+import type { UserRepository } from '@/domain/ports/user-repository';
 import type { AIService } from '@/domain/ports/ai-service';
 import type {
   QuestionClassifier,
@@ -24,6 +25,7 @@ describe('OrchestrateRecipeUseCase - Full Flow', () => {
   let mockInteractionRepo: jest.Mocked<InteractionRepository>;
   let mockRecipeRepo: jest.Mocked<RecipeRepository>;
   let mockAtomRepo: jest.Mocked<AtomRepository>;
+  let mockUserRepo: jest.Mocked<UserRepository>;
   let mockAiService: jest.Mocked<AIService>;
   let mockQuestionClassifier: jest.Mocked<QuestionClassifier>;
   let mockRagService: jest.Mocked<RAGService>;
@@ -109,6 +111,10 @@ describe('OrchestrateRecipeUseCase - Full Flow', () => {
       findById: jest.fn(),
     };
 
+    mockUserRepo = {
+      findById: jest.fn().mockResolvedValue({ id: testStudentId, name: 'Test Student' }),
+    };
+
     mockAiService = {
       generateResponse: jest.fn(),
       generateExplanation: jest.fn(),
@@ -132,6 +138,7 @@ describe('OrchestrateRecipeUseCase - Full Flow', () => {
       mockInteractionRepo,
       mockRecipeRepo,
       mockAtomRepo,
+      mockUserRepo,
       mockAiService,
       mockQuestionClassifier,
       mockRagService,
@@ -235,7 +242,134 @@ describe('OrchestrateRecipeUseCase - Full Flow', () => {
       const result = await useCase.start(testRecipeId, testStudentId);
 
       expect(result.sessionId).toBe(existingSessionId);
+      expect(result.resumed).toBe(true);
       expect(mockSessionRepo.create).not.toHaveBeenCalled();
+    });
+
+    it('should return existing session if status is IDLE (resumable)', async () => {
+      mockRecipeRepo.findById.mockResolvedValueOnce(testRecipe);
+      mockRecipeRepo.findStepsByRecipeId.mockResolvedValueOnce([testStep]);
+      mockAtomRepo.findById.mockResolvedValueOnce(testAtom);
+
+      const existingSessionId = randomUUID();
+      const existingSession: Session = {
+        id: existingSessionId,
+        studentId: testStudentId,
+        recipeId: testRecipeId,
+        status: 'IDLE',
+        stateCheckpoint: { currentState: 'AWAITING_START', currentStepIndex: 0 },
+        currentInteractionId: null,
+        startedAt: new Date(),
+        lastActivityAt: new Date(),
+        completedAt: null,
+        escalatedAt: null,
+        version: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        safetyFlag: null,
+        outOfScope: false,
+        failedAttempts: 0,
+      };
+      mockSessionRepo.findByStudentAndRecipe.mockResolvedValueOnce(existingSession);
+
+      const result = await useCase.start(testRecipeId, testStudentId);
+
+      expect(result.sessionId).toBe(existingSessionId);
+      expect(result.resumed).toBe(true);
+      expect(mockSessionRepo.create).not.toHaveBeenCalled();
+    });
+
+    it('should return existing session if status is PAUSED_FOR_QUESTION (resumable)', async () => {
+      mockRecipeRepo.findById.mockResolvedValueOnce(testRecipe);
+      mockRecipeRepo.findStepsByRecipeId.mockResolvedValueOnce([testStep]);
+      mockAtomRepo.findById.mockResolvedValueOnce(testAtom);
+
+      const existingSessionId = randomUUID();
+      const existingSession: Session = {
+        id: existingSessionId,
+        studentId: testStudentId,
+        recipeId: testRecipeId,
+        status: 'PAUSED_FOR_QUESTION',
+        stateCheckpoint: { currentState: 'RESOLVING_DOUBT', currentStepIndex: 2 },
+        currentInteractionId: null,
+        startedAt: new Date(),
+        lastActivityAt: new Date(),
+        completedAt: null,
+        escalatedAt: null,
+        version: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        safetyFlag: null,
+        outOfScope: false,
+        failedAttempts: 0,
+      };
+      mockSessionRepo.findByStudentAndRecipe.mockResolvedValueOnce(existingSession);
+
+      const result = await useCase.start(testRecipeId, testStudentId);
+
+      expect(result.sessionId).toBe(existingSessionId);
+      expect(result.resumed).toBe(true);
+      expect(mockSessionRepo.create).not.toHaveBeenCalled();
+    });
+
+    it('should create new session if previous session is COMPLETED (terminal)', async () => {
+      mockRecipeRepo.findById.mockResolvedValueOnce(testRecipe);
+      mockRecipeRepo.findStepsByRecipeId.mockResolvedValueOnce([testStep]);
+      mockAtomRepo.findById.mockResolvedValueOnce(testAtom);
+      mockSessionRepo.findByStudentAndRecipe.mockResolvedValueOnce({
+        id: randomUUID(),
+        studentId: testStudentId,
+        recipeId: testRecipeId,
+        status: 'COMPLETED' as const,
+        stateCheckpoint: { currentState: 'COMPLETED' as const, currentStepIndex: 5 },
+        currentInteractionId: null,
+        startedAt: new Date(),
+        lastActivityAt: new Date(),
+        completedAt: new Date(),
+        escalatedAt: null,
+        version: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        safetyFlag: null,
+        outOfScope: false,
+        failedAttempts: 0,
+      });
+      mockAiService.generateResponse.mockResolvedValueOnce(mockAiResponse);
+
+      const result = await useCase.start(testRecipeId, testStudentId);
+
+      expect(mockSessionRepo.create).toHaveBeenCalled();
+      expect(result.resumed).toBe(false);
+    });
+
+    it('should create new session if previous session is ESCALATED (terminal)', async () => {
+      mockRecipeRepo.findById.mockResolvedValueOnce(testRecipe);
+      mockRecipeRepo.findStepsByRecipeId.mockResolvedValueOnce([testStep]);
+      mockAtomRepo.findById.mockResolvedValueOnce(testAtom);
+      mockSessionRepo.findByStudentAndRecipe.mockResolvedValueOnce({
+        id: randomUUID(),
+        studentId: testStudentId,
+        recipeId: testRecipeId,
+        status: 'ESCALATED' as const,
+        stateCheckpoint: { currentState: 'ACTIVE_CLASS' as const, currentStepIndex: 2 },
+        currentInteractionId: null,
+        startedAt: new Date(),
+        lastActivityAt: new Date(),
+        completedAt: null,
+        escalatedAt: new Date(),
+        version: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        safetyFlag: 'max_attempts_exceeded',
+        outOfScope: false,
+        failedAttempts: 5,
+      });
+      mockAiService.generateResponse.mockResolvedValueOnce(mockAiResponse);
+
+      const result = await useCase.start(testRecipeId, testStudentId);
+
+      expect(mockSessionRepo.create).toHaveBeenCalled();
+      expect(result.resumed).toBe(false);
     });
   });
 

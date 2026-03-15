@@ -5,7 +5,12 @@ import type pino from 'pino';
 import type { AuthRequest } from '../middleware/auth.js';
 
 import type { OrchestrateRecipeUseCase } from '@/application/use-cases';
-import { StartRecipeInputSchema, InteractRecipeInputSchema } from '@/application/dto';
+import type { QuestionAnsweringUseCase } from '@/application/use-cases/question/question-answering.use-case.js';
+import {
+  StartRecipeInputSchema,
+  InteractRecipeInputSchema,
+  QuestionAnswerInputSchema,
+} from '@/application/dto';
 
 export interface AppRequest extends AuthRequest {
   logger?: pino.Logger;
@@ -13,7 +18,10 @@ export interface AppRequest extends AuthRequest {
   startTime?: number;
 }
 
-export function createRecipeRouter(orchestrateUseCase: OrchestrateRecipeUseCase): Router {
+export function createRecipeRouter(
+  orchestrateUseCase: OrchestrateRecipeUseCase,
+  questionAnsweringUseCase?: QuestionAnsweringUseCase,
+): Router {
   const router = Router();
 
   router.post(
@@ -53,6 +61,34 @@ export function createRecipeRouter(orchestrateUseCase: OrchestrateRecipeUseCase)
           validated.sessionId,
           validated.studentInput,
         );
+
+        response.json(result);
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          response.status(400).json({ error: 'Validation error', details: error.issues });
+          return;
+        }
+        next(error);
+      }
+    },
+  );
+
+  router.post(
+    '/question',
+    async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+      try {
+        const appRequest = request as AppRequest;
+        const validated = QuestionAnswerInputSchema.parse(appRequest.body);
+
+        if (!questionAnsweringUseCase) {
+          response.status(501).json({ error: 'Question answering not available' });
+          return;
+        }
+
+        const result = await questionAnsweringUseCase.execute({
+          recipeId: validated.recipeId,
+          question: validated.question,
+        });
 
         response.json(result);
       } catch (error) {

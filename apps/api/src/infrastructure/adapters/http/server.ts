@@ -9,6 +9,7 @@ import { createRecipeRouter } from './routes/recipe.js';
 import { createRecipesRouter } from './routes/recipes.js';
 import { createSessionsRouter } from './routes/sessions.js';
 import { createAuthRouter } from './routes/auth.js';
+import { createTTSRouter } from './routes/tts.js';
 import { requestIdMiddleware } from './middleware/request-id.js';
 import { timeoutMiddleware } from './middleware/timeout.js';
 import { requestLoggerMiddleware } from './middleware/request-logger.js';
@@ -21,10 +22,13 @@ import type { ListRecipesUseCase } from '@/application/use-cases/recipe/list-rec
 import type { GetSessionUseCase } from '@/application/use-cases/session/get-session.use-case.js';
 import type { ListSessionsUseCase } from '@/application/use-cases/session/list-sessions.use-case.js';
 import type { ResetSessionUseCase } from '@/application/use-cases/session/reset-session.use-case.js';
+import type { CompleteSessionUseCase } from '@/application/use-cases/session/complete-session.use-case.js';
 import type { UserRepository } from '@/domain/ports/user-repository.js';
 import type { RegisterUseCase } from '@/application/use-cases/auth/register.use-case.js';
 import type { LoginUseCase } from '@/application/use-cases/auth/login.use-case.js';
 import type { VerifyTokenUseCase } from '@/application/use-cases/auth/verify-token.use-case.js';
+import type { QuestionAnsweringUseCase } from '@/application/use-cases/question/question-answering.use-case.js';
+import type { TTSService } from '@/domain/ports/tts-service.js';
 
 export interface ServerDependencies {
   config: {
@@ -47,9 +51,12 @@ export interface ServerDependencies {
   getSessionUseCase: GetSessionUseCase;
   listSessionsUseCase: ListSessionsUseCase;
   resetSessionUseCase: ResetSessionUseCase;
+  completeSessionUseCase: CompleteSessionUseCase;
   registerUseCase: RegisterUseCase;
   loginUseCase: LoginUseCase;
   verifyTokenUseCase: VerifyTokenUseCase;
+  questionAnsweringUseCase: QuestionAnsweringUseCase;
+  ttsService: TTSService;
 }
 
 export function createApp(deps: ServerDependencies): Express {
@@ -64,9 +71,12 @@ export function createApp(deps: ServerDependencies): Express {
     getSessionUseCase,
     listSessionsUseCase,
     resetSessionUseCase,
+    completeSessionUseCase,
     registerUseCase,
     loginUseCase,
     verifyTokenUseCase,
+    questionAnsweringUseCase,
+    ttsService,
   } = deps;
   const app = express();
 
@@ -97,9 +107,12 @@ export function createApp(deps: ServerDependencies): Express {
     }),
   );
 
+  // Parse CORS_ORIGIN (can be comma-separated list)
+  const corsOrigins = config.CORS_ORIGIN.split(',').map((o) => o.trim());
+
   app.use(
     cors({
-      origin: config.CORS_ORIGIN,
+      origin: corsOrigins.length === 1 ? corsOrigins[0] : corsOrigins,
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
@@ -108,23 +121,44 @@ export function createApp(deps: ServerDependencies): Express {
 
   app.use(express.json({ limit: '1mb' }));
 
-  const generalLimiter = rateLimit({
+  const authLimiter = rateLimit({
     windowMs: config.RATE_LIMIT_WINDOW_MS,
-    max: config.RATE_LIMIT_MAX,
-    message: { error: 'Too many requests' },
+    max: config.RATE_LIMIT_MAX * 2, // Allow more attempts for auth
+    message: { error: 'Too many authentication requests' },
     standardHeaders: true,
     legacyHeaders: false,
   });
-  app.use('/api/', generalLimiter);
 
-  const interactLimiter = rateLimit({
+  const recipeLimiter = rateLimit({
     windowMs: config.RATE_LIMIT_WINDOW_MS,
-    max: config.RATE_LIMIT_MAX_INTERACT,
-    message: { error: 'Too many interaction requests' },
+    max: config.RATE_LIMIT_MAX * 5, // Limit for all recipe-related endpoints
+    message: { error: 'Too many recipe requests' },
     standardHeaders: true,
     legacyHeaders: false,
   });
-  app.use('/api/leccion/interact', interactLimiter);
+
+  const readOnlyLimiter = rateLimit({
+    windowMs: config.RATE_LIMIT_WINDOW_MS,
+    max: config.RATE_LIMIT_MAX * 10, // Allow many more attempts for read-only GET requests
+    message: { error: 'Too many read requests' },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  // TTS specific rate limiter - more restrictive due to computational cost
+  const ttsLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 10, // 10 requests per minute per IP
+    message: { error: 'Demasiadas solicitudes de voz. Intenta de nuevo en un minuto.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  // Apply specific limiters
+  app.use('/api/auth', authLimiter);
+  app.use('/api/recipe', recipeLimiter); // covers start, interact, question
+  app.use('/api/recipes', readOnlyLimiter);
+  app.use('/api/sessions', readOnlyLimiter);
 
   app.use(requestLoggerMiddleware(logger));
 
@@ -162,7 +196,11 @@ export function createApp(deps: ServerDependencies): Express {
   const protectedMiddleware = authMiddleware(userRepo, verifyTokenUseCase);
 
   // Protected routes
-  app.use('/api/recipe', protectedMiddleware, createRecipeRouter(orchestrateUseCase));
+  app.use(
+    '/api/recipe',
+    protectedMiddleware,
+    createRecipeRouter(orchestrateUseCase, questionAnsweringUseCase),
+  );
   app.use(
     '/api/recipes',
     protectedMiddleware,
@@ -171,8 +209,16 @@ export function createApp(deps: ServerDependencies): Express {
   app.use(
     '/api/sessions',
     protectedMiddleware,
-    createSessionsRouter(getSessionUseCase, listSessionsUseCase, resetSessionUseCase),
+    createSessionsRouter(
+      getSessionUseCase,
+      listSessionsUseCase,
+      resetSessionUseCase,
+      completeSessionUseCase,
+    ),
   );
+
+  // TTS routes - with rate limiting and authentication
+  app.use('/api/tts', ttsLimiter, protectedMiddleware, createTTSRouter(ttsService));
 
   app.use((_req: Request, res: Response) => {
     res.status(404).json({ error: 'Not found' });

@@ -1,7 +1,54 @@
 import type { AssetAttachment } from './asset-attachment';
 import type { UserProgress } from './user-progress';
+import type { Concept } from './concept';
 
 export type RecipeStatus = 'draft' | 'published' | 'archived';
+
+export type StepType = 'content' | 'activity' | 'intro' | 'closure';
+
+// Script for a recipe step (static content)
+export interface StepTransition {
+  readonly text: string;
+}
+
+export interface StepContent {
+  readonly text: string;
+  readonly chunks: readonly ContentChunk[];
+}
+
+export interface StepExample {
+  readonly text: string;
+  readonly visual?: {
+    readonly type: 'image' | 'animation' | 'equation';
+    readonly src?: string;
+  };
+}
+
+export interface StepComprehensionCheck {
+  readonly question: string;
+  readonly expectedAnswer: string;
+  readonly feedback: {
+    readonly correct: string;
+    readonly incorrect: string;
+  };
+}
+
+export interface StepClosure {
+  readonly text: string;
+}
+
+export interface StepScript {
+  readonly transition: StepTransition;
+  readonly content: StepContent;
+  readonly examples: readonly StepExample[];
+  readonly comprehensionCheck?: StepComprehensionCheck;
+  readonly closure: StepClosure;
+}
+
+export interface ContentChunk {
+  readonly text: string;
+  readonly pauseAfter: number;
+}
 
 export interface Recipe {
   readonly id: string;
@@ -15,9 +62,11 @@ export interface Recipe {
   readonly createdAt: Date;
   readonly updatedAt: Date;
   readonly steps: readonly RecipeStep[];
+  readonly concepts?: readonly Concept[];
   readonly tags?: readonly Tag[];
   readonly attachments?: readonly AssetAttachment[];
   readonly progressEntries?: readonly UserProgress[];
+  readonly meta?: Record<string, unknown>;
 }
 
 export interface RecipeStep {
@@ -28,6 +77,11 @@ export interface RecipeStep {
   readonly condition?: any;
   readonly onCondition?: string;
   readonly createdAt: Date;
+  // New fields for static content
+  readonly conceptId?: string;
+  readonly activityId?: string;
+  readonly script?: StepScript;
+  readonly stepType?: StepType;
 }
 
 export interface Tag {

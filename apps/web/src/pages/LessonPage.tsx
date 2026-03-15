@@ -1,25 +1,52 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import type { PedagogicalState } from '@pixel-mentor/shared';
+import { IconArrowLeft, IconMicrophone, IconPlayerStop, IconSend } from '@tabler/icons-react';
 
 import { useAuthStore } from '../stores/authStore';
 import { useLessonStore } from '../stores/lessonStore';
-import { type PedagogicalState } from '../services/api';
-import { useSpeech } from '../hooks/useSpeech';
-import { useStartLesson, useLessonInteraction } from '../hooks/useLessonQueries';
 
+import { useVoice, type VoiceSettings } from '@/hooks/useVoice';
+import {
+  VoiceSettingsPanel,
+  useVoiceSettings,
+} from '@/components/voice-settings/VoiceSettingsPanel';
+import { useStartRecipe, useRecipeInteraction } from '@/hooks/useLessonQueries';
+import { useLessonTimers } from '@/hooks/useLessonTimers';
+import { ActivitySkipOffer } from '@/components/lesson/ActivitySkipOffer';
 import { Mascot } from '@/components/mascot/Mascot';
-
-interface Message {
-  role: 'tutor' | 'student';
-  text: string;
-}
+import { ContentPanel, type ContentType } from '@/components/content-panel/ContentPanel';
+import { QuestionHandButton, type HandState } from '@/components/question-hand/QuestionHandButton';
+import { VoiceInputWithConfirmation } from '@/components/voice-input/VoiceInputWithConfirmation';
+import { ResumeToast } from '@/components/lesson/ResumeToast';
+import { Button, Spinner } from '@/components/ui';
 
 const STATE_LABELS: Record<PedagogicalState, string> = {
-  ACTIVE_CLASS: 'Hablando',
+  AWAITING_START: 'Esperando inicio',
+  ACTIVE_CLASS: 'Aprendiendo',
   RESOLVING_DOUBT: 'Pensando',
+  CLARIFYING: 'Aclarando',
   EXPLANATION: 'Explicando',
   QUESTION: 'Preguntando',
   EVALUATION: 'Revisando',
+  COMPLETED: 'Completado',
+  ACTIVITY_WAIT: 'Actividad en espera',
+  ACTIVITY_INACTIVITY_WARNING: '¿Necesitas ayuda?',
+  ACTIVITY_SKIP_OFFER: '¿Qué prefieres?',
+  ACTIVITY_REPEAT: 'Repitiendo concepto',
+};
+
+const getContentType = (state?: PedagogicalState): ContentType => {
+  const mapping: Record<string, ContentType> = {
+    ACTIVE_CLASS: 'explanation',
+    EXPLANATION: 'explanation',
+    RESOLVING_DOUBT: 'listening',
+    CLARIFYING: 'listening',
+    QUESTION: 'activity',
+    EVALUATION: 'activity',
+    COMPLETED: 'completed',
+  };
+  return mapping[state || ''] || 'explanation';
 };
 
 export function LessonPage() {
@@ -28,264 +55,467 @@ export function LessonPage() {
   const {
     currentState,
     setCurrentState,
-    setIsSpeaking: setGlobalIsSpeaking,
-    setIsListening: setGlobalIsListening,
+    setSessionId,
+    sessionId,
+    setConfig,
+    setStudentName,
+    setWasResumed,
+    wasResumed,
+    config,
+    studentName,
+    reset: resetLessonStore,
   } = useLessonStore();
+
+  // Voice hook
   const {
-    isSpeaking,
-    isListening,
-    transcript,
-    error: speechError,
     speak,
+    stopSpeaking,
+    isListening,
     startListening,
     stopListening,
-    clearTranscript,
-    stopSpeaking,
-  } = useSpeech();
-  const { mutateAsync: startLesson, isPending: isStarting } = useStartLesson();
-  const { mutateAsync: interactWithLesson, isPending: isInteracting } = useLessonInteraction();
+    transcript,
+    isSpeechSupported,
+    isRecognitionSupported,
+  } = useVoice();
 
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [conversation, setConversation] = useState<Message[]>([]);
+  const { settings: voiceSettings, updateSettings } = useVoiceSettings();
+
+  // Connect useVoice to lesson store
+  const [tutorIsSpeaking, setTutorIsSpeaking] = useState(false);
+  const { setIsSpeaking: setStoreIsSpeaking } = useLessonStore();
+
+  // Update store when tutor speaks
+  useEffect(() => {
+    setStoreIsSpeaking(tutorIsSpeaking);
+  }, [tutorIsSpeaking, setStoreIsSpeaking]);
+
+  // Preview voice with current settings
+  const handlePreviewVoice = async (settings: VoiceSettings) => {
+    setTutorIsSpeaking(true);
+    await speak('Hola, soy tu tutor. Vamos a aprender juntos.', settings);
+    setTutorIsSpeaking(false);
+  };
+
+  const { mutateAsync: startRecipe, isPending: isStarting } = useStartRecipe();
+  const { mutateAsync: interactWithRecipe, isPending: isProcessing } = useRecipeInteraction();
+
+  const [handState, setHandState] = useState<HandState>('idle');
+  const [contentText, setContentText] = useState('');
   const [inputText, setInputText] = useState('');
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [isSessionComplete, setIsSessionComplete] = useState(false);
+  const [inputMode, setInputMode] = useState<'voice' | 'type'>('voice');
+  const [activityOptions, setActivityOptions] = useState<any[]>([]);
+  const [activityQuestion, setActivityQuestion] = useState('');
+  const [activityCorrect, setActivityCorrect] = useState<boolean | null>(null);
+  const [activityFeedback, setActivityFeedback] = useState('');
+  const [needsStart, setNeedsStart] = useState(false);
+
   const conversationEndRef = useRef<HTMLDivElement>(null);
+  const contentType = useMemo(() => getContentType(currentState), [currentState]);
 
-  const isProcessing = isStarting || isInteracting;
+  // Process response from API
+  const processResponseWithAutoAdvance = useCallback(
+    async (response: any) => {
+      if (!response) return;
 
-  useEffect(() => {
-    setGlobalIsSpeaking(isSpeaking);
-  }, [isSpeaking, setGlobalIsSpeaking]);
+      if (response.sessionId) setSessionId(response.sessionId);
+      if (response.pedagogicalState) setCurrentState(response.pedagogicalState);
 
-  useEffect(() => {
-    setGlobalIsListening(isListening);
-  }, [isListening, setGlobalIsListening]);
+      if (response.resumed !== undefined) {
+        setWasResumed(response.resumed);
+      }
 
-  useEffect(() => {
-    if (transcript) {
-      setInputText(transcript);
-      clearTranscript();
-    }
-  }, [transcript, clearTranscript]);
+      if (response.needsStart !== undefined) {
+        setNeedsStart(response.needsStart);
+      }
 
-  useEffect(() => {
-    if (!lessonId || !user) return;
-    let mounted = true;
+      const nextVoiceText = response.voiceText || response.extraExplanation || '';
+      setContentText(nextVoiceText);
 
-    const initLesson = async () => {
-      setActionError(null);
-      try {
-        const response = await startLesson(lessonId);
-        if (!mounted) return;
-        setSessionId(response.sessionId);
-        setCurrentState(response.pedagogicalState);
-        setConversation([{ role: 'tutor', text: response.voiceText }]);
-        speak(response.voiceText);
-      } catch (err) {
-        if (mounted) {
-          setActionError(err instanceof Error ? err.message : 'No pudimos conectar.');
+      if (response.meta) {
+        setConfig(response.meta.config ?? null);
+        setStudentName(response.meta.studentName ?? user?.name ?? 'Estudiante');
+      }
+
+      if (response.staticContent?.activity) {
+        const { instruction, options } = response.staticContent.activity;
+        setActivityQuestion(instruction);
+        setActivityOptions(
+          options?.map((opt: any, idx: number) => ({
+            id: opt.id || `option-${idx}`,
+            text: opt.text,
+            isCorrect: opt.isCorrect,
+          })) ?? [],
+        );
+      } else if (response.pedagogicalState !== 'ACTIVITY_REPEAT') {
+        setActivityQuestion('');
+        setActivityOptions([]);
+      }
+
+      if (response.isCorrect !== undefined) {
+        setActivityCorrect(response.isCorrect);
+        if (response.feedback) setActivityFeedback(response.feedback);
+      } else {
+        setActivityCorrect(null);
+        setActivityFeedback('');
+      }
+
+      // Speak the response if there's text
+      if (nextVoiceText && isSpeechSupported) {
+        setTutorIsSpeaking(true);
+        try {
+          await speak(nextVoiceText, {
+            character: voiceSettings.character,
+            speakingRate: voiceSettings.speakingRate,
+            pitch: voiceSettings.pitch,
+            languageCode: voiceSettings.languageCode,
+          });
+        } catch (e) {
+          console.error('Error speaking:', e);
+        } finally {
+          setTutorIsSpeaking(false);
         }
       }
-    };
+    },
+    [
+      setCurrentState,
+      setSessionId,
+      setConfig,
+      setStudentName,
+      user?.name,
+      speak,
+      isSpeechSupported,
+      voiceSettings,
+      setTutorIsSpeaking,
+    ],
+  );
 
-    initLesson();
+  // Handle interaction with API
+  const handleInteraction = useCallback(
+    async (input: string) => {
+      if (!sessionId || !input.trim()) return;
+
+      // Stop any current voice
+      stopSpeaking();
+      stopListening();
+
+      try {
+        const res = await interactWithRecipe({ sessionId, input: input.trim() });
+        await processResponseWithAutoAdvance(res);
+      } catch (err) {
+        console.error('Error en la interacción:', err);
+      }
+    },
+    [sessionId, interactWithRecipe, processResponseWithAutoAdvance, stopSpeaking, stopListening],
+  );
+
+  const { timeRemaining, startTimer, resetTimer, hasWarned } = useLessonTimers({
+    onWarning: () => setCurrentState('ACTIVITY_INACTIVITY_WARNING'),
+    onSkipOffer: () => setCurrentState('ACTIVITY_SKIP_OFFER'),
+    onTimeout: () => handleInteraction('timeout'),
+    activityDurationSeconds: 30,
+  });
+
+  // Initialize lesson
+  useEffect(() => {
+    if (!lessonId || !user) return;
+
+    const init = async () => {
+      try {
+        const res = await startRecipe(lessonId);
+        await processResponseWithAutoAdvance(res);
+      } catch (err) {
+        console.error('Error al iniciar lección:', err);
+      }
+    };
+    init();
 
     return () => {
-      mounted = false;
       stopSpeaking();
-      useLessonStore.getState().reset();
+      stopListening();
+      resetLessonStore();
     };
-  }, [lessonId, user, startLesson, setCurrentState, speak, stopSpeaking]);
+  }, [
+    lessonId,
+    user,
+    startRecipe,
+    processResponseWithAutoAdvance,
+    stopSpeaking,
+    stopListening,
+    resetLessonStore,
+  ]);
 
+  // Handle timers
+  useEffect(() => {
+    if (currentState === 'QUESTION' || currentState === 'EVALUATION') {
+      startTimer();
+    } else {
+      resetTimer();
+    }
+  }, [currentState, startTimer, resetTimer]);
+
+  // Scroll to bottom on content change
   useEffect(() => {
     conversationEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [conversation]);
+  }, [contentText]);
 
-  const handleSend = async () => {
-    if (!inputText.trim() || !sessionId) return;
-    const userText = inputText;
-    setInputText('');
-    setConversation((prev) => [...prev, { role: 'student', text: userText }]);
+  const handleRaiseHand = useCallback(() => {
+    if (handState !== 'idle') return;
     stopSpeaking();
-    setActionError(null);
-    try {
-      const response = await interactWithLesson({ sessionId, input: userText });
-      setCurrentState(response.pedagogicalState);
-      setConversation((prev) => [...prev, { role: 'tutor', text: response.voiceText }]);
-      if (response.sessionCompleted) {
-        setIsSessionComplete(true);
+    setHandState('raised');
+    setTimeout(() => setHandState('listening'), 500);
+  }, [handState, stopSpeaking]);
+
+  const handleDoubtConfirm = useCallback(
+    (text: string) => {
+      setHandState('idle');
+      handleInteraction(text);
+    },
+    [handleInteraction],
+  );
+
+  // Voice button handler
+  const handleVoiceButtonClick = useCallback(() => {
+    if (isListening) {
+      stopListening();
+      if (transcript.trim()) {
+        handleInteraction(transcript.trim());
       }
-      speak(response.voiceText);
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Error al enviar mensaje.');
+    } else {
+      startListening();
     }
-  };
+  }, [isListening, transcript, startListening, stopListening, handleInteraction]);
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
-  if (isStarting && !sessionId) {
+  // Show "Comenzar" button when needsStart is true
+  if (currentState === 'AWAITING_START' || needsStart) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-sky-50">
-        <div className="text-center">
-          <div className="text-6xl animate-bounce mb-6">🚀</div>
-          <p className="text-xl font-black text-sky-600">Preparando la nave...</p>
+      <div className="min-h-screen bg-gradient-to-b from-sky-50 to-white flex flex-col items-center justify-center p-8">
+        <div className="text-center max-w-lg">
+          <div className="text-6xl mb-6">🎓</div>
+          <h1 className="text-3xl font-bold text-slate-800 mb-4">
+            ¡Hola, {studentName || user?.name || 'Estudiante'}!
+          </h1>
+          <p className="text-lg text-slate-600 mb-8">
+            {contentText || 'Vamos a comenzar tu clase de matemáticas.'}
+          </p>
+          <Button
+            onClick={() => handleInteraction('sí')}
+            disabled={isProcessing}
+            size="lg"
+            className="text-lg px-8 py-4"
+          >
+            {isProcessing ? (
+              <>
+                <Spinner size="sm" className="mr-2" />
+                Comenzando...
+              </>
+            ) : (
+              '🚀 ¡Comenzar Clase!'
+            )}
+          </Button>
         </div>
       </div>
     );
   }
 
-  const lastTutorMessage = conversation.filter((m) => m.role === 'tutor').pop();
+  if (isStarting && !sessionId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-sky-50">
+        <div className="text-center">
+          <div className="w-20 h-20 mx-auto mb-6 relative">
+            <div className="absolute inset-0 bg-sky-400 rounded-full animate-ping opacity-30" />
+            <div className="absolute inset-0 bg-sky-500 rounded-full animate-pulse flex items-center justify-center">
+              <span className="text-4xl">🚀</span>
+            </div>
+          </div>
+          <p className="text-xl font-bold text-sky-600">Preparando la clase...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-sky-50 font-sans flex flex-col text-slate-800">
-      <header className="bg-white border-b-2 border-sky-100 h-20 flex items-center px-6 shrink-0 relative z-10">
+    <div className="min-h-screen bg-gradient-to-br from-sky-50 to-slate-100 font-sans text-slate-800 flex flex-col">
+      <ResumeToast isVisible={wasResumed} onDismiss={() => setWasResumed(false)} />
+
+      {/* Header */}
+      <header className="bg-white/80 backdrop-blur-sm border-b border-sky-100 h-16 flex items-center px-4 sm:px-6 shrink-0 relative z-10">
         <div className="max-w-7xl mx-auto w-full flex justify-between items-center">
           <Link
             to="/dashboard"
-            className="w-12 h-12 flex items-center justify-center bg-slate-100 text-slate-500 rounded-full hover:bg-sky-100 hover:text-sky-600 transition-colors"
+            className="flex items-center gap-2 px-3 py-2 text-slate-500 hover:text-sky-600 hover:bg-sky-50 rounded-lg transition-colors"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={3}
-                d="M10 19l-7-7m0 0l7-7m-7 7h18"
-              />
-            </svg>
+            <IconArrowLeft className="w-5 h-5" />
+            <span className="hidden sm:inline text-sm font-medium">Volver</span>
           </Link>
-          <div className="flex items-center gap-3 bg-white border-2 border-sky-100 px-5 py-2.5 rounded-full shadow-sm">
+
+          <div className="flex items-center gap-3 bg-white border-2 border-sky-100 px-4 py-2 rounded-full shadow-sm">
             <div
-              className={`w-3 h-3 rounded-full ${currentState === 'ACTIVE_CLASS' ? 'bg-emerald-400' : 'bg-amber-400'} animate-pulse`}
-            ></div>
-            <span className="text-sm font-bold text-slate-700">
+              className={`w-2.5 h-2.5 rounded-full ${
+                currentState === 'ACTIVE_CLASS' ? 'bg-emerald-400' : 'bg-amber-400'
+              } animate-pulse`}
+            />
+            <span className="text-sm font-semibold text-slate-700">
               {STATE_LABELS[currentState] || 'Listo'}
             </span>
           </div>
+
+          <VoiceSettingsPanel
+            settings={voiceSettings}
+            onSettingsChange={updateSettings}
+            onPreview={handlePreviewVoice}
+          />
         </div>
       </header>
 
+      {/* Main Content */}
       <main className="flex-1 max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 flex flex-col lg:flex-row gap-6 min-h-0">
-        <section className="w-full lg:w-5/12 flex flex-col bg-white rounded-3xl border-2 border-sky-100 shadow-sm overflow-hidden relative">
-          <div className="absolute inset-0 bg-gradient-to-b from-sky-50 to-white pointer-events-none"></div>
-
-          <div className="flex-1 flex flex-col justify-center items-center p-8 relative z-10">
-            <Mascot />
+        {/* Left Panel - Mascot & Hand */}
+        <section className="w-full lg:w-5/12 flex flex-col items-center justify-center">
+          <Mascot />
+          <div className="mt-6">
+            <QuestionHandButton
+              handState={handState}
+              onRaiseHand={handleRaiseHand}
+              isDisabled={isProcessing || handState !== 'idle'}
+            />
           </div>
 
-          <div className="p-6 bg-white relative z-10">
-            <div className="bg-sky-50 border-2 border-sky-100 rounded-2xl p-6 relative">
-              <div className="absolute -top-3 left-8 w-6 h-6 bg-sky-50 border-t-2 border-l-2 border-sky-100 transform rotate-45"></div>
-              <p className="text-lg text-slate-700 font-bold leading-relaxed relative z-10">
-                {lastTutorMessage ? lastTutorMessage.text : '¡Hola!'}
-              </p>
+          {handState !== 'idle' ? (
+            <div className="mt-4 w-full max-w-md">
+              <VoiceInputWithConfirmation onConfirm={handleDoubtConfirm} />
+              <button
+                onClick={() => setHandState('idle')}
+                className="mt-3 w-full text-sm text-slate-500 hover:text-slate-700 transition-colors text-center"
+              >
+                Cancelar
+              </button>
             </div>
-          </div>
+          ) : null}
         </section>
 
-        <section className="w-full lg:w-7/12 flex flex-col bg-white rounded-3xl border-2 border-sky-100 shadow-sm min-h-[500px]">
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {actionError || speechError ? (
-              <div className="p-4 bg-rose-50 border-2 border-rose-100 text-rose-600 font-bold rounded-2xl">
-                {actionError || speechError}
-              </div>
-            ) : null}
+        {/* Right Panel - Content */}
+        <section className="w-full lg:w-7/12 flex flex-col bg-white rounded-3xl border-2 border-sky-100 shadow-sm min-h-[500px] overflow-hidden">
+          {currentState === 'ACTIVITY_SKIP_OFFER' ? (
+            <ActivitySkipOffer
+              onRepeat={() => {
+                resetTimer();
+                setCurrentState('QUESTION');
+              }}
+              onContinue={() => handleInteraction('continue')}
+              studentName={studentName || user?.name || ''}
+            />
+          ) : (
+            <ContentPanel
+              contentType={contentType}
+              explanationText={contentText}
+              activityQuestion={activityQuestion}
+              activityOptions={activityOptions}
+              onActivitySelect={handleInteraction}
+              activityCorrect={activityCorrect}
+              activityFeedback={activityFeedback}
+              timeRemaining={timeRemaining}
+              hasWarned={hasWarned}
+              studentName={studentName}
+              config={config}
+              pedagogicalState={currentState}
+            />
+          )}
 
-            {conversation.map((message, index) => (
-              <div
-                key={index}
-                className={`flex w-full ${message.role === 'student' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-[80%] p-5 rounded-3xl text-base font-medium leading-relaxed ${
-                    message.role === 'student'
-                      ? 'bg-sky-500 text-white rounded-tr-sm shadow-md'
-                      : 'bg-slate-100 text-slate-800 rounded-tl-sm'
-                  }`}
-                >
-                  {message.text}
-                </div>
-              </div>
-            ))}
-            <div ref={conversationEndRef} />
-          </div>
-
-          <div className="p-4 sm:p-6 bg-white border-t-2 border-sky-50 rounded-b-3xl">
-            {isSessionComplete ? (
-              <Link
-                to="/mission-report"
-                state={{
-                  stats: {
-                    xpEarned: conversation.length * 15,
-                    accuracy: 100,
-                    conceptsMastered: ['Hablar Claro', 'Escuchar'],
-                  },
-                }}
-                className="w-full flex items-center justify-center py-4 bg-emerald-500 text-white text-lg font-black rounded-2xl hover:bg-emerald-600 transition-colors shadow-md hover:-translate-y-1 transform"
-              >
-                ¡Ver mis estrellas! ⭐
-              </Link>
-            ) : (
-              <div className="flex gap-4">
-                <button
-                  onClick={isListening ? stopListening : startListening}
-                  disabled={isProcessing || isSpeaking}
-                  className={`w-16 h-16 shrink-0 flex items-center justify-center rounded-2xl transition-all ${
-                    isListening
-                      ? 'bg-rose-500 text-white shadow-lg scale-105'
-                      : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                  } disabled:opacity-50`}
-                >
-                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={3}
-                      d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-                    />
-                  </svg>
-                </button>
-
-                <div className="flex-1 relative">
-                  <input
-                    type="text"
-                    value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Escribe aquí..."
-                    disabled={isProcessing || isSessionComplete}
-                    className="w-full h-16 pl-6 pr-16 bg-slate-50 border-2 border-slate-200 rounded-2xl text-lg font-medium focus:border-sky-400 focus:bg-white focus:outline-none transition-all disabled:opacity-50"
-                  />
+          {/* Input Area */}
+          {handState === 'idle' && contentType !== 'completed' && contentType !== 'activity' ? (
+            <div className="p-4 sm:p-6 bg-white border-t-2 border-sky-50 rounded-b-3xl">
+              {/* Mode Toggle */}
+              <div className="flex gap-2 mb-4">
+                {(['voice', 'type'] as const).map((mode) => (
                   <button
-                    onClick={handleSend}
-                    disabled={!inputText.trim() || isProcessing}
-                    className="absolute right-2 top-2 bottom-2 aspect-square bg-sky-500 text-white rounded-xl flex items-center justify-center hover:bg-sky-600 disabled:opacity-50 transition-colors shadow-sm"
+                    key={mode}
+                    onClick={() => setInputMode(mode)}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-medium transition-all ${
+                      inputMode === mode
+                        ? 'bg-sky-500 text-white shadow-md'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
                   >
-                    <svg
-                      className="w-6 h-6 ml-1"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={3}
-                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                      />
-                    </svg>
+                    {mode === 'voice' ? (
+                      <>
+                        <IconMicrophone className="w-4 h-4" />
+                        Voz
+                      </>
+                    ) : (
+                      '✏️ Escribir'
+                    )}
                   </button>
-                </div>
+                ))}
               </div>
-            )}
-          </div>
+
+              {/* Input */}
+              <div className="flex gap-3">
+                {inputMode === 'voice' ? (
+                  <div className="flex-1 flex flex-col gap-2">
+                    <button
+                      onClick={handleVoiceButtonClick}
+                      disabled={isProcessing || !isRecognitionSupported}
+                      className={`w-full h-16 flex items-center justify-center gap-3 rounded-2xl transition-all font-medium ${
+                        isListening
+                          ? 'bg-red-500 text-white animate-pulse'
+                          : 'bg-slate-100 text-slate-600 hover:bg-sky-100 hover:text-sky-600'
+                      } disabled:opacity-50`}
+                    >
+                      {isListening ? (
+                        <>
+                          <IconPlayerStop className="w-6 h-6" />
+                          <span>Escuchando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <IconMicrophone className="w-6 h-6" />
+                          <span>Habla ahora</span>
+                        </>
+                      )}
+                    </button>
+
+                    {/* Status messages */}
+                    {isListening || transcript ? (
+                      <p className="text-center text-sm text-sky-600 animate-pulse">
+                        {isListening ? `🎤 ${transcript || 'Escuchando...'}` : ''}
+                      </p>
+                    ) : null}
+
+                    {!isRecognitionSupported ? (
+                      <p className="text-center text-sm text-amber-600">
+                        ⚠️ Voz no disponible en este navegador
+                      </p>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="flex-1 relative">
+                    <input
+                      type="text"
+                      value={inputText}
+                      onChange={(e) => setInputText(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleInteraction(inputText)}
+                      className="w-full h-16 pl-5 pr-16 bg-slate-50 border-2 border-slate-200 rounded-2xl text-base focus:border-sky-400 focus:bg-white focus:outline-none transition-all"
+                      placeholder="Escribe aquí tu respuesta..."
+                      disabled={isProcessing}
+                    />
+                    <button
+                      onClick={() => {
+                        handleInteraction(inputText);
+                        setInputText('');
+                      }}
+                      disabled={!inputText.trim() || isProcessing}
+                      className="absolute right-2 top-2 bottom-2 aspect-square bg-sky-500 text-white rounded-xl flex items-center justify-center hover:bg-sky-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <IconSend className="w-5 h-5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : null}
         </section>
       </main>
+      <div ref={conversationEndRef} />
     </div>
   );
 }

@@ -8,14 +8,21 @@ interface AuthState {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
+  isHydrated: boolean; // NEW: tracks Zustand hydration completion
+  isValidating: boolean; // NEW: tracks auth check in progress
   isLoading: boolean;
   error: string | null;
+
+  // actions (existing)
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string, role: Role) => Promise<void>;
   checkAuth: () => Promise<void>;
   logout: () => void;
   clearError: () => void;
   setAuth: (user: User, token: string) => void;
+
+  // NEW: internal hydration marker
+  _setHydrated: (hydrated: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -24,12 +31,20 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       token: null,
       isAuthenticated: false,
+      isHydrated: false, // NEW: default false
+      isValidating: false, // NEW: default false
       isLoading: false,
       error: null,
       setAuth: (user, token) => set({ user, token, isAuthenticated: true }),
       logout: () => {
         clearToken();
-        set({ user: null, token: null, isAuthenticated: false });
+        set({
+          user: null,
+          token: null,
+          isAuthenticated: false,
+          isHydrated: false, // NEW: force re-hydration check on next load
+          isValidating: false,
+        });
       },
       login: async (email: string, password: string) => {
         set({ isLoading: true, error: null });
@@ -58,22 +73,34 @@ export const useAuthStore = create<AuthState>()(
       checkAuth: async () => {
         const token = getToken();
         if (!token) {
-          set({ isAuthenticated: false, user: null, token: null });
+          set({ isAuthenticated: false, user: null, token: null, isValidating: false });
           return;
         }
+        set({ isValidating: true }); // NEW: mark validation in progress
         try {
           const { user } = await api.getCurrentUser();
-          set({ user, token, isAuthenticated: true });
+          set({ user, token, isAuthenticated: true, isValidating: false });
         } catch {
           clearToken();
-          set({ user: null, token: null, isAuthenticated: false });
+          set({ user: null, token: null, isAuthenticated: false, isValidating: false });
         }
       },
       clearError: () => set({ error: null }),
+      _setHydrated: (hydrated) => set({ isHydrated: hydrated }), // NEW: internal hydration marker
     }),
     {
       name: 'auth-storage',
       partialize: (state) => ({ token: state.token }),
+      // @ts-ignore - onRehydrate is supported in zustand v5
+      onRehydrate: () => {
+        // This runs after Zustand hydrates from localStorage
+        const store = useAuthStore.getState();
+        store._setHydrated(true);
+        // Trigger async auth check (don't await - let it run in background)
+        store.checkAuth().catch(() => {
+          // Error handled in checkAuth itself
+        });
+      },
     },
   ),
 );

@@ -13,13 +13,17 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@pixel-mentor/shared": "workspace:*",
+    "@rive-app/canvas": "^2.35.2",
     "@rive-app/react-canvas": "^4.27.1",
+    "@tabler/icons-react": "^3.40.0",
     "@tanstack/react-query": "^5.90.21",
     "axios": "^1.13.6",
     "clsx": "^2.1.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-router-dom": "^7.13.1",
+    "rive-react": "^4.24.0",
     "tailwind-merge": "^3.5.0",
     "zod": "^4.3.6",
     "zustand": "5.0.11"

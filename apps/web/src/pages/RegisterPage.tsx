@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { IconUserPlus, IconArrowLeft } from '@tabler/icons-react';
 
 import { useAuthStore } from '../stores/authStore';
+import { Button, Input, Card } from '../components/ui';
 
 export function RegisterPage() {
   const navigate = useNavigate();
@@ -18,114 +20,106 @@ export function RegisterPage() {
     setValidationError('');
 
     if (password !== confirmPassword) {
-      setValidationError('Las claves de acceso no coinciden.');
+      setValidationError('Las contraseñas no coinciden.');
       return;
     }
 
     if (password.length < 6) {
-      setValidationError('La clave requiere un mínimo de 6 caracteres.');
+      setValidationError('La contraseña debe tener al menos 6 caracteres.');
       return;
     }
 
     try {
       await register(email, password, name, 'STUDENT');
       navigate('/dashboard');
-    } catch {}
+    } catch {
+      // Error is handled by the store
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4 font-sans text-slate-900">
-      <div className="w-full max-w-[360px]">
-        <div className="mb-8 flex flex-col items-center">
-          <div className="w-8 h-8 bg-slate-900 rounded-sm mb-4"></div>
-          <h1 className="text-xl font-semibold tracking-tight">Pixel Mentor</h1>
-          <p className="text-sm text-slate-500 mt-1">Alta de nuevo operador</p>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100 px-4 py-8">
+      <div className="w-full max-w-sm">
+        {/* Back link */}
+        <Link
+          to="/login"
+          className="inline-flex items-center gap-1 text-slate-500 hover:text-slate-700 transition-colors mb-6"
+        >
+          <IconArrowLeft className="w-4 h-4" />
+          <span className="text-sm font-medium">Volver</span>
+        </Link>
+
+        {/* Logo and Title */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-slate-700 to-slate-900 rounded-2xl shadow-lg mb-4 mx-auto">
+            <IconUserPlus className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold text-slate-800">Crear Cuenta</h1>
+          <p className="text-slate-500 mt-1">Únete a Pixel Mentor</p>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-md p-6">
+        <Card variant="outlined" padding="lg">
           <form onSubmit={handleSubmit} className="space-y-4">
             {error || validationError ? (
-              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-md">
+              <div className="p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl">
                 {error || validationError}
               </div>
             ) : null}
 
-            <div>
-              <label htmlFor="name" className="block text-xs font-medium text-slate-700 mb-1.5">
-                Designación (Nombre)
-              </label>
-              <input
-                id="name"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm focus:border-slate-400 focus:outline-none transition-colors"
-                placeholder="Operador Alfa"
-              />
-            </div>
+            <Input
+              label="Nombre"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              placeholder="Tu nombre"
+              autoComplete="name"
+            />
 
-            <div>
-              <label htmlFor="email" className="block text-xs font-medium text-slate-700 mb-1.5">
-                Identificador (Email)
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm focus:border-slate-400 focus:outline-none transition-colors"
-                placeholder="alfa@sistema.com"
-              />
-            </div>
+            <Input
+              label="Correo electrónico"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              placeholder="tu@email.com"
+              autoComplete="email"
+            />
 
-            <div>
-              <label htmlFor="password" className="block text-xs font-medium text-slate-700 mb-1.5">
-                Clave de acceso
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm focus:border-slate-400 focus:outline-none transition-colors"
-              />
-            </div>
+            <Input
+              label="Contraseña"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={6}
+              placeholder="Mínimo 6 caracteres"
+              autoComplete="new-password"
+            />
 
-            <div>
-              <label
-                htmlFor="confirmPassword"
-                className="block text-xs font-medium text-slate-700 mb-1.5"
-              >
-                Confirmar clave
-              </label>
-              <input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm focus:border-slate-400 focus:outline-none transition-colors"
-              />
-            </div>
+            <Input
+              label="Confirmar contraseña"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              placeholder="Repite tu contraseña"
+              autoComplete="new-password"
+            />
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full mt-2 py-2.5 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 focus:outline-none transition-colors disabled:opacity-50"
-            >
-              {isLoading ? 'Procesando...' : 'Registrar'}
-            </button>
+            <Button type="submit" disabled={isLoading} className="w-full mt-2">
+              {isLoading ? 'Creando cuenta...' : 'Crear Cuenta'}
+            </Button>
           </form>
-        </div>
+        </Card>
 
-        <p className="mt-6 text-center text-xs text-slate-500">
-          ¿Registro existente?{' '}
-          <Link to="/login" className="text-slate-900 font-medium hover:underline">
-            Autenticarse
+        <p className="mt-6 text-center text-slate-600">
+          ¿Ya tienes cuenta?{' '}
+          <Link
+            to="/login"
+            className="text-slate-800 font-semibold hover:text-sky-600 transition-colors"
+          >
+            Iniciar sesión
           </Link>
         </p>
       </div>

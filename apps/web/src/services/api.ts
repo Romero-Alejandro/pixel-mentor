@@ -1,90 +1,23 @@
 import axios from 'axios';
-import { z } from 'zod';
+import {
+  UserSchema,
+  AuthResponseSchema,
+  RecipeSchema,
+  SessionSchema,
+  StartRecipeOutputSchema,
+  InteractRecipeOutputSchema,
+  QuestionAnswerOutputSchema,
+  type User,
+  type Role,
+  type Recipe,
+  type Session,
+  type PedagogicalState,
+} from '@pixel-mentor/shared';
 
 import { useAuthStore } from '../stores/authStore';
 
-export const UserSchema = z.object({
-  id: z.string(),
-  email: z.string().email(),
-  name: z.string(),
-  role: z.enum(['STUDENT', 'TEACHER', 'ADMIN']),
-  age: z.number().optional(),
-  quota: z.number(),
-});
-
-export const AuthResponseSchema = z.object({
-  user: UserSchema,
-  token: z.string(),
-});
-
-export const LessonSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  description: z.string().optional(),
-  active: z.boolean().optional(),
-  concepts: z.array(z.any()).optional(),
-  questions: z.array(z.any()).optional(),
-});
-
-export const PedagogicalStateSchema = z.enum([
-  'ACTIVE_CLASS',
-  'RESOLVING_DOUBT',
-  'EXPLANATION',
-  'QUESTION',
-  'EVALUATION',
-]);
-
-export const SessionSchema = z.object({
-  id: z.string(),
-  studentId: z.string(),
-  lessonId: z.string(),
-  status: z.string(),
-  stateCheckpoint: z
-    .object({
-      currentState: PedagogicalStateSchema,
-      currentSegmentIndex: z.number(),
-      currentQuestionIndex: z.number(),
-      savedSegmentIndex: z.number().optional(),
-      doubtContext: z
-        .object({
-          question: z.string(),
-          chunkIndex: z.number(),
-        })
-        .optional(),
-    })
-    .nullable()
-    .optional(),
-  startedAt: z.string().optional(),
-  lastActivityAt: z.string().optional(),
-  completedAt: z.string().nullish(),
-  escalatedAt: z.string().nullish(),
-  version: z.number().optional(),
-  createdAt: z.string().optional(),
-  updatedAt: z.string().optional(),
-  safetyFlag: z.string().nullish(),
-  outOfScope: z.boolean().nullish(),
-  failedAttempts: z.number().nullish(),
-});
-
-export const StartLessonResponseSchema = z.object({
-  sessionId: z.string(),
-  voiceText: z.string(),
-  pedagogicalState: PedagogicalStateSchema,
-});
-
-export const InteractLessonResponseSchema = z.object({
-  voiceText: z.string(),
-  pedagogicalState: PedagogicalStateSchema,
-  sessionCompleted: z.boolean().optional(),
-});
-
-export type User = z.infer<typeof UserSchema>;
-export type Role = z.infer<typeof UserSchema>['role'];
-export type Lesson = z.infer<typeof LessonSchema>;
-export type Session = z.infer<typeof SessionSchema>;
-export type StartLessonResponse = z.infer<typeof StartLessonResponseSchema>;
-export type InteractLessonResponse = z.infer<typeof InteractLessonResponseSchema>;
-export type PedagogicalState = z.infer<typeof PedagogicalStateSchema>;
+// Re-export for convenience
+export { type User, type Role, type Recipe, type Session, type PedagogicalState };
 
 export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:3001',
@@ -92,7 +25,8 @@ export const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().token;
+  // Read token directly from localStorage to avoid race condition with zustand hydration
+  const token = localStorage.getItem('token');
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -136,25 +70,25 @@ export const api = {
   },
   getCurrentUser: async () => {
     const { data } = await apiClient.get('/api/auth/me');
-    return z.object({ user: UserSchema }).parse(data);
+    return { user: UserSchema.parse(data.user) };
   },
-  listLessons: async (activeOnly = true) => {
-    const { data } = await apiClient.get(`/api/lessons?activeOnly=${activeOnly}`);
-    return z.array(LessonSchema).parse(data);
+  listRecipes: async (activeOnly = true) => {
+    const { data } = await apiClient.get(`/api/recipes?activeOnly=${activeOnly}`);
+    return RecipeSchema.array().parse(data);
   },
   listSessions: async (studentId: string, activeOnly = false) => {
     const { data } = await apiClient.get(
       `/api/sessions?studentId=${studentId}&activeOnly=${activeOnly}`,
     );
-    return z.array(SessionSchema).parse(data);
+    return SessionSchema.array().parse(data);
   },
-  startLesson: async (lessonId: string) => {
-    const { data } = await apiClient.post('/api/leccion/start', { lessonId });
-    return StartLessonResponseSchema.parse(data);
+  startRecipe: async (recipeId: string) => {
+    const { data } = await apiClient.post('/api/recipe/start', { recipeId });
+    return StartRecipeOutputSchema.parse(data);
   },
-  interactWithLesson: async (sessionId: string, studentInput: string) => {
-    const { data } = await apiClient.post('/api/leccion/interact', { sessionId, studentInput });
-    return InteractLessonResponseSchema.parse(data);
+  interactWithRecipe: async (sessionId: string, studentInput: string) => {
+    const { data } = await apiClient.post('/api/recipe/interact', { sessionId, studentInput });
+    return InteractRecipeOutputSchema.parse(data);
   },
   getSession: async (sessionId: string) => {
     const { data } = await apiClient.get(`/api/sessions/${sessionId}`);
@@ -162,6 +96,14 @@ export const api = {
   },
   resetSession: async (sessionId: string) => {
     const { data } = await apiClient.post(`/api/sessions/${sessionId}/replay`);
+    return SessionSchema.parse(data);
+  },
+  askQuestion: async (recipeId: string, question: string) => {
+    const { data } = await apiClient.post('/api/recipe/question', { recipeId, question });
+    return QuestionAnswerOutputSchema.parse(data);
+  },
+  completeSession: async (sessionId: string) => {
+    const { data } = await apiClient.post(`/api/sessions/${sessionId}/complete`);
     return SessionSchema.parse(data);
   },
 };

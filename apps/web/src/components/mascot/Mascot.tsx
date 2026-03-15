@@ -1,63 +1,104 @@
-import { useRive, Layout, Fit, Alignment } from '@rive-app/react-canvas';
+import { useRive, Layout, Fit, Alignment, useStateMachineInput } from '@rive-app/react-canvas';
 import { useEffect } from 'react';
 
 import { useLessonStore } from '@/stores/lessonStore';
 
-interface RiveObjectWithOpacity {
-  name: string;
-  opacity: number;
+// Map pedagogical states to avatar states
+function getAvatarState(isSpeaking: boolean, isListening: boolean, currentState: string): string {
+  if (isSpeaking) return 'speaking';
+  if (isListening) return 'listening';
+
+  switch (currentState) {
+    case 'RESOLVING_DOUBT':
+      return 'thinking';
+    case 'EXPLANATION':
+    case 'ACTIVE_CLASS':
+      return 'explaining';
+    case 'COMPLETED':
+      return 'happy';
+    default:
+      return 'idle';
+  }
 }
 
 export function Mascot() {
   const { isSpeaking, isListening, currentState } = useLessonStore();
 
+  const avatarState = getAvatarState(isSpeaking, isListening, currentState);
+
   const { rive, RiveComponent } = useRive({
-    src: '/assets/robot-expressions.riv',
-    animations: 'Idle',
+    src: '/assets/magic-cat.riv',
+    stateMachines: 'BLACK CATW',
     autoplay: true,
     layout: new Layout({
       fit: Fit.Contain,
-      alignment: Alignment.Center,
+      alignment: Alignment.TopCenter,
     }),
-    onLoad: (riveInstance) => {
-      if (!riveInstance) return;
-
-      const artboard = (riveInstance as unknown as { artboard: any }).artboard;
-      if (!artboard) return;
-
-      const hiddenNodes = ['Background', 'BG', 'Expressions', 'Accessories', 'Buttons', 'Shadow'];
-
-      for (let i = 0; i < artboard.objectsCount; i++) {
-        const obj = artboard.objectAt(i) as RiveObjectWithOpacity;
-        if (obj && hiddenNodes.some((name) => obj.name.includes(name))) {
-          if (typeof obj.opacity === 'number') {
-            obj.opacity = 0;
-          }
-        }
-      }
-    },
   });
 
+  // Get hover input from state machine
+  const hoverInput = useStateMachineInput(rive, 'BLACK CATW', 'Hover');
+
+  // Handle hover interaction
   useEffect(() => {
-    if (!rive) return;
-
-    rive.stop();
-
-    if (isSpeaking) {
-      rive.play(['normal smile_face', 'normal smile_arms']);
-    } else if (isListening) {
-      rive.play(['surprised_face', 'suprised_arms']);
-    } else if (currentState === 'RESOLVING_DOUBT') {
-      rive.play(['super happy_face', 'super happy_arms']);
-    } else {
-      rive.play('Idle');
+    if (hoverInput) {
+      // We can use hoverInput.value to track mouse hover
+      console.log('[Mascot] Avatar state:', avatarState, 'Hover:', hoverInput.value);
     }
-  }, [rive, isSpeaking, isListening, currentState]);
+  }, [hoverInput, avatarState]);
+
+  // Log state changes for debugging
+  useEffect(() => {
+    console.log('[Mascot] State changed:', {
+      avatarState,
+      isSpeaking,
+      isListening,
+      currentState,
+    });
+  }, [avatarState, isSpeaking, isListening, currentState]);
 
   return (
-    <div className="w-64 h-64 mx-auto flex items-center justify-center relative overflow-hidden bg-transparent">
-      <div className="absolute inset-0 bg-cyan-500/5 blur-3xl rounded-full" />
-      <RiveComponent className="w-full h-full relative z-10 scale-110" />
+    <div className="w-48 h-48 mx-auto flex items-center justify-center relative overflow-hidden">
+      {/* Subtle glow effect */}
+      <div
+        className={`absolute inset-0 rounded-full transition-all duration-500 ${
+          isSpeaking
+            ? 'bg-cyan-400/20 blur-3xl scale-110'
+            : isListening
+              ? 'bg-yellow-400/20 blur-3xl'
+              : 'bg-transparent'
+        }`}
+      />
+
+      {/* Rive Avatar */}
+      <div className="relative z-10 w-full h-full cursor-pointer">
+        <RiveComponent
+          className={`w-full h-full transition-transform duration-300 ${
+            isSpeaking ? 'animate-pulse' : ''
+          }`}
+        />
+      </div>
+
+      {/* State indicator */}
+      <div className="absolute -bottom-1 -right-1 bg-white rounded-full px-2 py-1 shadow-md text-xs font-medium text-slate-600 flex items-center gap-1">
+        <span
+          className={`w-2 h-2 rounded-full ${
+            isSpeaking
+              ? 'bg-green-400 animate-pulse'
+              : isListening
+                ? 'bg-yellow-400 animate-pulse'
+                : 'bg-slate-400'
+          }`}
+        />
+        <span className="capitalize">
+          {avatarState === 'idle' ? '😺' : null}
+          {avatarState === 'listening' ? '👂' : null}
+          {avatarState === 'thinking' ? '🤔' : null}
+          {avatarState === 'speaking' ? '🗣️' : null}
+          {avatarState === 'explaining' ? '📚' : null}
+          {avatarState === 'happy' ? '😸' : null}
+        </span>
+      </div>
     </div>
   );
 }

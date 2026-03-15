@@ -1,17 +1,36 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import {
+  IconArrowLeft,
+  IconRefresh,
+  IconPlayerPause,
+  IconSend,
+  IconCheck,
+} from '@tabler/icons-react';
 
 import { api, type Session, type PedagogicalState } from '../services/api';
-import { useSpeech } from '../hooks/useSpeech';
+import { Button, Card, Badge, Spinner } from '../components/ui';
+
+import { useVoice, type VoiceSettings } from '@/hooks/useVoice';
+import {
+  VoiceSettingsPanel,
+  useVoiceSettings,
+} from '@/components/voice-settings/VoiceSettingsPanel';
 
 const STATE_LABELS: Record<string, string> = {
-  ACTIVE_CLASS: 'SYS_ACTIVE',
-  RESOLVING_DOUBT: 'SYS_ANALYSIS',
-  CLARIFYING: 'SYS_CLARIFY',
-  QUESTION: 'SYS_QUERY',
-  EVALUATION: 'SYS_EVAL',
-  EXPLANATION: 'SYS_EXPLAIN',
-  COMPLETED: 'SYS_DONE',
+  IDLE: 'Inactivo',
+  ACTIVE: 'Activo',
+  PAUSED_FOR_QUESTION: 'Pregunta',
+  AWAITING_CONFIRMATION: 'Esperando',
+  PAUSED_IDLE: 'Pausado',
+  COMPLETED: 'Completado',
+  ESCALATED: 'Escalado',
+  ACTIVE_CLASS: 'En clase',
+  RESOLVING_DOUBT: 'Analizando',
+  CLARIFYING: 'Aclarando',
+  QUESTION: 'Pregunta',
+  EVALUATION: 'Evaluando',
+  EXPLANATION: 'Explicando',
 };
 
 interface Message {
@@ -30,7 +49,13 @@ export function SessionPage() {
   const [sessionCompleted, setSessionCompleted] = useState(false);
   const conversationEndRef = useRef<HTMLDivElement>(null);
 
-  const { isSpeaking, speak, stopSpeaking } = useSpeech();
+  const { isSpeaking, speak, stopSpeaking } = useVoice();
+  const { settings: voiceSettings, updateSettings } = useVoiceSettings();
+
+  // Preview voice with current settings
+  const handlePreviewVoice = async (settings: VoiceSettings) => {
+    await speak('Hola, soy tu tutor. Vamos a aprender juntos.', settings);
+  };
 
   useEffect(() => {
     if (!sessionId) return;
@@ -38,9 +63,9 @@ export function SessionPage() {
       try {
         const data = await api.getSession(sessionId);
         setSession(data);
-        setSessionCompleted(data.status === 'completed' || data.status === 'escalated');
+        setSessionCompleted(data.status === 'COMPLETED' || data.status === 'ESCALATED');
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error en enlace de sesión.');
+        setError(err instanceof Error ? err.message : 'Error al cargar la sesión.');
       } finally {
         setIsLoading(false);
       }
@@ -49,7 +74,7 @@ export function SessionPage() {
   }, [sessionId]);
 
   useEffect(() => {
-    conversationEndRef.current?.scrollIntoView();
+    conversationEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversation]);
 
   const handleSend = async () => {
@@ -61,7 +86,7 @@ export function SessionPage() {
     setIsProcessing(true);
     setError(null);
     try {
-      const response = await api.interactWithLesson(sessionId, userText);
+      const response = await api.interactWithRecipe(sessionId, userText);
       setConversation((prev) => [...prev, { role: 'tutor', text: response.voiceText }]);
       if (response.sessionCompleted) {
         setSessionCompleted(true);
@@ -70,9 +95,14 @@ export function SessionPage() {
           setSession(updated);
         }
       }
-      speak(response.voiceText);
+      speak(response.voiceText, {
+        character: voiceSettings.character,
+        speakingRate: voiceSettings.speakingRate,
+        pitch: voiceSettings.pitch,
+        languageCode: voiceSettings.languageCode,
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fallo en transmisión.');
+      setError(err instanceof Error ? err.message : 'Error en la transmisión.');
     } finally {
       setIsProcessing(false);
     }
@@ -87,15 +117,15 @@ export function SessionPage() {
 
   const handleReset = async () => {
     if (!sessionId) return;
-    if (!confirm('Confirmar reinicio de sesión. Datos volátiles se perderán.')) return;
+    if (!confirm('¿Confirmar reinicio de sesión? Los datos se perderán.')) return;
     setIsProcessing(true);
     try {
       const data = await api.resetSession(sessionId);
       setSession(data);
       setConversation([]);
-      setSessionCompleted(data.status === 'completed');
+      setSessionCompleted(data.status === 'COMPLETED');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al reiniciar núcleo.');
+      setError(err instanceof Error ? err.message : 'Error al reiniciar.');
     } finally {
       setIsProcessing(false);
     }
@@ -106,8 +136,9 @@ export function SessionPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="text-center font-mono text-sm text-slate-500 uppercase tracking-widest">
-          Leyendo archivo histórico...
+        <div className="text-center">
+          <Spinner size="lg" className="mx-auto mb-4 text-sky-500" />
+          <p className="text-slate-500 font-medium">Cargando sesión...</p>
         </div>
       </div>
     );
@@ -116,83 +147,98 @@ export function SessionPage() {
   if (error || !session) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="text-center p-8">
-          <p className="text-slate-900 font-medium text-sm mb-4">
-            {error || 'Archivo no localizado.'}
-          </p>
+        <Card variant="outlined" className="text-center p-8">
+          <p className="text-slate-800 font-medium mb-4">{error || 'Sesión no encontrada.'}</p>
           <Link
             to="/dashboard"
-            className="text-slate-500 text-sm hover:text-slate-900 transition-colors"
+            className="text-sky-600 hover:text-sky-700 font-medium transition-colors"
           >
-            Volver al Terminal
+            Volver al inicio
           </Link>
-        </div>
+        </Card>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans flex flex-col text-slate-900">
-      <header className="bg-white border-b border-slate-200 h-14 flex items-center px-6 shrink-0">
+      {/* Header */}
+      <header className="bg-white border-b border-slate-200 h-14 flex items-center px-4 sm:px-6 shrink-0">
         <div className="flex-1 flex items-center">
           <Link
             to="/dashboard"
-            className="text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors"
+            className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors"
           >
-            ← Terminal
+            <IconArrowLeft className="w-4 h-4" />
+            <span>Volver</span>
           </Link>
+        </div>
+        <div className="flex items-center gap-4">
+          <VoiceSettingsPanel
+            settings={voiceSettings}
+            onSettingsChange={updateSettings}
+            onPreview={handlePreviewVoice}
+          />
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <div
-              className={`w-2 h-2 rounded-full ${currentState === 'ACTIVE_CLASS' ? 'bg-emerald-500' : 'bg-slate-400'}`}
-            ></div>
-            <span className="text-xs font-mono text-slate-600 uppercase tracking-wider">
-              {STATE_LABELS[currentState] || 'SYS_ARCHIVE'}
+              className={`w-2 h-2 rounded-full ${
+                currentState === 'ACTIVE_CLASS' ? 'bg-emerald-500' : 'bg-slate-400'
+              }`}
+            />
+            <span className="text-xs font-medium text-slate-600 uppercase tracking-wider">
+              {STATE_LABELS[currentState] || 'Archivo'}
             </span>
           </div>
-          <div className="w-px h-4 bg-slate-200"></div>
+          <div className="w-px h-4 bg-slate-200" />
           <button
             onClick={handleReset}
             disabled={isProcessing}
-            className="text-xs font-mono text-slate-500 hover:text-slate-900 transition-colors disabled:opacity-50"
+            className="text-xs font-medium text-slate-500 hover:text-slate-800 transition-colors disabled:opacity-50 flex items-center gap-1"
           >
-            [ PURGAR ]
+            <IconRefresh className="w-3 h-3" />
+            Reiniciar
           </button>
         </div>
       </header>
 
       <main className="flex-1 flex flex-col lg:flex-row min-h-0">
-        <section className="w-full lg:w-1/3 bg-slate-950 flex flex-col relative border-r border-slate-800">
-          <div className="flex-1 flex flex-col justify-center items-center p-8 text-center text-slate-500 font-mono text-sm uppercase tracking-widest">
-            <div className="w-16 h-16 border border-slate-800 rounded flex items-center justify-center mb-6 bg-slate-900">
-              SYS
+        {/* Left Panel - Visual (placeholder) */}
+        <section className="w-full lg:w-1/3 bg-slate-900 flex flex-col relative border-r border-slate-800">
+          <div className="flex-1 flex flex-col justify-center items-center p-8 text-center text-slate-500">
+            <div className="w-16 h-16 border border-slate-700 rounded flex items-center justify-center mb-6 bg-slate-800">
+              <span className="text-2xl">🎓</span>
             </div>
-            Visualización Deshabilitada
+            <p className="text-sm">Visualización no disponible</p>
           </div>
         </section>
 
+        {/* Right Panel - Conversation */}
         <section className="flex-1 flex flex-col bg-white min-h-0">
+          {/* Header */}
           <div className="h-12 border-b border-slate-100 bg-slate-50 px-6 flex justify-between items-center shrink-0">
-            <h3 className="text-xs font-mono font-medium text-slate-500 uppercase tracking-wider">
-              Archivo de Telemetría
+            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Historial de la Sesión
             </h3>
             {sessionCompleted ? (
-              <span className="text-xs font-mono text-emerald-600 border border-emerald-200 bg-emerald-50 px-2 py-0.5 rounded-sm">
-                COMPLETADO
-              </span>
+              <Badge variant="success">
+                <IconCheck className="w-3 h-3 mr-1" />
+                Completado
+              </Badge>
             ) : null}
           </div>
 
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-4">
             {error ? (
-              <div className="p-3 border border-red-200 bg-red-50 text-red-700 text-sm rounded-md">
+              <div className="p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl">
                 {error}
               </div>
             ) : null}
             {conversation.length === 0 ? (
-              <div className="text-sm text-slate-400 font-mono">
-                Fin del archivo. Esperando entrada...
+              <div className="text-sm text-slate-400">
+                Sin mensajes. ¡Envía tu primera respuesta!
               </div>
             ) : (
               conversation.map((message, index) => (
@@ -200,14 +246,14 @@ export function SessionPage() {
                   key={index}
                   className={`flex flex-col ${message.role === 'student' ? 'items-end' : 'items-start'}`}
                 >
-                  <span className="text-[10px] font-mono text-slate-400 mb-1 uppercase tracking-widest">
-                    {message.role === 'student' ? 'Operador' : 'Sistema'}
+                  <span className="text-[10px] font-medium text-slate-400 mb-1 uppercase tracking-widest">
+                    {message.role === 'student' ? 'Tú' : 'Tutor'}
                   </span>
                   <div
-                    className={`max-w-[85%] p-4 rounded-md text-sm leading-relaxed ${
+                    className={`max-w-[85%] p-4 rounded-2xl text-sm leading-relaxed ${
                       message.role === 'student'
-                        ? 'bg-slate-50 border border-slate-200 text-slate-900'
-                        : 'bg-white border border-slate-100 shadow-sm text-slate-800'
+                        ? 'bg-sky-500 text-white'
+                        : 'bg-slate-100 text-slate-800'
                     }`}
                   >
                     {message.text}
@@ -218,7 +264,8 @@ export function SessionPage() {
             <div ref={conversationEndRef} />
           </div>
 
-          <div className="p-6 border-t border-slate-100 bg-white shrink-0">
+          {/* Input */}
+          <div className="p-4 border-t border-slate-100 bg-white shrink-0">
             {sessionCompleted ? (
               <Link
                 to="/mission-report"
@@ -226,23 +273,26 @@ export function SessionPage() {
                   stats: {
                     xpEarned: conversation.length * 15,
                     accuracy: 100,
-                    conceptsMastered: ['Análisis Histórico'],
+                    conceptsMastered: ['Análisis'],
                   },
                 }}
-                className="w-full flex items-center justify-center py-3 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 transition-colors"
               >
-                Acceder al Reporte Final
+                <Button className="w-full" size="lg">
+                  <IconCheck className="w-5 h-5 mr-2" />
+                  Ver Reporte Final
+                </Button>
               </Link>
             ) : (
               <div className="flex gap-3">
                 <button
-                  onClick={isSpeaking ? stopSpeaking : () => {}}
+                  onClick={() => (isSpeaking ? stopSpeaking() : null)}
                   disabled={!isSpeaking}
-                  className="w-12 h-12 flex items-center justify-center rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-30 transition-colors"
+                  className="w-12 h-12 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-30 transition-colors"
+                  aria-label={isSpeaking ? 'Detener' : 'Reproducir'}
                 >
-                  <div
-                    className={`w-3 h-3 rounded-full ${isSpeaking ? 'bg-amber-500 animate-pulse' : 'bg-slate-300'}`}
-                  ></div>
+                  <IconPlayerPause
+                    className={`w-5 h-5 ${isSpeaking ? 'text-red-500' : 'text-slate-300'}`}
+                  />
                 </button>
 
                 <div className="flex-1 relative">
@@ -251,16 +301,17 @@ export function SessionPage() {
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    placeholder="Escriba instrucción..."
+                    placeholder="Escribe tu respuesta..."
                     disabled={isProcessing || sessionCompleted}
-                    className="w-full h-12 pl-4 pr-12 bg-slate-50 border border-slate-200 rounded-md text-sm focus:border-slate-400 focus:bg-white focus:outline-none transition-colors disabled:opacity-50"
+                    className="w-full h-12 pl-4 pr-12 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:border-sky-400 focus:bg-white focus:outline-none transition-colors disabled:opacity-50"
                   />
                   <button
                     onClick={handleSend}
                     disabled={!inputText.trim() || isProcessing || sessionCompleted}
-                    className="absolute right-2 top-2 bottom-2 w-8 flex items-center justify-center text-slate-400 hover:text-slate-900 disabled:opacity-50 transition-colors"
+                    className="absolute right-2 top-2 bottom-2 w-8 flex items-center justify-center text-sky-500 hover:text-sky-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    aria-label="Enviar"
                   >
-                    →
+                    {isProcessing ? <Spinner size="sm" /> : <IconSend className="w-5 h-5" />}
                   </button>
                 </div>
               </div>

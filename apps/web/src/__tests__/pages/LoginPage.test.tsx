@@ -47,11 +47,14 @@ describe('LoginPage', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByLabelText(/correo electrónico/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/contraseña/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /iniciar sesión/i })).toBeInTheDocument();
-    expect(screen.getByText(/¿no tienes cuenta\?/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /regístrate/i })).toHaveAttribute('href', '/register');
+    expect(screen.getByLabelText(/Tu correo/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Tu contraseña secreta/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /¡A jugar!/i })).toBeInTheDocument();
+    expect(screen.getByText(/¿Eres nuevo\?/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Crea tu personaje/i })).toHaveAttribute(
+      'href',
+      '/register',
+    );
   });
 
   it('should show error message when store has error', () => {
@@ -78,8 +81,8 @@ describe('LoginPage', () => {
       </MemoryRouter>,
     );
 
-    const emailInput = screen.getByLabelText(/correo electrónico/i);
-    const passwordInput = screen.getByLabelText(/contraseña/i);
+    const emailInput = screen.getByLabelText(/Tu correo/i);
+    const passwordInput = screen.getByLabelText(/Tu contraseña secreta/i);
 
     fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
     fireEvent.change(passwordInput, { target: { value: 'password123' } });
@@ -97,9 +100,9 @@ describe('LoginPage', () => {
       </MemoryRouter>,
     );
 
-    const emailInput = screen.getByLabelText(/correo electrónico/i);
-    const passwordInput = screen.getByLabelText(/contraseña/i);
-    const submitButton = screen.getByRole('button', { name: /iniciar sesión/i });
+    const emailInput = screen.getByLabelText(/Tu correo/i);
+    const passwordInput = screen.getByLabelText(/Tu contraseña secreta/i);
+    const submitButton = screen.getByRole('button', { name: /¡A jugar!/i });
 
     fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
     fireEvent.change(passwordInput, { target: { value: 'password123' } });
@@ -126,7 +129,7 @@ describe('LoginPage', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText('Iniciando sesión...')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /iniciando sesión/i })).toBeDisabled();
+    expect(screen.getByText('Entrando...')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Entrando\.\.\./i })).toBeDisabled();
   });
 });

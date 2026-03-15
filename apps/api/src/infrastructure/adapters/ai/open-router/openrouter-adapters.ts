@@ -108,6 +108,44 @@ export class OpenRouterAdapter extends BaseGenerativeAdapter implements AIServic
       confidence: isCorrect ? 0.9 : 0.5,
     };
   }
+
+  async generateAnswer(params: {
+    question: string;
+    context: string;
+    recipeTitle: string;
+  }): Promise<{ answer: string }> {
+    const prompt = `Eres un tutor infantil amigable y paciente.
+TEMA DE LA CLASE: ${params.recipeTitle}
+CONTENIDO RELACIONADO:
+${params.context}
+
+INSTRUCCIONES:
+1. Responde solo usando el contenido proporcionado
+2. Si no tienes información suficiente, dice "Buena pregunta, ahora mismo te explico más sobre eso usando lo que aprendimos"
+3. Usa ejemplos del contenido para explicar
+4. Sé encouraging y positivo
+5. Lenguaje simple para niños de 6-8 años
+6. Máximo 2-3 oraciones
+
+PREGUNTA DEL ESTUDIANTE: ${params.question}`;
+
+    try {
+      const result = await this.client.chat.completions.create({
+        model: config.DEFAULT_MODEL_OPENROUTER || 'stepfun/step-3.5-flash',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.3,
+        max_tokens: 200,
+      });
+
+      const answer =
+        result.choices[0]?.message?.content ||
+        '¡Muy buena pregunta! ¿Qué te parece si lo practicamos un poco más?';
+      return { answer };
+    } catch (error) {
+      this.logger?.error(error, 'Error generating answer');
+      return { answer: '¡Muy buena pregunta! ¿Qué te parece si lo practicamos un poco más?' };
+    }
+  }
 }
 
 abstract class BaseOpenRouterFetchAdapter extends BaseLLMAdapter {

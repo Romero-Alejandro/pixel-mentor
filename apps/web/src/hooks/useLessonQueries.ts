@@ -4,39 +4,48 @@ import {
   type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query';
-
 import {
-  api,
-  type Lesson,
-  type StartLessonResponse,
-  type InteractLessonResponse,
-} from '../services/api';
+  type Recipe,
+  type StartRecipeOutput,
+  type InteractRecipeOutput,
+} from '@pixel-mentor/shared';
+
+import { api } from '../services/api';
 
 export const lessonKeys = {
-  all: ['lessons'] as const,
+  all: ['recipes'] as const,
   lists: () => [...lessonKeys.all, 'list'] as const,
   sessions: (id?: string) => ['sessions', id] as const,
 };
 
-export function useLessons(activeOnly = true): UseQueryResult<Lesson[]> {
+export function useRecipes(activeOnly = true): UseQueryResult<Recipe[]> {
   return useQuery({
     queryKey: [...lessonKeys.lists(), activeOnly],
-    queryFn: () => api.listLessons(activeOnly),
+    queryFn: () => api.listRecipes(activeOnly),
   });
 }
 
-export function useStartLesson(): UseMutationResult<StartLessonResponse, Error, string> {
+// Alias for backwards compatibility
+export const useLessons = useRecipes;
+
+export function useStartRecipe(): UseMutationResult<StartRecipeOutput, Error, string> {
   return useMutation({
-    mutationFn: (lessonId: string) => api.startLesson(lessonId),
+    mutationFn: (recipeId: string) => api.startRecipe(recipeId),
   });
 }
 
-export function useLessonInteraction(): UseMutationResult<
-  InteractLessonResponse,
+// Alias for backwards compatibility
+export const useStartLesson = useStartRecipe;
+
+export function useRecipeInteraction(): UseMutationResult<
+  InteractRecipeOutput,
   Error,
   { sessionId: string; input: string }
 > {
   return useMutation({
-    mutationFn: ({ sessionId, input }) => api.interactWithLesson(sessionId, input),
+    mutationFn: ({ sessionId, input }) => api.interactWithRecipe(sessionId, input),
   });
 }
+
+// Alias for backwards compatibility
+export const useLessonInteraction = useRecipeInteraction;

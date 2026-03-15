@@ -5,6 +5,7 @@ import type { SessionRepository } from '@/domain/ports/session-repository';
 import type { InteractionRepository } from '@/domain/ports/interaction-repository';
 import type { RecipeRepository } from '@/domain/ports/recipe-repository';
 import type { AtomRepository } from '@/domain/ports/atom-repository';
+import type { UserRepository } from '@/domain/ports/user-repository';
 import type { AIService } from '@/domain/ports/ai-service';
 import type {
   QuestionClassifier,
@@ -71,6 +72,7 @@ describe('OrchestrateRecipeUseCase - Multi-Segment Integration', () => {
   let mockInteractionRepo: jest.Mocked<InteractionRepository>;
   let mockRecipeRepo: jest.Mocked<RecipeRepository>;
   let mockAtomRepo: jest.Mocked<AtomRepository>;
+  let mockUserRepo: jest.Mocked<UserRepository>;
   let mockAiService: jest.Mocked<AIService>;
   let mockQuestionClassifier: jest.Mocked<QuestionClassifier>;
   let mockRagService: jest.Mocked<RAGService>;
@@ -109,6 +111,10 @@ describe('OrchestrateRecipeUseCase - Multi-Segment Integration', () => {
       findById: jest.fn(),
     } as any;
 
+    mockUserRepo = {
+      findById: jest.fn().mockResolvedValue({ id: studentId, name: 'Test Student' }),
+    } as any;
+
     mockAiService = {
       generateResponse: jest.fn(),
     } as any;
@@ -130,6 +136,7 @@ describe('OrchestrateRecipeUseCase - Multi-Segment Integration', () => {
       mockInteractionRepo,
       mockRecipeRepo,
       mockAtomRepo,
+      mockUserRepo,
       mockAiService,
       mockQuestionClassifier,
       mockRagService,

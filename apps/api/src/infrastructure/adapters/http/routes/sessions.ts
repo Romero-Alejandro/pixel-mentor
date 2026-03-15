@@ -5,6 +5,7 @@ import type pino from 'pino';
 import type { GetSessionUseCase } from '@/application/use-cases/session/get-session.use-case';
 import type { ListSessionsUseCase } from '@/application/use-cases/session/list-sessions.use-case';
 import type { ResetSessionUseCase } from '@/application/use-cases/session/reset-session.use-case';
+import type { CompleteSessionUseCase } from '@/application/use-cases/session/complete-session.use-case';
 import { GetSessionInputSchema, ListSessionsInputSchema } from '@/application/dto';
 
 export interface AppRequest extends Request {
@@ -17,6 +18,7 @@ export function createSessionsRouter(
   getSessionUseCase: GetSessionUseCase,
   listSessionsUseCase: ListSessionsUseCase,
   resetSessionUseCase: ResetSessionUseCase,
+  completeSessionUseCase: CompleteSessionUseCase,
 ): Router {
   const router = Router();
 
@@ -34,6 +36,7 @@ export function createSessionsRouter(
           return;
         }
 
+        response.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
         response.json(session);
       } catch (error) {
         if (error instanceof z.ZodError) {
@@ -73,6 +76,7 @@ export function createSessionsRouter(
           validated.activeOnly,
         );
 
+        response.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
         response.json(sessions);
       } catch (error) {
         if (error instanceof z.ZodError) {
@@ -90,6 +94,19 @@ export function createSessionsRouter(
       try {
         const sessionId = request.params.id as string;
         const result = await resetSessionUseCase.execute(sessionId);
+        response.json(result);
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  router.post(
+    '/:id/complete',
+    async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+      try {
+        const sessionId = request.params.id as string;
+        const result = await completeSessionUseCase.execute(sessionId);
         response.json(result);
       } catch (error) {
         next(error);

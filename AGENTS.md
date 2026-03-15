@@ -13,23 +13,16 @@ CRITICAL: Map your task to the exact domain below. Use `mcp:filesystem` to read 
 
 [DOMAIN: Architecture, Stack & Database]
 
-- Target Files: `.docs/ai/01-architecture-and-stack.md`, `apps/api/prisma/schema.prisma`
+- Target Files: `docs/ai/01-architecture-and-stack.md`, `apps/api/prisma/schema.prisma`
 
 [DOMAIN: Coding Standards & UI Conventions]
 
-- Target File: `.docs/ai/02-coding-standards.md`
+- Target File: `docs/ai/02-coding-standards.md`
 
-[DOMAIN: Product Logic & Core RAG Flows]
+[DOMAIN: PRD - Product Logic & Core]
 
-- Target File: `.docs/ai/03-core-flows.md`
+- Target File: `docs/PRD.md`
 
-[DOMAIN: State Machine & Concurrency]
-
-- Target File: `.docs/ai/04-state-machine.md`
-
-[DOMAIN: Security, NFRs & Escalation]
-
-- Target File: `.docs/ai/05-security-nfr.md`
   </routing_manifest>
 
 <terminal_protocols>

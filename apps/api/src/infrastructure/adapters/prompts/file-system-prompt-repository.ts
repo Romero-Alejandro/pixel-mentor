@@ -27,6 +27,9 @@ export class FileSystemPromptRepository implements PromptRepository {
       'EVALUATION',
       'COMPLETED',
       'EXPLANATION',
+      'ACTIVITY_WAIT',
+      'ACTIVITY_INACTIVITY_WARNING',
+      'ACTIVITY_SKIP_OFFER',
     ];
 
     const templates: StateTemplateMap = {} as StateTemplateMap;
@@ -131,10 +134,20 @@ export class FileSystemPromptRepository implements PromptRepository {
         return 'Tutor entusiasta y alentador';
       case 'RESOLVING_DOUBT':
         return 'Tutor paciente y clarificador';
+      case 'CLARIFYING':
+        return 'Tutor clarificador';
       case 'QUESTION':
         return 'Evaluador formal';
       case 'EVALUATION':
         return 'Evaluador analítico';
+      case 'ACTIVITY_WAIT':
+        return 'Tutor que espera respuesta';
+      case 'ACTIVITY_INACTIVITY_WARNING':
+        return 'Tutor motivador';
+      case 'ACTIVITY_SKIP_OFFER':
+        return 'Tutor comprensivo';
+      case 'EXPLANATION':
+        return 'Tutor explicativo';
       case 'COMPLETED':
         return 'Tutor felicitador';
       default:
