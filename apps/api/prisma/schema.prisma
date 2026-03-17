@@ -202,12 +202,12 @@ model RecipeStep {
   // New fields for static content
   conceptId  String?
   activityId String?
-  script     Json?    // Complete step script (transition, content, examples, closure)
-  stepType   String?  @default("content") // "content", "activity", "intro", "closure"
+  script     Json? // Complete step script (transition, content, examples, closure)
+  stepType   String? @default("content") // "content", "activity", "intro", "closure"
 
-  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  atom   Atom   @relation(fields: [atomId], references: [id], onDelete: Restrict)
-  concept Concept? @relation(fields: [conceptId], references: [id], onDelete: SetNull)
+  recipe   Recipe    @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  atom     Atom      @relation(fields: [atomId], references: [id], onDelete: Restrict)
+  concept  Concept?  @relation(fields: [conceptId], references: [id], onDelete: SetNull)
   activity Activity? @relation(fields: [activityId], references: [id], onDelete: SetNull)
 
   @@unique([recipeId, order])
@@ -219,29 +219,29 @@ model RecipeStep {
 
 // Concept: Pedagogical concept within a recipe
 model Concept {
-  id          String   @id @default(uuid())
-  recipeId    String
-  title       String   @db.VarChar(255)
-  order       Int      @db.SmallInt
-  
-  // Introduction to this concept
-  introduction Json    // { text: string, duration: number }
-  
-  // Main explanation content
-  explanation Json    // { text: string, chunks: [{ text: string, pauseAfter: number }] }
-  
-  // Examples
-  examples    Json    // [{ text: string, visual: { type: string, src: string } }]
-  
-  // Key points to remember
-  keyPoints   Json    // [string]
-  
-  // Closure of this concept
-  closure     Json    // { text: string }
-  
-  createdAt   DateTime @default(now())
+  id       String @id @default(uuid())
+  recipeId String
+  title    String @db.VarChar(255)
+  order    Int    @db.SmallInt
 
-  recipe      Recipe        @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  // Introduction to this concept
+  introduction Json // { text: string, duration: number }
+
+  // Main explanation content
+  explanation Json // { text: string, chunks: [{ text: string, pauseAfter: number }] }
+
+  // Examples
+  examples Json // [{ text: string, visual: { type: string, src: string } }]
+
+  // Key points to remember
+  keyPoints Json // [string]
+
+  // Closure of this concept
+  closure Json // { text: string }
+
+  createdAt DateTime @default(now())
+
+  recipe      Recipe       @relation(fields: [recipeId], references: [id], onDelete: Cascade)
   activities  Activity[]
   recipeSteps RecipeStep[]
 
@@ -252,25 +252,25 @@ model Concept {
 
 // Activity: Pedagogical activity within a concept
 model Activity {
-  id            String   @id @default(uuid())
-  conceptId     String
-  type          String   @db.VarChar(50) // "PRACTICE", "QUIZ", "GAME"
-  order         Int      @db.SmallInt
-  
-  instruction   String   @db.Text
-  
-  // For multiple choice
-  options       Json?    // [{ text: string, isCorrect: boolean }]
-  
-  correctAnswer String   @db.VarChar(500)
-  
-  // Feedback based on answer
-  feedback      Json    // { correct: string, incorrect: string, partial: string }
-  
-  createdAt     DateTime @default(now())
+  id        String @id @default(uuid())
+  conceptId String
+  type      String @db.VarChar(50) // "PRACTICE", "QUIZ", "GAME"
+  order     Int    @db.SmallInt
 
-  concept       Concept     @relation(fields: [conceptId], references: [id], onDelete: Cascade)
-  recipeSteps   RecipeStep[]
+  instruction String @db.Text
+
+  // For multiple choice
+  options Json? // [{ text: string, isCorrect: boolean }]
+
+  correctAnswer String @db.VarChar(500)
+
+  // Feedback based on answer
+  feedback Json // { correct: string, incorrect: string, partial: string }
+
+  createdAt DateTime @default(now())
+
+  concept     Concept      @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+  recipeSteps RecipeStep[]
 
   @@unique([conceptId, order])
   @@index([conceptId])

@@ -19,8 +19,6 @@ import type { AdvisoryLockManager } from '@/domain/ports/advisory-lock.js';
 import { createSessionLockId } from '@/domain/ports/advisory-lock.js';
 import type { PedagogicalState } from '@/domain/entities/pedagogical-state.js';
 import type { Interaction } from '@/domain/entities/interaction.js';
-import { getNextState, isTransitionAllowed } from '@/domain/state/state-machine.js';
-import type { StateEvent } from '@/domain/state/state-machine.js';
 import type { SessionCheckpoint } from '@/domain/entities/session.js';
 import type { InteractRecipeOutput, StaticContent } from '@/application/dto/index.js';
 import { determineClassificationAction } from '@/domain/entities/question-classification.js';
@@ -32,6 +30,48 @@ import {
   type RecipeConfig,
 } from '@/domain/entities/recipe-config.js';
 import { isTerminalStatus } from '@/domain/entities/session.js';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tipos del script auto-contenido
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface ContentScript {
+  transition?: string;
+  content?: string;
+  examples?: string[];
+  closure?: string;
+}
+
+interface QuestionScript extends ContentScript {
+  question: string; // Texto de la pregunta de comprensión
+  expectedAnswer: string; // Respuesta esperada (para el evaluador LLM)
+  hint?: string;
+  feedback: { correct: string; incorrect: string };
+}
+
+interface ActivityOption {
+  text: string;
+  isCorrect: boolean;
+}
+
+interface ActivityScript extends ContentScript {
+  instruction: string; // Enunciado del MCQ
+  options: ActivityOption[];
+  feedback: { correct: string; incorrect: string };
+}
+
+type StepScript = ContentScript | QuestionScript | ActivityScript;
+
+function isQuestionScript(s: unknown): s is QuestionScript {
+  return typeof (s as QuestionScript)?.question === 'string';
+}
+
+function isActivityScript(s: unknown): s is ActivityScript {
+  const opts = (s as ActivityScript)?.options;
+  return Array.isArray(opts) && opts.length > 0;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export class OrchestrateRecipeUseCase {
   private config: RecipeConfig = DEFAULT_CONFIG;
@@ -51,156 +91,207 @@ export class OrchestrateRecipeUseCase {
     private advisoryLockManager?: AdvisoryLockManager,
     private contextWindowService: ContextWindowService = new ContextWindowService(),
   ) {
-    // Keep these for future use: concept-based content loading
+    // Mantenidos para compatibilidad futura
     void this.conceptRepo;
+    void this.activityRepo;
   }
 
+  // ─── extractStaticContent ────────────────────────────────────────────────
   /**
-   * Extract static content from a recipe step
+   * Lee TODO el contenido del paso desde step.script (JSON auto-contenido).
+   *
+   * CORRECCIÓN CLAVE respecto a la versión anterior:
+   *   - La versión anterior leía `step.activityId` → siempre undefined porque
+   *     el campo no existe en el schema de Prisma.
+   *   - Ahora leemos directamente de `step.script.options` / `step.script.question`,
+   *     que están embebidos en el JSON del paso. Sin dependencias de FKs externas.
    */
-  private async extractStaticContent(step: {
-    stepType?: string;
-    script?: any;
-    activityId?: string;
-  }): Promise<StaticContent | undefined> {
-    if (!step.stepType) return undefined;
+  private extractStaticContent(step: {
+    stepType?: string | null;
+    script?: unknown;
+  }): StaticContent | undefined {
+    const { stepType, script } = step;
+    if (!stepType || !script) return undefined;
 
-    const staticContent: StaticContent = {
-      stepType: step.stepType as 'content' | 'activity' | 'intro' | 'closure',
-    };
-
-    // Add script content if available
-    if (step.script) {
-      staticContent.script = {
-        transition: step.script.transition || '',
-        content: step.script.content || '',
-        examples: step.script.examples || [],
-        closure: step.script.closure || '',
+    // ── Contenido / intro / closure ──────────────────────────────────────
+    if (stepType === 'content' || stepType === 'intro' || stepType === 'closure') {
+      const s = script as ContentScript;
+      return {
+        stepType: stepType as 'content' | 'intro' | 'closure',
+        script: {
+          transition: s.transition ?? '',
+          content: s.content ?? '',
+          examples: s.examples ?? [],
+          closure: s.closure ?? '',
+        },
       };
     }
 
-    // Add activity content if available
-    if (step.activityId) {
-      const activity = await this.activityRepo.findById(step.activityId);
-      if (activity) {
-        staticContent.activity = {
-          instruction: activity.instruction,
-          options: activity.options
-            ? activity.options.map((o) => ({ text: o.text, isCorrect: o.isCorrect }))
-            : undefined,
+    // ── Pregunta de comprensión (respuesta libre) ─────────────────────────
+    if (stepType === 'question' && isQuestionScript(script)) {
+      return {
+        stepType: 'activity', // La UI lo trata como panel interactivo
+        script: {
+          transition: script.transition ?? '',
+          content: script.question,
+          examples: [],
+          closure: '',
+        },
+        activity: {
+          instruction: script.question,
+          options: [], // Sin opciones = input libre en el frontend
           feedback: {
-            correct: activity.feedback.correct,
-            incorrect: activity.feedback.incorrect,
-            partial: activity.feedback.partial,
+            correct: script.feedback.correct,
+            incorrect: script.feedback.incorrect,
+            partial: script.hint,
           },
-        };
-      }
+        },
+      };
     }
 
-    return staticContent;
+    // ── Actividad / examen (opción múltiple) ──────────────────────────────
+    if ((stepType === 'activity' || stepType === 'exam') && isActivityScript(script)) {
+      return {
+        stepType: 'activity',
+        script: {
+          transition: script.transition ?? '',
+          content: script.instruction,
+          examples: [],
+          closure: script.closure ?? '',
+        },
+        activity: {
+          instruction: script.instruction,
+          options: script.options.map((o) => ({ text: o.text, isCorrect: o.isCorrect })),
+          feedback: {
+            correct: script.feedback.correct,
+            incorrect: script.feedback.incorrect,
+          },
+        },
+      };
+    }
+
+    // Fallback
+    const s = script as ContentScript;
+    return {
+      stepType: 'content',
+      script: {
+        transition: s.transition ?? '',
+        content: s.content ?? '',
+        examples: s.examples ?? [],
+        closure: s.closure ?? '',
+      },
+    };
   }
 
-  async start(
-    recipeId: string,
-    studentId: string,
-  ): Promise<{
-    sessionId: string;
-    voiceText: string;
-    pedagogicalState: PedagogicalState;
-    staticContent?: StaticContent;
-    config?: Record<string, unknown>;
-    resumed?: boolean;
-    needsStart?: boolean;
-  }> {
+  // ─── buildVoiceText ──────────────────────────────────────────────────────
+  private buildVoiceText(step: { stepType?: string | null; script?: unknown }): string {
+    const { stepType, script } = step;
+    if (!script) return '';
+
+    if (stepType === 'question' && isQuestionScript(script)) {
+      return [script.transition, script.question].filter(Boolean).join(' ');
+    }
+    if ((stepType === 'activity' || stepType === 'exam') && isActivityScript(script)) {
+      return [script.transition, script.instruction].filter(Boolean).join(' ');
+    }
+    const s = script as ContentScript;
+    return [s.transition, s.content, s.closure].filter(Boolean).join(' ');
+  }
+
+  // ─── Helpers de clasificación de paso ───────────────────────────────────
+
+  private requiresStudentInput(stepType?: string | null): boolean {
+    return stepType === 'activity' || stepType === 'exam' || stepType === 'question';
+  }
+
+  private stateForStep(step: { stepType?: string | null }): PedagogicalState {
+    return this.requiresStudentInput(step?.stepType) ? 'ACTIVITY_WAIT' : 'EXPLANATION';
+  }
+
+  private advanceStep(steps: any[], current: number): number | null {
+    const next = current + 1;
+    return next < steps.length ? next : null;
+  }
+
+  private findPreviousContentStep(steps: any[], from: number): number | null {
+    for (let i = from - 1; i >= 0; i--) {
+      if (!this.requiresStudentInput(steps[i].stepType)) return i;
+    }
+    return null;
+  }
+
+  private getFallbackResponse(state: PedagogicalState, title: string): AIResponse {
+    return {
+      explanation: `Continuemos con ${title}.`,
+      supportQuotes: [],
+      pedagogicalState: state,
+    };
+  }
+
+  private async record(sessionId: string, turnBase: number, text: string, type: string | null) {
+    await this.interactionRepo.create({
+      id: randomUUID(),
+      sessionId,
+      turnNumber: turnBase + 1,
+      transcript: text,
+      aiResponse: type ? { text, responseType: type } : null,
+      pausedForQuestion: false,
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // start()
+  // ─────────────────────────────────────────────────────────────────────────
+
+  async start(recipeId: string, studentId: string) {
     const recipe = await this.recipeRepo.findById(recipeId);
     if (!recipe) throw new RecipeNotFoundError(recipeId);
 
-    // Parse recipe configuration from meta
     this.config = parseRecipeConfig(recipe.meta);
-
-    // Get student name for personalized greeting
     const student = await this.userRepo.findById(studentId);
-    const studentName = student?.name || 'estudiante';
+    const name = student?.name ?? 'estudiante';
 
     const steps = await this.recipeRepo.findStepsByRecipeId(recipeId);
-    if (steps.length === 0) {
-      throw new Error('Recipe has no steps');
-    }
+    if (!steps.length) throw new Error('Recipe has no steps');
 
-    const firstStep = steps[0];
-    const firstAtom = await this.atomRepo.findById(firstStep.atomId);
-    if (!firstAtom) {
-      throw new Error(`Atom with ID ${firstStep.atomId} not found`);
-    }
-
-    // Check for existing non-terminal session
     const existing = await this.sessionRepo.findByStudentAndRecipe(studentId, recipeId);
     if (existing && !isTerminalStatus(existing.status)) {
-      // Resume: get the current step content for proper display
-      const currentStepIndex = existing.stateCheckpoint.currentStepIndex ?? 0;
-      const currentStep = steps[currentStepIndex] || steps[0];
-
-      // Check if session needs to start (was in AWAITING_START)
+      const idx = existing.stateCheckpoint.currentStepIndex ?? 0;
       const needsToStart = existing.stateCheckpoint.currentState === 'AWAITING_START';
-
-      // Build a resume message based on the current state
-      const stateMessages: Record<string, string> = {
-        ACTIVE_CLASS: `¡Bienvenido de vuelta! Vamos a continuar aprendiendo ${recipe.title}.`,
-        QUESTION: 'Tenías una pregunta pendiente. ¿Querés que la respondamos?',
-        EVALUATION: 'Tenías una actividad en progreso. Continuemos.',
-        AWAITING_CONFIRMATION: 'Hay algo que necesita confirmación. ¿Querés continuar?',
-        PAUSED_IDLE: `¡Hola de nuevo! Tu sesión estaba en pausa. Continuemos con ${recipe.title}.`,
-        PAUSED_FOR_QUESTION: '¿Querés que retomemos donde lo dejamos?',
-        IDLE: `¡Bienvenido de vuelta! Vamos a continuar con ${recipe.title}.`,
-      };
-
-      // If needs to start, use the intro message instead
-      const resumeMessage = needsToStart
+      const resumeMsg = needsToStart
         ? fillTemplate(this.config.greetings.intro, {
-            name: studentName,
+            name,
             tutor: this.config.tutorName,
             title: recipe.title,
           })
-        : stateMessages[existing.stateCheckpoint.currentState] ||
-          `¡Bienvenido de vuelta! Continuemos con tu aprendizaje.`;
-
-      // Extract static content if there's a current step
-      let staticContent: StaticContent | undefined;
-      if (currentStep) {
-        staticContent = await this.extractStaticContent(currentStep);
-      }
-
-      // Return state that indicates user needs to click "Comenzar"
+        : `¡Bienvenido de vuelta, ${name}! Continuemos con ${recipe.title}.`;
       return {
         sessionId: existing.id,
-        voiceText: resumeMessage,
-        // Return needsStart flag to trigger the "Comenzar" button on frontend
-        pedagogicalState: needsToStart
+        voiceText: resumeMsg,
+        pedagogicalState: (needsToStart
           ? 'AWAITING_START'
-          : (existing.stateCheckpoint.currentState as PedagogicalState),
-        staticContent,
+          : existing.stateCheckpoint.currentState) as PedagogicalState,
+        staticContent: this.extractStaticContent(steps[idx] ?? steps[0]),
         config: this.config as unknown as Record<string, unknown>,
         resumed: true,
         needsStart: needsToStart,
+        lessonProgress: { currentStep: idx, totalSteps: steps.length },
       };
     }
 
     const sessionId = randomUUID();
-
-    // Create presentation greeting using config
-    const introGreeting = fillTemplate(this.config.greetings.intro, {
-      name: studentName,
-      tutor: this.config.tutorName,
-      title: recipe.title,
-    });
-
-    const readyPrompt = fillTemplate(this.config.greetings.readyPrompt, {
-      name: studentName,
-      tutor: this.config.tutorName,
-      title: recipe.title,
-    });
-
-    const voiceText = `${introGreeting}. ${readyPrompt}`;
+    const voiceText = [
+      fillTemplate(this.config.greetings.intro, {
+        name,
+        tutor: this.config.tutorName,
+        title: recipe.title,
+      }),
+      fillTemplate(this.config.greetings.readyPrompt, {
+        name,
+        tutor: this.config.tutorName,
+        title: recipe.title,
+      }),
+    ].join('. ');
 
     await this.sessionRepo.create({
       id: sessionId,
@@ -213,36 +304,27 @@ export class OrchestrateRecipeUseCase {
         questionCount: 0,
         lastQuestionTime: null,
         skippedActivities: [],
+        failedAttempts: 0,
       },
     });
-
-    // Create initial interaction
-    await this.interactionRepo.create({
-      id: randomUUID(),
-      sessionId,
-      turnNumber: 1,
-      transcript: voiceText,
-      aiResponse: {
-        text: voiceText,
-        responseType: 'greeting',
-      },
-      pausedForQuestion: false,
-    });
-
     await this.sessionRepo.updateStatus(sessionId, 'ACTIVE');
-
-    // Extract static content from the first step
-    const staticContent = await this.extractStaticContent(firstStep);
+    await this.record(sessionId, 0, voiceText, 'greeting');
 
     return {
       sessionId,
       voiceText,
-      pedagogicalState: 'AWAITING_START',
-      staticContent,
+      pedagogicalState: 'AWAITING_START' as PedagogicalState,
+      staticContent: this.extractStaticContent(steps[0]),
       config: this.config as unknown as Record<string, unknown>,
       resumed: false,
+      needsStart: true,
+      lessonProgress: { currentStep: 0, totalSteps: steps.length },
     };
   }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // interact()
+  // ─────────────────────────────────────────────────────────────────────────
 
   async interact(
     sessionId: string,
@@ -251,575 +333,334 @@ export class OrchestrateRecipeUseCase {
   ): Promise<InteractRecipeOutput> {
     const session = await this.sessionRepo.findById(sessionId);
     if (!session) throw new SessionNotFoundError(sessionId);
-    if (userId && session.studentId !== userId) {
-      const error = new Error('Forbidden: access denied');
-      // Using a generic approach for HTTP status codes
-      // In a real implementation, you might want to use a custom HttpError class
-      throw error;
-    }
-    if (session.status !== 'ACTIVE') {
-      throw new Error(`Session is not active (status: ${session.status})`);
-    }
+    if (userId && session.studentId !== userId)
+      throw Object.assign(new Error('Forbidden'), { statusCode: 403 });
+    if (session.status !== 'ACTIVE') throw new Error(`Session not active: ${session.status}`);
 
     const recipe = await this.recipeRepo.findById(session.recipeId);
     if (!recipe) throw new RecipeNotFoundError(session.recipeId);
+    this.config = parseRecipeConfig(recipe.meta);
 
     const steps = await this.recipeRepo.findStepsByRecipeId(session.recipeId);
-    if (steps.length === 0) {
-      throw new Error('Recipe has no steps');
-    }
+    if (!steps.length) throw new Error('Recipe has no steps');
 
     const history = await this.interactionRepo.findBySessionOrdered(sessionId);
-    const limitedHistory = this.contextWindowService.trimHistory(history);
-    const recentHistory: Array<{ readonly role: 'user' | 'assistant'; readonly content: string }> =
-      limitedHistory.map((h: Interaction) => ({
-        role: h.turnNumber % 2 === 1 ? ('user' as const) : ('assistant' as const),
-        content: h.transcript,
-      }));
+    const limited = this.contextWindowService.trimHistory(history);
+    const recentHistory = limited.map((h: Interaction) => ({
+      role: (h.turnNumber % 2 === 1 ? 'user' : 'assistant') as 'user' | 'assistant',
+      content: h.transcript,
+    }));
     const historySummary = this.contextWindowService.summarizeOlderTurns(history);
 
-    const checkpoint = session.stateCheckpoint;
-    const currentState = checkpoint.currentState;
-    const currentStepIndex = checkpoint.currentStepIndex;
-    let newStepIndex = currentStepIndex;
-    let newSavedStepIndex: number | undefined = checkpoint.savedStepIndex;
-    let newDoubtContext: { question: string; stepIndex: number } | undefined =
-      checkpoint.doubtContext;
+    const cp = session.stateCheckpoint;
+    const currentState = cp.currentState as PedagogicalState;
+    let currentIdx = cp.currentStepIndex ?? 0;
+    let questionCount = cp.questionCount ?? 0;
+    let lastQuestionTime = cp.lastQuestionTime ?? null;
+    let skippedActivities: string[] = cp.skippedActivities ?? [];
+    let failedAttempts = cp.failedAttempts ?? 0;
+    let savedStepIndex: number | undefined = cp.savedStepIndex;
+    let doubtContext = cp.doubtContext;
 
-    // Mutable checkpoint tracking
-    let questionCount = checkpoint.questionCount || 0;
-    let lastQuestionTime = checkpoint.lastQuestionTime;
-    let skippedActivities = checkpoint.skippedActivities || [];
-    let failedAttempts = checkpoint.failedAttempts || 0;
-
-    // Check for escalation flags pre-AI
     if (session.safetyFlag || session.outOfScope) {
       await this.sessionRepo.escalate(sessionId);
       return {
-        voiceText: 'Session escalated',
+        voiceText: 'Sesión escalada.',
         pedagogicalState: currentState,
         sessionCompleted: true,
-        feedback: 'Session escalated due to safety or repeated failures',
       };
     }
 
-    // Get current step and atom
-    const currentStep = steps[newStepIndex];
-    const currentAtom = await this.atomRepo.findById(currentStep.atomId);
-    if (!currentAtom) {
-      throw new Error(`Atom with ID ${currentStep.atomId} not found`);
+    const currentStep = steps[currentIdx];
+    if (!currentStep) {
+      await this.sessionRepo.complete(sessionId);
+      return {
+        voiceText: fillTemplate(this.config.greetings.completionMessage ?? '¡Felicitaciones!', {
+          name: 'estudiante',
+          title: recipe.title,
+        }),
+        pedagogicalState: 'COMPLETED',
+        sessionCompleted: true,
+        lessonProgress: { currentStep: currentIdx, totalSteps: steps.length },
+      };
     }
 
-    // FAST PATH: AWAITING_START state doesn't need AI - just check for start keywords
+    const currentAtom = await this.atomRepo.findById(currentStep.atomId);
+    if (!currentAtom) throw new Error(`Atom ${currentStep.atomId} not found`);
+
+    // ── AWAITING_START fast path ─────────────────────────────────────────
     if (currentState === 'AWAITING_START') {
-      const lowerInput = studentInput.toLowerCase();
-      if (
-        lowerInput.includes('sí') ||
-        lowerInput.includes('si') ||
-        lowerInput.includes('start') ||
-        lowerInput.includes('comenzar') ||
-        lowerInput.includes('listo') ||
-        lowerInput.includes('ready') ||
-        lowerInput.includes('adelante') ||
-        lowerInput.includes('vamos')
-      ) {
-        // Update checkpoint directly without AI calls
-        const updatedCheckpoint: SessionCheckpoint = {
-          ...checkpoint,
-          currentState: 'ACTIVE_CLASS' as PedagogicalState,
-        };
+      const lower = studentInput.toLowerCase();
+      const ready = [
+        'sí',
+        'si',
+        'comenzar',
+        'start',
+        'listo',
+        'adelante',
+        'vamos',
+        'ready',
+        'ok',
+        'dale',
+        'continuar',
+      ].some((w) => lower.includes(w));
 
-        await this.interactionRepo.create({
-          id: randomUUID(),
-          sessionId,
-          turnNumber: history.length + 1,
-          transcript: studentInput,
-          aiResponse: null,
-          pausedForQuestion: false,
+      if (ready) {
+        const vt = this.buildVoiceText(currentStep);
+        await this.record(sessionId, history.length, studentInput, null);
+        await this.record(sessionId, history.length + 1, vt, 'answer');
+        await this.sessionRepo.updateCheckpoint(sessionId, {
+          ...cp,
+          currentState: this.stateForStep(currentStep),
+          currentStepIndex: currentIdx,
         });
-
-        const voiceText = '¡Perfecto! Vamos a comenzar.';
-
-        await this.interactionRepo.create({
-          id: randomUUID(),
-          sessionId,
-          turnNumber: history.length + 2,
-          transcript: voiceText,
-          aiResponse: { text: voiceText, responseType: 'answer' },
-          pausedForQuestion: false,
-        });
-
-        await this.sessionRepo.updateCheckpoint(sessionId, updatedCheckpoint);
-
-        const staticContent = await this.extractStaticContent(currentStep);
-
         return {
-          voiceText,
-          pedagogicalState: 'ACTIVE_CLASS',
-          staticContent,
-        };
-      } else {
-        // Keep waiting - return the ready prompt
-        const voiceText = this.config.greetings.readyPrompt;
-
-        await this.interactionRepo.create({
-          id: randomUUID(),
-          sessionId,
-          turnNumber: history.length + 1,
-          transcript: studentInput,
-          aiResponse: null,
-          pausedForQuestion: false,
-        });
-
-        await this.interactionRepo.create({
-          id: randomUUID(),
-          sessionId,
-          turnNumber: history.length + 2,
-          transcript: voiceText,
-          aiResponse: { text: voiceText, responseType: 'answer' },
-          pausedForQuestion: false,
-        });
-
-        const staticContent = await this.extractStaticContent(currentStep);
-
-        return {
-          voiceText,
-          pedagogicalState: 'AWAITING_START',
-          staticContent,
+          voiceText: vt,
+          pedagogicalState: this.stateForStep(currentStep),
+          staticContent: this.extractStaticContent(currentStep),
+          lessonProgress: { currentStep: currentIdx, totalSteps: steps.length },
         };
       }
+
+      const prompt = this.config.greetings.readyPrompt ?? '¿Estás listo?';
+      await this.record(sessionId, history.length, studentInput, null);
+      await this.record(sessionId, history.length + 1, prompt, 'answer');
+      return {
+        voiceText: prompt,
+        pedagogicalState: 'AWAITING_START',
+        staticContent: this.extractStaticContent(currentStep),
+        lessonProgress: { currentStep: currentIdx, totalSteps: steps.length },
+      };
     }
 
-    // Classify student input
+    // ── Clasificar input ──────────────────────────────────────────────────
     const classification = await this.questionClassifier.classify({
       transcript: studentInput,
       lastTurns: recentHistory,
-      lessonMetadata: {
-        title: recipe.title,
-        concepts: [],
-      },
+      lessonMetadata: { title: recipe.title, concepts: [] },
     });
-
     const action = determineClassificationAction(classification);
 
-    // Determine if we need RAG context
-    let ragContext;
-    if (action.type === 'ACCEPT' && classification.intent === 'question') {
-      const retrieval = await this.ragService.retrieveChunks({
+    let ragContext: any;
+    if (
+      action.type === 'ACCEPT' &&
+      classification.intent === 'question' &&
+      currentState !== 'ACTIVITY_WAIT'
+    ) {
+      const r = await this.ragService.retrieveChunks({
         atomId: currentAtom.id,
         queryText: studentInput,
         k: 3,
       });
-      ragContext = retrieval.chunks;
+      ragContext = r.chunks;
     }
 
-    // Prepare currentQuestion if atom is a quiz type
-    let currentQuestion: { text: string; options?: readonly string[] } | undefined;
-    if (['MINI_QUIZ', 'MCQ', 'INTERACTIVE'].includes(currentAtom.type)) {
-      const options = currentAtom.options?.map((o) => o.text) ?? undefined;
-      currentQuestion = {
-        text: currentAtom.title,
-        options,
-      };
+    let aiResponse: AIResponse;
+    try {
+      aiResponse = await this.aiService.generateResponse({
+        recipe,
+        currentState,
+        conversationHistory: recentHistory,
+        ragContext,
+        currentSegment: {
+          chunkText: currentAtom.content || currentAtom.title,
+          order: currentStep.order,
+        },
+        totalSegments: steps.length,
+        historySummary,
+      });
+    } catch (e: any) {
+      console.warn('[Orchestrator] LLM fallback:', e.message);
+      aiResponse = this.getFallbackResponse(currentState, currentAtom.title);
     }
 
-    const aiResponse: AIResponse = await this.aiService.generateResponse({
-      recipe,
-      currentState,
-      conversationHistory: recentHistory,
-      currentQuestion,
-      ragContext,
-      currentSegment: {
-        chunkText: currentAtom.content || currentAtom.title,
-        order: currentStep.order,
-      },
-      totalSegments: steps.length,
-      historySummary,
-    });
-
-    let voiceText =
-      aiResponse.explanation +
-      (aiResponse.microInteraction ? '\n' + aiResponse.microInteraction.text : '');
-
-    let responseFeedback = aiResponse.feedback;
-    let nextState: PedagogicalState;
-    let event: StateEvent | null = null;
-    let shouldAdvanceStep = false;
-    let willComplete = false;
-
-    // Helper to check cooldown between questions
-    const canAskQuestion = (): boolean => {
-      // Check max questions limit
-      if (questionCount >= this.config.maxQuestionsPerSession) {
-        return false;
-      }
-
-      // Check cooldown
+    const canAsk = () => {
+      if (questionCount >= this.config.maxQuestionsPerSession) return false;
       if (lastQuestionTime) {
-        const timeSinceLastQuestion = Date.now() - new Date(lastQuestionTime).getTime();
-        const cooldownMs = this.config.questionCooldownSeconds * 1000;
-        if (timeSinceLastQuestion < cooldownMs) {
-          return false;
-        }
+        const ms = Date.now() - new Date(lastQuestionTime).getTime();
+        if (ms < this.config.questionCooldownSeconds * 1_000) return false;
       }
-
       return true;
     };
 
-    // State machine transitions
-    if (currentState === 'ACTIVE_CLASS') {
-      // Check if asking question and if cooldown applies
-      const isQuestion = action.type === 'ACCEPT' && classification.intent === 'question';
+    let voiceText = aiResponse.explanation;
+    let responseFeedback: string | undefined;
+    let nextState: PedagogicalState = currentState;
+    let nextIdx = currentIdx;
+    let willComplete = false;
 
-      if (isQuestion && !canAskQuestion()) {
-        // Return feedback about cooldown or limit
-        if (questionCount >= this.config.maxQuestionsPerSession) {
-          voiceText = `Hoy hemos hecho muchas preguntas. ¡Sigamos practicando las actividades!`;
-        } else {
-          voiceText = `Espera un momentito, vamos a practicar un poco primero. ¡Tú puedes!`;
-        }
-        nextState = 'ACTIVE_CLASS';
-      } else if (isQuestion) {
-        // Allow the question - increment counter
-        questionCount += 1;
+    // ── Máquina de estados ────────────────────────────────────────────────
+
+    if (currentState === 'ACTIVE_CLASS' || currentState === 'EXPLANATION') {
+      if (action.type === 'ACCEPT' && classification.intent === 'question' && canAsk()) {
+        questionCount++;
         lastQuestionTime = new Date().toISOString();
-        event = { type: 'RAISE_HAND' };
-      } else if (action.type === 'CLARIFY') {
-        event = { type: 'CLARIFY' };
-      } else {
-        event = { type: 'CONTINUE' };
-      }
-
-      if (event && isTransitionAllowed(currentState, event.type)) {
-        nextState = getNextState(currentState, event);
-      } else if (!event) {
+        nextState = 'RESOLVING_DOUBT';
+        savedStepIndex = currentIdx;
+        doubtContext = { question: studentInput, stepIndex: currentIdx };
+      } else if (action.type === 'ACCEPT' && classification.intent === 'question') {
+        voiceText = 'Continuemos con el tema por ahora.';
         nextState = currentState;
       } else {
-        throw new Error(`Invalid transition from ${currentState} with event ${event.type}`);
-      }
-
-      if (nextState === 'RESOLVING_DOUBT') {
-        newSavedStepIndex = currentStepIndex;
-        newDoubtContext = { question: studentInput, stepIndex: currentStepIndex };
-      }
-
-      // CONTINUE advances to EXPLANATION
-      if (event && event.type === 'CONTINUE') {
-        if (newStepIndex < steps.length - 1) {
-          shouldAdvanceStep = true;
-          nextState = 'EXPLANATION';
-        } else {
-          nextState = 'COMPLETED';
+        const adv = this.advanceStep(steps, currentIdx);
+        if (adv === null) {
           willComplete = true;
-        }
-      }
-    } else if (currentState === 'EXPLANATION') {
-      // Handle question during explanation
-      if (action.type === 'ACCEPT' && classification.intent === 'question') {
-        const isQuestionAllowed = canAskQuestion();
-
-        if (!isQuestionAllowed) {
-          voiceText = `Espera un poquito, vamos a practicar un poco después de la explicación.`;
-          nextState = 'EXPLANATION';
+          nextState = 'COMPLETED';
         } else {
-          questionCount += 1;
-          lastQuestionTime = new Date().toISOString();
-          event = { type: 'RAISE_HAND' };
-          nextState = 'RESOLVING_DOUBT';
-          newSavedStepIndex = currentStepIndex;
-          newDoubtContext = { question: studentInput, stepIndex: currentStepIndex };
+          nextIdx = adv;
+          nextState = this.stateForStep(steps[nextIdx]);
+          voiceText = this.buildVoiceText(steps[nextIdx]);
         }
-      } else if (action.type === 'CLARIFY') {
-        event = { type: 'CLARIFY' };
-        nextState = 'CLARIFYING';
-      } else {
-        // Normal continuation - move to activity wait
-        event = { type: 'EXPLAIN', conceptIndex: 0 };
-        nextState = 'ACTIVITY_WAIT';
       }
     } else if (currentState === 'ACTIVITY_WAIT') {
-      // Handle question during activity wait
-      if (action.type === 'ACCEPT' && classification.intent === 'question') {
-        const isQuestionAllowed = canAskQuestion();
+      const script = currentStep.script;
 
-        if (!isQuestionAllowed) {
-          voiceText = `Vamos a terminar esta actividad primero.`;
-          nextState = 'ACTIVITY_WAIT';
-        } else {
-          questionCount += 1;
-          lastQuestionTime = new Date().toISOString();
-          event = { type: 'RAISE_HAND' };
-          nextState = 'RESOLVING_DOUBT';
-          newSavedStepIndex = currentStepIndex;
-          newDoubtContext = { question: studentInput, stepIndex: currentStepIndex };
-        }
-      } else {
-        // Evaluate answer
-        let expectedAnswer = '';
-        if (currentAtom.type === 'MCQ' || currentAtom.type === 'MINI_QUIZ') {
-          const correctOption = currentAtom.options?.find((o) => o.isCorrect);
-          expectedAnswer = correctOption?.text || '';
-        } else if (currentAtom.content) {
-          expectedAnswer = currentAtom.content;
-        }
-
+      if (isQuestionScript(script)) {
+        // ── Pregunta de comprensión: evaluar con LLM ─────────────────────
         const evaluation = await this.comprehensionEvaluator.evaluate({
-          microQuestion: currentAtom.title,
-          expectedAnswer,
+          microQuestion: (script as QuestionScript).question,
+          expectedAnswer: (script as QuestionScript).expectedAnswer ?? '',
           studentAnswer: studentInput,
           attemptNumber: failedAttempts + 1,
         });
-
+        const qs = script as QuestionScript;
         if (evaluation.result === 'correct') {
-          event = { type: 'ANSWER', answer: studentInput, isCorrect: true };
+          voiceText = qs.feedback.correct;
+          responseFeedback = qs.feedback.correct;
           nextState = 'EVALUATION';
+          failedAttempts = 0;
         } else if (evaluation.result === 'partial') {
+          voiceText = qs.hint ?? evaluation.hint ?? qs.feedback.incorrect;
           nextState = 'ACTIVITY_WAIT';
-          if (evaluation.hint) {
-            responseFeedback = (responseFeedback ? responseFeedback + ' ' : '') + evaluation.hint;
-          }
         } else {
-          // Incorrect - check if we should offer skip
-          const updatedSession = await this.sessionRepo.incrementFailedAttempts(sessionId);
-          const failedAttempts = updatedSession.failedAttempts || 0;
+          failedAttempts++;
+          voiceText = qs.feedback.incorrect;
+          responseFeedback = qs.feedback.incorrect;
+          nextState =
+            failedAttempts >= this.config.skipAfterFailedAttempts && this.config.enableActivitySkip
+              ? 'ACTIVITY_SKIP_OFFER'
+              : 'EVALUATION';
+        }
+      } else if (isActivityScript(script)) {
+        // ── Actividad MCQ: comparación directa (sin LLM) ─────────────────
+        const as = script as ActivityScript;
+        const norm = studentInput.trim().toLowerCase();
+        const correct = as.options.find((o) => o.isCorrect);
+        const isCorrect = !!correct && norm === correct.text.trim().toLowerCase();
 
-          if (
-            failedAttempts >= this.config.skipAfterFailedAttempts &&
-            this.config.enableActivitySkip
-          ) {
-            event = { type: 'OFFER_SKIP', reason: 'failed_attempts' };
-            nextState = 'ACTIVITY_SKIP_OFFER';
-          } else {
-            event = { type: 'ANSWER', answer: studentInput, isCorrect: false };
-            nextState = 'EVALUATION';
-          }
+        voiceText = isCorrect ? as.feedback.correct : as.feedback.incorrect;
+        responseFeedback = voiceText;
+
+        if (isCorrect) {
+          nextState = 'EVALUATION';
+          failedAttempts = 0;
+        } else {
+          failedAttempts++;
+          nextState =
+            failedAttempts >= this.config.skipAfterFailedAttempts && this.config.enableActivitySkip
+              ? 'ACTIVITY_SKIP_OFFER'
+              : 'EVALUATION';
         }
       }
-    } else if (currentState === 'QUESTION') {
-      // Handle question during question state (allow doubts)
-      if (action.type === 'ACCEPT' && classification.intent === 'question') {
-        const isQuestionAllowed = canAskQuestion();
-
-        if (!isQuestionAllowed) {
-          voiceText = `Vamos a terminar esta actividad primero, después puedes preguntar.`;
-          nextState = 'QUESTION';
-        } else {
-          questionCount += 1;
-          lastQuestionTime = new Date().toISOString();
-          event = { type: 'RAISE_HAND' };
-          nextState = 'RESOLVING_DOUBT';
-          newSavedStepIndex = currentStepIndex;
-          newDoubtContext = { question: studentInput, stepIndex: currentStepIndex };
-        }
+    } else if (currentState === 'EVALUATION') {
+      const lower = studentInput.toLowerCase();
+      if (lower.includes('repetir') || lower.includes('otra vez')) {
+        const ci = this.findPreviousContentStep(steps, currentIdx) ?? currentIdx;
+        nextIdx = ci;
+        nextState = this.stateForStep(steps[ci]);
+        voiceText = this.buildVoiceText(steps[ci]);
+        failedAttempts = 0;
       } else {
-        // Evaluate answer
-        let expectedAnswer = '';
-        if (currentAtom.type === 'MCQ' || currentAtom.type === 'MINI_QUIZ') {
-          const correctOption = currentAtom.options?.find((o) => o.isCorrect);
-          expectedAnswer = correctOption?.text || '';
-        } else if (currentAtom.content) {
-          expectedAnswer = currentAtom.content;
-        }
-
-        const evaluation = await this.comprehensionEvaluator.evaluate({
-          microQuestion: currentAtom.title,
-          expectedAnswer,
-          studentAnswer: studentInput,
-          attemptNumber: failedAttempts + 1,
-        });
-
-        if (evaluation.result === 'correct') {
-          event = { type: 'ANSWER', answer: studentInput, isCorrect: true };
-          nextState = 'EVALUATION';
-          shouldAdvanceStep = true;
-        } else if (evaluation.result === 'partial') {
-          nextState = 'QUESTION';
-          if (evaluation.hint) {
-            responseFeedback = (responseFeedback ? responseFeedback + ' ' : '') + evaluation.hint;
-          }
+        const adv = this.advanceStep(steps, currentIdx);
+        if (adv === null) {
+          willComplete = true;
+          nextState = 'COMPLETED';
         } else {
-          // Incorrect - check if we should offer skip instead of escalating
-          const updatedSession = await this.sessionRepo.incrementFailedAttempts(sessionId);
-          const failedAttempts = updatedSession.failedAttempts || 0;
-
-          if (
-            failedAttempts >= this.config.skipAfterFailedAttempts &&
-            this.config.enableActivitySkip
-          ) {
-            event = { type: 'OFFER_SKIP', reason: 'failed_attempts' };
-            nextState = 'ACTIVITY_SKIP_OFFER';
-          } else {
-            event = { type: 'ANSWER', answer: studentInput, isCorrect: false };
-            nextState = 'EVALUATION';
-          }
+          nextIdx = adv;
+          nextState = this.stateForStep(steps[nextIdx]);
+          voiceText = this.buildVoiceText(steps[nextIdx]);
+          failedAttempts = 0;
         }
       }
     } else if (currentState === 'ACTIVITY_SKIP_OFFER') {
-      // Handle skip offer response
-      const lowerInput = studentInput.toLowerCase();
-
-      if (
-        lowerInput.includes('repetir') ||
-        lowerInput.includes('repeat') ||
-        lowerInput.includes('otra vez')
-      ) {
-        // Repeat the concept
-        event = { type: 'REPEAT_CONCEPT' };
-        nextState = 'EXPLANATION';
+      const lower = studentInput.toLowerCase();
+      if (lower.includes('repetir') || lower.includes('otra vez')) {
+        const ci = this.findPreviousContentStep(steps, currentIdx) ?? currentIdx;
+        nextIdx = ci;
+        nextState = this.stateForStep(steps[ci]);
+        voiceText = this.buildVoiceText(steps[ci]);
         failedAttempts = 0;
-      } else if (
-        lowerInput.includes('continuar') ||
-        lowerInput.includes('continue') ||
-        lowerInput.includes('siguiente') ||
-        lowerInput.includes('saltar') ||
-        lowerInput.includes('skip')
-      ) {
-        // Skip and continue
-        event = { type: 'SKIP_ACTIVITY', skipAction: 'continue' };
-        skippedActivities = [...skippedActivities, currentStep.atomId];
-        shouldAdvanceStep = true;
-        if (newStepIndex < steps.length - 1) {
-          nextState = 'EXPLANATION';
-        } else {
-          nextState = 'COMPLETED';
-          willComplete = true;
-        }
       } else {
-        // Invalid response, ask again
-        voiceText =
-          '¿Quieres que repita el tema o prefieres continuar? Dime "repetir" o "continuar".';
-        nextState = 'ACTIVITY_SKIP_OFFER';
-      }
-    } else if (currentState === 'EVALUATION') {
-      // Handle skip offer from evaluation
-      const lowerInput = studentInput.toLowerCase();
-
-      if (
-        lowerInput.includes('repetir') ||
-        lowerInput.includes('repeat') ||
-        lowerInput.includes('otra vez')
-      ) {
-        event = { type: 'REPEAT_CONCEPT' };
-        nextState = 'EXPLANATION';
-        failedAttempts = 0;
-      } else if (
-        lowerInput.includes('continuar') ||
-        lowerInput.includes('continue') ||
-        lowerInput.includes('siguiente') ||
-        lowerInput.includes('saltar')
-      ) {
-        event = { type: 'SKIP_ACTIVITY', skipAction: 'continue' };
         skippedActivities = [...skippedActivities, currentStep.atomId];
-        shouldAdvanceStep = true;
-        if (newStepIndex < steps.length - 1) {
-          nextState = 'EXPLANATION';
-        } else {
-          nextState = 'COMPLETED';
+        const adv = this.advanceStep(steps, currentIdx);
+        if (adv === null) {
           willComplete = true;
+          nextState = 'COMPLETED';
+        } else {
+          nextIdx = adv;
+          nextState = this.stateForStep(steps[nextIdx]);
+          voiceText = this.buildVoiceText(steps[nextIdx]);
         }
-      } else {
-        // Normal advance
-        event = { type: 'ADVANCE' };
-        nextState = 'EXPLANATION';
-        shouldAdvanceStep = true;
       }
-    } else {
-      nextState = currentState;
+    } else if (currentState === 'RESOLVING_DOUBT' || currentState === 'CLARIFYING') {
+      const ri = savedStepIndex ?? currentIdx;
+      nextIdx = ri;
+      nextState = this.stateForStep(steps[ri] ?? currentStep);
+      savedStepIndex = undefined;
+      doubtContext = undefined;
+      voiceText = `${aiResponse.explanation} Continuemos donde lo dejamos.`;
     }
 
-    // Apply step advancement if needed
-    if (shouldAdvanceStep) {
-      if (newStepIndex < steps.length - 1) {
-        newStepIndex += 1;
-      } else {
-        willComplete = true;
-      }
+    if (willComplete) {
+      voiceText = fillTemplate(
+        this.config.greetings.completionMessage ?? '¡Felicitaciones! Completaste {title}.',
+        { name: 'estudiante', title: recipe.title },
+      );
     }
 
-    const updatedCheckpoint = {
+    await this.record(sessionId, history.length, studentInput, null);
+    await this.record(sessionId, history.length + 1, voiceText, 'answer');
+
+    const newCp: SessionCheckpoint = {
       currentState: nextState,
-      currentStepIndex: newStepIndex,
-      savedStepIndex: newSavedStepIndex,
-      doubtContext: newDoubtContext,
+      currentStepIndex: nextIdx,
+      savedStepIndex,
+      doubtContext,
       questionCount,
       lastQuestionTime,
       skippedActivities,
       failedAttempts,
     };
 
-    // Record interactions
-    await this.interactionRepo.create({
-      id: randomUUID(),
-      sessionId,
-      turnNumber: history.length + 1,
-      transcript: studentInput,
-      aiResponse: null,
-      pausedForQuestion: false,
-    });
+    const persist = async () => {
+      if (willComplete) await this.sessionRepo.complete(sessionId);
+      else await this.sessionRepo.updateCheckpoint(sessionId, newCp);
+    };
 
-    await this.interactionRepo.create({
-      id: randomUUID(),
-      sessionId,
-      turnNumber: history.length + 2,
-      transcript: voiceText,
-      aiResponse: {
-        text: voiceText,
-        responseType: 'answer',
-      },
-      pausedForQuestion: false,
-    });
-
-    // Persist changes with lock if enabled
     if (this.advisoryLockManager) {
       const lockId = createSessionLockId(sessionId);
       await this.advisoryLockManager.acquireLock(lockId);
       try {
-        if (willComplete) {
-          await this.sessionRepo.complete(sessionId);
-        } else {
-          await this.sessionRepo.updateCheckpoint(sessionId, updatedCheckpoint);
-        }
+        await persist();
       } finally {
         await this.advisoryLockManager.releaseLock(lockId);
       }
     } else {
-      if (willComplete) {
-        await this.sessionRepo.complete(sessionId);
-      } else {
-        await this.sessionRepo.updateCheckpoint(sessionId, updatedCheckpoint);
-      }
+      await persist();
     }
 
-    // Extract static content from the current step
-    const staticContent = await this.extractStaticContent(currentStep);
-
-    // Determine auto-advance behavior based on step type and state
-    // Auto-advance: content steps (intro, content, closure) and after evaluation
-    // Pause: activity steps that need user input
-    const currentStepType = currentStep.stepType || 'content';
-    const shouldAutoAdvance =
-      // Auto-advance after content/explanation states
-      (nextState === 'EXPLANATION' && currentStepType !== 'activity') ||
-      // Auto-advance after evaluation (transitioning to next step)
-      nextState === 'EVALUATION' ||
-      // Auto-advance when transitioning from content to activity
-      (currentState === 'EXPLANATION' &&
-        currentStepType === 'activity' &&
-        nextState === 'ACTIVITY_WAIT');
-
-    // Default delay: 2 seconds for content, 1 second for evaluation transitions
-    const autoAdvanceDelay = nextState === 'EVALUATION' ? 1500 : 2500;
+    // FIX CLAVE: usar nextIdx (paso destino) para el staticContent
+    const displayStep = willComplete ? currentStep : (steps[nextIdx] ?? currentStep);
+    const staticContent = this.extractStaticContent(displayStep);
 
     return {
       voiceText,
       pedagogicalState: nextState,
-      sessionCompleted: willComplete,
+      sessionCompleted: willComplete || undefined,
       feedback: responseFeedback,
       isCorrect: aiResponse.isCorrect,
-      extraExplanation: aiResponse.extraExplanation,
       staticContent,
-      autoAdvance: shouldAutoAdvance,
-      autoAdvanceDelay,
+      lessonProgress: { currentStep: nextIdx, totalSteps: steps.length },
     };
   }
 }
