@@ -27,7 +27,7 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, _get) => ({
       user: null,
       token: null,
       isAuthenticated: false,
@@ -35,7 +35,7 @@ export const useAuthStore = create<AuthState>()(
       isValidating: false, // NEW: default false
       isLoading: false,
       error: null,
-      setAuth: (user, token) => set({ user, token, isAuthenticated: true }),
+      setAuth: (user, token) => set({ user, token, isAuthenticated: true, isHydrated: true }),
       logout: () => {
         clearToken();
         set({
@@ -51,7 +51,13 @@ export const useAuthStore = create<AuthState>()(
         try {
           const result = await api.login({ email, password });
           setToken(result.token);
-          set({ user: result.user, token: result.token, isAuthenticated: true, isLoading: false });
+          set({
+            user: result.user,
+            token: result.token,
+            isAuthenticated: true,
+            isLoading: false,
+            isHydrated: true,
+          });
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : 'Login failed';
           set({ error: message, isLoading: false });
@@ -63,7 +69,13 @@ export const useAuthStore = create<AuthState>()(
         try {
           const result = await api.register({ email, password, name, role });
           setToken(result.token);
-          set({ user: result.user, token: result.token, isAuthenticated: true, isLoading: false });
+          set({
+            user: result.user,
+            token: result.token,
+            isAuthenticated: true,
+            isLoading: false,
+            isHydrated: true,
+          });
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : 'Registration failed';
           set({ error: message, isLoading: false });
@@ -86,21 +98,34 @@ export const useAuthStore = create<AuthState>()(
         }
       },
       clearError: () => set({ error: null }),
-      _setHydrated: (hydrated) => set({ isHydrated: hydrated }), // NEW: internal hydration marker
+      _setHydrated: (hydrated: boolean) => set({ isHydrated: hydrated }), // NEW: internal hydration marker
     }),
     {
       name: 'auth-storage',
       partialize: (state) => ({ token: state.token }),
-      // @ts-ignore - onRehydrate is supported in zustand v5
-      onRehydrate: () => {
-        // This runs after Zustand hydrates from localStorage
-        const store = useAuthStore.getState();
-        store._setHydrated(true);
-        // Trigger async auth check (don't await - let it run in background)
-        store.checkAuth().catch(() => {
-          // Error handled in checkAuth itself
-        });
+      onRehydrateStorage: () => (_state, error) => {
+        // This callback runs after hydration completes
+        // We use setTimeout to avoid accessing useAuthStore before it's fully initialized
+        if (error) {
+          console.error('[AuthStore] Hydration error:', error);
+        }
+        // Defer the state update to the next tick to ensure store is initialized
+        setTimeout(() => {
+          const store = useAuthStore.getState();
+          store._setHydrated(true);
+          store.checkAuth().catch(console.error);
+        }, 0);
       },
     },
   ),
 );
+
+// Subscribe to hydration completion as a backup/additional trigger
+// This ensures hydration is marked complete even if the callback misses
+useAuthStore.persist.onFinishHydration(() => {
+  const currentState = useAuthStore.getState();
+  if (!currentState.isHydrated) {
+    currentState._setHydrated(true);
+    currentState.checkAuth().catch(console.error);
+  }
+});
