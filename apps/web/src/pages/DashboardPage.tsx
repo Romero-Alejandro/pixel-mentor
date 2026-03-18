@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   IconLogout,
   IconBooks,
@@ -7,6 +7,7 @@ import {
   IconRocket,
   IconArrowRight,
   IconX,
+  IconPlayerPlay,
 } from '@tabler/icons-react';
 
 import { useAuthStore } from '../stores/authStore';
@@ -14,7 +15,6 @@ import { useAutoSelect } from '../hooks/useAutoSelect';
 import { api, type Recipe, type Session } from '../services/api';
 import { Button, Card, Badge, Spinner, CardSkeleton } from '../components/ui';
 
-// Helper to identify resumable sessions
 const isResumable = (status: string): boolean => {
   return ['IDLE', 'ACTIVE', 'PAUSED_FOR_QUESTION', 'AWAITING_CONFIRMATION', 'PAUSED_IDLE'].includes(
     status,
@@ -48,21 +48,19 @@ const getStatusBadge = (status: string) => {
 
 export function DashboardPage() {
   const { user, logout } = useAuthStore();
-  const navigate = useNavigate();
 
-  // Auto-select hook for resumable sessions
-  const { getSessionToResume, clearSessionToResume } = useAutoSelect(user?.id || null, {
+  const { getSessionToResume } = useAutoSelect(user?.id || null, {
     autoResume: true,
   });
+
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [isLoadingRecipes, setIsLoadingRecipes] = useState(true);
   const [isLoadingSessions, setIsLoadingSessions] = useState(true);
   const [activeTab, setActiveTab] = useState<'recipes' | 'sessions'>('recipes');
   const [completingSessionId, setCompletingSessionId] = useState<string | null>(null);
-  const [hasAutoNavigated, setHasAutoNavigated] = useState(false);
+  const [suggestedSession, setSuggestedSession] = useState<Session | null>(null);
 
-  // Fetch data on mount
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -83,40 +81,24 @@ export function DashboardPage() {
     fetchData();
   }, [user]);
 
-  // Handle navigation after sessions load - auto-select resumable session
   useEffect(() => {
     if (!isLoadingSessions && sessions.length > 0) {
-      const sessionToResume = getSessionToResume();
-      if (sessionToResume) {
-        // Clear the flag so we don't keep redirecting
-        clearSessionToResume();
-        // Find the session to get the recipe ID
-        const session = sessions.find((s) => s.id === sessionToResume);
+      const sessionToResumeId = getSessionToResume();
+      if (sessionToResumeId) {
+        const session = sessions.find((s) => s.id === sessionToResumeId);
         if (session) {
-          // Navigate to the lesson
-          navigate(`/lesson/${session.recipeId}`);
+          setSuggestedSession(session);
         }
       }
-    }
-  }, [isLoadingSessions, sessions, getSessionToResume, clearSessionToResume, navigate]);
-
-  // Auto-select single class (quick win) - navigate if only one recipe and no resumable sessions
-  useEffect(() => {
-    if (hasAutoNavigated) return;
-
-    if (
+    } else if (
       !isLoadingRecipes &&
       !isLoadingSessions &&
       recipes.length === 1 &&
-      localStorage.getItem('autoSelectDisabled') !== 'true'
+      sessions.length === 0
     ) {
-      const hasResumableSession = sessions.some((s) => isResumable(s.status));
-      if (!hasResumableSession) {
-        setHasAutoNavigated(true);
-        navigate(`/lesson/${recipes[0].id}`);
-      }
+      setSuggestedSession({ id: 'new', recipeId: recipes[0].id, status: 'IDLE' } as Session);
     }
-  }, [isLoadingRecipes, isLoadingSessions, recipes, sessions, navigate, hasAutoNavigated]);
+  }, [isLoadingSessions, isLoadingRecipes, sessions, recipes, getSessionToResume]);
 
   const handleCompleteSession = async (sessionId: string) => {
     if (!confirm('¿Estás seguro de que quieres terminar esta sesión?')) return;
@@ -128,8 +110,7 @@ export function DashboardPage() {
         const sessionsData = await api.listSessions(user.id, false);
         setSessions(sessionsData);
       }
-    } catch (error) {
-      console.error('Error completing session:', error);
+    } catch (e) {
       alert('Error al terminar la sesión');
     } finally {
       setCompletingSessionId(null);
@@ -144,7 +125,6 @@ export function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
-      {/* Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -175,15 +155,36 @@ export function DashboardPage() {
       </header>
 
       <main className="max-w-6xl mx-auto px-6 py-8">
-        {/* Page Title */}
+        {suggestedSession ? (
+          <div className="mb-8 p-6 bg-gradient-to-r from-amber-100 to-orange-100 border-2 border-amber-200 rounded-2xl flex items-center justify-between shadow-sm">
+            <div className="flex items-center gap-4">
+              <div className="text-4xl">🚀</div>
+              <div>
+                <h2 className="text-xl font-bold text-amber-900">¡Tu misión te espera!</h2>
+                <p className="text-amber-700 font-medium">
+                  {suggestedSession.id === 'new'
+                    ? 'Tienes un módulo listo para explorar.'
+                    : `Dejaste la clase "${recipeMap.get(suggestedSession.recipeId) || 'Módulo'}" por la mitad.`}
+                </p>
+              </div>
+            </div>
+            <Link to={`/lesson/${suggestedSession.recipeId}`}>
+              <Button
+                size="lg"
+                className="bg-amber-500 hover:bg-amber-600 text-white border-none shadow-md"
+              >
+                <IconPlayerPlay className="w-5 h-5 mr-2" />
+                Continuar Misión
+              </Button>
+            </Link>
+          </div>
+        ) : null}
+
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-slate-800 mb-1">Mis Clases</h2>
-          <p className="text-slate-500">
-            Explora los módulos disponibles o continúa donde lo dejaste.
-          </p>
+          <p className="text-slate-500">Explora los módulos disponibles o revisa tu historial.</p>
         </div>
 
-        {/* Tabs */}
         <div className="mb-6">
           <div className="inline-flex p-1 bg-white border border-slate-200 rounded-xl shadow-sm">
             <button
@@ -211,7 +212,6 @@ export function DashboardPage() {
           </div>
         </div>
 
-        {/* Content */}
         {activeTab === 'recipes' ? (
           <div>
             {isLoadingRecipes ? (
@@ -232,7 +232,7 @@ export function DashboardPage() {
                     <Card
                       variant="outlined"
                       padding="lg"
-                      className="h-full hover:border-sky-300 hover:shadow-lg hover:shadow-sky-100 transition-all duration-200"
+                      className="h-full hover:border-sky-300 hover:shadow-lg hover:shadow-sky-100 transition-all duration-200 flex flex-col"
                     >
                       <div className="flex justify-between items-start mb-3">
                         <h3 className="text-base font-semibold text-slate-800 line-clamp-2">

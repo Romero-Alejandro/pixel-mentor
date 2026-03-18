@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   IconArrowLeft,
@@ -8,14 +8,11 @@ import {
   IconCheck,
 } from '@tabler/icons-react';
 
-import { api, type Session, type PedagogicalState } from '../services/api';
 import { Button, Card, Badge, Spinner } from '../components/ui';
 
-import { useVoice, type VoiceSettings } from '@/hooks/useVoice';
-import {
-  VoiceSettingsPanel,
-  useVoiceSettings,
-} from '@/components/voice-settings/VoiceSettingsPanel';
+import { VoiceSettingsPanel } from '@/components/voice-settings/VoiceSettingsPanel';
+import { useSessionLogic } from '@/hooks/useSessionLogic';
+import { useVoiceSettings } from '@/components/voice-settings/useVoiceSettings';
 
 const STATE_LABELS: Record<string, string> = {
   IDLE: 'Inactivo',
@@ -33,80 +30,31 @@ const STATE_LABELS: Record<string, string> = {
   EXPLANATION: 'Explicando',
 };
 
-interface Message {
-  role: 'tutor' | 'student';
-  text: string;
-}
-
 export function SessionPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
-  const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [inputText, setInputText] = useState('');
-  const [conversation, setConversation] = useState<Message[]>([]);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [sessionCompleted, setSessionCompleted] = useState(false);
+  const { settings: voiceSettings, updateSettings } = useVoiceSettings();
   const conversationEndRef = useRef<HTMLDivElement>(null);
 
-  const { isSpeaking, speak, stopSpeaking } = useVoice();
-  const { settings: voiceSettings, updateSettings } = useVoiceSettings();
-
-  // Preview voice with current settings
-  const handlePreviewVoice = async (settings: VoiceSettings) => {
-    await speak('Hola, soy tu tutor. Vamos a aprender juntos.', settings);
-  };
-
-  useEffect(() => {
-    if (!sessionId) return;
-    const fetchSession = async () => {
-      try {
-        const data = await api.getSession(sessionId);
-        setSession(data);
-        setSessionCompleted(data.status === 'COMPLETED' || data.status === 'ESCALATED');
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error al cargar la sesión.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchSession();
-  }, [sessionId]);
+  const {
+    session,
+    isLoading,
+    error,
+    inputText,
+    setInputText,
+    conversation,
+    isProcessing,
+    sessionCompleted,
+    isSpeaking,
+    stopSpeaking,
+    handleSend,
+    handleReset,
+    handlePreviewVoice,
+    currentState,
+  } = useSessionLogic(sessionId, voiceSettings);
 
   useEffect(() => {
     conversationEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversation]);
-
-  const handleSend = async () => {
-    if (!inputText.trim() || !sessionId) return;
-    const userText = inputText;
-    setInputText('');
-    setConversation((prev) => [...prev, { role: 'student', text: userText }]);
-    stopSpeaking();
-    setIsProcessing(true);
-    setError(null);
-    try {
-      const response = await api.interactWithRecipe(sessionId, userText);
-      setConversation((prev) => [...prev, { role: 'tutor', text: response.voiceText }]);
-      if (response.sessionCompleted) {
-        setSessionCompleted(true);
-        if (sessionId) {
-          const updated = await api.getSession(sessionId);
-          setSession(updated);
-        }
-      }
-      speak(response.voiceText, {
-        character: voiceSettings.character,
-        speakingRate: voiceSettings.speakingRate,
-        pitch: voiceSettings.pitch,
-        languageCode: voiceSettings.languageCode,
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error en la transmisión.');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -114,24 +62,6 @@ export function SessionPage() {
       handleSend();
     }
   };
-
-  const handleReset = async () => {
-    if (!sessionId) return;
-    if (!confirm('¿Confirmar reinicio de sesión? Los datos se perderán.')) return;
-    setIsProcessing(true);
-    try {
-      const data = await api.resetSession(sessionId);
-      setSession(data);
-      setConversation([]);
-      setSessionCompleted(data.status === 'COMPLETED');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al reiniciar.');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const currentState: PedagogicalState = session?.stateCheckpoint?.currentState || 'ACTIVE_CLASS';
 
   if (isLoading) {
     return (
@@ -162,7 +92,6 @@ export function SessionPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans flex flex-col text-slate-900">
-      {/* Header */}
       <header className="bg-white border-b border-slate-200 h-14 flex items-center px-4 sm:px-6 shrink-0">
         <div className="flex-1 flex items-center">
           <Link
@@ -204,7 +133,6 @@ export function SessionPage() {
       </header>
 
       <main className="flex-1 flex flex-col lg:flex-row min-h-0">
-        {/* Left Panel - Visual (placeholder) */}
         <section className="w-full lg:w-1/3 bg-slate-900 flex flex-col relative border-r border-slate-800">
           <div className="flex-1 flex flex-col justify-center items-center p-8 text-center text-slate-500">
             <div className="w-16 h-16 border border-slate-700 rounded flex items-center justify-center mb-6 bg-slate-800">
@@ -214,9 +142,7 @@ export function SessionPage() {
           </div>
         </section>
 
-        {/* Right Panel - Conversation */}
         <section className="flex-1 flex flex-col bg-white min-h-0">
-          {/* Header */}
           <div className="h-12 border-b border-slate-100 bg-slate-50 px-6 flex justify-between items-center shrink-0">
             <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
               Historial de la Sesión
@@ -229,7 +155,6 @@ export function SessionPage() {
             ) : null}
           </div>
 
-          {/* Messages */}
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
             {error ? (
               <div className="p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl">
@@ -264,7 +189,6 @@ export function SessionPage() {
             <div ref={conversationEndRef} />
           </div>
 
-          {/* Input */}
           <div className="p-4 border-t border-slate-100 bg-white shrink-0">
             {sessionCompleted ? (
               <Link
