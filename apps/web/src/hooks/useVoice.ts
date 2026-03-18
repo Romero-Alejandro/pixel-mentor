@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 
-import { apiClient } from '../services/api';
+import { apiClient, getToken } from '../services/api';
+import type { TTSAudioMessageData, TTSErrorMessageData } from '@pixel-mentor/shared';
 
 // Voice settings for backend TTS
 export interface VoiceSettings {
@@ -63,6 +64,15 @@ export function useVoice(): UseVoiceReturn {
 
   const recognitionRef = useRef<any>(null);
 
+  // Streaming TTS refs
+  const eventSourceRef = useRef<EventSource | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const audioQueueRef = useRef<Array<{ element: HTMLAudioElement; url: string }>>([]);
+  const currentAudioRef = useRef<{ element: HTMLAudioElement; url: string } | null>(null);
+  const httpAudioRef = useRef<HTMLAudioElement | null>(null);
+  const httpAudioUrlRef = useRef<string | null>(null);
+  const streamEndedRef = useRef(false);
+
   // Check browser support
   const isSpeechSupported = typeof window !== 'undefined' && 'speechSynthesis' in window;
   const isRecognitionSupported =
@@ -119,45 +129,127 @@ export function useVoice(): UseVoiceReturn {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      // Cancel any ongoing TTS operations
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      // Clear streaming audio
+      audioQueueRef.current.forEach((item) => {
+        try {
+          URL.revokeObjectURL(item.url);
+        } catch (e) {}
+      });
+      if (currentAudioRef.current) {
+        try {
+          currentAudioRef.current.element.pause();
+          URL.revokeObjectURL(currentAudioRef.current.url);
+        } catch (e) {}
+      }
+      // Clear HTTP audio
+      if (httpAudioRef.current) {
+        try {
+          httpAudioRef.current.pause();
+        } catch (e) {}
+      }
+      if (httpAudioUrlRef.current) {
+        try {
+          URL.revokeObjectURL(httpAudioUrlRef.current);
+        } catch (e) {}
+      }
+      // Browser TTS
       if (isSpeechSupported) {
         try {
           window.speechSynthesis.cancel();
-        } catch (e) {
-          // Ignore
-        }
+        } catch (e) {}
       }
+      // Recognition
       if (recognitionRef.current) {
         try {
           recognitionRef.current.abort();
-        } catch (e) {
-          // Ignore
-        }
+        } catch (e) {}
       }
     };
   }, [isSpeechSupported]);
 
   const stopSpeaking = useCallback(() => {
-    if (!isSpeechSupported) return;
-
-    try {
-      window.speechSynthesis.cancel();
-    } catch (e) {
-      debugError('Error stopping speech:', e);
+    // Abort current operation if any
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
     }
-    setIsSpeaking(false);
-  }, [isSpeechSupported]);
 
-  const speak = useCallback(
+    // Stop streaming resources
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+
+    // Clear streaming audio queue
+    audioQueueRef.current.forEach((item) => {
+      try {
+        URL.revokeObjectURL(item.url);
+      } catch (e) {
+        // ignore
+      }
+    });
+    audioQueueRef.current = [];
+
+    if (currentAudioRef.current) {
+      try {
+        currentAudioRef.current.element.pause();
+        URL.revokeObjectURL(currentAudioRef.current.url);
+      } catch (e) {
+        // ignore
+      }
+      currentAudioRef.current = null;
+    }
+
+    // Stop HTTP TTS audio
+    if (httpAudioRef.current) {
+      try {
+        httpAudioRef.current.pause();
+      } catch (e) {
+        // ignore
+      }
+      httpAudioRef.current = null;
+    }
+    if (httpAudioUrlRef.current) {
+      try {
+        URL.revokeObjectURL(httpAudioUrlRef.current);
+      } catch (e) {
+        // ignore
+      }
+      httpAudioUrlRef.current = null;
+    }
+
+    // Stop browser TTS
+    if (isSpeechSupported) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch (e) {
+        debugError('Error stopping speech synthesis:', e);
+      }
+    }
+
+    setIsSpeaking(false);
+    setError(null);
+  }, [isSpeechSupported, setIsSpeaking, setError]);
+
+  const speakHTTP = useCallback(
     async (text: string, voiceSettings?: VoiceSettings): Promise<boolean> => {
-      debugLog('speak() called with:', text?.substring(0, 50));
+      setError(null);
+      setIsSpeaking(true);
 
       // Validate input
       if (!text || typeof text !== 'string' || text.trim().length === 0) {
-        debugLog('Empty text, skipping speak');
+        debugLog('Empty text, skipping speakHTTP');
+        setIsSpeaking(false);
         return false;
       }
 
-      // Merge with defaults
       const settings = {
         character: voiceSettings?.character || 'person',
         languageCode: voiceSettings?.languageCode || 'es-ES',
@@ -165,13 +257,8 @@ export function useVoice(): UseVoiceReturn {
         pitch: voiceSettings?.pitch ?? 0,
       };
 
-      setError(null);
-      setIsSpeaking(true);
-
-      // Strategy 1: Try backend TTS (primary)
       try {
-        debugLog('Trying backend TTS...', settings);
-
+        debugLog('speakHTTP: Trying backend HTTP TTS...', settings);
         const response = await apiClient.post('/api/tts/speak', {
           text: text.trim(),
           character: settings.character,
@@ -181,7 +268,6 @@ export function useVoice(): UseVoiceReturn {
         });
 
         const data = response.data;
-
         if (!data.audioContent) {
           throw new Error('No audio content in response');
         }
@@ -190,37 +276,56 @@ export function useVoice(): UseVoiceReturn {
         const audioBytes = Uint8Array.from(atob(data.audioContent), (c) => c.charCodeAt(0));
         const audioBlob = new Blob([audioBytes], { type: 'audio/mpeg' });
         const audioUrl = URL.createObjectURL(audioBlob);
-
+        httpAudioUrlRef.current = audioUrl;
         const audio = new Audio(audioUrl);
+        httpAudioRef.current = audio;
 
         audio.onplay = () => {
-          debugLog('Backend TTS playing');
+          debugLog('HTTP TTS playing');
           setError(null);
         };
 
         audio.onended = () => {
-          debugLog('Backend TTS ended');
+          debugLog('HTTP TTS ended');
           setIsSpeaking(false);
-          URL.revokeObjectURL(audioUrl);
+          httpAudioRef.current = null;
+          if (httpAudioUrlRef.current) {
+            URL.revokeObjectURL(httpAudioUrlRef.current);
+            httpAudioUrlRef.current = null;
+          }
         };
 
         audio.onerror = (err) => {
           debugError('Audio playback error:', err);
           setError('Error al reproducir audio');
           setIsSpeaking(false);
+          if (httpAudioRef.current) {
+            httpAudioRef.current = null;
+          }
+          if (httpAudioUrlRef.current) {
+            URL.revokeObjectURL(httpAudioUrlRef.current);
+            httpAudioUrlRef.current = null;
+          }
         };
 
         await audio.play();
-        debugLog('Backend TTS started successfully!');
+        debugLog('HTTP TTS started successfully!');
         return true;
       } catch (backendErr) {
-        debugError('Backend TTS failed:', backendErr);
+        debugError('HTTP TTS failed:', backendErr);
 
-        // Strategy 2: Fallback to browser TTS
+        // Fallback to browser TTS
         debugLog('Falling back to browser TTS...');
 
         try {
           const utterance = new SpeechSynthesisUtterance(text.trim());
+
+          // Apply voice settings if possible
+          utterance.rate = voiceSettings?.speakingRate ?? 1.0;
+          utterance.pitch = voiceSettings?.pitch ?? 0;
+          if (voiceSettings?.languageCode) {
+            utterance.lang = voiceSettings.languageCode;
+          }
 
           utterance.onstart = () => {
             debugLog('Browser TTS started successfully');
@@ -258,7 +363,259 @@ export function useVoice(): UseVoiceReturn {
         }
       }
     },
-    [],
+    [apiClient, setError, setIsSpeaking],
+  );
+
+  const speakStream = useCallback(
+    async (text: string, voiceSettings?: VoiceSettings, signal?: AbortSignal): Promise<boolean> => {
+      if (!text || typeof text !== 'string' || text.trim().length === 0) {
+        return false;
+      }
+
+      const settings = {
+        languageCode: voiceSettings?.languageCode || 'es-ES',
+        speakingRate: voiceSettings?.speakingRate ?? 1.0,
+      };
+
+      // Helper to convert base64 to Blob
+      const base64ToBlob = (base64: string, mimeType: string): Blob => {
+        const sliceSize = 1024;
+        const byteCharacters = atob(base64);
+        const byteArrays: Uint8Array[] = [];
+
+        for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+          const slice = byteCharacters.slice(offset, offset + sliceSize);
+          const byteNumbers = new Array(slice.length);
+          for (let i = 0; i < slice.length; i++) {
+            byteNumbers[i] = slice.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          byteArrays.push(byteArray);
+        }
+
+        return new Blob(byteArrays as BlobPart[], { type: mimeType });
+      };
+
+      const baseUrl = apiClient.defaults.baseURL ?? 'http://localhost:3001';
+      const url = new URL(`${baseUrl}/api/tts/stream`);
+      url.searchParams.set('text', text.trim());
+      url.searchParams.set('lang', settings.languageCode);
+      if (settings.speakingRate < 1) {
+        url.searchParams.set('slow', 'true');
+      }
+      const token = getToken();
+      if (token) {
+        url.searchParams.set('token', token);
+      }
+
+      const maxRetries = 3;
+      let retryCount = 0;
+
+      // Cleanup streaming resources
+      const cleanupStreamingResources = () => {
+        if (eventSourceRef.current) {
+          eventSourceRef.current.close();
+          eventSourceRef.current = null;
+        }
+        // Clear audio queue
+        audioQueueRef.current.forEach((item) => {
+          try {
+            URL.revokeObjectURL(item.url);
+          } catch (e) {}
+        });
+        audioQueueRef.current = [];
+        if (currentAudioRef.current) {
+          try {
+            currentAudioRef.current.element.pause();
+            URL.revokeObjectURL(currentAudioRef.current.url);
+          } catch (e) {}
+          currentAudioRef.current = null;
+        }
+      };
+
+      // Create a streaming connection
+      const createStreamConnection = (): Promise<void> => {
+        return new Promise((resolve, reject) => {
+          const eventSource = new EventSource(url.toString());
+          eventSourceRef.current = eventSource;
+          streamEndedRef.current = false;
+
+          // Abort handling
+          const abortListener = () => {
+            eventSource.close();
+            cleanupStreamingResources();
+            reject(new DOMException('Aborted', 'AbortError'));
+          };
+          if (signal) {
+            signal.addEventListener('abort', abortListener, { once: true });
+          }
+
+          eventSource.onopen = () => {
+            debugLog('EventSource connected');
+            retryCount = 0; // reset retry count on successful connection
+          };
+
+          eventSource.addEventListener('audio', (event: MessageEvent) => {
+            try {
+              const data = JSON.parse(event.data) as TTSAudioMessageData;
+              const audioBlob = base64ToBlob(data.audioBase64, 'audio/mpeg');
+              const audioUrl = URL.createObjectURL(audioBlob);
+              const audio = new Audio(audioUrl);
+              const queueItem = { element: audio, url: audioUrl };
+
+              audio.onended = () => {
+                URL.revokeObjectURL(audioUrl);
+                // If this was the current audio, clear it and play next
+                if (currentAudioRef.current && currentAudioRef.current.url === audioUrl) {
+                  currentAudioRef.current = null;
+                }
+                // If queue has items, play next
+                if (audioQueueRef.current.length > 0) {
+                  const next = audioQueueRef.current.shift()!;
+                  currentAudioRef.current = next;
+                  next.element.play().catch((e) => console.error('Play error', e));
+                } else if (streamEndedRef.current) {
+                  // No more queued and stream ended, resolve
+                  cleanupStreamingResources();
+                  resolve();
+                }
+              };
+
+              audio.onerror = (e) => {
+                URL.revokeObjectURL(audioUrl);
+                console.error('Chunk playback error', e);
+                if (currentAudioRef.current && currentAudioRef.current.url === audioUrl) {
+                  currentAudioRef.current = null;
+                }
+                if (audioQueueRef.current.length > 0) {
+                  const next = audioQueueRef.current.shift()!;
+                  currentAudioRef.current = next;
+                  next.element.play().catch((e) => console.error('Play error', e));
+                } else if (streamEndedRef.current) {
+                  cleanupStreamingResources();
+                  resolve();
+                }
+              };
+
+              if (!currentAudioRef.current) {
+                currentAudioRef.current = queueItem;
+                audio.play().catch((e) => console.error('Failed to play chunk', e));
+              } else {
+                audioQueueRef.current.push(queueItem);
+              }
+            } catch (err) {
+              console.error('Failed to process audio message', err);
+            }
+          });
+
+          eventSource.addEventListener('end', (event: MessageEvent) => {
+            try {
+              JSON.parse(event.data); // validate
+              streamEndedRef.current = true;
+              eventSource.close();
+              // If no audio playing and queue empty, resolve
+              if (!currentAudioRef.current && audioQueueRef.current.length === 0) {
+                cleanupStreamingResources();
+                resolve();
+              }
+              // else will resolve in onended handlers
+            } catch (err) {
+              console.error('Failed to parse end message', err);
+              eventSource.close();
+              cleanupStreamingResources();
+              reject(err);
+            }
+          });
+
+          eventSource.addEventListener('error', (event: MessageEvent) => {
+            try {
+              const data = JSON.parse(event.data) as TTSErrorMessageData;
+              console.error('Stream error from server', data);
+              streamEndedRef.current = true;
+              eventSource.close();
+              cleanupStreamingResources();
+              reject(new Error(data.message || 'Stream error'));
+            } catch (err) {
+              console.error('Error parsing SSE error', err);
+              streamEndedRef.current = true;
+              eventSource.close();
+              cleanupStreamingResources();
+              reject(new Error('Stream error'));
+            }
+          });
+
+          eventSource.onerror = (err) => {
+            if (!streamEndedRef.current) {
+              console.error('EventSource connection error', err);
+              eventSource.close();
+              cleanupStreamingResources();
+              reject(new Error('Connection error'));
+            }
+          };
+        });
+      };
+
+      // Retry loop
+      while (retryCount < maxRetries) {
+        try {
+          await createStreamConnection();
+          return true;
+        } catch (err) {
+          if (err instanceof DOMException && err.name === 'AbortError') {
+            throw err; // propagate abort immediately
+          }
+          retryCount++;
+          if (retryCount >= maxRetries) {
+            throw err;
+          }
+          const delay = Math.min(1000 * Math.pow(2, retryCount), 10000) + Math.random() * 500;
+          debugLog(
+            `Streaming connection failed, retrying in ${delay}ms (${retryCount}/${maxRetries})`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      }
+      throw new Error('Max retries exceeded');
+    },
+    [apiClient, getToken],
+  );
+
+  const speak = useCallback(
+    async (text: string, voiceSettings?: VoiceSettings): Promise<boolean> => {
+      // Cancel any ongoing speech first
+      stopSpeaking();
+
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
+      setIsSpeaking(true);
+      setError(null);
+
+      try {
+        // Try streaming first
+        const success = await speakStream(text, voiceSettings, abortController.signal);
+        return success;
+      } catch (err: any) {
+        // If aborted, just return false without fallback
+        if (err.name === 'AbortError') {
+          debugLog('Speech aborted by user');
+          return false;
+        }
+        debugError('Streaming failed, falling back to HTTP TTS', err);
+        // Cleanup streaming resources (in case any left)
+        if (eventSourceRef.current) {
+          eventSourceRef.current.close();
+          eventSourceRef.current = null;
+        }
+        // Fallback to HTTP TTS
+        return await speakHTTP(text, voiceSettings);
+      } finally {
+        // Clear abort controller ref if it hasn't been cleared already
+        if (abortControllerRef.current === abortController) {
+          abortControllerRef.current = null;
+        }
+      }
+    },
+    [stopSpeaking, speakStream, speakHTTP],
   );
 
   const startListening = useCallback(() => {
