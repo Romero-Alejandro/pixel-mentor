@@ -1,6 +1,7 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 
-import { useAuthStore } from './stores/authStore';
+import { useAuthStore, useAuthRedirect } from './stores/authStore';
 import { Spinner } from './components/ui/Spinner';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
@@ -11,6 +12,8 @@ import { SessionPage } from './pages/SessionPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isHydrated, isAuthenticated, isValidating } = useAuthStore();
+  const { saveRedirectPath } = useAuthRedirect();
+  const location = useLocation();
 
   // Wait for hydration before deciding
   if (!isHydrated || isValidating) {
@@ -25,6 +28,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!isAuthenticated) {
+    // Save the current location to redirect back after login
+    saveRedirectPath(location.pathname);
     return <Navigate to="/login" replace />;
   }
 
@@ -33,7 +38,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { isHydrated, isAuthenticated, isValidating } = useAuthStore();
+  const { getRedirectPath, clearRedirect } = useAuthRedirect();
 
+  // Wait for hydration before deciding
   if (!isHydrated || isValidating) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -46,6 +53,21 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (isAuthenticated) {
+    const redirectPath = getRedirectPath();
+    // Only redirect to non-auth paths (avoid redirecting to /login or /register)
+    const isSafePath =
+      redirectPath && !redirectPath.startsWith('/login') && !redirectPath.startsWith('/register');
+
+    // Clear the redirect path after we've decided to use it (avoid setState during render)
+    useEffect(() => {
+      if (isSafePath) {
+        clearRedirect();
+      }
+    }, [isSafePath, clearRedirect]);
+
+    if (isSafePath) {
+      return <Navigate to={redirectPath} replace />;
+    }
     return <Navigate to="/dashboard" replace />;
   }
 
