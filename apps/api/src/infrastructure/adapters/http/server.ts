@@ -145,10 +145,11 @@ export function createApp(deps: ServerDependencies): Express {
     legacyHeaders: false,
   });
 
-  // TTS specific rate limiter - more restrictive due to computational cost
+  // TTS specific rate limiter - increased from 10 to 1000 requests per minute per IP
+  // Note: This is a significant increase to allow more TTS usage for educational purposes
   const ttsLimiter = rateLimit({
     windowMs: 60 * 1000, // 1 minute
-    max: 10, // 10 requests per minute per IP
+    max: 1000, // 1000 requests per minute per IP (increased from 10)
     message: { error: 'Demasiadas solicitudes de voz. Intenta de nuevo en un minuto.' },
     standardHeaders: true,
     legacyHeaders: false,
