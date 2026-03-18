@@ -4,10 +4,10 @@ export type StateEventType =
   // Eventos de control de clase
   | 'START_CLASS' // NUEVO: Iniciar después de presentación
   | 'RESTART_CLASS' // NUEVO: Reiniciar clase desde el principio
-  
+
   // Eventos de explicación
   | 'EXPLAIN'
-  
+
   // Eventos de actividad
   | 'ANSWER'
   | 'ADVANCE'
@@ -18,7 +18,7 @@ export type StateEventType =
   | 'OFFER_SKIP' // NUEVO: Ofrecer saltar actividad
   | 'SKIP_ACTIVITY' // NUEVO: Procesar decisión de salto
   | 'REPEAT_CONCEPT' // NUEVO: Repetir explicación del tema
-  
+
   // Eventos de preguntas y dudas
   | 'RAISE_HAND'
   | 'RESUME_CLASS'
@@ -46,7 +46,7 @@ const transitions: Record<PedagogicalState, Partial<Record<StateEventType, Pedag
     START_CLASS: 'ACTIVE_CLASS',
     RESTART_CLASS: 'AWAITING_START',
   },
-  
+
   // Clase activa en progreso
   ACTIVE_CLASS: {
     RAISE_HAND: 'RESOLVING_DOUBT',
@@ -55,18 +55,18 @@ const transitions: Record<PedagogicalState, Partial<Record<StateEventType, Pedag
     CLARIFY: 'CLARIFYING',
     EXPLAIN: 'EXPLANATION',
   },
-  
+
   // Resolviendo duda del estudiante
   RESOLVING_DOUBT: {
     RESUME_CLASS: 'ACTIVE_CLASS',
     QUESTION_COOLDOWN: 'ACTIVE_CLASS',
   },
-  
+
   // Solicitando clarificación
   CLARIFYING: {
     RESUME_CLASS: 'ACTIVE_CLASS',
   },
-  
+
   // Explicación del tutor
   EXPLANATION: {
     RAISE_HAND: 'RESOLVING_DOUBT',
@@ -74,33 +74,33 @@ const transitions: Record<PedagogicalState, Partial<Record<StateEventType, Pedag
     EXPLAIN: 'QUESTION', // Transición a actividad
     ACTIVITY_TIMEOUT: 'ACTIVITY_INACTIVITY_WARNING',
   },
-  
+
   // Esperando respuesta a actividad
   ACTIVITY_WAIT: {
     ANSWER: 'EVALUATION',
     SHOW_ENCOURAGEMENT: 'ACTIVITY_INACTIVITY_WARNING',
     ACTIVITY_TIMEOUT: 'ACTIVITY_SKIP_OFFER',
   },
-  
+
   // Mostrando mensaje de ánimo
   ACTIVITY_INACTIVITY_WARNING: {
     ANSWER: 'EVALUATION',
     ACTIVITY_TIMEOUT: 'ACTIVITY_SKIP_OFFER',
   },
-  
+
   // Ofreciendo saltar actividad
   ACTIVITY_SKIP_OFFER: {
     REPEAT_CONCEPT: 'EXPLANATION',
     SKIP_ACTIVITY: 'QUESTION', // Continuar a sig actividad
     CONTINUE: 'QUESTION',
   },
-  
+
   // Pregunta formal
   QUESTION: {
     ANSWER: 'EVALUATION',
     RAISE_HAND: 'RESOLVING_DOUBT', // Permitir duda durante pregunta
   },
-  
+
   // Evaluando respuesta
   EVALUATION: {
     ADVANCE: 'QUESTION',
@@ -108,7 +108,7 @@ const transitions: Record<PedagogicalState, Partial<Record<StateEventType, Pedag
     VALIDATE: 'ACTIVE_CLASS',
     OFFER_SKIP: 'ACTIVITY_SKIP_OFFER', // Ofrecer salto si hay fallos
   },
-  
+
   // Lección completada
   COMPLETED: {
     RESTART_CLASS: 'AWAITING_START',

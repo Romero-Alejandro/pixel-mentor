@@ -1,4 +1,5 @@
 import { prisma } from '../client.js';
+
 import type { Tag } from '@/domain/entities/tag.js';
 import type { TagRepository } from '@/domain/ports/tag-repository.js';
 

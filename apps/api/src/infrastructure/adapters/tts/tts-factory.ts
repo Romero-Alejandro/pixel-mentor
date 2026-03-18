@@ -1,4 +1,7 @@
 import type pino from 'pino';
+
+import { GoogleFreeTTSAdapter, type GoogleFreeTTSConfig } from './google-free.adapter.js';
+
 import type {
   TTSService,
   Voice,
@@ -6,7 +9,6 @@ import type {
   TTSOptions,
   TTSResponse,
 } from '@/domain/ports/tts-service.js';
-import { GoogleFreeTTSAdapter, type GoogleFreeTTSConfig } from './google-free.adapter.js';
 
 /**
  * TTS Provider Types

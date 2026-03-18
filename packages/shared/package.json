@@ -10,7 +10,8 @@
     "./auth": "./src/auth.ts",
     "./recipe": "./src/recipe.ts",
     "./session": "./src/session.ts",
-    "./pedagogical": "./src/pedagogical.ts"
+    "./pedagogical": "./src/pedagogical.ts",
+    "./types/tts": "./src/types/tts.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

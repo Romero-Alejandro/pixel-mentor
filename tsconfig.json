@@ -26,7 +26,8 @@
     "paths": {
       "@pixel-mentor/api/*": ["./apps/api/src/*"],
       "@pixel-mentor/web/*": ["./apps/web/src/*"],
-    },
+      "@pixel-mentor/shared/*": ["./packages/shared/src/*"]
+    }
   },
 
   "include": ["apps/*/src/**/*", "packages/*/src/**/*", "**/*.ts", "**/*.tsx"],
@@ -36,6 +37,6 @@
     "**/build",
     "**/.turbo",
     "**/postcss.config.js",
-    "**/tailwind.config.js",
-  ],
+    "**/tailwind.config.js"
+  ]
 }

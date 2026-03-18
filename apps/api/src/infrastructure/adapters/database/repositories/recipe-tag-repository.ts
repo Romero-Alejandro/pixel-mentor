@@ -1,4 +1,5 @@
 import { prisma } from '../client.js';
+
 import type { RecipeTag } from '@/domain/entities/recipe-tag.js';
 import type { RecipeTagRepository } from '@/domain/ports/recipe-tag-repository.js';
 

@@ -2,11 +2,11 @@ export type PedagogicalState =
   // Estados de control de clase
   | 'AWAITING_START' // NUEVO: Esperando confirmación del estudiante para iniciar
   | 'ACTIVE_CLASS' // Clase activamente en progreso
-  
+
   // Estados de dudas y preguntas
   | 'RESOLVING_DOUBT' // Resolviendo duda del estudiante
   | 'CLARIFYING' // Solicitando clarificación
-  
+
   // Estados de explicación y actividades
   | 'EXPLANATION' // El tutor explica un concepto
   | 'ACTIVITY_WAIT' // NUEVO: Esperando respuesta a actividad (con timer)
@@ -14,7 +14,7 @@ export type PedagogicalState =
   | 'ACTIVITY_SKIP_OFFER' // NUEVO: Ofreciendo saltar actividad
   | 'QUESTION' // Pregunta formal al estudiante
   | 'EVALUATION' // Evaluando respuesta
-  
+
   // Estados finales
   | 'COMPLETED'; // Lección completada
 

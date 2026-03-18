@@ -1,4 +1,5 @@
 import { prisma } from '../client';
+
 import type { Module } from '@/domain/entities/module';
 import type { ModuleRepository } from '@/domain/ports/module-repository';
 

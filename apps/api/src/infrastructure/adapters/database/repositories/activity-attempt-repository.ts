@@ -1,4 +1,5 @@
 import { prisma } from '../client';
+
 import type { ActivityAttempt } from '@/domain/entities/activity-attempt';
 import type { ActivityAttemptRepository } from '@/domain/ports/activity-attempt-repository';
 
@@ -11,7 +12,10 @@ export class PrismaActivityAttemptRepository implements ActivityAttemptRepositor
     return raw.map(this.mapAttempt);
   }
 
-  async findLatestByUserIdAndAtomId(userId: string, atomId: string): Promise<ActivityAttempt | null> {
+  async findLatestByUserIdAndAtomId(
+    userId: string,
+    atomId: string,
+  ): Promise<ActivityAttempt | null> {
     const raw = await prisma.activityAttempt.findFirst({
       where: { userId, atomId },
       orderBy: { createdAt: 'desc' },

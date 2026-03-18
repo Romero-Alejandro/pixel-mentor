@@ -354,7 +354,7 @@ export class OrchestrateRecipeUseCase {
 
     const cp = session.stateCheckpoint;
     const currentState = cp.currentState as PedagogicalState;
-    let currentIdx = cp.currentStepIndex ?? 0;
+    const currentIdx = cp.currentStepIndex ?? 0;
     let questionCount = cp.questionCount ?? 0;
     let lastQuestionTime = cp.lastQuestionTime ?? null;
     let skippedActivities: string[] = cp.skippedActivities ?? [];

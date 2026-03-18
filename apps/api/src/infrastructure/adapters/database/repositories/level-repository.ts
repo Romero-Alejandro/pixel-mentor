@@ -1,4 +1,5 @@
 import { prisma } from '../client';
+
 import type { Level } from '@/domain/entities/level';
 import type { LevelRepository } from '@/domain/ports/level-repository';
 

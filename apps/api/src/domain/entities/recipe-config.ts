@@ -6,37 +6,37 @@
 export interface RecipeConfig {
   /** Name of the tutor bot */
   tutorName: string;
-  
+
   /** Maximum number of questions allowed per session */
   maxQuestionsPerSession: number;
-  
+
   /** Cooldown period between questions (in seconds) */
   questionCooldownSeconds: number;
-  
+
   /** Timeout for activity responses (in seconds) */
   activityTimeoutSeconds: number;
-  
+
   /** Time before showing encouragement message (in seconds) */
   encouragementAfterInactivitySeconds: number;
-  
+
   /** Number of failed attempts before offering skip */
   skipAfterFailedAttempts: number;
-  
+
   /** Timeout before offering skip option (in seconds) */
   skipAfterInactivitySeconds: number;
-  
+
   /** Whether to enable the activity skip feature */
   enableActivitySkip: boolean;
-  
+
   /** Tone of the tutor's dialogue */
   tone: 'friendly' | 'formal';
-  
+
   /** Greeting and dialogue phrases */
   greetings: GreetingConfig;
-  
+
   /** Encouragement phrases for when student is stuck */
   encouragementPhrases: string[];
-  
+
   /** Simple jokes appropriate for children */
   jokes: string[];
 }
@@ -45,13 +45,13 @@ export interface RecipeConfig {
 export interface GreetingConfig {
   /** Introduction phrase - supports {name}, {tutor}, {title} placeholders */
   intro: string;
-  
+
   /** Prompt to ask if student is ready */
   readyPrompt: string;
-  
+
   /** Transition phrase between concepts */
   nextConceptTransition: string;
-  
+
   /** Completion message */
   completionMessage: string;
 }
@@ -101,30 +101,38 @@ export function parseRecipeConfig(meta: Record<string, unknown> | null | undefin
   try {
     return {
       tutorName: typeof meta.tutorName === 'string' ? meta.tutorName : DEFAULT_CONFIG.tutorName,
-      maxQuestionsPerSession: typeof meta.maxQuestionsPerSession === 'number' 
-        ? meta.maxQuestionsPerSession 
-        : DEFAULT_CONFIG.maxQuestionsPerSession,
-      questionCooldownSeconds: typeof meta.questionCooldownSeconds === 'number'
-        ? meta.questionCooldownSeconds
-        : DEFAULT_CONFIG.questionCooldownSeconds,
-      activityTimeoutSeconds: typeof meta.activityTimeoutSeconds === 'number'
-        ? meta.activityTimeoutSeconds
-        : DEFAULT_CONFIG.activityTimeoutSeconds,
-      encouragementAfterInactivitySeconds: typeof meta.encouragementAfterInactivitySeconds === 'number'
-        ? meta.encouragementAfterInactivitySeconds
-        : DEFAULT_CONFIG.encouragementAfterInactivitySeconds,
-      skipAfterFailedAttempts: typeof meta.skipAfterFailedAttempts === 'number'
-        ? meta.skipAfterFailedAttempts
-        : DEFAULT_CONFIG.skipAfterFailedAttempts,
-      skipAfterInactivitySeconds: typeof meta.skipAfterInactivitySeconds === 'number'
-        ? meta.skipAfterInactivitySeconds
-        : DEFAULT_CONFIG.skipAfterInactivitySeconds,
-      enableActivitySkip: typeof meta.enableActivitySkip === 'boolean'
-        ? meta.enableActivitySkip
-        : DEFAULT_CONFIG.enableActivitySkip,
+      maxQuestionsPerSession:
+        typeof meta.maxQuestionsPerSession === 'number'
+          ? meta.maxQuestionsPerSession
+          : DEFAULT_CONFIG.maxQuestionsPerSession,
+      questionCooldownSeconds:
+        typeof meta.questionCooldownSeconds === 'number'
+          ? meta.questionCooldownSeconds
+          : DEFAULT_CONFIG.questionCooldownSeconds,
+      activityTimeoutSeconds:
+        typeof meta.activityTimeoutSeconds === 'number'
+          ? meta.activityTimeoutSeconds
+          : DEFAULT_CONFIG.activityTimeoutSeconds,
+      encouragementAfterInactivitySeconds:
+        typeof meta.encouragementAfterInactivitySeconds === 'number'
+          ? meta.encouragementAfterInactivitySeconds
+          : DEFAULT_CONFIG.encouragementAfterInactivitySeconds,
+      skipAfterFailedAttempts:
+        typeof meta.skipAfterFailedAttempts === 'number'
+          ? meta.skipAfterFailedAttempts
+          : DEFAULT_CONFIG.skipAfterFailedAttempts,
+      skipAfterInactivitySeconds:
+        typeof meta.skipAfterInactivitySeconds === 'number'
+          ? meta.skipAfterInactivitySeconds
+          : DEFAULT_CONFIG.skipAfterInactivitySeconds,
+      enableActivitySkip:
+        typeof meta.enableActivitySkip === 'boolean'
+          ? meta.enableActivitySkip
+          : DEFAULT_CONFIG.enableActivitySkip,
       tone: meta.tone === 'formal' ? 'formal' : DEFAULT_CONFIG.tone,
       greetings: parseGreetingConfig(meta.greetings),
-      encouragementPhrases: parseStringArray(meta.encouragementPhrases) || DEFAULT_CONFIG.encouragementPhrases,
+      encouragementPhrases:
+        parseStringArray(meta.encouragementPhrases) || DEFAULT_CONFIG.encouragementPhrases,
       jokes: parseStringArray(meta.jokes) || DEFAULT_CONFIG.jokes,
     };
   } catch {
@@ -141,13 +149,16 @@ function parseGreetingConfig(greetings: unknown): GreetingConfig {
   const g = greetings as Record<string, unknown>;
   return {
     intro: typeof g.intro === 'string' ? g.intro : DEFAULT_CONFIG.greetings.intro,
-    readyPrompt: typeof g.readyPrompt === 'string' ? g.readyPrompt : DEFAULT_CONFIG.greetings.readyPrompt,
-    nextConceptTransition: typeof g.nextConceptTransition === 'string' 
-      ? g.nextConceptTransition 
-      : DEFAULT_CONFIG.greetings.nextConceptTransition,
-    completionMessage: typeof g.completionMessage === 'string' 
-      ? g.completionMessage 
-      : DEFAULT_CONFIG.greetings.completionMessage,
+    readyPrompt:
+      typeof g.readyPrompt === 'string' ? g.readyPrompt : DEFAULT_CONFIG.greetings.readyPrompt,
+    nextConceptTransition:
+      typeof g.nextConceptTransition === 'string'
+        ? g.nextConceptTransition
+        : DEFAULT_CONFIG.greetings.nextConceptTransition,
+    completionMessage:
+      typeof g.completionMessage === 'string'
+        ? g.completionMessage
+        : DEFAULT_CONFIG.greetings.completionMessage,
   };
 }
 
@@ -161,10 +172,7 @@ function parseStringArray(value: unknown): string[] | null {
  * Fill placeholders in a template string
  * Supported placeholders: {name}, {tutor}, {title}, {conceptTitle}
  */
-export function fillTemplate(
-  template: string,
-  variables: Record<string, string>
-): string {
+export function fillTemplate(template: string, variables: Record<string, string>): string {
   return template.replace(/\{(\w+)\}/g, (_, key) => variables[key] || `{${key}}`);
 }
 

@@ -1,4 +1,5 @@
 import { prisma } from '../client';
+
 import type { Atom } from '@/domain/entities/atom';
 import type { AtomRepository } from '@/domain/ports/atom-repository';
 

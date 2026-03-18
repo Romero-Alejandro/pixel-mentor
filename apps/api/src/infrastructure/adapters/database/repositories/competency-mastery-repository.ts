@@ -1,4 +1,5 @@
 import { prisma } from '../client.js';
+
 import type { CompetencyMastery } from '@/domain/entities/competency-mastery.js';
 import type { CompetencyMasteryRepository } from '@/domain/ports/competency-mastery-repository.js';
 

@@ -1,4 +1,5 @@
 import { prisma } from '../client';
+
 import type { Competency } from '@/domain/entities/competency';
 import type { CompetencyRepository } from '@/domain/ports/competency-repository';
 

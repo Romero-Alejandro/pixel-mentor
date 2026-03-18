@@ -1,4 +1,5 @@
 import { prisma } from '../client';
+
 import type { UserProgress } from '@/domain/entities/user-progress';
 import type { ProgressRepository } from '@/domain/ports/progress-repository';
 

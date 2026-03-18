@@ -4,7 +4,12 @@ export interface AtomRepository {
   findById(id: string): Promise<Atom | null>;
   findByCanonicalId(canonicalId: string): Promise<Atom | null>;
   findAll(published?: boolean): Promise<Atom[]>;
-  create(atom: Omit<Atom, 'createdAt' | 'updatedAt' | 'options' | 'competencies' | 'attachments' | 'knowledgeChunks'>): Promise<Atom>;
+  create(
+    atom: Omit<
+      Atom,
+      'createdAt' | 'updatedAt' | 'options' | 'competencies' | 'attachments' | 'knowledgeChunks'
+    >,
+  ): Promise<Atom>;
   update(id: string, data: Partial<Atom>): Promise<Atom>;
   delete(id: string): Promise<void>;
   findOptionsByAtomId(atomId: string): Promise<any[]>;

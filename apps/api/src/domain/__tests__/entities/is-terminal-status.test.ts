@@ -1,7 +1,4 @@
-import {
-  isTerminalStatus,
-  type SessionStatus,
-} from '@/domain/entities/session';
+import { isTerminalStatus, type SessionStatus } from '@/domain/entities/session';
 
 describe('isTerminalStatus', () => {
   it('should return true for COMPLETED status', () => {

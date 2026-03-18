@@ -1,4 +1,5 @@
 import { prisma } from '../client';
+
 import type { Concept } from '@/domain/entities/concept';
 import type { ConceptRepository } from '@/domain/ports/concept-repository';
 

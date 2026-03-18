@@ -1,4 +1,10 @@
-export type ProgressStatus = 'LOCKED' | 'UNLOCKED' | 'IN_PROGRESS' | 'MASTERED' | 'NEEDS_REMEDIATION' | 'FAILED';
+export type ProgressStatus =
+  | 'LOCKED'
+  | 'UNLOCKED'
+  | 'IN_PROGRESS'
+  | 'MASTERED'
+  | 'NEEDS_REMEDIATION'
+  | 'FAILED';
 
 export interface UserProgress {
   readonly id: string;

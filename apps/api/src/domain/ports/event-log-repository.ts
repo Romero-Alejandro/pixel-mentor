@@ -1,5 +1,4 @@
-import type { EventLog } from '../entities/event-log';
-import type { EventType } from '../entities/event-log';
+import type { EventLog, EventType } from '../entities/event-log';
 
 export interface EventLogRepository {
   findById(id: string): Promise<EventLog | null>;

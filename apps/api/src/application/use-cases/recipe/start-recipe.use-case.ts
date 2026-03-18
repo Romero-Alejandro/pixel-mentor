@@ -11,12 +11,15 @@ export class StartRecipeUseCase {
     private sessionRepo: SessionRepository,
   ) {}
 
-  async execute(recipeId: string, studentId: string): Promise<{ sessionId: string; resumed: boolean }> {
+  async execute(
+    recipeId: string,
+    studentId: string,
+  ): Promise<{ sessionId: string; resumed: boolean }> {
     const recipe = await this.recipeRepo.findById(recipeId);
     if (!recipe) throw new RecipeNotFoundError(recipeId);
 
     const existing = await this.sessionRepo.findByStudentAndRecipe(studentId, recipeId);
-    
+
     // If existing session is in non-terminal status, resume it
     if (existing && !isTerminalStatus(existing.status)) {
       return { sessionId: existing.id, resumed: true };

@@ -1,4 +1,5 @@
 import { prisma } from '../client';
+
 import type { AssetAttachment } from '@/domain/entities/asset-attachment';
 import type { AssetAttachmentRepository } from '@/domain/ports/asset-attachment-repository';
 

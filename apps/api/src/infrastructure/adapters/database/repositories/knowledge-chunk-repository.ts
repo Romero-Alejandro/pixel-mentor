@@ -1,4 +1,5 @@
 import { prisma } from '../client';
+
 import type { KnowledgeChunk } from '@/domain/entities/knowledge-chunk';
 import type { KnowledgeChunkRepository } from '@/domain/ports/knowledge-chunk-repository';
 

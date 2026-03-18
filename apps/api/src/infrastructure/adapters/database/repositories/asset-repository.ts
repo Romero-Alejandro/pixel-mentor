@@ -1,4 +1,5 @@
 import { prisma } from '../client';
+
 import type { Asset } from '@/domain/entities/asset';
 import type { AssetRepository } from '@/domain/ports/asset-repository';
 

@@ -6,6 +6,10 @@ import {
   ListRecipesUseCase,
   ListSessionsUseCase,
   OrchestrateRecipeUseCase,
+  StartRecipeUseCase,
+  AttemptActivityUseCase,
+  TrackProgressUseCase,
+  LogEventUseCase,
 } from './application/use-cases';
 import { ResetSessionUseCase } from './application/use-cases/session/reset-session.use-case.js';
 import { CompleteSessionUseCase } from './application/use-cases/session/complete-session.use-case.js';
@@ -13,12 +17,6 @@ import { RegisterUseCase } from './application/use-cases/auth/register.use-case.
 import { LoginUseCase } from './application/use-cases/auth/login.use-case.js';
 import { VerifyTokenUseCase } from './application/use-cases/auth/verify-token.use-case.js';
 import { QuestionAnsweringUseCase } from './application/use-cases/question/question-answering.use-case.js';
-import {
-  StartRecipeUseCase,
-  AttemptActivityUseCase,
-  TrackProgressUseCase,
-  LogEventUseCase,
-} from './application/use-cases';
 import { ProgressService } from './domain/services/progress.service.js';
 import { EventService } from './domain/services/event.service.js';
 import { CompetencyService } from './domain/services/competency.service.js';

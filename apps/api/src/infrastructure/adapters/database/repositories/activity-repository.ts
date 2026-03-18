@@ -1,4 +1,5 @@
 import { prisma } from '../client';
+
 import type { Activity } from '@/domain/entities/activity';
 import type { ActivityRepository } from '@/domain/ports/activity-repository';
 

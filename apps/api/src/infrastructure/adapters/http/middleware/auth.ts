@@ -15,13 +15,21 @@ export interface AuthRequest extends Request {
 export function authMiddleware(userRepo: UserRepository, verifyTokenUseCase: VerifyTokenUseCase) {
   return async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      let token: string | null = null;
       const authHeader = req.headers.authorization;
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.slice(7);
+      } else if (req.query.token && typeof req.query.token === 'string') {
+        // Support token in query string (useful for EventSource SSE connections)
+        token = req.query.token;
+      }
+
+      if (!token) {
         res.status(401).json({ error: 'No token provided' });
         return;
       }
 
-      const token = authHeader.slice(7);
       const payload = await verifyTokenUseCase.execute(token);
 
       // Optionally verify user still exists

@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
+
 import argon2 from 'argon2';
+
 import { PrismaClient } from '../src/infrastructure/adapters/database/client.js';
 
 const prisma = new PrismaClient();
