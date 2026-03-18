@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { useCallback } from 'react';
 
 import { api, type User, type Role } from '../services/api';
 import { setToken, getToken, clearToken } from '../services/api';
@@ -12,6 +13,8 @@ interface AuthState {
   isValidating: boolean; // NEW: tracks auth check in progress
   isLoading: boolean;
   error: string | null;
+  // Auth redirect state
+  redirectPath: string | null;
 
   // actions (existing)
   login: (email: string, password: string) => Promise<void>;
@@ -20,6 +23,8 @@ interface AuthState {
   logout: () => void;
   clearError: () => void;
   setAuth: (user: User, token: string) => void;
+  setRedirectPath: (path: string | null) => void;
+  clearRedirectPath: () => void;
 
   // NEW: internal hydration marker
   _setHydrated: (hydrated: boolean) => void;
@@ -35,6 +40,7 @@ export const useAuthStore = create<AuthState>()(
       isValidating: false, // NEW: default false
       isLoading: false,
       error: null,
+      redirectPath: null,
       setAuth: (user, token) => set({ user, token, isAuthenticated: true, isHydrated: true }),
       logout: () => {
         clearToken();
@@ -98,6 +104,8 @@ export const useAuthStore = create<AuthState>()(
         }
       },
       clearError: () => set({ error: null }),
+      setRedirectPath: (path) => set({ redirectPath: path }),
+      clearRedirectPath: () => set({ redirectPath: null }),
       _setHydrated: (hydrated: boolean) => set({ isHydrated: hydrated }), // NEW: internal hydration marker
     }),
     {
@@ -120,12 +128,57 @@ export const useAuthStore = create<AuthState>()(
   ),
 );
 
-// Subscribe to hydration completion as a backup/additional trigger
-// This ensures hydration is marked complete even if the callback misses
-useAuthStore.persist.onFinishHydration(() => {
-  const currentState = useAuthStore.getState();
-  if (!currentState.isHydrated) {
-    currentState._setHydrated(true);
-    currentState.checkAuth().catch(console.error);
-  }
-});
+// ─── Auth Redirect Helpers ──────────────────────────────────────────────────────
+
+/**
+ * Hook to manage auth redirect flow
+ * Call this on pages that need to redirect to login/register
+ */
+export function useAuthRedirect() {
+  const setRedirectPath = useAuthStore((state) => state.setRedirectPath);
+  const clearRedirectPath = useAuthStore((state) => state.clearRedirectPath);
+  const redirectPath = useAuthStore((state) => state.redirectPath);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+  /**
+   * Save the current path for redirect after login
+   */
+  const saveRedirectPath = useCallback(
+    (path: string) => {
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('auth-redirect-path', path);
+      }
+      setRedirectPath(path);
+    },
+    [setRedirectPath],
+  );
+
+  /**
+   * Get the saved redirect path
+   */
+  const getRedirectPath = useCallback((): string | null => {
+    // Priority: Zustand store > sessionStorage
+    return (
+      redirectPath ||
+      (typeof window !== 'undefined' ? sessionStorage.getItem('auth-redirect-path') : null)
+    );
+  }, [redirectPath]);
+
+  /**
+   * Clear the saved redirect path
+   */
+  const clearRedirect = useCallback(() => {
+    clearRedirectPath();
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('auth-redirect-path');
+    }
+  }, [clearRedirectPath]);
+
+  return {
+    saveRedirectPath,
+    getRedirectPath,
+    clearRedirect,
+    redirectPath,
+    isAuthenticated,
+  };
+}
