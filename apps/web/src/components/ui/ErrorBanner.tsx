@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 
 import { Button } from './Button';
+
 import { cn } from '@/utils/cn';
 
 export interface ErrorBannerProps {
@@ -77,16 +78,16 @@ export function ErrorBanner({
         {/* Content */}
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-semibold text-red-800">{title}</h3>
-          {message && <p className="mt-1 text-sm text-red-600">{message}</p>}
-          {retryCount > 0 && (
+          {message ? <p className="mt-1 text-sm text-red-600">{message}</p> : null}
+          {retryCount > 0 ? (
             <p className="mt-1 text-xs text-red-500">
               Intento {retryCount} de {maxRetries}
             </p>
-          )}
+          ) : null}
         </div>
 
         {/* Dismiss button */}
-        {onDismiss && (
+        {onDismiss ? (
           <button
             type="button"
             onClick={onDismiss}
@@ -102,11 +103,11 @@ export function ErrorBanner({
               />
             </svg>
           </button>
-        )}
+        ) : null}
       </div>
 
       {/* Actions */}
-      {canRetry && (
+      {canRetry ? (
         <div className="flex justify-end gap-2 ml-13">
           <Button
             variant="outline"
@@ -125,11 +126,11 @@ export function ErrorBanner({
             )}
           </Button>
         </div>
-      )}
+      ) : null}
 
-      {!canRetry && retryCount >= maxRetries && onDismiss && (
+      {!canRetry && retryCount >= maxRetries && onDismiss ? (
         <p className="text-xs text-red-500 text-right">Máximo de intentos alcanzado</p>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -166,7 +167,7 @@ export function CompactError({ message, onDismiss, className }: CompactErrorProp
         />
       </svg>
       <span className="flex-1">{message}</span>
-      {onDismiss && (
+      {onDismiss ? (
         <button
           type="button"
           onClick={onDismiss}
@@ -182,7 +183,7 @@ export function CompactError({ message, onDismiss, className }: CompactErrorProp
             />
           </svg>
         </button>
-      )}
+      ) : null}
     </div>
   );
 }

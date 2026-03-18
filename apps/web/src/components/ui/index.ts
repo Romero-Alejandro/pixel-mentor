@@ -17,7 +17,15 @@ export type { ToastProps } from './Toast';
 export { Textarea } from './Textarea';
 export type { TextareaProps } from './Textarea';
 
-export { Skeleton, CardSkeleton, TableRowSkeleton, FormSkeleton, SkeletonLesson, SkeletonDashboard, SkeletonAuth } from './Skeleton';
+export {
+  Skeleton,
+  CardSkeleton,
+  TableRowSkeleton,
+  FormSkeleton,
+  SkeletonLesson,
+  SkeletonDashboard,
+  SkeletonAuth,
+} from './Skeleton';
 
 export { ErrorBanner, CompactError } from './ErrorBanner';
 export type { ErrorBannerProps, CompactErrorProps } from './ErrorBanner';

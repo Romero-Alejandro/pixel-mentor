@@ -1,5 +1,5 @@
 import { useRive, Layout, Fit, Alignment, useStateMachineInput } from '@rive-app/react-canvas';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useMemo, memo, useEffect } from 'react';
 
 import { useLessonStore } from '@/stores/lessonStore';
 import { cn } from '@/utils/cn';
@@ -13,7 +13,6 @@ type AvatarState =
   | 'waiting'
   | 'idle';
 
-// --- 1. Lógica de Estado Mejorada (State Guards) ---
 function getAvatarState(
   isSpeaking: boolean,
   isListening: boolean,
@@ -42,7 +41,6 @@ function getAvatarState(
   }
 }
 
-// --- 2. Sistema de Temas Mágicos ---
 const STATE_THEMES: Record<
   AvatarState,
   { color: string; icon: string; label: string; particles: string[] }
@@ -75,15 +73,24 @@ interface MascotProps {
   className?: string;
 }
 
-export function Mascot({ className = '' }: MascotProps) {
+export const Mascot = memo(function Mascot({ className = '' }: MascotProps) {
   const { isSpeaking, isListening, currentState } = useLessonStore();
   const isStart = currentState === 'AWAITING_START';
 
-  // Estado para el Skeleton Mágico
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   const avatarState = getAvatarState(isSpeaking, isListening, currentState);
   const theme = STATE_THEMES[avatarState];
+
+  const particleStyles = useMemo(() => {
+    return theme.particles.map((_, i) => ({
+      left: `${25 + Math.random() * 50}%`,
+      bottom: `${20 + Math.random() * 10}%`,
+      animationDelay: `${i * 0.3}s`,
+      animationDuration: `${2.5 + Math.random() * 1.5}s`,
+    }));
+  }, [theme.particles]);
 
   const { rive, RiveComponent } = useRive({
     src: '/assets/magic-cat.riv',
@@ -94,19 +101,25 @@ export function Mascot({ className = '' }: MascotProps) {
       alignment: Alignment.Center,
     }),
     onLoad: () => {
-      setIsLoaded(true); // El gato ha sido "Invocado" exitosamente
+      setIsLoaded(true);
     },
   });
 
   const hoverInput = useStateMachineInput(rive, 'BLACK CATW', 'Hover');
 
+  useEffect(() => {
+    if (hoverInput) {
+      hoverInput.value = avatarState === 'waiting' || isHovered;
+    }
+  }, [avatarState, isHovered, hoverInput]);
+
   const handleMouseEnter = useCallback(() => {
-    if (hoverInput) hoverInput.value = true;
-  }, [hoverInput]);
+    setIsHovered(true);
+  }, []);
 
   const handleMouseLeave = useCallback(() => {
-    if (hoverInput) hoverInput.value = false;
-  }, [hoverInput]);
+    setIsHovered(false);
+  }, []);
 
   return (
     <div
@@ -118,7 +131,6 @@ export function Mascot({ className = '' }: MascotProps) {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {/* --- Esqueleto Mágico (Se oculta suavemente al cargar) --- */}
       <div
         className={cn(
           'absolute inset-0 flex items-center justify-center transition-all duration-700 z-0',
@@ -132,7 +144,6 @@ export function Mascot({ className = '' }: MascotProps) {
         </span>
       </div>
 
-      {/* --- Aura Mágica de Fondo (Respiración) --- */}
       <div
         className={cn(
           'absolute inset-0 rounded-full opacity-30 blur-[50px] transition-all duration-1000',
@@ -144,7 +155,6 @@ export function Mascot({ className = '' }: MascotProps) {
         )}
       />
 
-      {/* --- Partículas Flotantes (Staggered & Organic) --- */}
       {isLoaded && theme.particles.length > 0 ? (
         <div className="absolute inset-0 pointer-events-none overflow-visible z-20">
           {theme.particles.map((particle, i) => (
@@ -152,14 +162,9 @@ export function Mascot({ className = '' }: MascotProps) {
               key={`${avatarState}-${i}`}
               className={cn(
                 'absolute animate-float-up opacity-0',
-                i % 2 === 0 ? 'text-xl' : 'text-2xl', // Variación de tamaño
+                i % 2 === 0 ? 'text-xl' : 'text-2xl',
               )}
-              style={{
-                left: `${25 + Math.random() * 50}%`, // Distribución horizontal aleatoria
-                bottom: `${20 + Math.random() * 10}%`,
-                animationDelay: `${i * 0.3}s`,
-                animationDuration: `${2.5 + Math.random() * 1.5}s`,
-              }}
+              style={particleStyles[i]}
             >
               {particle}
             </span>
@@ -167,7 +172,6 @@ export function Mascot({ className = '' }: MascotProps) {
         </div>
       ) : null}
 
-      {/* --- Plataforma Mágica / Sombra Estilizada --- */}
       <div
         className={cn(
           'absolute bottom-2 w-2/3 h-6 bg-slate-900/15 blur-md rounded-[100%] shadow-2xl transition-all duration-700',
@@ -175,7 +179,6 @@ export function Mascot({ className = '' }: MascotProps) {
         )}
       />
 
-      {/* --- Componente Rive (El Gato) --- */}
       <div
         className={cn(
           'relative z-10 w-full h-full transform-gpu transition-all duration-1000 ease-out hover:scale-105 active:scale-95 animate-float',
@@ -185,13 +188,12 @@ export function Mascot({ className = '' }: MascotProps) {
         <RiveComponent className="w-full h-full drop-shadow-[0_15px_25px_rgba(0,0,0,0.2)]" />
       </div>
 
-      {/* --- Badge de Estado Flotante --- */}
       <div
         className={cn(
           'absolute -bottom-4 right-0 flex items-center gap-2 px-3 py-1.5 rounded-2xl shadow-xl border border-white/60',
           'bg-white/90 backdrop-blur-md transition-all duration-500 transform-gpu z-30',
           isSpeaking || isListening ? 'scale-110 -translate-y-2' : 'scale-100',
-          !isLoaded && 'opacity-0 translate-y-4 scale-75', // Oculto durante la invocación
+          !isLoaded && 'opacity-0 translate-y-4 scale-75',
         )}
       >
         <div className="relative flex h-2.5 w-2.5 items-center justify-center">
@@ -213,4 +215,4 @@ export function Mascot({ className = '' }: MascotProps) {
       </div>
     </div>
   );
-}
+});
