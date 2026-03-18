@@ -20,8 +20,10 @@ export interface AppRequest extends Request {
 
 // Text sanitization - remove potentially dangerous content
 function sanitizeText(input: string): string {
+  if (input.length > 50000) {
+    throw new Error('El texto no puede exceder 50000 caracteres');
+  }
   return input
-    .slice(0, 5000) // Limit length
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // Remove control characters
     .replace(/<[^>]*>/g, '') // Remove HTML tags (prevent XSS)
     .trim();
@@ -78,7 +80,7 @@ export function createTTSRouter(ttsService: TTSService): Router {
    *
    * Request body:
    * {
-   *   text: string,        // Text to synthesize (required)
+   *   text: string,        // Text to synthesize (required, max 50000 chars)
    *   character?: string, // Voice character: robot, animal, person, cartoon
    *   languageCode?: string, // Language code (default: es-ES)
    *   speakingRate?: number, // Speech rate 0.25-4.0 (default: 1.0)
@@ -102,8 +104,8 @@ export function createTTSRouter(ttsService: TTSService): Router {
           pitch,
         };
 
-        // Add timeout for TTS synthesis (15 seconds)
-        const timeoutMs = 15000;
+        // Add timeout for TTS synthesis (60 seconds for long text)
+        const timeoutMs = 60000;
         const timeoutPromise = new Promise<never>((_, reject) => {
           setTimeout(
             () => reject(new Error('TTS timeout: La solicitud tardó demasiado')),
@@ -127,7 +129,7 @@ export function createTTSRouter(ttsService: TTSService): Router {
         if (error instanceof Error && error.message.includes('timeout')) {
           response
             .status(504)
-            .json({ error: 'Tiempo de espera agotado. Intenta con un texto más corto.' });
+            .json({ error: 'Tiempo de espera agotado (60s). Intenta con un texto más corto.' });
           return;
         }
         next(error);
@@ -191,7 +193,7 @@ export function createTTSRouter(ttsService: TTSService): Router {
    * Stream text-to-speech audio via Server-Sent Events (SSE)
    *
    * Query params:
-   *   text: string          // Text to synthesize (required)
+   *   text: string          // Text to synthesize (required, max 50000 chars)
    *   lang?: string        // Language code (e.g., 'es-ES', default: 'en')
    *   slow?: boolean      // Slow speech (default: false)
    *

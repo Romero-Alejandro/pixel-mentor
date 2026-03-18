@@ -52,7 +52,7 @@ export class TTSStreamService extends Readable {
       lang: 'en',
       slow: false,
       host: 'https://translate.google.com',
-      timeout: 10000, // 10 seconds
+      timeout: 60000, // 60 seconds for long text
       splitPunct: '.,;!?', // Default punctuation to split long text
       ...options,
     };
