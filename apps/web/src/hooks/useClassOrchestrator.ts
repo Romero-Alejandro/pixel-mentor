@@ -20,6 +20,18 @@ import { api } from '@/services/api';
 import { useVoice, VoiceSettings } from '@/hooks/useVoice';
 import { useLessonStore } from '@/stores/lessonStore';
 
+// ─── Result type for error handling ────────────────────────────────────────────
+
+export type Result<T, E = Error> = { ok: true; value: T } | { ok: false; error: E };
+
+export function Ok<T>(value: T): Result<T, never> {
+  return { ok: true, value };
+}
+
+export function Err<E>(error: E): Result<never, E> {
+  return { ok: false, error };
+}
+
 // ─── Tipos públicos ───────────────────────────────────────────────────────────
 
 export type UIState =
@@ -54,7 +66,7 @@ export interface ClassOrchestrator {
   feedback: FeedbackData | null;
   isProcessing: boolean;
   isSpeaking: boolean;
-  startClass: (lessonId: string) => Promise<void>;
+  startClass: (lessonId: string) => Promise<Result<void, Error>>;
   submitAnswer: (answer: string) => Promise<void>;
   speakContent: () => void;
   stopSpeaking: () => void;
@@ -95,7 +107,7 @@ const randomEncouragement = () => ENCOURAGEMENTS[Math.floor(Math.random() * ENCO
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function useClassOrchestrator(): ClassOrchestrator {
-  const { setSessionId, setCurrentState, setIsSpeaking: syncStore } = useLessonStore();
+  const { setSessionId, setCurrentState, setIsSpeaking: syncStore, setError } = useLessonStore();
   const {
     speak,
     stopSpeaking: voiceStop,
@@ -116,6 +128,8 @@ export function useClassOrchestrator(): ClassOrchestrator {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const contentRef = useRef('');
   const processRef = useRef<(r: unknown) => void>(() => {});
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
     syncStore(isSpeaking);
@@ -128,11 +142,29 @@ export function useClassOrchestrator(): ClassOrchestrator {
     }
   }, []);
 
-  useEffect(() => () => clearTimer(), [clearTimer]);
+  // Cleanup function for cancellation
+  const cleanup = useCallback(() => {
+    clearTimer();
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+  }, [clearTimer]);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      cleanup();
+    };
+  }, [cleanup]);
 
   const doInteract = useCallback(async (input: string): Promise<unknown> => {
     const sid = sessionIdRef.current;
     if (!sid) throw new Error('No session');
+    // Check if aborted before making request
+    if (abortControllerRef.current?.signal.aborted) {
+      throw new Error('Operation cancelled');
+    }
     return api.interactWithRecipe(sid, input);
   }, []);
 
@@ -272,8 +304,12 @@ export function useClassOrchestrator(): ClassOrchestrator {
 
   // ─── startClass ───────────────────────────────────────────────────────────
   const startClass = useCallback(
-    async (lessonId: string) => {
-      clearTimer();
+    async (lessonId: string): Promise<Result<void, Error>> => {
+      console.log('[Orchestrator] startClass called with lessonId:', lessonId);
+      // Cancel any previous session
+      cleanup();
+      abortControllerRef.current = new AbortController();
+
       setIsProcessing(true);
       setUIState('idle');
       setFeedbackData(null);
@@ -281,29 +317,87 @@ export function useClassOrchestrator(): ClassOrchestrator {
       setOptions([]);
 
       try {
+        console.log('[Orchestrator] Calling api.startRecipe...');
         const startResult = (await api.startRecipe(lessonId)) as any;
-        sessionIdRef.current = startResult.sessionId;
-        setSessionId(startResult.sessionId);
+        console.log('[Orchestrator] startRecipe success:', startResult);
 
-        speak(startResult.voiceText || '¡Bienvenido!', _voiceSettings).catch(() => {});
+        // Handle post-API success scenarios intelligently
+        // Even if component unmounted or aborted, the session was created successfully on backend
+        if (!isMountedRef.current || abortControllerRef.current?.signal.aborted) {
+          console.warn('[Orchestrator] Component unmounted or aborted after API success');
+          console.warn(
+            '[Orchestrator] Session was created successfully on backend, continuing anyway',
+          );
+          // We still need to set sessionId to allow recovery/resumption
+          sessionIdRef.current = startResult.sessionId;
+          setSessionId(startResult.sessionId);
+          console.log('[Orchestrator] Session created (post-unmount):', startResult.sessionId);
 
-        const delay = GREETING_PAUSE_MS + estimateReadTime(startResult.voiceText || '¡Bienvenido!');
-        timerRef.current = setTimeout(async () => {
-          try {
-            const firstStep = await doInteract('comenzar');
-            processRef.current(firstStep);
-          } catch (e) {
-            console.error('[Orchestrator] startClass error:', e);
-          } finally {
-            setIsProcessing(false);
+          // CRITICAL: If needsStart is true, we must call doInteract('comenzar') even if unmounting
+          // Otherwise the class remains in AWAITING_START and never advances
+          if (startResult.needsStart) {
+            console.log(
+              '[Orchestrator] Component unmounted but needsStart=true - initiating class immediately',
+            );
+            doInteract('comenzar')
+              .then((firstStep) => {
+                console.log('[Orchestrator] doInteract succeeded (unmounted):', firstStep);
+                processRef.current(firstStep);
+              })
+              .catch((err) => {
+                console.error('[Orchestrator] doInteract failed after unmount:', err);
+                // We can't update UI state since component is unmounted, but at least backend advances
+              });
           }
-        }, delay);
+          // Don't speak or set timers if unmounted, but return success
+        }
+
+        // Continue normal flow only if still mounted
+        if (isMountedRef.current && !abortControllerRef.current?.signal.aborted) {
+          sessionIdRef.current = startResult.sessionId;
+          setSessionId(startResult.sessionId);
+          console.log('[Orchestrator] Session created:', startResult.sessionId);
+
+          console.log('[Orchestrator] Speaking greeting:', startResult.voiceText);
+          speak(startResult.voiceText || '¡Bienvenido!', _voiceSettings).catch((err) => {
+            console.error('[Orchestrator] speak failed:', err);
+          });
+
+          const delay =
+            GREETING_PAUSE_MS + estimateReadTime(startResult.voiceText || '¡Bienvenido!');
+          timerRef.current = setTimeout(async () => {
+            if (!isMountedRef.current || abortControllerRef.current?.signal.aborted) {
+              console.log('[Orchestrator] Timer fired but component unmounted/aborted');
+              return;
+            }
+
+            try {
+              console.log('[Orchestrator] Timer completed, calling doInteract("comenzar")');
+              const firstStep = await doInteract('comenzar');
+              console.log('[Orchestrator] First step received:', firstStep);
+              processRef.current(firstStep);
+            } catch (e) {
+              console.error('[Orchestrator] startClass error after timer:', e);
+              // Propagate error to UI
+              if (isMountedRef.current) {
+                setError('Error al cargar la clase. Por favor, intenta de nuevo.');
+              }
+            } finally {
+              if (isMountedRef.current) {
+                setIsProcessing(false);
+              }
+            }
+          }, delay);
+        }
+
+        return Ok(undefined);
       } catch (e) {
-        console.error('[Orchestrator] startRecipe error:', e);
+        console.error('[Orchestrator] startRecipe error details:', e);
         setIsProcessing(false);
+        return Err(e instanceof Error ? e : new Error('Failed to start class'));
       }
     },
-    [clearTimer, setSessionId, speak, doInteract],
+    [cleanup, setSessionId, speak, doInteract],
   );
 
   // ─── submitAnswer ─────────────────────────────────────────────────────────
@@ -334,8 +428,7 @@ export function useClassOrchestrator(): ClassOrchestrator {
   }, [voiceStop, clearTimer]);
 
   const reset = useCallback(() => {
-    clearTimer();
-    voiceStop();
+    cleanup();
     sessionIdRef.current = null;
     contentRef.current = '';
     setUIState('idle');
@@ -348,7 +441,8 @@ export function useClassOrchestrator(): ClassOrchestrator {
     setIsProcessing(false);
     setSessionId(null);
     setCurrentState('AWAITING_START');
-  }, [clearTimer, voiceStop, setSessionId, setCurrentState]);
+    setError(null);
+  }, [cleanup, setSessionId, setCurrentState]);
 
   return {
     uiState,
