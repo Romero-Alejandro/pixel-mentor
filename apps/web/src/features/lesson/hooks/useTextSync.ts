@@ -41,6 +41,10 @@ export function useTextSync({
 
   const words = useMemo(() => (fullText.trim() ? fullText.trim().split(/\s+/) : []), [fullText]);
 
+  // Ref para wordsPerSecond calibrado dinámicamente
+  const calibratedWPSRef = useRef<number | null>(null);
+  const calibrationLoggedRef = useRef<boolean>(false);
+
   const stopRaf = useCallback(() => {
     if (rafIdRef.current !== null) {
       cancelAnimationFrame(rafIdRef.current);
@@ -52,6 +56,8 @@ export function useTextSync({
     stopRaf();
     lastWordIndexRef.current = 0;
     accumulatedTimeRef.current = 0;
+    calibratedWPSRef.current = null;
+    calibrationLoggedRef.current = false;
     setState({ visibleText: '', currentWordIndex: 0, progress: 0, isSynced: false });
   }, [stopRaf]);
 
@@ -64,7 +70,9 @@ export function useTextSync({
     if (!audio || audio.paused || audio.ended) return;
 
     const elapsed = accumulatedTimeRef.current + audio.currentTime + 0.1;
-    const effectiveWPS = wordsPerSecond * playbackRate;
+    // Usar WPS calibrado si existe, si no el predeterminado
+    const baseWPS = calibratedWPSRef.current ?? wordsPerSecond;
+    const effectiveWPS = baseWPS * playbackRate;
     const estimatedIndex = Math.min(Math.floor(elapsed * effectiveWPS), words.length);
 
     if (estimatedIndex !== lastWordIndexRef.current) {
@@ -94,11 +102,51 @@ export function useTextSync({
   useEffect(() => {
     const handlePlay = () => {
       stopRaf();
+
+      // Calibrar wordsPerSecond basado en duración real del audio (solo una vez)
+      const audio = currentAudioRef.current;
+      if (
+        audio &&
+        !calibratedWPSRef.current &&
+        !isNaN(audio.duration) &&
+        audio.duration > 3 &&
+        words.length > 0
+      ) {
+        const duration = audio.duration;
+        const wps = words.length / duration;
+        // Validar rango razonable (0.5 - 10 palabras/segundo)
+        if (wps >= 0.5 && wps <= 10) {
+          calibratedWPSRef.current = wps;
+          if (!calibrationLoggedRef.current) {
+            console.debug(
+              '[useTextSync] Calibrated wordsPerSecond:',
+              wps.toFixed(2),
+              `(words: ${words.length}, duration: ${duration.toFixed(2)}s)`,
+            );
+            calibrationLoggedRef.current = true;
+          }
+        }
+      }
+
       rafIdRef.current = requestAnimationFrame(updateSync);
     };
     const handlePause = () => stopRaf();
     const handleEnded = (e: Event) => {
-      accumulatedTimeRef.current += (e.target as HTMLAudioElement).duration || 0;
+      const audio = e.target as HTMLAudioElement;
+      accumulatedTimeRef.current += audio.duration || 0;
+
+      // Force complete text when audio ends to avoid truncation
+      if (words.length > 0) {
+        const finalState: TextSyncState = {
+          visibleText: fullText,
+          currentWordIndex: words.length,
+          progress: 1,
+          isSynced: true,
+        };
+        setState(finalState);
+        onUpdate?.(finalState);
+      }
+
       stopRaf();
     };
 

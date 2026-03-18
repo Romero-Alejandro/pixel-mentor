@@ -109,11 +109,22 @@ export function useVoice(): UseVoiceReturn {
     }
 
     // Method 3: Poll for voices (some browsers load async)
+    // Limit to max 3 seconds total (6 attempts max) to avoid infinite polling
+    let attempts = 0;
+    const maxAttempts = 6; // 6 * 500ms = 3000ms
     const pollInterval = setInterval(() => {
+      attempts++;
       const voices = window.speechSynthesis.getVoices();
       if (voices.length > 0) {
         debugLog('Voices loaded via poll:', voices.length);
         setAvailableVoices(voices);
+        clearInterval(pollInterval);
+      } else if (attempts >= maxAttempts) {
+        debugLog(
+          'Voice polling completed after',
+          attempts,
+          'attempts — no voices found. Browser TTS fallback will be disabled.',
+        );
         clearInterval(pollInterval);
       }
     }, 500);
@@ -370,6 +381,7 @@ export function useVoice(): UseVoiceReturn {
   const speakStream = useCallback(
     async (text: string, voiceSettings?: VoiceSettings, signal?: AbortSignal): Promise<boolean> => {
       if (!text || typeof text !== 'string' || text.trim().length === 0) {
+        debugLog('Empty text, skipping speakStream');
         return false;
       }
 
@@ -409,8 +421,16 @@ export function useVoice(): UseVoiceReturn {
         url.searchParams.set('token', token);
       }
 
+      debugLog('Starting TTS stream', {
+        textLength: text.length,
+        languageCode: settings.languageCode,
+        speakingRate: settings.speakingRate,
+        url: url.toString(),
+      });
+
       const maxRetries = 3;
       let retryCount = 0;
+      let totalChunksReceived = 0;
 
       // Cleanup streaming resources
       const cleanupStreamingResources = () => {
@@ -459,6 +479,11 @@ export function useVoice(): UseVoiceReturn {
           eventSource.addEventListener('audio', (event: MessageEvent) => {
             try {
               const data = JSON.parse(event.data) as TTSAudioMessageData;
+              totalChunksReceived++;
+              debugLog('Received audio chunk', {
+                chunkIndex: totalChunksReceived,
+                base64Length: data.audioBase64.length,
+              });
               const audioBlob = base64ToBlob(data.audioBase64, 'audio/mpeg');
               const audioUrl = URL.createObjectURL(audioBlob);
               const audio = new Audio(audioUrl);
@@ -514,6 +539,10 @@ export function useVoice(): UseVoiceReturn {
               JSON.parse(event.data); // validate
               streamEndedRef.current = true;
               eventSource.close();
+              debugLog('Stream ended', {
+                totalChunksReceived,
+                queueRemaining: audioQueueRef.current.length,
+              });
               // If no audio playing and queue empty, resolve
               if (!currentAudioRef.current && audioQueueRef.current.length === 0) {
                 cleanupStreamingResources();
@@ -532,6 +561,13 @@ export function useVoice(): UseVoiceReturn {
             try {
               const data = JSON.parse(event.data) as TTSErrorMessageData;
               console.error('Stream error from server', data);
+              debugLog('Stream error', {
+                message: data.message,
+                code: data.code,
+                retryCount,
+                textLength: text.length,
+                totalChunksReceived,
+              });
               streamEndedRef.current = true;
               eventSource.close();
               cleanupStreamingResources();

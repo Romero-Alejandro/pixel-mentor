@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 
 import { Mascot } from '@/components/mascot/Mascot';
@@ -21,7 +21,6 @@ export function LessonPage() {
   const { lessonId } = useParams<{ lessonId: string }>();
   const { settings: voiceSettings, updateSettings } = useVoiceSettings();
 
-  // Sincronizar configuraciones de voz con el orquestador
   useVoiceSettingsSync(voiceSettings);
 
   const {
@@ -29,6 +28,9 @@ export function LessonPage() {
     currentStep,
     totalSteps,
     contentText,
+    transitionText,
+    closureText,
+    fullVoiceText,
     questionText,
     options,
     feedback,
@@ -42,7 +44,6 @@ export function LessonPage() {
     getCurrentAudioElement,
   } = useClassOrchestrator();
 
-  // Estados locales para la interacción de actividades
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activityCorrect, setActivityCorrect] = useState<boolean | null>(null);
 
@@ -52,16 +53,15 @@ export function LessonPage() {
   });
 
   const {
-    visibleText: syncedText,
     isSynced,
     reset: resetTextSync,
+    currentWordIndex,
   } = useTextSync({
-    fullText: contentText,
+    fullText: fullVoiceText,
     audioElementGetter: getCurrentAudioElement,
     playbackRate: voiceSettings.speakingRate,
   });
 
-  // Referencias para limpieza segura (evitar bucles infinitos)
   const stopRef = useRef(stopSpeaking);
   const resetRef = useRef(reset);
   const prevQ = useRef<string>('');
@@ -71,7 +71,6 @@ export function LessonPage() {
     resetRef.current = reset;
   }, [stopSpeaking, reset]);
 
-  // Resetear selección cuando cambia la pregunta
   useEffect(() => {
     if (questionText !== prevQ.current) {
       prevQ.current = questionText;
@@ -80,14 +79,12 @@ export function LessonPage() {
     }
   }, [questionText]);
 
-  // Sincronizar feedback de la API con la UI local
   useEffect(() => {
     if (feedback && uiState === 'feedback') {
       setActivityCorrect(feedback.isCorrect);
     }
   }, [feedback, uiState]);
 
-  // Limpieza al desmontar
   useEffect(() => {
     return () => {
       stopRef.current();
@@ -111,15 +108,18 @@ export function LessonPage() {
   const isStart = uiState === 'idle';
   const isLoading = isStarting && !contentText && !error;
 
-  const renderCurrentPanel = () => {
+  const currentPanel = useMemo(() => {
     switch (uiState) {
       case 'concentration':
         return (
           <ConcentrationPanel
-            text={contentText}
-            visibleText={syncedText}
-            isSpeaking={isSpeaking}
+            fullVoiceText={fullVoiceText}
+            transitionText={transitionText}
+            contentText={contentText}
+            closureText={closureText}
+            currentWordIndex={currentWordIndex}
             isSynced={isSynced}
+            isSpeaking={isSpeaking}
             onRepeat={() => {
               resetTextSync();
               speakContent();
@@ -152,9 +152,28 @@ export function LessonPage() {
       default:
         return null;
     }
-  };
+  }, [
+    uiState,
+    fullVoiceText,
+    transitionText,
+    contentText,
+    closureText,
+    currentWordIndex,
+    isSynced,
+    isSpeaking,
+    resetTextSync,
+    speakContent,
+    questionText,
+    submitAnswer,
+    isProcessing,
+    options,
+    handleMCQ,
+    selectedId,
+    activityCorrect,
+    feedback,
+    handleRestart,
+  ]);
 
-  // 1. Prioridad: Error
   if (error && isStart) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
@@ -176,7 +195,6 @@ export function LessonPage() {
     );
   }
 
-  // 2. Prioridad: Carga
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
@@ -202,23 +220,25 @@ export function LessonPage() {
         updateSettings={updateSettings}
         speakContent={speakContent}
       />
-
       <main
         className={`flex-1 max-w-7xl mx-auto w-full p-4 sm:p-8 flex transition-all duration-700 ease-in-out ${
           isStart
-            ? 'flex-col items-center justify-center'
+            ? 'flex-col items-center justify-center min-h-[calc(100vh-8rem)]'
             : 'flex-col lg:flex-row gap-10 lg:items-start'
         }`}
       >
-        {/* Lado Izquierdo: Mascot Stage */}
         <section
-          className={`flex flex-col items-center justify-center transition-all duration-1000 shrink-0 ${
-            isStart ? 'w-full mb-8' : 'w-full lg:w-5/12 lg:sticky lg:top-24'
+          className={`flex flex-col items-center transition-all duration-1000 shrink-0 ${
+            isStart
+              ? 'w-full mb-8 justify-center'
+              : 'w-full lg:w-5/12 lg:sticky lg:top-0 lg:h-screen lg:justify-center'
           }`}
         >
           <div className="relative group">
             <div
-              className={`absolute inset-0 bg-sky-400/20 blur-3xl rounded-full transition-opacity duration-700 ${isSpeaking ? 'opacity-100' : 'opacity-0'}`}
+              className={`absolute inset-0 bg-sky-400/20 blur-3xl rounded-full transition-opacity duration-700 ${
+                isSpeaking ? 'opacity-100' : 'opacity-0'
+              }`}
             />
             <Mascot
               className={isStart ? 'w-64 h-64 sm:w-80 sm:h-80' : 'w-52 h-52 sm:w-64 sm:h-64'}
@@ -243,7 +263,6 @@ export function LessonPage() {
           ) : null}
         </section>
 
-        {/* Lado Derecho: Content Stage */}
         <section
           className={`flex flex-col transition-all duration-700 ease-out ${
             isStart
@@ -252,7 +271,7 @@ export function LessonPage() {
           }`}
         >
           <div className="flex-1 flex flex-col animate-in fade-in slide-in-from-right-8 duration-700">
-            {renderCurrentPanel()}
+            {currentPanel}
           </div>
         </section>
       </main>

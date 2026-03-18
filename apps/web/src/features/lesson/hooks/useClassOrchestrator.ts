@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { estimateReadTime } from '../utils/readTimeEstimator';
 
@@ -8,16 +8,16 @@ import { api, type PedagogicalState } from '@/services/api';
 import { useVoice, type VoiceSettings } from '@/hooks/useVoice';
 import { useLessonStore } from '@/stores/lessonStore';
 
-// --- Tipos de Resultado ---
 export type Result<T, E = Error> = { ok: true; value: T } | { ok: false; error: E };
+
 export function Ok<T>(value: T): Result<T, never> {
   return { ok: true, value };
 }
+
 export function Err<E>(error: E): Result<never, E> {
   return { ok: false, error };
 }
 
-// --- Interfaces de API ---
 interface LessonResponse {
   voiceText?: string;
   pedagogicalState?: PedagogicalState;
@@ -27,7 +27,7 @@ interface LessonResponse {
   lessonProgress?: { currentStep: number; totalSteps: number };
   staticContent?: {
     stepType?: string;
-    script?: { content?: string };
+    script?: { transition?: string; content?: string; closure?: string };
     activity?: {
       instruction: string;
       options?: Array<{ text: string; isCorrect: boolean }>;
@@ -59,7 +59,6 @@ export function useClassOrchestrator() {
     getCurrentAudioElement: getAudio,
   } = useVoice();
 
-  // Desestructuramos para tener referencias estables de las funciones de estado
   const {
     uiState,
     currentStep,
@@ -79,6 +78,10 @@ export function useClassOrchestrator() {
     setIsProcessing,
     resetState,
   } = useLessonState();
+
+  const [transitionText, setTransitionText] = useState('');
+  const [closureText, setClosureText] = useState('');
+  const [fullVoiceText, setFullVoiceText] = useState('');
 
   const sessionIdRef = useRef<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -109,7 +112,6 @@ export function useClassOrchestrator() {
     return api.interactWithRecipe(sid, input) as Promise<LessonResponse>;
   }, []);
 
-  // --- Procesamiento de Respuestas (Lógica Central) ---
   const processResponse = useCallback(
     (raw: LessonResponse) => {
       if (!isMountedRef.current) return;
@@ -124,21 +126,18 @@ export function useClassOrchestrator() {
         lessonProgress,
       } = raw;
 
-      // 1. Actualizar Progreso
       if (lessonProgress) {
         setCurrentStep(lessonProgress.currentStep);
         setTotalSteps(lessonProgress.totalSteps);
       }
       setCurrentState(pedagogicalState);
 
-      // 2. Caso: Fin de Clase
       if (pedagogicalState === 'COMPLETED' || sessionCompleted) {
         setUIState('completed');
         speak(voiceText || '¡Lo lograste!', _voiceSettings).catch(() => {});
         return;
       }
 
-      // 3. Caso: Feedback de pregunta/actividad
       if (pedagogicalState === 'EVALUATION') {
         const msg = feedback || (isCorrect ? '¡Bien hecho!' : 'Casi, ¡sigue intentando!');
         setFeedbackData({
@@ -161,7 +160,6 @@ export function useClassOrchestrator() {
         return;
       }
 
-      // 4. Caso: Espera de interacción (Pregunta o Actividad)
       const activity = staticContent?.activity;
       const hasOptions = Array.isArray(activity?.options) && activity.options.length > 0;
 
@@ -182,10 +180,20 @@ export function useClassOrchestrator() {
         return;
       }
 
-      // 5. Caso: Explicación (Avance automático)
-      const display = staticContent?.script?.content || voiceText || '';
-      setContentText(display);
-      contentRef.current = display;
+      if (staticContent?.script) {
+        setTransitionText(staticContent.script.transition || '');
+        setContentText(staticContent.script.content || '');
+        setClosureText(staticContent.script.closure || '');
+        setFullVoiceText(voiceText);
+        contentRef.current = voiceText;
+      } else {
+        setTransitionText('');
+        setContentText(voiceText);
+        setClosureText('');
+        setFullVoiceText(voiceText);
+        contentRef.current = voiceText;
+      }
+
       setFeedbackData(null);
       setUIState('concentration');
       speak(voiceText, _voiceSettings).catch(() => {});
@@ -196,7 +204,7 @@ export function useClassOrchestrator() {
         doInteract('continuar')
           .then(processResponse)
           .finally(() => setIsProcessing(false));
-      }, estimateReadTime(display));
+      }, estimateReadTime(voiceText));
     },
     [
       setCurrentStep,
@@ -228,7 +236,6 @@ export function useClassOrchestrator() {
 
         speak(startResult.voiceText || '¡Bienvenido!', _voiceSettings).catch(() => {});
 
-        // Iniciamos el flujo inmediatamente para obtener el primer contenido
         const firstStep = await doInteract('comenzar');
         processResponse(firstStep);
 
@@ -266,17 +273,18 @@ export function useClassOrchestrator() {
   }, [cleanup, resetState, setSessionId, setCurrentState, setError]);
 
   return {
-    // Estado
     uiState,
     currentStep,
     totalSteps,
     contentText,
+    transitionText,
+    closureText,
+    fullVoiceText,
     questionText,
     options,
-    feedback: feedbackData, // Mapeo crítico para la UI
+    feedback: feedbackData,
     isProcessing,
     isSpeaking,
-    // Acciones
     startClass,
     submitAnswer,
     speakContent: () =>

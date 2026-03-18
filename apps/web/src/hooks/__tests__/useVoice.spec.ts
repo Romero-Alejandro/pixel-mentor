@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+
 import { useVoice } from '../useVoice';
 
 // Mock EventSource
@@ -26,7 +27,7 @@ class MockEventSource {
   // Helper to simulate server events
   emit(type: string, data?: any) {
     const event = { data: JSON.stringify(data) };
-    this.listeners[type]?.forEach((listener) => listener(event));
+    if (this.listeners[type]) for (const listener of this.listeners[type]) listener(event);
   }
 }
 
@@ -89,7 +90,7 @@ describe('useVoice (Streaming)', () => {
       },
     );
 
-    let speakerPromise = act(async () => {
+    const speakerPromise = act(async () => {
       result.current.speak('Test');
     });
 
