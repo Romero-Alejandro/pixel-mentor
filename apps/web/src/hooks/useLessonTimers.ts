@@ -16,50 +16,19 @@ export function useLessonTimers({
   const [timeRemaining, setTimeRemaining] = useState(activityDurationSeconds);
   const [isRunning, setIsRunning] = useState(false);
   const [hasWarned, setHasWarned] = useState(false);
+
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // Use refs to store callbacks to avoid stale closures and setState during render
-  const onWarningRef = useRef(onWarning);
-  const onTimeoutRef = useRef(onTimeout);
-  const onSkipOfferRef = useRef(onSkipOffer);
-
-  // Update refs when callbacks change
-  useEffect(() => {
-    onWarningRef.current = onWarning;
-  }, [onWarning]);
+  const callbacks = useRef({ onWarning, onSkipOffer, onTimeout });
 
   useEffect(() => {
-    onTimeoutRef.current = onTimeout;
-  }, [onTimeout]);
+    callbacks.current = { onWarning, onSkipOffer, onTimeout };
+  }, [onWarning, onSkipOffer, onTimeout]);
 
-  useEffect(() => {
-    onSkipOfferRef.current = onSkipOffer;
-  }, [onSkipOffer]);
-
-  // Track warning/timeout events to trigger via useEffect (avoids setState during render)
-  const [warningTriggered, setWarningTriggered] = useState(false);
-  const [timeoutTriggered, setTimeoutTriggered] = useState(false);
-
-  // Handle warning via useEffect to avoid setState during render
-  useEffect(() => {
-    if (warningTriggered) {
-      onWarningRef.current?.();
-      setWarningTriggered(false);
+  const clearCurrentInterval = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
     }
-  }, [warningTriggered]);
-
-  // Handle timeout via useEffect to avoid setState during render
-  useEffect(() => {
-    if (timeoutTriggered) {
-      onTimeoutRef.current?.();
-      setTimeoutTriggered(false);
-    }
-  }, [timeoutTriggered]);
-
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
   }, []);
 
   useEffect(() => {
@@ -67,33 +36,26 @@ export function useLessonTimers({
 
     timerRef.current = setInterval(() => {
       setTimeRemaining((prev) => {
-        if (prev <= 1) {
-          if (timerRef.current) {
-            clearInterval(timerRef.current);
-            timerRef.current = null;
-          }
-          setIsRunning(false);
-          // Trigger timeout via state to avoid setState during render
-          setTimeoutTriggered(true);
-          return 0;
-        }
-
         const newTime = prev - 1;
 
         if (newTime === 10 && !hasWarned) {
           setHasWarned(true);
-          // Trigger warning via state to avoid setState during render
-          setWarningTriggered(true);
+          callbacks.current.onWarning?.();
+        }
+
+        if (newTime <= 0) {
+          clearCurrentInterval();
+          setIsRunning(false);
+          callbacks.current.onTimeout?.();
+          return 0;
         }
 
         return newTime;
       });
     }, 1000);
 
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [isRunning, timeRemaining, hasWarned]);
+    return clearCurrentInterval;
+  }, [isRunning, timeRemaining, hasWarned, clearCurrentInterval]);
 
   const startTimer = useCallback(() => {
     setTimeRemaining(activityDurationSeconds);
@@ -102,24 +64,18 @@ export function useLessonTimers({
   }, [activityDurationSeconds]);
 
   const resetTimer = useCallback(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
+    clearCurrentInterval();
     setTimeRemaining(activityDurationSeconds);
     setIsRunning(false);
     setHasWarned(false);
-  }, [activityDurationSeconds]);
+  }, [activityDurationSeconds, clearCurrentInterval]);
 
   const skipTimer = useCallback(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
+    clearCurrentInterval();
     setIsRunning(false);
     setHasWarned(false);
-    onSkipOfferRef.current?.();
-  }, []);
+    callbacks.current.onSkipOffer?.();
+  }, [clearCurrentInterval]);
 
   return {
     timeRemaining,

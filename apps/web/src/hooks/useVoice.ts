@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-
 import type { TTSAudioMessageData, TTSErrorMessageData } from '@pixel-mentor/shared';
+
 import { apiClient, getToken } from '../services/api';
 
 // Voice settings for backend TTS
@@ -138,11 +138,11 @@ export function useVoice(): UseVoiceReturn {
         abortControllerRef.current.abort();
       }
       // Clear streaming audio
-      audioQueueRef.current.forEach((item) => {
+      for (const item of audioQueueRef.current) {
         try {
           URL.revokeObjectURL(item.url);
         } catch (e) {}
-      });
+      }
       if (currentAudioRef.current) {
         try {
           currentAudioRef.current.element.pause();
@@ -189,13 +189,13 @@ export function useVoice(): UseVoiceReturn {
     }
 
     // Clear streaming audio queue
-    audioQueueRef.current.forEach((item) => {
+    for (const item of audioQueueRef.current) {
       try {
         URL.revokeObjectURL(item.url);
       } catch (e) {
         // ignore
       }
-    });
+    }
     audioQueueRef.current = [];
 
     if (currentAudioRef.current) {
@@ -419,11 +419,11 @@ export function useVoice(): UseVoiceReturn {
           eventSourceRef.current = null;
         }
         // Clear audio queue
-        audioQueueRef.current.forEach((item) => {
+        for (const item of audioQueueRef.current) {
           try {
             URL.revokeObjectURL(item.url);
           } catch (e) {}
-        });
+        }
         audioQueueRef.current = [];
         if (currentAudioRef.current) {
           try {
