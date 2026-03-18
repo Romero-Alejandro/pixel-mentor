@@ -1,13 +1,5 @@
 import type pino from 'pino';
 
-import type { AIService } from '@/domain/ports/ai-service.js';
-import type {
-  QuestionClassifier,
-  ComprehensionEvaluator,
-} from '@/domain/ports/question-classifier.js';
-import type { RAGService } from '@/domain/ports/rag-service.js';
-import type { PromptRepository } from '@/domain/ports/prompt-repository.js';
-import type { KnowledgeChunkRepository } from '@/domain/ports/knowledge-chunk-repository.js';
 import {
   GeminiAIModelAdapter,
   GeminiClassifierAdapter,
@@ -20,6 +12,15 @@ import {
   OpenRouterComprehensionEvaluatorAdapter,
   OpenRouterRAGServiceAdapter,
 } from './open-router/openrouter-adapters';
+
+import type { AIService } from '@/domain/ports/ai-service.js';
+import type {
+  QuestionClassifier,
+  ComprehensionEvaluator,
+} from '@/domain/ports/question-classifier.js';
+import type { RAGService } from '@/domain/ports/rag-service.js';
+import type { PromptRepository } from '@/domain/ports/prompt-repository.js';
+import type { KnowledgeChunkRepository } from '@/domain/ports/knowledge-chunk-repository.js';
 
 export interface AIAdapterFactoryOptions {
   provider: 'gemini' | 'openrouter';

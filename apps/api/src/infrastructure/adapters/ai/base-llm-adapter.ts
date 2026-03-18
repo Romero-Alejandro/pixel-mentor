@@ -1,5 +1,6 @@
 import type pino from 'pino';
-import { z } from 'zod';
+import type { z } from 'zod';
+
 import type { PedagogicalState } from '@/domain/entities/pedagogical-state.js';
 import type { PromptRepository } from '@/domain/ports/prompt-repository.js';
 import { cleanJsonResponse } from '@/utils/ai-utils';

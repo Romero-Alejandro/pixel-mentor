@@ -3,7 +3,6 @@ import type pino from 'pino';
 import { z } from 'zod';
 
 import { cleanJsonResponse, cosineSimilarity } from '@/utils/ai-utils.js';
-
 import type { AIService, AIResponse } from '@/domain/ports/ai-service.js';
 import type { QuestionClassification } from '@/domain/entities/question-classification.js';
 import type {
@@ -18,9 +17,9 @@ import type { PromptRepository } from '@/domain/ports/prompt-repository.js';
 import type { KnowledgeChunkRepository } from '@/domain/ports/knowledge-chunk-repository.js';
 import { RAG_CONFIG } from '@/domain/ports/rag-service.js';
 import type { KnowledgeChunk } from '@/domain/entities/knowledge-chunk.js';
+import type { GenerateResponseParams } from '@/infrastructure/adapters/ai/base-llm-adapter.js';
 import {
   BaseGenerativeAdapter,
-  GenerateResponseParams,
   BaseLLMAdapter,
 } from '@/infrastructure/adapters/ai/base-llm-adapter.js';
 import {
