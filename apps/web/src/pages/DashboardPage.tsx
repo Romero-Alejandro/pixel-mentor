@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   IconLogout,
   IconBooks,
@@ -10,6 +10,7 @@ import {
 } from '@tabler/icons-react';
 
 import { useAuthStore } from '../stores/authStore';
+import { useAutoSelect } from '../hooks/useAutoSelect';
 import { api, type Recipe, type Session } from '../services/api';
 import { Button, Card, Badge, Spinner, CardSkeleton } from '../components/ui';
 
@@ -47,13 +48,21 @@ const getStatusBadge = (status: string) => {
 
 export function DashboardPage() {
   const { user, logout } = useAuthStore();
+  const navigate = useNavigate();
+
+  // Auto-select hook for resumable sessions
+  const { getSessionToResume, clearSessionToResume } = useAutoSelect(user?.id || null, {
+    autoResume: true,
+  });
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [isLoadingRecipes, setIsLoadingRecipes] = useState(true);
   const [isLoadingSessions, setIsLoadingSessions] = useState(true);
   const [activeTab, setActiveTab] = useState<'recipes' | 'sessions'>('recipes');
   const [completingSessionId, setCompletingSessionId] = useState<string | null>(null);
+  const [hasAutoNavigated, setHasAutoNavigated] = useState(false);
 
+  // Fetch data on mount
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -73,6 +82,41 @@ export function DashboardPage() {
 
     fetchData();
   }, [user]);
+
+  // Handle navigation after sessions load - auto-select resumable session
+  useEffect(() => {
+    if (!isLoadingSessions && sessions.length > 0) {
+      const sessionToResume = getSessionToResume();
+      if (sessionToResume) {
+        // Clear the flag so we don't keep redirecting
+        clearSessionToResume();
+        // Find the session to get the recipe ID
+        const session = sessions.find((s) => s.id === sessionToResume);
+        if (session) {
+          // Navigate to the lesson
+          navigate(`/lesson/${session.recipeId}`);
+        }
+      }
+    }
+  }, [isLoadingSessions, sessions, getSessionToResume, clearSessionToResume, navigate]);
+
+  // Auto-select single class (quick win) - navigate if only one recipe and no resumable sessions
+  useEffect(() => {
+    if (hasAutoNavigated) return;
+
+    if (
+      !isLoadingRecipes &&
+      !isLoadingSessions &&
+      recipes.length === 1 &&
+      localStorage.getItem('autoSelectDisabled') !== 'true'
+    ) {
+      const hasResumableSession = sessions.some((s) => isResumable(s.status));
+      if (!hasResumableSession) {
+        setHasAutoNavigated(true);
+        navigate(`/lesson/${recipes[0].id}`);
+      }
+    }
+  }, [isLoadingRecipes, isLoadingSessions, recipes, sessions, navigate, hasAutoNavigated]);
 
   const handleCompleteSession = async (sessionId: string) => {
     if (!confirm('¿Estás seguro de que quieres terminar esta sesión?')) return;

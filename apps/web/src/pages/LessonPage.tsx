@@ -6,6 +6,8 @@
  *   activity      → ActivityPanel       (MCQ — evaluación directa)
  *   feedback      → FeedbackPanel       (auto-avanza con timer)
  *   completed     → CompletedPanel
+ *
+ * Plus auto-start with loading skeleton and error states
  */
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
@@ -20,9 +22,10 @@ import {
   useVoiceSettingsSync,
   type UIState,
 } from '@/hooks/useClassOrchestrator';
+import { useAutoStart } from '@/hooks/useAutoStart';
 import { useTextSync } from '@/hooks/useTextSync';
 import { Mascot } from '@/components/mascot/Mascot';
-import { Spinner } from '@/components/ui';
+import { Spinner, ErrorBanner } from '@/components/ui';
 
 const UI_LABELS: Record<UIState, string> = {
   idle: 'Preparado',
@@ -32,34 +35,6 @@ const UI_LABELS: Record<UIState, string> = {
   feedback: 'Retroalimentación',
   completed: '¡Completado!',
 };
-
-function StartPanel({ onStart, isLoading }: { onStart(): void; isLoading: boolean }) {
-  return (
-    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center gap-8">
-      <Mascot className="w-48 h-48" />
-      <div>
-        <h2 className="text-2xl font-bold text-slate-800">¡Vamos a aprender!</h2>
-        <p className="text-slate-500 mt-1 max-w-sm">
-          El tutor te guiará automáticamente paso a paso.
-        </p>
-      </div>
-      <button
-        onClick={onStart}
-        disabled={isLoading}
-        className="px-10 py-4 bg-sky-500 text-white text-lg font-bold rounded-2xl hover:bg-sky-600 disabled:opacity-50 transition-all shadow-lg hover:-translate-y-0.5 active:scale-95"
-      >
-        {isLoading ? (
-          <span className="flex items-center gap-2">
-            <Spinner size="sm" />
-            Iniciando...
-          </span>
-        ) : (
-          '🚀 Comenzar la clase'
-        )}
-      </button>
-    </div>
-  );
-}
 
 function ConcentrationPanel({
   text,
@@ -332,6 +307,13 @@ export function LessonPage() {
     getCurrentAudioElement,
   } = useClassOrchestrator();
 
+  // Auto-start hook with retry logic
+  const { isStarting, error, retryCount, retry } = useAutoStart(lessonId || null, startClass, {
+    maxRetries: 3,
+    baseDelayMs: 1000,
+    autoStart: true,
+  });
+
   // Text sync hook for progressive text reveal
   const {
     visibleText: syncedText,
@@ -359,9 +341,6 @@ export function LessonPage() {
     if (feedback && uiState === 'feedback') setActivityCorrect(feedback.isCorrect);
   }, [feedback, uiState]);
 
-  const handleStart = useCallback(() => {
-    if (lessonId) startClass(lessonId);
-  }, [lessonId, startClass]);
   const handleMCQ = useCallback(
     (text: string, id: string) => {
       setSelectedId(id);
@@ -384,8 +363,10 @@ export function LessonPage() {
   ); // eslint-disable-line
 
   const isStart = uiState === 'idle';
+  const isLoading = isStarting && !contentText;
 
-  if (isStart && isProcessing && !contentText)
+  // Loading skeleton state
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-sky-50 to-slate-100 flex flex-col">
         <header className="bg-white/80 border-b border-sky-100 h-16 flex items-center px-6">
@@ -406,6 +387,36 @@ export function LessonPage() {
         </main>
       </div>
     );
+  }
+
+  // Error state with retry
+  if (error && uiState === 'idle') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-sky-50 to-slate-100 flex flex-col">
+        <header className="bg-white/80 border-b border-sky-100 h-16 flex items-center px-6">
+          <Link
+            to="/dashboard"
+            className="flex items-center gap-2 text-slate-500 hover:text-sky-600"
+          >
+            <IconArrowLeft className="w-5 h-5" />
+            <span className="text-sm">Volver</span>
+          </Link>
+        </header>
+        <main className="flex-1 flex flex-col items-center justify-center gap-6 p-6">
+          <Mascot className="w-48 h-48" />
+          <div className="w-full max-w-md">
+            <ErrorBanner
+              title="Error al iniciar la clase"
+              message={error}
+              onRetry={retry}
+              retryCount={retryCount}
+              maxRetries={3}
+            />
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 to-slate-100 font-sans text-slate-800 flex flex-col overflow-x-hidden">
@@ -461,9 +472,7 @@ export function LessonPage() {
         <section
           className={`flex flex-col transition-all duration-700 ${isStart ? 'w-full max-w-lg' : 'w-full lg:w-7/12 bg-white rounded-3xl border-2 border-sky-100 shadow-sm min-h-[480px] overflow-hidden'}`}
         >
-          {uiState === 'idle' ? (
-            <StartPanel onStart={handleStart} isLoading={isProcessing} />
-          ) : null}
+          {/* Auto-started - show content directly, no StartPanel */}
           {uiState === 'concentration' ? (
             <ConcentrationPanel
               text={contentText}
