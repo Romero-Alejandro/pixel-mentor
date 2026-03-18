@@ -20,6 +20,7 @@ import {
   useVoiceSettingsSync,
   type UIState,
 } from '@/hooks/useClassOrchestrator';
+import { useTextSync } from '@/hooks/useTextSync';
 import { Mascot } from '@/components/mascot/Mascot';
 import { Spinner } from '@/components/ui';
 
@@ -62,18 +63,41 @@ function StartPanel({ onStart, isLoading }: { onStart(): void; isLoading: boolea
 
 function ConcentrationPanel({
   text,
+  visibleText,
   isSpeaking,
+  isSynced,
   onRepeat,
 }: {
   text: string;
+  visibleText?: string;
   isSpeaking: boolean;
+  isSynced?: boolean;
   onRepeat(): void;
 }) {
+  // Use visibleText if provided (text sync mode), otherwise fall back to text
+  const displayText = visibleText !== undefined ? visibleText : text;
+  const showCursor = isSpeaking && !isSynced;
+
+  // Auto-scroll to bottom as text grows
+  const textContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (textContainerRef.current && displayText) {
+      textContainerRef.current.scrollTop = textContainerRef.current.scrollHeight;
+    }
+  }, [displayText]);
+
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-8 gap-6">
-      <div className="bg-white rounded-2xl border-2 border-sky-100 shadow-sm p-6 w-full max-w-lg">
+      <div
+        ref={textContainerRef}
+        className="bg-white rounded-2xl border-2 border-sky-100 shadow-sm p-6 w-full max-w-lg overflow-y-auto max-h-[400px]"
+      >
         <p className="text-lg text-slate-700 leading-relaxed">
-          {text || 'El tutor está explicando...'}
+          {displayText || 'El tutor está explicando...'}
+          {showCursor ? (
+            <span className="inline-block w-0.5 h-5 bg-sky-500 ml-0.5 animate-pulse align-middle" />
+          ) : null}
         </p>
       </div>
       <div className="h-8 flex items-center">
@@ -305,7 +329,19 @@ export function LessonPage() {
     speakContent,
     stopSpeaking,
     reset,
+    getCurrentAudioElement,
   } = useClassOrchestrator();
+
+  // Text sync hook for progressive text reveal
+  const {
+    visibleText: syncedText,
+    isSynced,
+    reset: resetTextSync,
+  } = useTextSync({
+    fullText: contentText,
+    audioElementGetter: getCurrentAudioElement,
+    playbackRate: voiceSettings.speakingRate ?? 1.0,
+  });
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activityCorrect, setActivityCorrect] = useState<boolean | null>(null);
@@ -431,8 +467,13 @@ export function LessonPage() {
           {uiState === 'concentration' ? (
             <ConcentrationPanel
               text={contentText}
+              visibleText={syncedText}
               isSpeaking={isSpeaking}
-              onRepeat={speakContent}
+              isSynced={isSynced}
+              onRepeat={() => {
+                resetTextSync();
+                speakContent();
+              }}
             />
           ) : null}
           {uiState === 'question' ? (

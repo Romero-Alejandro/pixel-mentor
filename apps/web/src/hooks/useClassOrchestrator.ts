@@ -17,7 +17,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 
 import { api } from '@/services/api';
-import { useVoice } from '@/hooks/useVoice';
+import { useVoice, VoiceSettings } from '@/hooks/useVoice';
 import { useLessonStore } from '@/stores/lessonStore';
 
 // ─── Tipos públicos ───────────────────────────────────────────────────────────
@@ -30,12 +30,7 @@ export type UIState =
   | 'feedback' // Mostrando retroalimentación
   | 'completed'; // Clase finalizada
 
-export interface VoiceSettings {
-  character?: string;
-  speakingRate?: number;
-  pitch?: number;
-  languageCode?: string;
-}
+export type { VoiceSettings } from '@/hooks/useVoice';
 
 export interface Option {
   id: string;
@@ -64,6 +59,7 @@ export interface ClassOrchestrator {
   speakContent: () => void;
   stopSpeaking: () => void;
   reset: () => void;
+  getCurrentAudioElement: () => HTMLAudioElement | null;
 }
 
 // ─── Tiempos de auto-avance ───────────────────────────────────────────────────
@@ -100,7 +96,12 @@ const randomEncouragement = () => ENCOURAGEMENTS[Math.floor(Math.random() * ENCO
 
 export function useClassOrchestrator(): ClassOrchestrator {
   const { setSessionId, setCurrentState, setIsSpeaking: syncStore } = useLessonStore();
-  const { speak, stopSpeaking: voiceStop, isSpeaking } = useVoice();
+  const {
+    speak,
+    stopSpeaking: voiceStop,
+    isSpeaking,
+    getCurrentAudioElement: getAudio,
+  } = useVoice();
 
   const [uiState, setUIState] = useState<UIState>('idle');
   const [currentStep, setCurrentStep] = useState(0);
@@ -364,5 +365,6 @@ export function useClassOrchestrator(): ClassOrchestrator {
     speakContent,
     stopSpeaking,
     reset,
+    getCurrentAudioElement: getAudio,
   };
 }

@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 
-import { apiClient, getToken } from '../services/api';
 import type { TTSAudioMessageData, TTSErrorMessageData } from '@pixel-mentor/shared';
+import { apiClient, getToken } from '../services/api';
 
 // Voice settings for backend TTS
 export interface VoiceSettings {
@@ -41,6 +41,7 @@ export interface UseVoiceReturn {
   isSupported: boolean;
   isSpeechSupported: boolean;
   isRecognitionSupported: boolean;
+  getCurrentAudioElement: () => HTMLAudioElement | null;
 }
 
 // Debug logging
@@ -722,6 +723,18 @@ export function useVoice(): UseVoiceReturn {
     setConfidence(0);
   }, []);
 
+  const getCurrentAudioElement = useCallback((): HTMLAudioElement | null => {
+    // Return the currently playing audio element
+    // Priority: streaming (currentAudioRef) > HTTP (httpAudioRef)
+    if (currentAudioRef.current) {
+      return currentAudioRef.current.element;
+    }
+    if (httpAudioRef.current) {
+      return httpAudioRef.current;
+    }
+    return null;
+  }, []);
+
   return {
     isSpeaking,
     speak,
@@ -737,6 +750,7 @@ export function useVoice(): UseVoiceReturn {
     isSupported,
     isSpeechSupported,
     isRecognitionSupported,
+    getCurrentAudioElement,
   };
 }
 

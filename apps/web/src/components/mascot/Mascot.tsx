@@ -21,7 +21,11 @@ function getAvatarState(isSpeaking: boolean, isListening: boolean, currentState:
   }
 }
 
-export function Mascot() {
+interface MascotProps {
+  className?: string;
+}
+
+export function Mascot({ className = '' }: MascotProps) {
   const { isSpeaking, isListening, currentState } = useLessonStore();
 
   const avatarState = getAvatarState(isSpeaking, isListening, currentState);
@@ -58,7 +62,9 @@ export function Mascot() {
   }, [avatarState, isSpeaking, isListening, currentState]);
 
   return (
-    <div className="w-48 h-48 mx-auto flex items-center justify-center relative overflow-hidden">
+    <div
+      className={`w-48 h-48 mx-auto flex items-center justify-center relative overflow-hidden ${className}`}
+    >
       {/* Subtle glow effect */}
       <div
         className={`absolute inset-0 rounded-full transition-all duration-500 ${
