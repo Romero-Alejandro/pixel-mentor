@@ -16,7 +16,6 @@ import {
 
 import { useAuthStore } from '../stores/authStore';
 
-// Re-export for convenience
 export { type User, type Role, type Recipe, type Session, type PedagogicalState };
 
 export const apiClient = axios.create({
@@ -25,7 +24,6 @@ export const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use((config) => {
-  // Read token directly from localStorage to avoid race condition with zustand hydration
   const token = localStorage.getItem('token');
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -57,6 +55,14 @@ export const getToken = (): string | null => {
 
 export const clearToken = (): void => {
   localStorage.removeItem('token');
+};
+
+export const streamInteractWithRecipe = (sessionId: string, studentInput: string): EventSource => {
+  if (import.meta.env.VITE_ENABLE_STREAMING !== 'true') {
+    throw new Error('Streaming disabled');
+  }
+  const url = `/api/recipe/interact/stream?sessionId=${encodeURIComponent(sessionId)}&studentInput=${encodeURIComponent(studentInput)}`;
+  return new EventSource(url);
 };
 
 export const api = {
@@ -106,4 +112,5 @@ export const api = {
     const { data } = await apiClient.post(`/api/sessions/${sessionId}/complete`);
     return SessionSchema.parse(data);
   },
+  streamInteractWithRecipe,
 };
