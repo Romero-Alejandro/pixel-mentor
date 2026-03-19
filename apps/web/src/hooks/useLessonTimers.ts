@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { ACTIVITY_TIMEOUT_SECONDS } from '@/config/lessonTiming';
+
 interface UseLessonTimersProps {
   onWarning?: () => void;
   onSkipOffer?: () => void;
@@ -7,11 +9,13 @@ interface UseLessonTimersProps {
   activityDurationSeconds?: number;
 }
 
+const DEFAULT_ACTIVITY_DURATION = ACTIVITY_TIMEOUT_SECONDS;
+
 export function useLessonTimers({
   onWarning,
   onSkipOffer,
   onTimeout,
-  activityDurationSeconds = 30,
+  activityDurationSeconds = DEFAULT_ACTIVITY_DURATION,
 }: UseLessonTimersProps = {}) {
   const [timeRemaining, setTimeRemaining] = useState(activityDurationSeconds);
   const [isRunning, setIsRunning] = useState(false);
