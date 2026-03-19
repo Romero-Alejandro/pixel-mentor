@@ -20,7 +20,11 @@ import { createSessionLockId } from '@/domain/ports/advisory-lock.js';
 import type { PedagogicalState } from '@/domain/entities/pedagogical-state.js';
 import type { Interaction } from '@/domain/entities/interaction.js';
 import type { SessionCheckpoint } from '@/domain/entities/session.js';
-import type { InteractRecipeOutput, StaticContent } from '@/application/dto/index.js';
+import type {
+  InteractRecipeOutput,
+  StaticContent,
+  InteractionChunk,
+} from '@/application/dto/index.js';
 import { determineClassificationAction } from '@/domain/entities/question-classification.js';
 import { ContextWindowService } from '@/application/services/context-window.service.js';
 import {
@@ -660,6 +664,351 @@ export class OrchestrateRecipeUseCase {
       feedback: responseFeedback,
       isCorrect: aiResponse.isCorrect,
       staticContent,
+      lessonProgress: { currentStep: nextIdx, totalSteps: steps.length },
+    };
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // interactStream()
+  // ─────────────────────────────────────────────────────────────────────────
+
+  async *interactStream(
+    sessionId: string,
+    studentInput: string,
+    userId?: string,
+  ): AsyncGenerator<InteractionChunk> {
+    // ── Load session ──────────────────────────────────────────────────────────
+    const session = await this.sessionRepo.findById(sessionId);
+    if (!session) throw new SessionNotFoundError(sessionId);
+    if (userId && session.studentId !== userId)
+      throw Object.assign(new Error('Forbidden'), { statusCode: 403 });
+    if (session.status !== 'ACTIVE') throw new Error(`Session not active: ${session.status}`);
+
+    const recipe = await this.recipeRepo.findById(session.recipeId);
+    if (!recipe) throw new RecipeNotFoundError(session.recipeId);
+    this.config = parseRecipeConfig(recipe.meta);
+
+    const steps = await this.recipeRepo.findStepsByRecipeId(session.recipeId);
+    if (!steps.length) throw new Error('Recipe has no steps');
+
+    const history = await this.interactionRepo.findBySessionOrdered(sessionId);
+    const limited = this.contextWindowService.trimHistory(history);
+    const recentHistory = limited.map((h: Interaction) => ({
+      role: (h.turnNumber % 2 === 1 ? 'user' : 'assistant') as 'user' | 'assistant',
+      content: h.transcript,
+    }));
+    const historySummary = this.contextWindowService.summarizeOlderTurns(history);
+
+    const cp = session.stateCheckpoint;
+    const currentState = cp.currentState as PedagogicalState;
+    const currentIdx = cp.currentStepIndex ?? 0;
+    let questionCount = cp.questionCount ?? 0;
+    let lastQuestionTime = cp.lastQuestionTime ?? null;
+    let skippedActivities: string[] = cp.skippedActivities ?? [];
+    let failedAttempts = cp.failedAttempts ?? 0;
+    let savedStepIndex: number | undefined = cp.savedStepIndex;
+    let doubtContext = cp.doubtContext;
+
+    if (session.safetyFlag || session.outOfScope) {
+      await this.sessionRepo.escalate(sessionId);
+      yield {
+        type: 'end',
+        reason: 'completed',
+        pedagogicalState: currentState,
+        sessionCompleted: true,
+        lessonProgress: { currentStep: currentIdx, totalSteps: steps.length },
+      };
+      return;
+    }
+
+    const currentStep = steps[currentIdx];
+    if (!currentStep) {
+      await this.sessionRepo.complete(sessionId);
+      yield {
+        type: 'end',
+        reason: 'completed',
+        pedagogicalState: 'COMPLETED',
+        sessionCompleted: true,
+        lessonProgress: { currentStep: currentIdx, totalSteps: steps.length },
+      };
+      return;
+    }
+
+    const currentAtom = await this.atomRepo.findById(currentStep.atomId);
+    if (!currentAtom) throw new Error(`Atom ${currentStep.atomId} not found`);
+
+    // ── AWAITING_START fast path (no streaming needed) ──────────────────────
+    if (currentState === 'AWAITING_START') {
+      const lower = studentInput.toLowerCase();
+      const ready = [
+        'sí',
+        'si',
+        'comenzar',
+        'start',
+        'listo',
+        'adelante',
+        'vamos',
+        'ready',
+        'ok',
+        'dale',
+        'continuar',
+      ].some((w) => lower.includes(w));
+
+      if (ready) {
+        const vt = this.buildVoiceText(currentStep);
+        await this.record(sessionId, history.length, studentInput, null);
+        await this.record(sessionId, history.length + 1, vt, 'answer');
+        await this.sessionRepo.updateCheckpoint(sessionId, {
+          ...cp,
+          currentState: this.stateForStep(currentStep),
+          currentStepIndex: currentIdx,
+        });
+        yield {
+          type: 'end',
+          reason: 'completed',
+          pedagogicalState: this.stateForStep(currentStep),
+          sessionCompleted: false,
+          lessonProgress: { currentStep: currentIdx, totalSteps: steps.length },
+        };
+        return;
+      }
+
+      const prompt = this.config.greetings.readyPrompt ?? '¿Estás listo?';
+      await this.record(sessionId, history.length, studentInput, null);
+      await this.record(sessionId, history.length + 1, prompt, 'answer');
+      yield {
+        type: 'end',
+        reason: 'completed',
+        pedagogicalState: 'AWAITING_START',
+        sessionCompleted: false,
+        lessonProgress: { currentStep: currentIdx, totalSteps: steps.length },
+      };
+      return;
+    }
+
+    // ── Classify input ───────────────────────────────────────────────────────
+    const classification = await this.questionClassifier.classify({
+      transcript: studentInput,
+      lastTurns: recentHistory,
+      lessonMetadata: { title: recipe.title, concepts: [] },
+    });
+    const action = determineClassificationAction(classification);
+
+    let ragContext: any;
+    if (
+      action.type === 'ACCEPT' &&
+      classification.intent === 'question' &&
+      currentState !== 'ACTIVITY_WAIT'
+    ) {
+      const r = await this.ragService.retrieveChunks({
+        atomId: currentAtom.id,
+        queryText: studentInput,
+        k: 3,
+      });
+      ragContext = r.chunks;
+    }
+
+    // ── Stream LLM response ─────────────────────────────────────────────────
+    const params = {
+      recipe,
+      currentState,
+      conversationHistory: recentHistory,
+      ragContext,
+      currentSegment: {
+        chunkText: currentAtom.content || currentAtom.title,
+        order: currentStep.order,
+      },
+      totalSegments: steps.length,
+      historySummary,
+    };
+
+    let fullResponse = '';
+    try {
+      for await (const chunk of this.aiService.generateResponseStream(params)) {
+        fullResponse += chunk;
+        yield { type: 'chunk', text: chunk };
+      }
+    } catch (e: any) {
+      console.warn('[Orchestrator] Stream fallback:', e.message);
+      fullResponse = this.getFallbackResponse(currentState, currentAtom.title).explanation;
+      yield { type: 'chunk', text: fullResponse };
+    }
+
+    // ── Compute state machine ────────────────────────────────────────────────
+    const canAsk = () => {
+      if (questionCount >= this.config.maxQuestionsPerSession) return false;
+      if (lastQuestionTime) {
+        const ms = Date.now() - new Date(lastQuestionTime).getTime();
+        if (ms < this.config.questionCooldownSeconds * 1_000) return false;
+      }
+      return true;
+    };
+
+    let voiceText = fullResponse;
+    let nextState: PedagogicalState = currentState;
+    let nextIdx = currentIdx;
+    let willComplete = false;
+
+    if (currentState === 'ACTIVE_CLASS' || currentState === 'EXPLANATION') {
+      if (action.type === 'ACCEPT' && classification.intent === 'question' && canAsk()) {
+        questionCount++;
+        lastQuestionTime = new Date().toISOString();
+        nextState = 'RESOLVING_DOUBT';
+        savedStepIndex = currentIdx;
+        doubtContext = { question: studentInput, stepIndex: currentIdx };
+      } else if (action.type === 'ACCEPT' && classification.intent === 'question') {
+        voiceText = 'Continuemos con el tema por ahora.';
+        nextState = currentState;
+      } else {
+        const adv = this.advanceStep(steps, currentIdx);
+        if (adv === null) {
+          willComplete = true;
+          nextState = 'COMPLETED';
+        } else {
+          nextIdx = adv;
+          nextState = this.stateForStep(steps[nextIdx]);
+          voiceText = this.buildVoiceText(steps[nextIdx]);
+        }
+      }
+    } else if (currentState === 'ACTIVITY_WAIT') {
+      const script = currentStep.script;
+
+      if (isQuestionScript(script)) {
+        const evaluation = await this.comprehensionEvaluator.evaluate({
+          microQuestion: (script as QuestionScript).question,
+          expectedAnswer: (script as QuestionScript).expectedAnswer ?? '',
+          studentAnswer: studentInput,
+          attemptNumber: failedAttempts + 1,
+        });
+        const qs = script as QuestionScript;
+        if (evaluation.result === 'correct') {
+          voiceText = qs.feedback.correct;
+          nextState = 'EVALUATION';
+          failedAttempts = 0;
+        } else if (evaluation.result === 'partial') {
+          voiceText = qs.hint ?? evaluation.hint ?? qs.feedback.incorrect;
+          nextState = 'ACTIVITY_WAIT';
+        } else {
+          failedAttempts++;
+          voiceText = qs.feedback.incorrect;
+          nextState =
+            failedAttempts >= this.config.skipAfterFailedAttempts && this.config.enableActivitySkip
+              ? 'ACTIVITY_SKIP_OFFER'
+              : 'EVALUATION';
+        }
+      } else if (isActivityScript(script)) {
+        const as = script as ActivityScript;
+        const norm = studentInput.trim().toLowerCase();
+        const correct = as.options.find((o) => o.isCorrect);
+        const isCorrect = !!correct && norm === correct.text.trim().toLowerCase();
+
+        voiceText = isCorrect ? as.feedback.correct : as.feedback.incorrect;
+
+        if (isCorrect) {
+          nextState = 'EVALUATION';
+          failedAttempts = 0;
+        } else {
+          failedAttempts++;
+          nextState =
+            failedAttempts >= this.config.skipAfterFailedAttempts && this.config.enableActivitySkip
+              ? 'ACTIVITY_SKIP_OFFER'
+              : 'EVALUATION';
+        }
+      }
+    } else if (currentState === 'EVALUATION') {
+      const lower = studentInput.toLowerCase();
+      if (lower.includes('repetir') || lower.includes('otra vez')) {
+        const ci = this.findPreviousContentStep(steps, currentIdx) ?? currentIdx;
+        nextIdx = ci;
+        nextState = this.stateForStep(steps[ci]);
+        voiceText = this.buildVoiceText(steps[ci]);
+        failedAttempts = 0;
+      } else {
+        const adv = this.advanceStep(steps, currentIdx);
+        if (adv === null) {
+          willComplete = true;
+          nextState = 'COMPLETED';
+        } else {
+          nextIdx = adv;
+          nextState = this.stateForStep(steps[nextIdx]);
+          voiceText = this.buildVoiceText(steps[nextIdx]);
+          failedAttempts = 0;
+        }
+      }
+    } else if (currentState === 'ACTIVITY_SKIP_OFFER') {
+      const lower = studentInput.toLowerCase();
+      if (lower.includes('repetir') || lower.includes('otra vez')) {
+        const ci = this.findPreviousContentStep(steps, currentIdx) ?? currentIdx;
+        nextIdx = ci;
+        nextState = this.stateForStep(steps[ci]);
+        voiceText = this.buildVoiceText(steps[ci]);
+        failedAttempts = 0;
+      } else {
+        skippedActivities = [...skippedActivities, currentStep.atomId];
+        const adv = this.advanceStep(steps, currentIdx);
+        if (adv === null) {
+          willComplete = true;
+          nextState = 'COMPLETED';
+        } else {
+          nextIdx = adv;
+          nextState = this.stateForStep(steps[nextIdx]);
+          voiceText = this.buildVoiceText(steps[nextIdx]);
+        }
+      }
+    } else if (currentState === 'RESOLVING_DOUBT' || currentState === 'CLARIFYING') {
+      const ri = savedStepIndex ?? currentIdx;
+      nextIdx = ri;
+      nextState = this.stateForStep(steps[ri] ?? currentStep);
+      savedStepIndex = undefined;
+      doubtContext = undefined;
+      voiceText = `${fullResponse} Continuemos donde lo dejamos.`;
+    }
+
+    if (willComplete) {
+      voiceText = fillTemplate(
+        this.config.greetings.completionMessage ?? '¡Felicitaciones! Completaste {title}.',
+        { name: 'estudiante', title: recipe.title },
+      );
+    }
+
+    // ── Persist interactions ────────────────────────────────────────────────
+    await this.record(sessionId, history.length, studentInput, null);
+    await this.record(sessionId, history.length + 1, voiceText, 'answer');
+
+    // ── Persist checkpoint ───────────────────────────────────────────────────
+    const newCp: SessionCheckpoint = {
+      currentState: nextState,
+      currentStepIndex: nextIdx,
+      savedStepIndex,
+      doubtContext,
+      questionCount,
+      lastQuestionTime,
+      skippedActivities,
+      failedAttempts,
+    };
+
+    const persist = async () => {
+      if (willComplete) await this.sessionRepo.complete(sessionId);
+      else await this.sessionRepo.updateCheckpoint(sessionId, newCp);
+    };
+
+    if (this.advisoryLockManager) {
+      const lockId = createSessionLockId(sessionId);
+      await this.advisoryLockManager.acquireLock(lockId);
+      try {
+        await persist();
+      } finally {
+        await this.advisoryLockManager.releaseLock(lockId);
+      }
+    } else {
+      await persist();
+    }
+
+    yield {
+      type: 'end',
+      reason: 'completed',
+      pedagogicalState: nextState,
+      sessionCompleted: willComplete,
       lessonProgress: { currentStep: nextIdx, totalSteps: steps.length },
     };
   }

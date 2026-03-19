@@ -1,6 +1,5 @@
 import type pino from 'pino';
 import type { z } from 'zod';
-
 import type { PedagogicalState } from '@/domain/entities/pedagogical-state.js';
 import type { PromptRepository } from '@/domain/ports/prompt-repository.js';
 import { cleanJsonResponse } from '@/utils/ai-utils';
@@ -40,7 +39,7 @@ export abstract class BaseLLMAdapter {
     this.logger?.error({
       msg: 'LLM error',
       state,
-      error,
+      error: error instanceof Error ? error.message : String(error),
     });
     return fallback;
   }
@@ -54,9 +53,12 @@ export abstract class BaseGenerativeAdapter extends BaseLLMAdapter {
     this.promptRepo = promptRepo;
   }
 
-  protected buildPrompt(state: PedagogicalState, params: any): string {
+  protected buildPrompt(state: PedagogicalState, params: Record<string, unknown>): string {
     const basePrompt = this.promptRepo.getPrompt(state, params);
-    const hidden = this.getHiddenInstructions(state, params.nextState);
+    const hidden = this.getHiddenInstructions(
+      state,
+      params.nextState as PedagogicalState | undefined,
+    );
     return `${basePrompt}\n\n${hidden}`;
   }
 
@@ -64,16 +66,13 @@ export abstract class BaseGenerativeAdapter extends BaseLLMAdapter {
     currentState: PedagogicalState,
     nextState?: PedagogicalState,
   ): string {
-    const lines: string[] = [];
-    lines.push('[HIDDEN INSTRUCTIONS]');
-    lines.push(`Current state: ${currentState}`);
+    const lines: string[] = ['[HIDDEN INSTRUCTIONS]', `Current state: ${currentState}`];
 
     if (nextState) {
       lines.push(`After this response, next state will be: ${nextState}`);
     }
 
-    lines.push('If user asks a question with high confidence, suggest pausing.');
-    lines.push('[/HIDDEN]');
+    lines.push('If user asks a question with high confidence, suggest pausing.', '[/HIDDEN]');
 
     if (currentState === 'RESOLVING_DOUBT' && nextState === 'ACTIVE_CLASS') {
       lines.push('[HIDDEN] Return to ACTIVE_CLASS after answering. [/HIDDEN]');
@@ -90,13 +89,17 @@ export abstract class BaseGenerativeAdapter extends BaseLLMAdapter {
     const cleanedText = cleanJsonResponse(rawText);
     try {
       const parsed = JSON.parse(cleanedText);
-      return schema.parse(parsed);
+      const validation = schema.safeParse(parsed);
+      if (!validation.success) {
+        this.logger?.error({ msg: 'Validation error', state, errors: validation.error.errors });
+        return null;
+      }
+      return validation.data;
     } catch (error: unknown) {
       this.logger?.error({
-        msg: 'JSON parse or validation error',
+        msg: 'Parse error',
         state,
-        rawText,
-        error,
+        error: error instanceof Error ? error.message : String(error),
       });
       return null;
     }

@@ -17,18 +17,22 @@ export interface AIAnswerResponse {
   answer: string;
 }
 
+export interface GenerateResponseParams {
+  recipe: Recipe;
+  currentState: PedagogicalState;
+  nextState?: PedagogicalState;
+  conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>;
+  currentQuestion?: { text: string; options?: readonly string[] };
+  ragContext?: unknown;
+  currentSegment?: { chunkText: string; order: number };
+  totalSegments?: number;
+  historySummary?: string;
+  [key: string]: unknown;
+}
+
 export interface AIService {
-  generateResponse(params: {
-    recipe: Recipe;
-    currentState: PedagogicalState;
-    nextState?: PedagogicalState;
-    conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>;
-    currentQuestion?: { text: string; options?: readonly string[] };
-    ragContext?: any;
-    currentSegment?: { chunkText: string; order: number };
-    totalSegments?: number;
-    historySummary?: string;
-  }): Promise<AIResponse>;
+  generateResponse(params: GenerateResponseParams): Promise<AIResponse>;
+  generateResponseStream(params: GenerateResponseParams): AsyncGenerator<string>;
   generateAnswer(params: {
     question: string;
     context: string;

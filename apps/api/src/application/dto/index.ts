@@ -142,3 +142,29 @@ export const ListSessionsInputSchema = z.object({
   activeOnly: z.boolean().optional().default(false),
 });
 export type ListSessionsInput = z.infer<typeof ListSessionsInputSchema>;
+
+// ==================== Streaming Interaction ====================
+
+export const InteractionChunkSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('chunk'), text: z.string() }),
+  z.object({
+    type: z.literal('end'),
+    reason: z.enum(['completed']),
+    pedagogicalState: z.enum([
+      'AWAITING_START',
+      'ACTIVE_CLASS',
+      'RESOLVING_DOUBT',
+      'CLARIFYING',
+      'EXPLANATION',
+      'ACTIVITY_WAIT',
+      'ACTIVITY_INACTIVITY_WARNING',
+      'ACTIVITY_SKIP_OFFER',
+      'QUESTION',
+      'EVALUATION',
+      'COMPLETED',
+    ]),
+    sessionCompleted: z.boolean(),
+    lessonProgress: z.object({ currentStep: z.number(), totalSteps: z.number() }),
+  }),
+]);
+export type InteractionChunk = z.infer<typeof InteractionChunkSchema>;

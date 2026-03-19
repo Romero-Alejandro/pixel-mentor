@@ -1,10 +1,13 @@
-import 'express-serve-static-core';
+import type { Request } from 'express';
 import type pino from 'pino';
 
-declare module 'express-serve-static-core' {
-  interface Request {
-    requestId?: string;
-    logger?: pino.Logger;
-    startTime?: number;
-  }
+export interface AppRequest extends Request {
+  requestId: string;
+  startTime: number;
+  logger: pino.Logger;
+  user?: {
+    id: string;
+    email: string;
+    role: string;
+  };
 }

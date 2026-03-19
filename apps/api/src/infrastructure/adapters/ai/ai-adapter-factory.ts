@@ -1,5 +1,4 @@
 import type pino from 'pino';
-
 import {
   GeminiAIModelAdapter,
   GeminiClassifierAdapter,
@@ -12,6 +11,12 @@ import {
   OpenRouterComprehensionEvaluatorAdapter,
   OpenRouterRAGServiceAdapter,
 } from './open-router/openrouter-adapters';
+import {
+  GroqAdapter,
+  GroqClassifierAdapter,
+  GroqComprehensionEvaluatorAdapter,
+  GroqRAGServiceAdapter,
+} from './groq/groq-adapters';
 
 import type { AIService } from '@/domain/ports/ai-service.js';
 import type {
@@ -21,12 +26,21 @@ import type {
 import type { RAGService } from '@/domain/ports/rag-service.js';
 import type { PromptRepository } from '@/domain/ports/prompt-repository.js';
 import type { KnowledgeChunkRepository } from '@/domain/ports/knowledge-chunk-repository.js';
+import {
+  ResilientAIAdapter,
+  ResilientClassifierAdapter,
+  ResilientEvaluatorAdapter,
+  ResilientRAGAdapter,
+} from './resilient-ai-adapter';
 
 export interface AIAdapterFactoryOptions {
-  provider: 'gemini' | 'openrouter';
+  provider: 'gemini' | 'openrouter' | 'groq';
   geminiApiKey?: string;
   openRouterApiKey?: string;
+  groqApiKey?: string;
+  defaultModelGemini?: string;
   defaultModelOpenRouter?: string;
+  defaultModelGroq?: string;
   promptRepo: PromptRepository;
   knowledgeChunkRepository: KnowledgeChunkRepository;
   logger?: pino.Logger;
@@ -40,15 +54,20 @@ export interface AIAdapterInstances {
 }
 
 interface AIProviderStrategy {
-  createInstances(options: AIAdapterFactoryOptions): AIAdapterInstances;
+  create(options: AIAdapterFactoryOptions): AIAdapterInstances;
 }
 
 class GeminiStrategy implements AIProviderStrategy {
-  createInstances(options: AIAdapterFactoryOptions): AIAdapterInstances {
-    if (!options.geminiApiKey) throw new Error('GEMINI_API_KEY required for Gemini');
-
+  create(options: AIAdapterFactoryOptions): AIAdapterInstances {
+    if (!options.geminiApiKey) throw new Error('GEMINI_API_KEY required');
+    const model = options.defaultModelGemini || 'gemini-3.1-flash-lite';
     return {
-      aiModel: new GeminiAIModelAdapter(options.promptRepo, options.geminiApiKey, options.logger),
+      aiModel: new GeminiAIModelAdapter(
+        options.promptRepo,
+        options.geminiApiKey,
+        model,
+        options.logger,
+      ),
       questionClassifier: new GeminiClassifierAdapter(options.geminiApiKey, options.logger),
       comprehensionEvaluator: new GeminiComprehensionEvaluatorAdapter(
         options.geminiApiKey,
@@ -62,37 +81,95 @@ class GeminiStrategy implements AIProviderStrategy {
   }
 }
 
-class OpenRouterStrategy implements AIProviderStrategy {
-  createInstances(options: AIAdapterFactoryOptions): AIAdapterInstances {
-    if (!options.openRouterApiKey) throw new Error('OPENROUTER_API_KEY required for OpenRouter');
-
-    const apiKey = options.openRouterApiKey;
-    const model = options.defaultModelOpenRouter || 'openai/gpt-4o';
-
+class GroqStrategy implements AIProviderStrategy {
+  create(options: AIAdapterFactoryOptions): AIAdapterInstances {
+    if (!options.groqApiKey) throw new Error('GROQ_API_KEY required');
+    const model = options.defaultModelGroq || 'moonshotai/kimi-k2-instruct-0905';
+    const fastModel = 'llama-3.1-8b-instant';
     return {
-      aiModel: new OpenRouterAdapter(options.promptRepo, apiKey, options.logger),
-      questionClassifier: new OpenRouterClassifierAdapter(apiKey, model, options.logger),
-      comprehensionEvaluator: new OpenRouterComprehensionEvaluatorAdapter(
-        apiKey,
-        model,
+      aiModel: new GroqAdapter(options.promptRepo, options.groqApiKey, model, options.logger),
+      questionClassifier: new GroqClassifierAdapter(options.groqApiKey, fastModel, options.logger),
+      comprehensionEvaluator: new GroqComprehensionEvaluatorAdapter(
+        options.groqApiKey,
+        fastModel,
         options.logger,
       ),
-      ragService: new OpenRouterRAGServiceAdapter(apiKey, options.knowledgeChunkRepository),
+      ragService: new GroqRAGServiceAdapter(options.groqApiKey, options.knowledgeChunkRepository),
     };
   }
 }
 
-const strategies: Record<string, AIProviderStrategy> = {
-  gemini: new GeminiStrategy(),
-  openrouter: new OpenRouterStrategy(),
-};
+class OpenRouterStrategy implements AIProviderStrategy {
+  create(options: AIAdapterFactoryOptions): AIAdapterInstances {
+    if (!options.openRouterApiKey) throw new Error('OPENROUTER_API_KEY required');
+    const model = options.defaultModelOpenRouter || 'stepfun/step-3.5-flash:free';
+    return {
+      aiModel: new OpenRouterAdapter(
+        options.promptRepo,
+        options.openRouterApiKey,
+        model,
+        options.logger,
+      ),
+      questionClassifier: new OpenRouterClassifierAdapter(
+        options.openRouterApiKey,
+        model,
+        options.logger,
+      ),
+      comprehensionEvaluator: new OpenRouterComprehensionEvaluatorAdapter(
+        options.openRouterApiKey,
+        model,
+        options.logger,
+      ),
+      ragService: new OpenRouterRAGServiceAdapter(
+        options.openRouterApiKey,
+        options.knowledgeChunkRepository,
+      ),
+    };
+  }
+}
 
 export class AIAdapterFactory {
-  static create(options: AIAdapterFactoryOptions): AIAdapterInstances {
-    const strategy = strategies[options.provider];
-    if (!strategy) {
-      throw new Error(`Unsupported LLM provider: ${options.provider}`);
+  private static readonly strategies: Record<string, AIProviderStrategy> = {
+    gemini: new GeminiStrategy(),
+    groq: new GroqStrategy(),
+    openrouter: new OpenRouterStrategy(),
+  };
+
+  static createResilient(options: AIAdapterFactoryOptions): AIAdapterInstances {
+    const availableProviders: ('gemini' | 'openrouter' | 'groq')[] = [
+      'gemini',
+      'groq',
+      'openrouter',
+    ];
+
+    const orderedProviders = [
+      options.provider,
+      ...availableProviders.filter((p) => p !== options.provider),
+    ];
+
+    const instances = orderedProviders
+      .map((provider) => {
+        try {
+          return this.strategies[provider].create(options);
+        } catch {
+          return null;
+        }
+      })
+      .filter((instance): instance is AIAdapterInstances => instance !== null);
+
+    if (instances.length === 0) {
+      throw new Error('No valid AI providers could be initialized');
     }
-    return strategy.createInstances(options);
+
+    return {
+      aiModel: new ResilientAIAdapter(instances.map((i) => i.aiModel)),
+      questionClassifier: new ResilientClassifierAdapter(
+        instances.map((i) => i.questionClassifier),
+      ),
+      comprehensionEvaluator: new ResilientEvaluatorAdapter(
+        instances.map((i) => i.comprehensionEvaluator),
+      ),
+      ragService: new ResilientRAGAdapter(instances.map((i) => i.ragService)),
+    };
   }
 }
