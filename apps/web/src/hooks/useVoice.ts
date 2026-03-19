@@ -292,37 +292,35 @@ export function useVoice(): UseVoiceReturn {
         const audio = new Audio(audioUrl);
         httpAudioRef.current = audio;
 
-        audio.onplay = () => {
-          debugLog('HTTP TTS playing');
-          setError(null);
-        };
-
-        audio.onended = () => {
-          debugLog('HTTP TTS ended');
-          setIsSpeaking(false);
-          httpAudioRef.current = null;
-          if (httpAudioUrlRef.current) {
-            URL.revokeObjectURL(httpAudioUrlRef.current);
-            httpAudioUrlRef.current = null;
-          }
-        };
-
-        audio.onerror = (err) => {
-          debugError('Audio playback error:', err);
-          setError('Error al reproducir audio');
-          setIsSpeaking(false);
-          if (httpAudioRef.current) {
-            httpAudioRef.current = null;
-          }
-          if (httpAudioUrlRef.current) {
-            URL.revokeObjectURL(httpAudioUrlRef.current);
-            httpAudioUrlRef.current = null;
-          }
-        };
-
         await audio.play();
         debugLog('HTTP TTS started successfully!');
-        return true;
+
+        // Wait for audio to actually finish playing
+        return new Promise<boolean>((resolve) => {
+          audio.onended = () => {
+            debugLog('HTTP TTS ended');
+            setIsSpeaking(false);
+            httpAudioRef.current = null;
+            if (httpAudioUrlRef.current) {
+              URL.revokeObjectURL(httpAudioUrlRef.current);
+              httpAudioUrlRef.current = null;
+            }
+            resolve(true);
+          };
+          audio.onerror = () => {
+            debugError('Audio playback error');
+            setError('Error al reproducir audio');
+            setIsSpeaking(false);
+            if (httpAudioRef.current) {
+              httpAudioRef.current = null;
+            }
+            if (httpAudioUrlRef.current) {
+              URL.revokeObjectURL(httpAudioUrlRef.current);
+              httpAudioUrlRef.current = null;
+            }
+            resolve(false);
+          };
+        });
       } catch (backendErr) {
         debugError('HTTP TTS failed:', backendErr);
 
@@ -339,34 +337,23 @@ export function useVoice(): UseVoiceReturn {
             utterance.lang = voiceSettings.languageCode;
           }
 
-          utterance.onstart = () => {
-            debugLog('Browser TTS started successfully');
-            setError(null);
-          };
-
-          utterance.onend = () => {
-            debugLog('Browser TTS ended');
-            setIsSpeaking(false);
-          };
-
-          utterance.onerror = (event) => {
-            debugError('Browser TTS error:', event.error);
-            setIsSpeaking(false);
-            if (event.error !== 'interrupted' && event.error !== 'canceled') {
-              setError(`Error de voz: ${event.error}`);
-            }
-          };
-
-          window.speechSynthesis.speak(utterance);
-
-          // Check if it started
-          setTimeout(() => {
-            if (window.speechSynthesis.speaking) {
-              return true;
-            }
-          }, 50);
-
-          return true;
+          // Wait for browser TTS to actually finish
+          return new Promise<boolean>((resolve) => {
+            utterance.onend = () => {
+              debugLog('Browser TTS ended');
+              setIsSpeaking(false);
+              resolve(true);
+            };
+            utterance.onerror = (event) => {
+              debugError('Browser TTS error:', event.error);
+              setIsSpeaking(false);
+              if (event.error !== 'interrupted' && event.error !== 'canceled') {
+                setError(`Error de voz: ${event.error}`);
+              }
+              resolve(false);
+            };
+            window.speechSynthesis.speak(utterance);
+          });
         } catch (browserErr) {
           debugError('Browser TTS also failed:', browserErr);
           setError('No se pudo reproducir la voz');
