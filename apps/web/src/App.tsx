@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import { useAuthStore, useAuthRedirect } from './stores/authStore';
 import { Spinner } from './components/ui/Spinner';
@@ -15,7 +15,12 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { saveRedirectPath } = useAuthRedirect();
   const location = useLocation();
 
-  // Wait for hydration before deciding
+  useEffect(() => {
+    if (isHydrated && !isValidating && !isAuthenticated) {
+      saveRedirectPath(location.pathname);
+    }
+  }, [isHydrated, isValidating, isAuthenticated, location.pathname, saveRedirectPath]);
+
   if (!isHydrated || isValidating) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -28,8 +33,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!isAuthenticated) {
-    // Save the current location to redirect back after login
-    saveRedirectPath(location.pathname);
     return <Navigate to="/login" replace />;
   }
 
@@ -40,7 +43,20 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   const { isHydrated, isAuthenticated, isValidating } = useAuthStore();
   const { getRedirectPath, clearRedirect } = useAuthRedirect();
 
-  // Wait for hydration before deciding
+  const redirectPath = getRedirectPath();
+
+  const isSafePath = useMemo(() => {
+    return Boolean(
+      redirectPath && !redirectPath.startsWith('/login') && !redirectPath.startsWith('/register'),
+    );
+  }, [redirectPath]);
+
+  useEffect(() => {
+    if (isHydrated && !isValidating && isAuthenticated && isSafePath) {
+      clearRedirect();
+    }
+  }, [isHydrated, isValidating, isAuthenticated, isSafePath, clearRedirect]);
+
   if (!isHydrated || isValidating) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -53,19 +69,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (isAuthenticated) {
-    const redirectPath = getRedirectPath();
-    // Only redirect to non-auth paths (avoid redirecting to /login or /register)
-    const isSafePath =
-      redirectPath && !redirectPath.startsWith('/login') && !redirectPath.startsWith('/register');
-
-    // Clear the redirect path after we've decided to use it (avoid setState during render)
-    useEffect(() => {
-      if (isSafePath) {
-        clearRedirect();
-      }
-    }, [isSafePath, clearRedirect]);
-
-    if (isSafePath) {
+    if (isSafePath && redirectPath) {
       return <Navigate to={redirectPath} replace />;
     }
     return <Navigate to="/dashboard" replace />;

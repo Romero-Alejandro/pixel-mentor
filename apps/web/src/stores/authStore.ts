@@ -9,14 +9,12 @@ interface AuthState {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
-  isHydrated: boolean; // NEW: tracks Zustand hydration completion
-  isValidating: boolean; // NEW: tracks auth check in progress
+  isHydrated: boolean;
+  isValidating: boolean;
   isLoading: boolean;
   error: string | null;
-  // Auth redirect state
   redirectPath: string | null;
 
-  // actions (existing)
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string, role: Role) => Promise<void>;
   checkAuth: () => Promise<void>;
@@ -26,7 +24,6 @@ interface AuthState {
   setRedirectPath: (path: string | null) => void;
   clearRedirectPath: () => void;
 
-  // NEW: internal hydration marker
   _setHydrated: (hydrated: boolean) => void;
 }
 
@@ -36,8 +33,8 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       token: null,
       isAuthenticated: false,
-      isHydrated: false, // NEW: default false
-      isValidating: false, // NEW: default false
+      isHydrated: false,
+      isValidating: false,
       isLoading: false,
       error: null,
       redirectPath: null,
@@ -48,7 +45,7 @@ export const useAuthStore = create<AuthState>()(
           user: null,
           token: null,
           isAuthenticated: false,
-          isHydrated: false, // NEW: force re-hydration check on next load
+          isHydrated: false,
           isValidating: false,
         });
       },
@@ -94,7 +91,7 @@ export const useAuthStore = create<AuthState>()(
           set({ isAuthenticated: false, user: null, token: null, isValidating: false });
           return;
         }
-        set({ isValidating: true }); // NEW: mark validation in progress
+        set({ isValidating: true });
         try {
           const { user } = await api.getCurrentUser();
           set({ user, token, isAuthenticated: true, isValidating: false });
@@ -106,18 +103,15 @@ export const useAuthStore = create<AuthState>()(
       clearError: () => set({ error: null }),
       setRedirectPath: (path) => set({ redirectPath: path }),
       clearRedirectPath: () => set({ redirectPath: null }),
-      _setHydrated: (hydrated: boolean) => set({ isHydrated: hydrated }), // NEW: internal hydration marker
+      _setHydrated: (hydrated: boolean) => set({ isHydrated: hydrated }),
     }),
     {
       name: 'auth-storage',
       partialize: (state) => ({ token: state.token }),
       onRehydrateStorage: () => (_state, error) => {
-        // This callback runs after hydration completes
-        // We use setTimeout to avoid accessing useAuthStore before it's fully initialized
         if (error) {
           console.error('[AuthStore] Hydration error:', error);
         }
-        // Defer the state update to the next tick to ensure store is initialized
         setTimeout(() => {
           const store = useAuthStore.getState();
           store._setHydrated(true);
@@ -128,21 +122,12 @@ export const useAuthStore = create<AuthState>()(
   ),
 );
 
-// ─── Auth Redirect Helpers ──────────────────────────────────────────────────────
-
-/**
- * Hook to manage auth redirect flow
- * Call this on pages that need to redirect to login/register
- */
 export function useAuthRedirect() {
   const setRedirectPath = useAuthStore((state) => state.setRedirectPath);
   const clearRedirectPath = useAuthStore((state) => state.clearRedirectPath);
   const redirectPath = useAuthStore((state) => state.redirectPath);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
-  /**
-   * Save the current path for redirect after login
-   */
   const saveRedirectPath = useCallback(
     (path: string) => {
       if (typeof window !== 'undefined') {
@@ -153,20 +138,13 @@ export function useAuthRedirect() {
     [setRedirectPath],
   );
 
-  /**
-   * Get the saved redirect path
-   */
   const getRedirectPath = useCallback((): string | null => {
-    // Priority: Zustand store > sessionStorage
     return (
       redirectPath ||
       (typeof window !== 'undefined' ? sessionStorage.getItem('auth-redirect-path') : null)
     );
   }, [redirectPath]);
 
-  /**
-   * Clear the saved redirect path
-   */
   const clearRedirect = useCallback(() => {
     clearRedirectPath();
     if (typeof window !== 'undefined') {

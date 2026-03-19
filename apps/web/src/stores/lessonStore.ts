@@ -40,6 +40,10 @@ interface LessonState {
   isStarting: boolean;
   error: string | null;
   retryCount: number;
+  // Streaming state
+  streamingChunks: string[];
+  isStreaming: boolean;
+  streamError: string | null;
 
   // Actions
   setLessonId: (id: string | null) => void;
@@ -55,6 +59,11 @@ interface LessonState {
   setError: (error: string | null) => void;
   incrementRetryCount: () => void;
   resetRetryCount: () => void;
+  // Streaming actions
+  setStreamingChunks: (chunks: string[]) => void;
+  setIsStreaming: (streaming: boolean) => void;
+  setStreamError: (error: string | null) => void;
+  clearStream: () => void;
   reset: () => void;
 }
 
@@ -71,6 +80,10 @@ const initialState = {
   isStarting: false,
   error: null,
   retryCount: 0,
+  // Streaming initial state
+  streamingChunks: [],
+  isStreaming: false,
+  streamError: null,
 };
 
 export const useLessonStore = create<LessonState>()(
@@ -90,6 +103,11 @@ export const useLessonStore = create<LessonState>()(
       setError: (error) => set({ error }),
       incrementRetryCount: () => set((state) => ({ retryCount: state.retryCount + 1 })),
       resetRetryCount: () => set({ retryCount: 0 }),
+      // Streaming actions
+      setStreamingChunks: (chunks) => set({ streamingChunks: chunks }),
+      setIsStreaming: (streaming) => set({ isStreaming: streaming }),
+      setStreamError: (error) => set({ streamError: error }),
+      clearStream: () => set({ streamingChunks: [], isStreaming: false, streamError: null }),
       reset: () =>
         set({
           ...initialState,
