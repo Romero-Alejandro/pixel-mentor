@@ -1,8 +1,8 @@
-import { spawn } from 'node:child_process';
-
 import * as googleTTS from '@sefinek/google-tts-api';
 import type pino from 'pino';
-
+import type { Readable } from 'node:stream';
+import { AudioProcessor } from './audio-processor.js';
+import { TTSStreamService } from '@/services/ttsStream.js';
 import type {
   TTSService,
   TTSOptions,
@@ -15,153 +15,71 @@ export interface GoogleFreeTTSConfig {
   logger?: pino.Logger;
 }
 
-/**
- * FFmpeg-based audio post-processing for character effects, pitch, and speed control
- */
-async function processAudioWithFFmpeg(
-  audioBuffer: Buffer,
-  options: { speed?: number; pitch?: number; character?: string },
-): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    const args: string[] = ['-i', 'pipe:0', '-y'];
-    const filters: string[] = [];
-
-    // Apply character-specific effects
-    if (options.character) {
-      switch (options.character) {
-        case 'robot':
-          // Robot: echo effect for mechanical sound
-          filters.push('aecho=0.8:0.9:30:0.3');
-          break;
-        case 'animal':
-          // Animal: vibrato for playful sound
-          filters.push('vibrato=f=6:d=0.3');
-          break;
-        case 'cartoon':
-          // Cartoon: flanger for whimsical sound
-          filters.push('flanger=delay=0:depth=0.5:speed=1');
-          break;
-      }
-    }
-
-    // Speed: using atempo (0.5 to 2.0 range)
-    if (options.speed && options.speed !== 1.0) {
-      let speed = options.speed;
-      while (speed < 0.5 || speed > 2.0) {
-        if (speed < 0.5) {
-          filters.push('atempo=0.5');
-          speed *= 2;
-        } else if (speed > 2.0) {
-          filters.push('atempo=2.0');
-          speed /= 2;
-        }
-      }
-      if (speed !== 1.0) {
-        filters.push(`atempo=${speed}`);
-      }
-    }
-
-    // Pitch: using rubberband pitch shift (in semitones)
-    if (options.pitch && options.pitch !== 0) {
-      const pitchRate = Math.pow(2, options.pitch / 12);
-      filters.push(`rubberband=pitch=${pitchRate}`);
-    }
-
-    if (filters.length > 0) {
-      args.push('-af', filters.join(','));
-    }
-
-    args.push('-acodec', 'libmp3lame', '-ab', '48k', '-ar', '24000', '-f', 'mp3', 'pipe:1');
-
-    const ffmpeg = spawn('ffmpeg', args);
-    const outputChunks: Buffer[] = [];
-    const errorChunks: Buffer[] = [];
-
-    ffmpeg.stdout.on('data', (chunk: Buffer) => {
-      outputChunks.push(chunk);
-    });
-
-    ffmpeg.stderr.on('data', (chunk: Buffer) => {
-      errorChunks.push(chunk);
-    });
-
-    ffmpeg.on('close', (code) => {
-      if (code === 0) {
-        resolve(Buffer.concat(outputChunks));
-      } else {
-        reject(new Error(`FFmpeg failed: ${Buffer.concat(errorChunks).toString()}`));
-      }
-    });
-
-    ffmpeg.on('error', (err) => {
-      reject(err);
-    });
-
-    ffmpeg.stdin.write(audioBuffer);
-    ffmpeg.stdin.end();
-  });
-}
-
 export class GoogleFreeTTSAdapter implements TTSService {
-  private logger?: pino.Logger;
+  private readonly logger?: pino.Logger;
 
   constructor(config: GoogleFreeTTSConfig) {
     this.logger = config.logger;
   }
 
-  async speak(text: string, options: TTSOptions = {}): Promise<TTSResponse> {
-    const { character = 'person', speakingRate = 1.0, pitch = 0 } = options;
+  /**
+   * Genera un stream de audio (SSE) mapeando correctamente el idioma
+   */
+  createStream(text: string, options: TTSOptions = {}): Readable {
+    const mappedLang = this.getLanguageCode(options.languageCode);
 
     this.logger?.debug(
-      { text: text.substring(0, 50), character, speakingRate, pitch },
-      'Google Free TTS request',
+      { original: options.languageCode, mapped: mappedLang },
+      'Creating TTS Stream',
     );
 
+    return new TTSStreamService(text, {
+      ...options,
+      lang: mappedLang, // Aseguramos que Google reciba 'es' y no 'es-ES'
+    });
+  }
+
+  /**
+   * Genera el audio completo en una sola respuesta
+   */
+  async speak(text: string, options: TTSOptions = {}): Promise<TTSResponse> {
+    const { character = 'person', speakingRate = 1.0, pitch = 0 } = options;
+    const lang = this.getLanguageCode(options.languageCode);
+    const slow = speakingRate < 0.8;
+
     try {
-      const lang = this.getLanguageCode(options.languageCode);
-      const useSlowParam = speakingRate < 0.5;
-      const slow = speakingRate < 0.8;
+      const textChunks = this.splitTextIntoChunks(text, 200);
+      const audioChunks: Buffer[] = [];
 
-      const audioBase64 = await googleTTS.getAudioBase64(text, { lang, slow });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let audioBuffer: any = Buffer.from(audioBase64, 'base64');
-
-      if (audioBuffer.length === 0) {
-        throw new Error('No audio content returned from Google TTS');
+      for (const chunk of textChunks) {
+        const base64 = await googleTTS.getAudioBase64(chunk, { lang, slow });
+        audioChunks.push(Buffer.from(base64, 'base64'));
       }
 
-      // Apply character effects + speed/pitch processing
+      // Usamos el tipo Buffer global para evitar errores de SharedArrayBuffer
+      let audioBuffer: Buffer = Buffer.concat(audioChunks);
+
+      if (audioBuffer.length === 0) {
+        throw new Error('No audio content generated');
+      }
+
       const needsProcessing = character !== 'person' || speakingRate !== 1.0 || pitch !== 0;
 
       if (needsProcessing) {
-        this.logger?.debug({ character, speakingRate, pitch }, 'Applying FFmpeg processing');
-
-        let ffSpeed = speakingRate;
-        if (useSlowParam && speakingRate < 0.5) {
-          ffSpeed = 0.5;
-        }
-
-        audioBuffer = (await processAudioWithFFmpeg(audioBuffer, {
-          speed: ffSpeed !== 1.0 ? ffSpeed : undefined,
-          pitch: pitch !== 0 ? pitch : undefined,
+        const processed = await AudioProcessor.applyEffects(audioBuffer, {
+          speed: speakingRate,
+          pitch,
           character: character !== 'person' ? character : undefined,
-        })) as unknown as Buffer;
-
-        this.logger?.debug({ processedSize: audioBuffer.length }, 'FFmpeg processing complete');
+        });
+        // Solución al error de tipos: Buffer.from asegura compatibilidad con Buffer<ArrayBuffer>
+        audioBuffer = Buffer.from(processed);
       }
-
-      const processedBase64 = audioBuffer.toString('base64');
-
-      this.logger?.info(
-        { size: audioBuffer.length, lang, character, speakingRate, pitch },
-        'Google Free TTS success',
-      );
 
       const characterDesc = this.getCharacterDescription(character, speakingRate, pitch);
 
       return {
         audioContent: audioBuffer,
-        audioContentBase64: processedBase64,
+        audioContentBase64: audioBuffer.toString('base64'),
         voice: {
           name: `Google Free (${lang}) - ${characterDesc}`,
           displayName: characterDesc,
@@ -171,36 +89,81 @@ export class GoogleFreeTTSAdapter implements TTSService {
         },
       };
     } catch (error) {
-      this.logger?.error({ error }, 'Google Free TTS error');
-      throw new Error(
-        `TTS synthesis failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
+      this.logger?.error({ error }, 'TTS synthesis error');
+      throw new Error(`TTS failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
-  async listVoices(_languageCode?: string): Promise<Voice[]> {
-    return this.getDefaultVoices();
+  async listVoices(): Promise<Voice[]> {
+    return [
+      {
+        name: 'es-google-free',
+        displayName: 'Español Estándar',
+        languageCode: 'es',
+        ssmlGender: 'FEMALE',
+        supportedCharacters: ['person', 'robot', 'animal', 'cartoon'],
+      },
+      {
+        name: 'en-google-free',
+        displayName: 'English Standard',
+        languageCode: 'en',
+        ssmlGender: 'FEMALE',
+        supportedCharacters: ['person', 'robot', 'animal', 'cartoon'],
+      },
+    ];
   }
 
   async isAvailable(): Promise<boolean> {
     try {
-      const audio = await googleTTS.getAudioBase64('test', { lang: 'es', slow: false });
-      return audio.length > 0;
+      const res = await googleTTS.getAudioBase64('ping', { lang: 'es', slow: false });
+      return res.length > 0;
     } catch {
       return false;
     }
   }
 
+  /**
+   * Divide el texto respetando el límite de 200 caracteres de la API gratuita
+   */
+  private splitTextIntoChunks(text: string, maxLength: number): string[] {
+    const chunks: string[] = [];
+    let current = text.trim();
+
+    while (current.length > 0) {
+      if (current.length <= maxLength) {
+        chunks.push(current);
+        break;
+      }
+
+      let splitIndex = current.lastIndexOf(' ', maxLength);
+      if (splitIndex === -1) splitIndex = maxLength;
+
+      chunks.push(current.substring(0, splitIndex).trim());
+      current = current.substring(splitIndex).trim();
+    }
+    return chunks;
+  }
+
+  /**
+   * Mapea códigos de idioma largos a los formatos cortos aceptados por Google Translate
+   */
   private getLanguageCode(code?: string): string {
     const langMap: Record<string, string> = {
       'es-ES': 'es',
       'es-MX': 'es-419',
-      'es-US': 'es',
       'es-AR': 'es',
+      'es-US': 'es',
       'en-US': 'en',
       'en-GB': 'en-gb',
     };
-    return langMap[code || 'es-ES'] || 'es';
+
+    // Si no se encuentra en el mapa, intentamos tomar los primeros 2 caracteres (ISO 639-1)
+    if (code && !langMap[code]) {
+      const shortCode = code.split('-')[0];
+      return shortCode.length === 2 ? shortCode : 'es';
+    }
+
+    return langMap[code || ''] || 'es';
   }
 
   private getCharacterDescription(character: VoiceCharacter, speed: number, pitch: number): string {
@@ -211,44 +174,14 @@ export class GoogleFreeTTSAdapter implements TTSService {
       cartoon: 'Cómico',
     };
 
-    let desc = baseNames[character] || 'Voz Estándar';
     const modifiers: string[] = [];
+    if (speed < 0.8) modifiers.push('Lenta');
+    else if (speed > 1.3) modifiers.push('Rápida');
 
-    if (speed < 0.8) {
-      modifiers.push('Lenta');
-    } else if (speed > 1.3) {
-      modifiers.push('Rápida');
-    }
+    if (pitch > 5) modifiers.push('Aguda');
+    else if (pitch < -5) modifiers.push('Grave');
 
-    if (pitch > 5) {
-      modifiers.push('Aguda');
-    } else if (pitch < -5) {
-      modifiers.push('Grave');
-    }
-
-    if (modifiers.length > 0) {
-      desc += ` (${modifiers.join(', ')})`;
-    }
-
-    return desc;
-  }
-
-  private getDefaultVoices(): Voice[] {
-    return [
-      {
-        name: 'Google Free Spanish - Voz Estándar',
-        displayName: 'Voz Estándar (Español)',
-        languageCode: 'es',
-        ssmlGender: 'FEMALE',
-        supportedCharacters: ['person', 'robot', 'animal', 'cartoon'] as VoiceCharacter[],
-      },
-      {
-        name: 'Google Free English',
-        displayName: 'English (Inglés)',
-        languageCode: 'en',
-        ssmlGender: 'FEMALE',
-        supportedCharacters: ['person', 'robot', 'animal', 'cartoon'] as VoiceCharacter[],
-      },
-    ];
+    const base = baseNames[character] || 'Voz Estándar';
+    return modifiers.length > 0 ? `${base} (${modifiers.join(', ')})` : base;
   }
 }

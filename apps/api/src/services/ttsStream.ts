@@ -1,13 +1,5 @@
-// apps/api/src/services/ttsStream.ts
 import { Readable } from 'node:stream';
-
 import * as googleTTS from '@sefinek/google-tts-api';
-
-// SSE message types for TTS streaming
-interface TTSMessage<T extends string, D = any> {
-  type: T;
-  data: D;
-}
 
 export const TTS_EVENT_TYPES = {
   AUDIO: 'audio',
@@ -15,105 +7,169 @@ export const TTS_EVENT_TYPES = {
   ERROR: 'error',
 } as const;
 
+interface TTSMessage<T extends string, D = unknown> {
+  type: T;
+  data: D;
+}
+
 interface TTSAudioMessageData {
   audioBase64: string;
 }
 
 interface TTSEndMessageData {
-  reason?: string;
+  reason: string;
 }
 
 interface TTSErrorMessageData {
   message: string;
-  code?: string;
+  code: string;
 }
 
 type TTSAudioMessage = TTSMessage<typeof TTS_EVENT_TYPES.AUDIO, TTSAudioMessageData>;
 type TTSEndMessage = TTSMessage<typeof TTS_EVENT_TYPES.END, TTSEndMessageData>;
 type TTSErrorMessage = TTSMessage<typeof TTS_EVENT_TYPES.ERROR, TTSErrorMessageData>;
 
-interface TTSStreamOptions {
+export interface TTSStreamOptions {
   lang?: string;
   slow?: boolean;
   host?: string;
   timeout?: number;
-  splitPunct?: string; // Add splitPunct for getAllAudioBase64
+  splitPunct?: string;
 }
 
 export class TTSStreamService extends Readable {
-  private text: string;
-  options: TTSStreamOptions;
-  private isGenerating: boolean = false;
+  public readonly options: TTSStreamOptions;
+  private readonly text: string;
+
+  private textChunks: string[] = [];
+  private isInitialized = false;
+  private currentTextIndex = 0;
+  private isProcessing = false;
 
   constructor(text: string, options: TTSStreamOptions = {}) {
     super({ objectMode: true });
     this.text = text;
     this.options = {
-      lang: 'en',
+      lang: 'es',
       slow: false,
       host: 'https://translate.google.com',
-      timeout: 60000, // 60 seconds for long text
-      splitPunct: '.,;!?', // Default punctuation to split long text
+      timeout: 30000,
+      splitPunct: '.,;!?',
       ...options,
     };
   }
 
-  async _read() {
-    if (this.isGenerating || this.text.length === 0) {
-      if (!this.isGenerating && this.text.length === 0) {
-        this.push(this.formatMessage<TTSEndMessage>(TTS_EVENT_TYPES.END, { reason: 'completed' }));
-        this.push(null); // End the stream
+  async _read(): Promise<void> {
+    if (this.isProcessing) return;
+
+    if (!this.isInitialized) {
+      this.initialize();
+      if (this.textChunks.length === 0) {
+        this.push(this.formatMessage(TTS_EVENT_TYPES.END, { reason: 'empty_text' }));
+        this.push(null);
+        return;
       }
+    }
+
+    if (this.currentTextIndex >= this.textChunks.length) {
+      this.push(this.formatMessage(TTS_EVENT_TYPES.END, { reason: 'completed' }));
+      this.push(null);
       return;
     }
 
-    this.isGenerating = true;
-    try {
-      const audioChunks = await googleTTS.getAllAudioBase64(this.text, this.options);
+    await this.processNextChunk();
+  }
 
-      for (const chunk of audioChunks) {
-        this.push(
-          this.formatMessage<TTSAudioMessage>(TTS_EVENT_TYPES.AUDIO, { audioBase64: chunk.base64 }),
-        );
+  private initialize(): void {
+    this.isInitialized = true;
+    if (!this.text.trim()) return;
+
+    this.textChunks = this.splitTextIntoChunks(this.text, 200);
+  }
+
+  private splitTextIntoChunks(text: string, maxLength: number): string[] {
+    const chunks: string[] = [];
+    let currentText = text.trim();
+
+    while (currentText.length > 0) {
+      if (currentText.length <= maxLength) {
+        chunks.push(currentText);
+        break;
       }
 
-      this.isGenerating = false;
-      this.text = ''; // Clear text after processing
-      this.push(this.formatMessage<TTSEndMessage>(TTS_EVENT_TYPES.END, { reason: 'completed' }));
-      this.push(null); // End the stream
-    } catch (error: any) {
-      console.error('Failed to generate TTS audio:', error);
+      let splitIndex = -1;
+      const punctuations = (this.options.splitPunct || '.,;!?').split('');
+
+      for (const p of punctuations) {
+        const lastPunct = currentText.lastIndexOf(p, maxLength);
+        if (lastPunct > splitIndex) {
+          splitIndex = lastPunct;
+        }
+      }
+
+      if (splitIndex === -1) {
+        splitIndex = currentText.lastIndexOf(' ', maxLength);
+      }
+
+      if (splitIndex === -1) {
+        splitIndex = maxLength;
+      } else {
+        splitIndex += 1;
+      }
+
+      chunks.push(currentText.substring(0, splitIndex).trim());
+      currentText = currentText.substring(splitIndex).trim();
+    }
+
+    return chunks.filter((c) => c.length > 0);
+  }
+
+  private async processNextChunk(): Promise<void> {
+    this.isProcessing = true;
+    const currentText = this.textChunks[this.currentTextIndex];
+
+    try {
+      // SANITIZACIÓN ESTRICTA DEL IDIOMA
+      const rawLang = this.options.lang || 'es';
+      let safeLang = rawLang;
+
+      if (rawLang.includes('-')) {
+        const parts = rawLang.split('-');
+        // Convertir 'es-ES', 'es-AR' -> 'es' (excepto 'es-419' que sí es válido)
+        if (parts[0] === 'es' && parts[1] !== '419') {
+          safeLang = 'es';
+          // Convertir 'en-US' -> 'en-us' (Google acepta minúsculas)
+        } else if (parts[0] === 'en') {
+          safeLang = rawLang.toLowerCase();
+        } else {
+          safeLang = parts[0];
+        }
+      }
+
+      const base64 = await googleTTS.getAudioBase64(currentText, {
+        lang: safeLang,
+        slow: this.options.slow,
+        host: this.options.host,
+        timeout: this.options.timeout,
+      });
+
+      this.currentTextIndex++;
+      this.isProcessing = false;
+
       this.push(
-        this.formatMessage<TTSErrorMessage>(TTS_EVENT_TYPES.ERROR, {
-          message: error.message,
-          code: 'TTS_GENERATION_ERROR',
+        this.formatMessage(TTS_EVENT_TYPES.AUDIO, {
+          audioBase64: base64,
         }),
       );
-      this.emit('error', error);
-      this.push(null); // End the stream on error
-      this.isGenerating = false;
+    } catch (error: unknown) {
+      this.isProcessing = false;
+      const message = error instanceof Error ? error.message : 'Chunk failed';
+      this.push(this.formatMessage(TTS_EVENT_TYPES.ERROR, { message, code: 'CHUNK_ERROR' }));
+      this.push(null);
     }
   }
 
-  private formatMessage<T extends TTSMessage<any, any>>(type: string, data: any): string {
-    let payload: any = data;
-
-    // Handle undefined/null data to ensure valid JSON
-    if (payload === undefined || payload === null) {
-      payload = { message: 'Unknown error', code: 'UNKNOWN' };
-    }
-
-    // Ensure the payload can be stringified to valid JSON
-    try {
-      const stringified = JSON.stringify(payload);
-      if (stringified === undefined) {
-        payload = { message: 'Unknown error', code: 'UNKNOWN' };
-      }
-    } catch {
-      payload = { message: 'Unknown error', code: 'UNKNOWN' };
-    }
-
-    const message: T = { type, data: payload } as T;
-    return `event: ${type}\ndata: ${JSON.stringify(message.data)}\n\n`;
+  private formatMessage(type: string, data: unknown): string {
+    return `event: ${type}\ndata: ${JSON.stringify(data)}\n\n`;
   }
 }

@@ -1,53 +1,70 @@
-// apps/api/src/routes/tts.ts
-import type { Request, Response } from 'express';
-import { Router } from 'express';
+import { Router, type Request, type Response } from 'express';
 
-import { TTSStreamService } from '../services/ttsStream';
+import type { AppRequest } from '@/types/express.js';
+import type { TTSService } from '@/domain/ports/tts-service.js';
 
-const ttsRouter = Router();
+export function createTTSRouter(ttsService: TTSService): Router {
+  const router = Router();
 
-ttsRouter.get('/stream', async (req: Request, res: Response) => {
-  const { text, lang, slow } = req.query;
+  router.get('/stream', (req: Request, res: Response) => {
+    const appReq = req as AppRequest;
+    const { text, lang, slow } = appReq.query;
 
-  if (!text || typeof text !== 'string') {
-    return res.status(400).json({ message: 'Text is required' });
-  }
+    if (typeof text !== 'string' || !text.trim()) {
+      res.status(400).json({ message: 'Text is required' });
+      return;
+    }
 
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('Access-Control-Allow-Origin', '*'); // Consider more restrictive CORS in production
-  res.flushHeaders(); // Flush headers to client
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.flushHeaders();
 
-  const ttsStream = new TTSStreamService(text, {
-    lang: typeof lang === 'string' ? lang : undefined,
-    slow: slow === 'true' ? true : slow === 'false' ? false : undefined,
+    try {
+      const ttsStream = ttsService.createStream(text, {
+        languageCode: typeof lang === 'string' ? lang : undefined,
+        speakingRate: slow === 'true' ? 0.5 : 1.0,
+      });
+
+      ttsStream.on('data', (chunk: string) => {
+        res.write(chunk);
+      });
+
+      ttsStream.on('end', () => {
+        res.end();
+      });
+
+      ttsStream.on('error', (error: unknown) => {
+        const message = error instanceof Error ? error.message : 'Internal Server Error';
+        const code =
+          error instanceof Error && 'code' in error
+            ? String((error as Record<string, unknown>).code)
+            : 'SSE_STREAM_ERROR';
+
+        appReq.logger?.error({ err: error }, 'SSE Stream Error');
+
+        if (!res.writableEnded) {
+          const errorMessage = `event: error\ndata: ${JSON.stringify({ message, code })}\n\n`;
+          res.write(errorMessage);
+          res.end();
+        }
+      });
+
+      appReq.on('close', () => {
+        appReq.logger?.info('Client disconnected from TTS stream.');
+        ttsStream.destroy();
+      });
+    } catch (error: unknown) {
+      appReq.logger?.error({ err: error }, 'Failed to initialize TTS stream');
+      if (!res.writableEnded) {
+        res.write(
+          `event: error\ndata: ${JSON.stringify({ message: 'Stream initialization failed', code: 'INIT_ERROR' })}\n\n`,
+        );
+        res.end();
+      }
+    }
   });
 
-  ttsStream.on('data', (chunk: string) => {
-    res.write(chunk);
-  });
-
-  ttsStream.on('end', () => {
-    res.end();
-  });
-
-  ttsStream.on('error', (error: any) => {
-    console.error('SSE Stream Error:', error);
-    // It's important to send an SSE error message before closing the connection
-    const errorMessage = `event: error\ndata: ${JSON.stringify({
-      message: error.message || 'Internal Server Error',
-      code: error.code || 'SSE_STREAM_ERROR',
-    })}\n\n`;
-    res.write(errorMessage);
-    res.end();
-  });
-
-  // Handle client disconnect
-  req.on('close', () => {
-    console.log('Client disconnected from TTS stream.');
-    ttsStream.destroy(); // Clean up the stream
-  });
-});
-
-export default ttsRouter;
+  return router;
+}

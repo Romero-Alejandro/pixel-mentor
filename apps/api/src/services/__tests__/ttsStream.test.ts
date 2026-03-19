@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
-import { TTSStreamService, TTS_EVENT_TYPES } from '../ttsStream';
 import * as googleTTS from '@sefinek/google-tts-api';
+
+import { TTSStreamService, TTS_EVENT_TYPES } from '../ttsStream';
 
 describe('TTSStreamService', () => {
   let mockGetAllAudioBase64: jest.Mock;
