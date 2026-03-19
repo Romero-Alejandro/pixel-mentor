@@ -11,23 +11,31 @@ jest.mock('openai', () => {
   };
 });
 
+jest.mock('@/config/index.js', () => ({
+  config: {
+    DEFAULT_MODEL_OPENROUTER: 'stepfun/step-3.5-flash',
+  },
+}));
+
 import OpenAI from 'openai';
 
 import { OpenRouterAdapter } from '@/infrastructure/adapters/ai/open-router/openrouter-adapters.js';
+import type pino from 'pino';
 
 describe('OpenRouterAdapter', () => {
   let adapter: OpenRouterAdapter;
   let mockCreate: jest.Mock;
   const mockPromptRepo = { getPrompt: jest.fn().mockReturnValue('Mocked prompt') };
+  let mockLogger: jest.Mocked<pino.Logger>;
 
   beforeEach(() => {
-    mockCreate = (OpenAI as any).mock.calls[0]?.result?.chat.completions.create || jest.fn();
-    // Need to get the mock instance's method. Actually, OpenAI mock returns a new object each time. We can instead set up mockImplementation to return object with create mock accessible.
-    // Simpler: after adapter is constructed, we can get the client from the adapter's private? Not possible.
-    // Instead, we mock OpenAI such that the returned object has a jest.fn for create that we can track.
-    // We'll restructure: define mockCreate as jest.fn() and have OpenAI mock implementation return an object containing that mock.
-    // So reset and reconfigure before each.
     mockCreate = jest.fn();
+    mockLogger = {
+      debug: jest.fn(),
+      error: jest.fn(),
+      info: jest.fn(),
+      warn: jest.fn(),
+    } as unknown as jest.Mocked<pino.Logger>;
     (OpenAI as any).mockImplementation(() => ({
       chat: {
         completions: {
@@ -35,7 +43,7 @@ describe('OpenRouterAdapter', () => {
         },
       },
     }));
-    adapter = new OpenRouterAdapter(mockPromptRepo, 'fake-api-key');
+    adapter = new OpenRouterAdapter(mockPromptRepo, 'fake-api-key', mockLogger);
   });
 
   afterEach(() => {
@@ -89,5 +97,86 @@ describe('OpenRouterAdapter', () => {
     expect(result.explanation).toBe('Tuve un problema técnico, ¿puedes intentarlo de nuevo?');
     expect(result.supportQuotes).toEqual([]);
     expect(result.pedagogicalState).toBe('EXPLANATION');
+  });
+
+  describe('generateResponseStream', () => {
+    it('should yield correct text sequence', async () => {
+      const chunks = ['Hello', ' world', '!'];
+
+      const mockStream = (async function* () {
+        for (const text of chunks) {
+          yield { choices: [{ delta: { content: text } }] };
+        }
+      })();
+
+      mockCreate.mockResolvedValue(mockStream);
+
+      const params = {
+        lesson: { title: 'Test Lesson' },
+        currentState: 'ACTIVE_CLASS',
+        conversationHistory: [],
+      };
+
+      const result: string[] = [];
+      for await (const chunk of adapter.generateResponseStream(params)) {
+        result.push(chunk);
+      }
+
+      expect(result).toEqual(['Hello', ' world', '!']);
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          model: 'stepfun/step-3.5-flash',
+          stream: true,
+        }),
+      );
+    });
+
+    it('should skip empty content chunks', async () => {
+      const mockStream = (async function* () {
+        yield { choices: [{ delta: { content: 'Hello' } }] };
+        yield { choices: [{ delta: { content: '' } }] };
+        yield { choices: [{ delta: { content: ' world' } }] };
+        yield { choices: [{ delta: {} }] }; // no content field
+        yield { choices: [{}] }; // empty delta
+        yield { choices: [] }; // empty choices
+      })();
+
+      mockCreate.mockResolvedValue(mockStream);
+
+      const params = {
+        lesson: { title: 'Test Lesson' },
+        currentState: 'EXPLANATION',
+        conversationHistory: [],
+      };
+
+      const result: string[] = [];
+      for await (const chunk of adapter.generateResponseStream(params)) {
+        result.push(chunk);
+      }
+
+      expect(result).toEqual(['Hello', ' world']);
+    });
+
+    it('should propagate error from stream', async () => {
+      const streamError = new Error('OpenRouter stream error');
+      mockCreate.mockRejectedValue(streamError);
+
+      const params = {
+        lesson: { title: 'Test Lesson' },
+        currentState: 'ACTIVE_CLASS',
+        conversationHistory: [],
+      };
+
+      await expect(adapter.generateResponseStream(params).next()).rejects.toThrow(
+        'OpenRouter stream error',
+      );
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          msg: 'LLM streaming error',
+          state: 'ACTIVE_CLASS',
+          error: streamError,
+        }),
+      );
+    });
   });
 });

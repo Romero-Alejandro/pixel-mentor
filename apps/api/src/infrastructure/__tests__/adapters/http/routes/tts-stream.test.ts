@@ -1,7 +1,8 @@
 import request from 'supertest';
+import * as googleTTS from '@sefinek/google-tts-api';
+
 import { createApp } from '@/infrastructure/adapters/http/server.js';
 import { TTSStreamService } from '@/services/ttsStream.js';
-import * as googleTTS from '@sefinek/google-tts-api';
 
 // Mock dependencies
 vi.mock('@sefinek/google-tts-api', () => ({

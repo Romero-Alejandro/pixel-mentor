@@ -1,4 +1,4 @@
-import type { Express, Request, Response, NextFunction } from 'express';
+import type { Express, Response, NextFunction } from 'express';
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
@@ -10,11 +10,13 @@ import { createRecipesRouter } from './routes/recipes.js';
 import { createSessionsRouter } from './routes/sessions.js';
 import { createAuthRouter } from './routes/auth.js';
 import { createTTSRouter } from './routes/tts.js';
+
 import { requestIdMiddleware } from './middleware/request-id.js';
 import { timeoutMiddleware } from './middleware/timeout.js';
 import { requestLoggerMiddleware } from './middleware/request-logger.js';
 import { authMiddleware } from './middleware/auth.js';
 
+import type { AppRequest } from '@/types/express.js';
 import type { PrismaClient } from '@/infrastructure/adapters/database/client.js';
 import type { OrchestrateRecipeUseCase } from '@/application/use-cases';
 import type { GetRecipeUseCase } from '@/application/use-cases/recipe/get-recipe.use-case.js';
@@ -44,7 +46,7 @@ export interface ServerDependencies {
   };
   logger: pino.Logger;
   prisma: PrismaClient;
-  userRepo: UserRepository;
+  userRepository: UserRepository; // Updated to match dependency container
   orchestrateUseCase: OrchestrateRecipeUseCase;
   getRecipeUseCase: GetRecipeUseCase;
   listRecipesUseCase: ListRecipesUseCase;
@@ -64,7 +66,7 @@ export function createApp(deps: ServerDependencies): Express {
     config,
     logger,
     prisma,
-    userRepo,
+    userRepository, // Updated name
     orchestrateUseCase,
     getRecipeUseCase,
     listRecipesUseCase,
@@ -78,6 +80,7 @@ export function createApp(deps: ServerDependencies): Express {
     questionAnsweringUseCase,
     ttsService,
   } = deps;
+
   const app = express();
 
   app.use(requestIdMiddleware);
@@ -107,7 +110,6 @@ export function createApp(deps: ServerDependencies): Express {
     }),
   );
 
-  // Parse CORS_ORIGIN (can be comma-separated list)
   const corsOrigins = config.CORS_ORIGIN.split(',').map((o) => o.trim());
 
   app.use(
@@ -123,7 +125,7 @@ export function createApp(deps: ServerDependencies): Express {
 
   const authLimiter = rateLimit({
     windowMs: config.RATE_LIMIT_WINDOW_MS,
-    max: config.RATE_LIMIT_MAX * 2, // Allow more attempts for auth
+    max: config.RATE_LIMIT_MAX * 2,
     message: { error: 'Too many authentication requests' },
     standardHeaders: true,
     legacyHeaders: false,
@@ -131,7 +133,7 @@ export function createApp(deps: ServerDependencies): Express {
 
   const recipeLimiter = rateLimit({
     windowMs: config.RATE_LIMIT_WINDOW_MS,
-    max: config.RATE_LIMIT_MAX * 5, // Limit for all recipe-related endpoints
+    max: config.RATE_LIMIT_MAX * 5,
     message: { error: 'Too many recipe requests' },
     standardHeaders: true,
     legacyHeaders: false,
@@ -139,32 +141,29 @@ export function createApp(deps: ServerDependencies): Express {
 
   const readOnlyLimiter = rateLimit({
     windowMs: config.RATE_LIMIT_WINDOW_MS,
-    max: config.RATE_LIMIT_MAX * 10, // Allow many more attempts for read-only GET requests
+    max: config.RATE_LIMIT_MAX * 10,
     message: { error: 'Too many read requests' },
     standardHeaders: true,
     legacyHeaders: false,
   });
 
-  // TTS specific rate limiter - increased from 10 to 1000 requests per minute per IP
-  // Note: This is a significant increase to allow more TTS usage for educational purposes
   const ttsLimiter = rateLimit({
-    windowMs: 60 * 1000, // 1 minute
-    max: 1000, // 1000 requests per minute per IP (increased from 10)
+    windowMs: 60 * 1000,
+    max: 1000,
     message: { error: 'Demasiadas solicitudes de voz. Intenta de nuevo en un minuto.' },
     standardHeaders: true,
     legacyHeaders: false,
   });
 
-  // Apply specific limiters
   app.use('/api/auth', authLimiter);
-  app.use('/api/recipe', recipeLimiter); // covers start, interact, question
+  app.use('/api/recipe', recipeLimiter);
   app.use('/api/recipes', readOnlyLimiter);
   app.use('/api/sessions', readOnlyLimiter);
 
   app.use(requestLoggerMiddleware(logger));
 
-  app.get('/health', async (req: Request, res: Response) => {
-    const requestLogger = (req as any).logger ?? logger;
+  app.get('/health', async (req: AppRequest, res: Response) => {
+    const requestLogger = req.logger ?? logger;
     const health: Record<string, unknown> = { status: 'ok', timestamp: new Date().toISOString() };
 
     try {
@@ -180,7 +179,7 @@ export function createApp(deps: ServerDependencies): Express {
     res.status(statusCode).json(health);
   });
 
-  app.get('/api', (_req: Request, res: Response) => {
+  app.get('/api', (_req: AppRequest, res: Response) => {
     res.json({
       name: 'Pixel Mentor API',
       version: '1.0.0',
@@ -188,15 +187,13 @@ export function createApp(deps: ServerDependencies): Express {
     });
   });
 
-  // Auth routes (no authentication required)
   app.use(
     '/api/auth',
-    createAuthRouter(userRepo, registerUseCase, loginUseCase, verifyTokenUseCase),
+    createAuthRouter(userRepository, registerUseCase, loginUseCase, verifyTokenUseCase),
   );
 
-  const protectedMiddleware = authMiddleware(userRepo, verifyTokenUseCase);
+  const protectedMiddleware = authMiddleware(userRepository, verifyTokenUseCase);
 
-  // Protected routes
   app.use(
     '/api/recipe',
     protectedMiddleware,
@@ -218,18 +215,19 @@ export function createApp(deps: ServerDependencies): Express {
     ),
   );
 
-  // TTS routes - with rate limiting and authentication
   app.use('/api/tts', ttsLimiter, protectedMiddleware, createTTSRouter(ttsService));
 
-  app.use((_req: Request, res: Response) => {
+  app.use((_req: AppRequest, res: Response) => {
     res.status(404).json({ error: 'Not found' });
   });
 
-  app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
-    const requestLogger = (_req as any).logger ?? logger;
-    requestLogger.error(err, { url: _req.url, method: _req.method });
-    const statusCode = (err as any).statusCode ?? 500;
-    const message = (err as any).message ?? 'Internal Server Error';
+  app.use((err: unknown, req: AppRequest, res: Response, _next: NextFunction) => {
+    const requestLogger = req.logger ?? logger;
+    requestLogger.error(err, { url: req.url, method: req.method });
+
+    const statusCode = err instanceof Error && 'statusCode' in err ? (err as any).statusCode : 500;
+    const message = err instanceof Error ? err.message : 'Internal Server Error';
+
     res.status(statusCode).json({ error: message });
   });
 

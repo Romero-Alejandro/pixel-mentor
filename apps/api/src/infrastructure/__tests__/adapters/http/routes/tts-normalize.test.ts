@@ -97,7 +97,7 @@ describe('formatMessage', () => {
     expect(result).toContain('Unknown error');
     expect(result).toContain('code');
     expect(result).toContain('UNKNOWN');
-    
+
     // Verify it's valid JSON by parsing the data portion
     const dataMatch = result.match(/data: (.+)\n\n/);
     expect(dataMatch).toBeTruthy();
@@ -109,7 +109,7 @@ describe('formatMessage', () => {
     expect(result).toContain('event: error');
     expect(result).toContain('Unknown error');
     expect(result).toContain('UNKNOWN');
-    
+
     // Verify it's valid JSON
     const dataMatch = result.match(/data: (.+)\n\n/);
     expect(dataMatch).toBeTruthy();
@@ -146,13 +146,13 @@ describe('formatMessage', () => {
       true,
     ];
 
-    testInputs.forEach((input) => {
+    for (const input of testInputs) {
       const result = formatMessage('test', input);
       const dataMatch = result.match(/data: (.+)\n\n/);
       expect(dataMatch).toBeTruthy();
-      
+
       // Verify JSON parsing doesn't throw
       expect(() => JSON.parse(dataMatch![1])).not.toThrow();
-    });
+    }
   });
 });

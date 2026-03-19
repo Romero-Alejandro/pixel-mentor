@@ -1,60 +1,56 @@
-import { type Request, type Response, type NextFunction } from 'express';
+import type { Response, NextFunction } from 'express';
 import { z } from 'zod';
-import type pino from 'pino';
 
 import type { GetSessionUseCase } from '@/application/use-cases/session/get-session.use-case';
 import type { ListSessionsUseCase } from '@/application/use-cases/session/list-sessions.use-case';
 import { GetSessionInputSchema, ListSessionsInputSchema } from '@/application/dto';
-
-export interface AppRequest extends Request {
-  logger?: pino.Logger;
-  requestId?: string;
-  startTime?: number;
-}
+import type { AppRequest } from '@/types/express';
 
 export class SessionsController {
   constructor(
-    private getSessionUseCase: GetSessionUseCase,
-    private listSessionsUseCase: ListSessionsUseCase,
+    private readonly getSessionUseCase: GetSessionUseCase,
+    private readonly listSessionsUseCase: ListSessionsUseCase,
   ) {}
 
-  async get(req: Request, res: Response, next: NextFunction): Promise<void> {
+  get = async (req: AppRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const validated = GetSessionInputSchema.parse({ sessionId: req.params.id });
       const session = await this.getSessionUseCase.execute(validated.sessionId);
       res.json(session);
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof z.ZodError) {
         res.status(400).json({ error: 'Validation error', details: error.issues });
         return;
       }
       next(error);
     }
-  }
+  };
 
-  async list(req: Request, res: Response, next: NextFunction): Promise<void> {
+  list = async (req: AppRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const studentId = typeof req.query.studentId === 'string' ? req.query.studentId : undefined;
-      const query: { studentId?: string; activeOnly?: boolean } = { studentId };
+
+      let activeOnly: boolean | undefined;
       if (req.query.activeOnly !== undefined) {
         const val = Array.isArray(req.query.activeOnly)
           ? req.query.activeOnly[0]
           : req.query.activeOnly;
-        query.activeOnly = val === 'true';
+        activeOnly = val === 'true';
       }
 
-      const validated = ListSessionsInputSchema.parse(query);
+      const validated = ListSessionsInputSchema.parse({ studentId, activeOnly });
       const sessions = await this.listSessionsUseCase.execute(
         validated.studentId,
         validated.activeOnly,
       );
+
       res.json(sessions);
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof z.ZodError) {
         res.status(400).json({ error: 'Validation error', details: error.issues });
         return;
       }
       next(error);
     }
-  }
+  };
 }
