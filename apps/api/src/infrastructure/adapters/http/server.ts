@@ -10,12 +10,12 @@ import { createRecipesRouter } from './routes/recipes.js';
 import { createSessionsRouter } from './routes/sessions.js';
 import { createAuthRouter } from './routes/auth.js';
 import { createTTSRouter } from './routes/tts.js';
-
 import { requestIdMiddleware } from './middleware/request-id.js';
 import { timeoutMiddleware } from './middleware/timeout.js';
 import { requestLoggerMiddleware } from './middleware/request-logger.js';
 import { authMiddleware } from './middleware/auth.js';
 
+import { createMetricsRouter } from '@/monitoring/routes/eval-metrics.route.js';
 import type { AppRequest } from '@/types/express.js';
 import type { PrismaClient } from '@/infrastructure/adapters/database/client.js';
 import type { OrchestrateRecipeUseCase } from '@/application/use-cases';
@@ -216,6 +216,9 @@ export function createApp(deps: ServerDependencies): Express {
   );
 
   app.use('/api/tts', ttsLimiter, protectedMiddleware, createTTSRouter(ttsService));
+
+  // Metrics endpoint for evaluation monitoring (public, no auth required)
+  app.use('/api/metrics/evaluation', createMetricsRouter());
 
   app.use((_req: AppRequest, res: Response) => {
     res.status(404).json({ error: 'Not found' });
