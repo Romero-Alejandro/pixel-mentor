@@ -18,9 +18,9 @@ jest.mock('@/config/index.js', () => ({
 }));
 
 import OpenAI from 'openai';
+import type pino from 'pino';
 
 import { OpenRouterAdapter } from '@/infrastructure/adapters/ai/open-router/openrouter-adapters.js';
-import type pino from 'pino';
 
 describe('OpenRouterAdapter', () => {
   let adapter: OpenRouterAdapter;

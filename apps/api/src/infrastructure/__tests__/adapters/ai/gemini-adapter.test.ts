@@ -1,8 +1,8 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import type pino from 'pino';
 
 import { GeminiAIModelAdapter } from '@/infrastructure/adapters/ai/gemini/gemini-adapters.js';
 import type { PromptRepository } from '@/domain/ports/prompt-repository.js';
-import type pino from 'pino';
 
 jest.mock('@google/generative-ai');
 

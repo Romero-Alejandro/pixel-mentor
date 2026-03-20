@@ -112,7 +112,16 @@ describe('OrchestrateRecipeUseCase - Full Flow', () => {
     };
 
     mockUserRepo = {
-      findById: jest.fn().mockResolvedValue({ id: testStudentId, name: 'Test Student' }),
+      findById: jest.fn().mockResolvedValue({
+        id: testStudentId,
+        name: 'Test Student',
+        email: 'test@example.com',
+        role: 'STUDENT' as const,
+        quota: 0,
+        cohort: 'default',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
     };
 
     mockAiService = {
