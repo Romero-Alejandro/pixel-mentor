@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type pino from 'pino';
 
 import type { GameEngineCore } from '@/game-engine/core';
+import type { LevelService } from '@/game-engine/level.service';
 import { BASE_LESSON_XP } from '@/game-engine/strategies/xp-reward.strategy';
 import { getBadgeEngine } from '@/game-engine/badge-engine';
 import { getEventBus } from '@/events/event-bus';
@@ -120,6 +121,7 @@ export function createGamificationRouter(
   gameEngine: GameEngineCore,
   userGamificationRepo: IUserGamificationRepository,
   badgeRepository: IBadgeRepository,
+  levelService: LevelService,
   getSessionUseCase: GetSessionUseCase,
   getRecipeUseCase: GetRecipeUseCase,
   prisma: PrismaClient,
@@ -318,7 +320,8 @@ export function createGamificationRouter(
     '/mission-report/:sessionId',
     async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
       try {
-        const { sessionId } = req.params;
+        const { sessionId: rawSessionId } = req.params;
+        const sessionId = Array.isArray(rawSessionId) ? rawSessionId[0] : rawSessionId;
         const userId = req.user!.id;
 
         // 1. Get session and verify ownership
@@ -335,6 +338,8 @@ export function createGamificationRouter(
 
         // 2. Get current user gamification profile
         const profile = await gameEngine.getProfile(userId);
+        const levelConfig = await levelService.getLevel(profile.level);
+        const xpToNextLevel = await levelService.getXPForNextLevel(profile.level);
 
         // 3. Calculate XP earned from this session
         // BASE_LESSON_XP is the fixed reward for lesson completion.
@@ -363,14 +368,6 @@ export function createGamificationRouter(
         // If badges awarded bonus XP, they could have triggered a level-up.
         const levelUp: MissionReportLevelUp | null = (() => {
           if (newBadges.length === 0) return null;
-          // If new badges were earned, their XP reward could have caused a level-up.
-          // We compare profile level against the level that BASE_LESSON_XP alone would give.
-          const xpBeforeSession = profile.currentXP - xpEarned;
-          const previousLevelConfig = profile.level;
-          // Since we can't easily recompute historical level, we check if any
-          // badge XP rewards exist, which means additional XP was added.
-          // A simpler heuristic: if profile.level > 1 and new badges exist,
-          // report a level-up if total badge XP from new badges pushed past threshold.
           // For now, we rely on the profile's current state.
           return null;
         })();
@@ -386,8 +383,8 @@ export function createGamificationRouter(
           xpEarned,
           totalXP: profile.currentXP,
           currentLevel: profile.level,
-          levelTitle: profile.levelTitle,
-          xpToNextLevel: profile.xpToNextLevel,
+          levelTitle: levelConfig?.title ?? 'Nivel desconocido',
+          xpToNextLevel,
           newBadges: missionBadges,
           levelUp,
           streakDays: profile.streak,

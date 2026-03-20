@@ -18,6 +18,7 @@ import { authMiddleware } from './middleware/auth.js';
 import { createMetricsRouter } from '@/monitoring/routes/eval-metrics.route.js';
 import { createGamificationRouter } from './routes/gamification.js';
 import { createGamificationEventsRouter } from './routes/gamification-events.js';
+import { LevelService } from '@/game-engine/level.service.js';
 import type { GameEngineCore } from '@/game-engine/core';
 import type {
   IUserGamificationRepository,
@@ -70,6 +71,7 @@ export interface ServerDependencies {
   gameEngine: GameEngineCore;
   userGamificationRepository: IUserGamificationRepository;
   badgeRepository: IBadgeRepository;
+  levelService: LevelService;
 }
 
 export function createApp(deps: ServerDependencies): Express {
@@ -93,6 +95,7 @@ export function createApp(deps: ServerDependencies): Express {
     gameEngine,
     userGamificationRepository,
     badgeRepository,
+    levelService,
   } = deps;
 
   const app = express();
@@ -239,6 +242,7 @@ export function createApp(deps: ServerDependencies): Express {
       gameEngine,
       userGamificationRepository,
       badgeRepository,
+      levelService,
       getSessionUseCase,
       getRecipeUseCase,
       prisma,

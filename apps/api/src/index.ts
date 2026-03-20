@@ -74,6 +74,7 @@ async function bootstrap(): Promise<void> {
     gameEngine: container.gameEngine,
     userGamificationRepository: container.gamificationRepositories.userGamificationRepository,
     badgeRepository: container.gamificationRepositories.badgeRepository,
+    levelService: container.gamificationRepositories.levelService,
   }).listen(config.PORT, () => {
     logger.info(`API running on port ${config.PORT}`);
   });

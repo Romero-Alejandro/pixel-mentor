@@ -13,6 +13,15 @@ import { LEVEL_TITLES } from './constants';
 
 export class LevelService {
   /**
+   * Get the configuration for a given level.
+   */
+  async getLevel(level: number) {
+    return await prisma.levelConfig.findUnique({
+      where: { level },
+    });
+  }
+
+  /**
    * Calculate the level based on total XP.
    * Uses the LevelConfig table to find the appropriate level.
    */
