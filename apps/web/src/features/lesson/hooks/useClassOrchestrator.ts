@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 
 import { useLessonState } from './useLessonState';
 import { useChatStream } from './useChatStream';
@@ -13,7 +14,6 @@ export type Result<T, E = Error> = { ok: true; value: T } | { ok: false; error: 
 export function Ok<T>(value: T): Result<T, never> {
   return { ok: true, value };
 }
-
 export function Err<E>(error: E): Result<never, E> {
   return { ok: false, error };
 }
@@ -26,19 +26,9 @@ interface LessonResponse {
   sessionCompleted?: boolean;
   lessonProgress?: { currentStep: number; totalSteps: number };
   staticContent?: {
-    stepType?: string;
     script?: { transition?: string; content?: string; closure?: string };
-    activity?: {
-      instruction: string;
-      options?: Array<{ text: string; isCorrect: boolean }>;
-    };
+    activity?: { instruction: string; options?: Array<{ text: string; isCorrect: boolean }> };
   };
-}
-
-interface StartRecipeResult {
-  sessionId: string;
-  voiceText?: string;
-  needsStart?: boolean;
 }
 
 let _voiceSettings: VoiceSettings = {};
@@ -50,13 +40,28 @@ export function useVoiceSettingsSync(settings: VoiceSettings): void {
 }
 
 export function useClassOrchestrator() {
-  const { setSessionId, setCurrentState, setIsSpeaking: syncStore, setError } = useLessonStore();
   const {
+    setSessionId,
+    setCurrentState,
+    setIsSpeaking: syncStore,
+    setError,
     setStreamingChunks,
     setIsStreaming: setStoreStreaming,
     setStreamError,
     clearStream,
-  } = useLessonStore();
+  } = useLessonStore(
+    useShallow((state) => ({
+      setSessionId: state.setSessionId,
+      setCurrentState: state.setCurrentState,
+      setIsSpeaking: state.setIsSpeaking,
+      setError: state.setError,
+      setStreamingChunks: state.setStreamingChunks,
+      setIsStreaming: state.setIsStreaming,
+      setStreamError: state.setStreamError,
+      clearStream: state.clearStream,
+    })),
+  );
+
   const { stopStream } = useChatStream();
   const {
     speak,
@@ -96,30 +101,26 @@ export function useClassOrchestrator() {
   const eventSourceRef = useRef<EventSource | null>(null);
   const isMountedRef = useRef(true);
   const streamingChunksRef = useRef<string[]>([]);
-  const chunkHandlerRef = useRef<((e: MessageEvent) => void) | null>(null);
-  const endHandlerRef = useRef<((e: MessageEvent) => void) | null>(null);
-  const errorHandlerRef = useRef<((e: MessageEvent) => void) | null>(null);
+  const handlersRef = useRef({ chunk: null as any, end: null as any, error: null as any });
 
   useEffect(() => {
     syncStore(isSpeaking);
   }, [isSpeaking, syncStore]);
 
-  const cleanup = useCallback(() => {
+  function cleanup() {
     if (timerRef.current) clearTimeout(timerRef.current);
     if (abortControllerRef.current) abortControllerRef.current.abort();
     if (eventSourceRef.current) {
       const es = eventSourceRef.current;
-      if (chunkHandlerRef.current) es.removeEventListener('chunk', chunkHandlerRef.current);
-      if (endHandlerRef.current) es.removeEventListener('end', endHandlerRef.current);
-      if (errorHandlerRef.current) es.removeEventListener('error', errorHandlerRef.current);
+      if (handlersRef.current.chunk) es.removeEventListener('chunk', handlersRef.current.chunk);
+      if (handlersRef.current.end) es.removeEventListener('end', handlersRef.current.end);
+      if (handlersRef.current.error) es.removeEventListener('error', handlersRef.current.error);
       es.close();
       eventSourceRef.current = null;
-      chunkHandlerRef.current = null;
-      endHandlerRef.current = null;
-      errorHandlerRef.current = null;
+      handlersRef.current = { chunk: null, end: null, error: null };
     }
     stopStream();
-  }, [stopStream]);
+  }
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -127,7 +128,7 @@ export function useClassOrchestrator() {
       isMountedRef.current = false;
       cleanup();
     };
-  }, [cleanup]);
+  }, []);
 
   async function processResponse(raw: LessonResponse): Promise<void> {
     if (!isMountedRef.current) return;
@@ -150,12 +151,12 @@ export function useClassOrchestrator() {
 
     if (pedagogicalState === 'COMPLETED' || sessionCompleted) {
       setUIState('completed');
-      speak(voiceText || '¡Lo lograste!', _voiceSettings).catch(() => {});
+      speak(voiceText || '¡Misión cumplida!', _voiceSettings).catch(() => {});
       return;
     }
 
     if (pedagogicalState === 'EVALUATION') {
-      const msg = feedback || (isCorrect ? '¡Bien hecho!' : 'Casi, ¡sigue intentando!');
+      const msg = feedback || (isCorrect ? '¡Muy bien!' : '¡Sigue intentando!');
       setFeedbackData({ isCorrect: !!isCorrect, message: msg });
       setUIState('feedback');
 
@@ -163,16 +164,17 @@ export function useClassOrchestrator() {
       await speak(voiceText || msg, _voiceSettings);
       const elapsed = Date.now() - startTime;
       const totalDuration = FEEDBACK_DISPLAY_MS + estimateReadTime(msg);
-      const remaining = Math.max(0, totalDuration - elapsed);
 
-      timerRef.current = setTimeout(() => {
-        if (!isMountedRef.current) return;
-        setIsProcessing(true);
-        doInteractRef
-          .current('continuar')
-          .then(processResponse)
-          .finally(() => setIsProcessing(false));
-      }, remaining);
+      timerRef.current = setTimeout(
+        () => {
+          if (!isMountedRef.current) return;
+          setIsProcessing(true);
+          doInteract('continuar')
+            .then(processResponse)
+            .finally(() => setIsProcessing(false));
+        },
+        Math.max(0, totalDuration - elapsed),
+      );
       return;
     }
 
@@ -200,16 +202,14 @@ export function useClassOrchestrator() {
       setTransitionText(staticContent.script.transition || '');
       setContentText(staticContent.script.content || '');
       setClosureText(staticContent.script.closure || '');
-      setFullVoiceText(voiceText);
-      contentRef.current = voiceText;
     } else {
       setTransitionText('');
       setContentText(voiceText);
       setClosureText('');
-      setFullVoiceText(voiceText);
-      contentRef.current = voiceText;
     }
 
+    setFullVoiceText(voiceText);
+    contentRef.current = voiceText;
     setFeedbackData(null);
     setUIState('concentration');
 
@@ -217,196 +217,117 @@ export function useClassOrchestrator() {
     await speak(voiceText, _voiceSettings);
     const elapsed = Date.now() - startTime;
     const totalDuration = estimateReadTime(voiceText);
-    const remaining = Math.max(0, totalDuration - elapsed);
 
-    timerRef.current = setTimeout(() => {
-      if (!sessionIdRef.current || !isMountedRef.current) return;
-      setIsProcessing(true);
-      doInteractRef
-        .current('continuar')
-        .then(processResponse)
-        .finally(() => setIsProcessing(false));
-    }, remaining);
+    timerRef.current = setTimeout(
+      () => {
+        if (!sessionIdRef.current || !isMountedRef.current) return;
+        setIsProcessing(true);
+        doInteract('continuar')
+          .then(processResponse)
+          .finally(() => setIsProcessing(false));
+      },
+      Math.max(0, totalDuration - elapsed),
+    );
   }
 
-  const doInteractRef = useRef<(input: string) => Promise<LessonResponse>>(() => {
-    throw new Error('doInteract not initialized');
-  });
+  async function doInteract(input: string): Promise<LessonResponse> {
+    const sid = sessionIdRef.current;
+    if (!sid) throw new Error('Sesión no activa');
 
-  const processResponseRef = useRef<(raw: LessonResponse) => Promise<void>>(() =>
-    Promise.resolve(),
-  );
-  processResponseRef.current = processResponse;
+    if (import.meta.env.VITE_ENABLE_STREAMING === 'true') {
+      try {
+        abortControllerRef.current = new AbortController();
+        const eventSource = streamInteractWithRecipe(sid, input);
+        eventSourceRef.current = eventSource;
 
-  const doInteract = useCallback(
-    async (input: string): Promise<LessonResponse> => {
-      const sid = sessionIdRef.current;
-      if (!sid) throw new Error('No session active');
+        let fullText = '';
+        setStoreStreaming(true);
+        setStreamError(null);
+        clearStream();
 
-      if (import.meta.env.VITE_ENABLE_STREAMING === 'true') {
-        try {
-          abortControllerRef.current = new AbortController();
-          const eventSource = streamInteractWithRecipe(sid, input);
-          eventSourceRef.current = eventSource;
+        handlersRef.current.chunk = (e: MessageEvent) => {
+          if (!isMountedRef.current) return;
+          try {
+            const { text } = JSON.parse(e.data);
+            fullText += text;
+            streamingChunksRef.current = [...streamingChunksRef.current, text];
+            setStreamingChunks(streamingChunksRef.current);
+            setContentText((prev) => prev + text);
+          } catch {}
+        };
 
-          let fullText = '';
-          setStoreStreaming(true);
-          setStreamError(null);
-          clearStream();
-
-          chunkHandlerRef.current = (e: MessageEvent) => {
-            if (!isMountedRef.current) return;
-            try {
-              const { text } = JSON.parse(e.data) as { text: string };
-              fullText += text;
-              streamingChunksRef.current = [...streamingChunksRef.current, text];
-              setStreamingChunks(streamingChunksRef.current);
-              setContentText((prev) => prev + text);
-            } catch {}
-          };
-
-          endHandlerRef.current = (e: MessageEvent) => {
-            if (!isMountedRef.current) return;
-            setStoreStreaming(false);
-            if (eventSourceRef.current) {
-              eventSourceRef.current.removeEventListener('chunk', chunkHandlerRef.current!);
-              eventSourceRef.current.removeEventListener('end', endHandlerRef.current!);
-              eventSourceRef.current.removeEventListener('error', errorHandlerRef.current!);
-              eventSourceRef.current.close();
-              eventSourceRef.current = null;
-            }
-            chunkHandlerRef.current = null;
-            endHandlerRef.current = null;
-            errorHandlerRef.current = null;
-            try {
-              const { pedagogicalState, sessionCompleted, lessonProgress } = JSON.parse(e.data) as {
-                pedagogicalState: PedagogicalState;
-                sessionCompleted: boolean;
-                lessonProgress?: { currentStep: number; totalSteps: number };
-              };
-              const syntheticResponse: LessonResponse = {
-                voiceText: fullText,
-                pedagogicalState,
-                sessionCompleted,
-                lessonProgress,
-              };
-              processResponseRef.current?.(syntheticResponse);
-            } catch {
-              api.interactWithRecipe(sid, input).then(processResponse);
-            }
-          };
-
-          errorHandlerRef.current = (e: MessageEvent) => {
-            if (!isMountedRef.current) return;
-            setStoreStreaming(false);
-            try {
-              const { message } = JSON.parse(e.data) as { message: string };
-              setStreamError(message);
-            } catch {
-              setStreamError('Stream error');
-            }
-            if (eventSourceRef.current) {
-              eventSourceRef.current.removeEventListener('chunk', chunkHandlerRef.current!);
-              eventSourceRef.current.removeEventListener('end', endHandlerRef.current!);
-              eventSourceRef.current.removeEventListener('error', errorHandlerRef.current!);
-              eventSourceRef.current.close();
-              eventSourceRef.current = null;
-            }
-            chunkHandlerRef.current = null;
-            endHandlerRef.current = null;
-            errorHandlerRef.current = null;
+        handlersRef.current.end = (e: MessageEvent) => {
+          if (!isMountedRef.current) return;
+          setStoreStreaming(false);
+          cleanup();
+          try {
+            const parsed = JSON.parse(e.data);
+            processResponse({ voiceText: fullText, ...parsed });
+          } catch {
             api.interactWithRecipe(sid, input).then(processResponse);
-          };
-
-          eventSource.addEventListener('chunk', chunkHandlerRef.current);
-          eventSource.addEventListener('end', endHandlerRef.current);
-          eventSource.addEventListener('error', errorHandlerRef.current);
-
-          eventSource.onerror = () => {
-            if (!isMountedRef.current) return;
-            setStoreStreaming(false);
-            setStreamError('Connection error');
-            if (eventSourceRef.current) {
-              if (chunkHandlerRef.current)
-                eventSourceRef.current.removeEventListener('chunk', chunkHandlerRef.current);
-              if (endHandlerRef.current)
-                eventSourceRef.current.removeEventListener('end', endHandlerRef.current);
-              if (errorHandlerRef.current)
-                eventSourceRef.current.removeEventListener('error', errorHandlerRef.current);
-              eventSourceRef.current.close();
-              eventSourceRef.current = null;
-            }
-            chunkHandlerRef.current = null;
-            endHandlerRef.current = null;
-            errorHandlerRef.current = null;
-            api.interactWithRecipe(sid, input).then(processResponse);
-          };
-
-          return {} as LessonResponse;
-        } catch (e: unknown) {
-          if (e instanceof Error && e.message === 'Streaming disabled') {
-          } else {
-            return (await api.interactWithRecipe(sid, input)) as LessonResponse;
           }
-        }
+        };
+
+        handlersRef.current.error = (e: MessageEvent) => {
+          if (!isMountedRef.current) return;
+          setStoreStreaming(false);
+          cleanup();
+          api.interactWithRecipe(sid, input).then(processResponse);
+        };
+
+        eventSource.addEventListener('chunk', handlersRef.current.chunk);
+        eventSource.addEventListener('end', handlersRef.current.end);
+        eventSource.addEventListener('error', handlersRef.current.error);
+        eventSource.onerror = () => {
+          if (!isMountedRef.current) return;
+          setStoreStreaming(false);
+          cleanup();
+          api.interactWithRecipe(sid, input).then(processResponse);
+        };
+
+        return {} as LessonResponse;
+      } catch {
+        return (await api.interactWithRecipe(sid, input)) as LessonResponse;
       }
+    }
+    return (await api.interactWithRecipe(sid, input)) as LessonResponse;
+  }
 
-      return (await api.interactWithRecipe(sid, input)) as LessonResponse;
-    },
-    [
-      clearStream,
-      processResponse,
-      setContentText,
-      setStreamError,
-      setStoreStreaming,
-      setStreamingChunks,
-    ],
-  );
+  async function startClass(lessonId: string): Promise<Result<void, Error>> {
+    cleanup();
+    abortControllerRef.current = new AbortController();
+    setIsProcessing(true);
 
-  doInteractRef.current = doInteract;
+    try {
+      const startResult = await api.startRecipe(lessonId);
+      sessionIdRef.current = startResult.sessionId;
+      setSessionId(startResult.sessionId);
 
-  const startClass = useCallback(
-    async (lessonId: string): Promise<Result<void, Error>> => {
-      cleanup();
-      abortControllerRef.current = new AbortController();
-      setIsProcessing(true);
+      if (!isMountedRef.current) return Ok(undefined);
 
-      try {
-        const startResult = (await api.startRecipe(lessonId)) as StartRecipeResult;
-        sessionIdRef.current = startResult.sessionId;
-        setSessionId(startResult.sessionId);
+      speak(startResult.voiceText || '¡Bienvenido!', _voiceSettings).catch(() => {});
+      const firstStep = await doInteract('comenzar');
+      processResponse(firstStep);
 
-        if (!isMountedRef.current) return Ok(undefined);
+      return Ok(undefined);
+    } catch (e) {
+      if (isMountedRef.current) setIsProcessing(false);
+      return Err(e instanceof Error ? e : new Error('Failed to start lesson'));
+    }
+  }
 
-        speak(startResult.voiceText || '¡Bienvenido!', _voiceSettings).catch(() => {});
+  async function submitAnswer(answer: string) {
+    if (!sessionIdRef.current || isProcessing) return;
+    setIsProcessing(true);
+    try {
+      const res = await doInteract(answer);
+      processResponse(res);
+    } finally {
+      if (isMountedRef.current) setIsProcessing(false);
+    }
+  }
 
-        const firstStep = await doInteract('comenzar');
-        processResponse(firstStep);
-
-        return Ok(undefined);
-      } catch (e) {
-        if (isMountedRef.current) setIsProcessing(false);
-        return Err(e instanceof Error ? e : new Error('Failed to start lesson'));
-      }
-    },
-    [cleanup, setSessionId, speak, doInteract, processResponse, setIsProcessing],
-  );
-
-  const submitAnswer = useCallback(
-    async (answer: string) => {
-      if (!sessionIdRef.current || isProcessing) return;
-      setIsProcessing(true);
-      try {
-        const res = await doInteract(answer);
-        processResponse(res);
-      } finally {
-        if (isMountedRef.current) setIsProcessing(false);
-      }
-    },
-    [isProcessing, doInteract, processResponse, setIsProcessing],
-  );
-
-  const reset = useCallback(() => {
+  function reset() {
     cleanup();
     sessionIdRef.current = null;
     contentRef.current = '';
@@ -415,7 +336,11 @@ export function useClassOrchestrator() {
     setCurrentState('AWAITING_START');
     setError(null);
     clearStream();
-  }, [cleanup, resetState, setSessionId, setCurrentState, setError, clearStream]);
+  }
+
+  function speakContent() {
+    if (contentRef.current) speak(contentRef.current, _voiceSettings).catch(() => {});
+  }
 
   return {
     uiState,
@@ -432,8 +357,7 @@ export function useClassOrchestrator() {
     isSpeaking,
     startClass,
     submitAnswer,
-    speakContent: () =>
-      contentRef.current && speak(contentRef.current, _voiceSettings).catch(() => {}),
+    speakContent,
     stopSpeaking: voiceStop,
     reset,
     getCurrentAudioElement: getAudio,

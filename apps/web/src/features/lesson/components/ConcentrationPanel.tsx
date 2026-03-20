@@ -1,7 +1,5 @@
-import { IconRepeat } from '@tabler/icons-react';
-import { useMemo, useEffect, useRef } from 'react';
-
-import { Spinner } from '@/components/ui';
+import { useEffect, useRef } from 'react';
+import { IconRepeat, IconPlayerPlayFilled } from '@tabler/icons-react';
 
 interface TextSectionProps {
   words: string[];
@@ -59,18 +57,9 @@ export function ConcentrationPanel({
 }: ConcentrationPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const transitionWords = useMemo(
-    () => transitionText.trim().split(/\s+/).filter(Boolean),
-    [transitionText],
-  );
-  const contentWords = useMemo(
-    () => contentText.trim().split(/\s+/).filter(Boolean),
-    [contentText],
-  );
-  const closureWords = useMemo(
-    () => closureText.trim().split(/\s+/).filter(Boolean),
-    [closureText],
-  );
+  const transitionWords = transitionText.trim().split(/\s+/).filter(Boolean);
+  const contentWords = contentText.trim().split(/\s+/).filter(Boolean);
+  const closureWords = closureText.trim().split(/\s+/).filter(Boolean);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -91,72 +80,62 @@ export function ConcentrationPanel({
   const activeL = isSynced ? -1 : currentWordIndex - 1 - tLen - cLen;
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 gap-6 w-full h-full">
+    <div className="flex-1 flex flex-col items-center p-6 sm:p-8 gap-6 w-full h-full min-h-0 animate-bounce-in">
       <div
         ref={scrollRef}
-        className="bg-white rounded-[2rem] border border-sky-100/60 shadow-xl shadow-sky-100/30 p-8 sm:p-10 w-full max-w-3xl overflow-y-auto max-h-[60vh] flex flex-col scroll-smooth"
+        className="bg-white rounded-[2.5rem] border-4 border-sky-100 shadow-[0_8px_0_0_#e0f2fe] p-6 sm:p-10 w-full flex-1 min-h-0 max-h-[40vh] sm:max-h-[50vh] lg:max-h-[55vh] overflow-y-auto scroll-smooth custom-scrollbar"
       >
         <div className="text-2xl sm:text-3xl leading-relaxed tracking-tight">
           <TextSection
             words={transitionWords}
             visibleCount={visibleT}
             activeIndex={activeT}
-            containerClassName="block mb-6 text-sky-600/80 italic font-medium"
+            containerClassName="block mb-6 text-sky-600/80 font-bold"
             wordClassName="transition-colors duration-200"
-            activeWordClassName="bg-sky-100 text-sky-800 rounded-md px-1 py-0.5"
+            activeWordClassName="bg-sky-100 text-sky-800 rounded-xl px-2 py-0.5 shadow-sm"
           />
 
           <TextSection
             words={contentWords}
             visibleCount={visibleC}
             activeIndex={activeC}
-            containerClassName="block mb-6 text-slate-800 font-semibold"
+            containerClassName="block mb-6 text-slate-800 font-bold"
             wordClassName="transition-colors duration-200"
-            activeWordClassName="bg-sky-100 text-sky-900 rounded-md px-1 py-0.5"
+            activeWordClassName="bg-amber-100 text-amber-900 rounded-xl px-2 py-0.5 shadow-sm"
           />
 
           <TextSection
             words={closureWords}
             visibleCount={visibleL}
             activeIndex={activeL}
-            containerClassName="block text-emerald-600 font-bold"
+            containerClassName="block text-emerald-600 font-black"
             wordClassName="transition-colors duration-200"
-            activeWordClassName="bg-emerald-100 text-emerald-800 rounded-md px-1 py-0.5"
+            activeWordClassName="bg-emerald-100 text-emerald-900 rounded-xl px-2 py-0.5 shadow-sm"
           />
 
           {!isSynced && (visibleT > 0 || visibleC > 0 || visibleL > 0) ? (
-            <span className="inline-block w-2 h-2 ml-2 bg-sky-400 rounded-full animate-pulse" />
+            <span className="inline-block w-4 h-4 ml-2 bg-sky-400 rounded-full animate-pulse" />
           ) : null}
         </div>
       </div>
 
-      <div className="h-10 flex items-center justify-center">
+      <div className="h-16 flex items-center justify-center shrink-0 w-full">
         {isSpeaking ? (
-          <div className="flex items-center gap-3 bg-sky-50 px-5 py-2 rounded-full border border-sky-100">
-            <span className="flex gap-1">
-              {[0, 150, 300].map((delay) => (
-                <span
-                  key={delay}
-                  className="w-1.5 h-1.5 bg-sky-500 rounded-full animate-bounce"
-                  style={{ animationDelay: `${delay}ms` }}
-                />
-              ))}
-            </span>
-            <span className="text-xs font-bold text-sky-600 uppercase tracking-widest">
+          <div className="flex items-center gap-3 bg-sky-50 px-8 py-4 rounded-[1.5rem] border-4 border-sky-200 shadow-[0_6px_0_0_#bae6fd]">
+            <IconPlayerPlayFilled className="w-6 h-6 text-sky-500 animate-pulse" />
+            <span className="text-sm font-black text-sky-700 uppercase tracking-widest">
               Escuchando
             </span>
           </div>
         ) : fullVoiceText ? (
           <button
             onClick={onRepeat}
-            className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-slate-500 hover:text-sky-600 hover:bg-sky-50 rounded-full transition-all active:scale-95"
+            className="flex items-center justify-center gap-3 px-8 py-4 bg-slate-50 text-slate-600 font-black text-lg rounded-[1.5rem] border-4 border-slate-200 shadow-[0_6px_0_0_#e2e8f0] hover:bg-sky-50 hover:text-sky-600 hover:border-sky-300 hover:shadow-[0_6px_0_0_#7dd3fc] active:translate-y-1 active:shadow-none transition-all cursor-pointer outline-none"
           >
-            <IconRepeat className="w-5 h-5" />
-            Repetir explicación
+            <IconRepeat className="w-6 h-6" stroke={3} />
+            Repetir
           </button>
-        ) : (
-          <Spinner size="sm" className="text-sky-400" />
-        )}
+        ) : null}
       </div>
     </div>
   );
