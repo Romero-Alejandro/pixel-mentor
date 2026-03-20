@@ -101,6 +101,8 @@ model User {
   competencies    CompetencyMastery[]
   events          EventLog[]
   consent         ParentalConsent?
+  userGamification UserGamification?
+  userBadges      UserBadge[]
 
   @@index([email])
   @@index([role])
@@ -557,4 +559,71 @@ model EventLog {
   @@index([userId, eventType, timestamp])
   @@index([sessionId])
   @@map("event_logs")
+}
+
+// ==================== GAMIFICATION MODELS ====================
+
+model UserGamification {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  totalXP         Int      @default(0)
+  currentStreak   Int      @default(0)
+  longestStreak   Int      @default(0)
+  lastActivityAt  DateTime?
+  level           Int      @default(1)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badges  UserBadge[]
+  
+  @@index([userId])
+  @@map("user_gamification")
+}
+
+model Badge {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  description String
+  icon        String
+  xpReward    Int      @default(10)
+  rules       Json
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  
+  users UserBadge[]
+  
+  @@map("badges")
+}
+
+model UserBadge {
+  id                 String   @id @default(uuid())
+  userId             String
+  badgeId            String
+  userGamificationId String
+  earnedAt           DateTime @default(now())
+  
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge             Badge           @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  userGamification  UserGamification @relation(fields: [userGamificationId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, badgeId])
+  @@index([userId])
+  @@index([badgeId])
+  @@index([userGamificationId])
+  @@map("user_badges")
+}
+
+model LevelConfig {
+  id          String   @id @default(uuid())
+  level       Int      @unique
+  title       String
+  description String?
+  minXP       Int
+  icon        String
+  
+  createdAt DateTime @default(now())
+  
+  @@map("level_configs")
 }
