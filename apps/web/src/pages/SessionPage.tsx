@@ -11,6 +11,8 @@ import {
 import { Button, Card, Badge, Spinner } from '../components/ui';
 
 import { VoiceSettingsPanel } from '@/components/voice-settings/VoiceSettingsPanel';
+import { SessionGamificationBar } from '@/components/gamification/SessionGamificationBar';
+import { useGamificationStore } from '@/stores/gamification.store';
 import { useSessionLogic } from '@/hooks/useSessionLogic';
 import { useVoiceSettings } from '@/components/voice-settings/useVoiceSettings';
 
@@ -52,9 +54,18 @@ export function SessionPage() {
     currentState,
   } = useSessionLogic(sessionId, voiceSettings);
 
+  const { profile: gamificationProfile, fetchProfile: fetchGamificationProfile } =
+    useGamificationStore();
+
   useEffect(() => {
     conversationEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversation]);
+
+  useEffect(() => {
+    if (session?.studentId) {
+      fetchGamificationProfile().catch(() => {});
+    }
+  }, [session?.studentId, fetchGamificationProfile]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -102,6 +113,7 @@ export function SessionPage() {
             <span>Volver</span>
           </Link>
         </div>
+        {gamificationProfile ? <SessionGamificationBar profile={gamificationProfile} /> : null}
         <div className="flex items-center gap-4">
           <VoiceSettingsPanel
             settings={voiceSettings}
@@ -191,16 +203,7 @@ export function SessionPage() {
 
           <div className="p-4 border-t border-slate-100 bg-white shrink-0">
             {sessionCompleted ? (
-              <Link
-                to="/mission-report"
-                state={{
-                  stats: {
-                    xpEarned: conversation.length * 15,
-                    accuracy: 100,
-                    conceptsMastered: ['Análisis'],
-                  },
-                }}
-              >
+              <Link to="/mission-report" state={{ sessionId: session.id }}>
                 <Button className="w-full" size="lg">
                   <IconCheck className="w-5 h-5 mr-2" />
                   Ver Reporte Final

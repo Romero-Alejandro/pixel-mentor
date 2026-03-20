@@ -2,6 +2,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useEffect, useMemo } from 'react';
 
 import { useAuthStore, useAuthRedirect } from './stores/authStore';
+import { useGamificationSSE } from './hooks/useGamificationSSE';
 import { Spinner } from './components/ui/Spinner';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
@@ -80,6 +81,9 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
+  const { isAuthenticated } = useAuthStore();
+  useGamificationSSE(isAuthenticated);
+
   return (
     <Routes>
       <Route

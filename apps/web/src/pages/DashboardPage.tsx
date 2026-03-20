@@ -15,7 +15,8 @@ import { useAutoSelect } from '../hooks/useAutoSelect';
 import { useGamificationStore } from '../stores/gamification.store';
 import { api, type Recipe, type Session } from '../services/api';
 import { Button, Card, Badge, Spinner, CardSkeleton } from '../components/ui';
-import { GamificationHeader } from '../components/gamification/GamificationHeader';
+import { CompactGamificationHeader } from '../components/gamification/CompactGamificationHeader';
+import { StreakWidget } from '../components/gamification/StreakWidget';
 
 const isResumable = (status: string): boolean => {
   return ['IDLE', 'ACTIVE', 'PAUSED_FOR_QUESTION', 'AWAITING_CONFIRMATION', 'PAUSED_IDLE'].includes(
@@ -129,6 +130,10 @@ export function DashboardPage() {
     return map;
   }, [recipes]);
 
+  const getActiveSessionForRecipe = (recipeId: string) => {
+    return sessions.find((s) => s.recipeId === recipeId && isResumable(s.status));
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
@@ -146,6 +151,7 @@ export function DashboardPage() {
               </span>
               <span className="text-sm font-semibold text-slate-800">{user?.name}</span>
             </div>
+            {profile && <CompactGamificationHeader profile={profile} />}
             <div className="w-px h-5 bg-slate-200"></div>
             <Button
               variant="ghost"
@@ -160,10 +166,13 @@ export function DashboardPage() {
         </div>
       </header>
 
-      {/* Gamification Header */}
+      {/* Streak Widget */}
       {profile ? (
-        <div className="max-w-6xl mx-auto px-6 mt-6">
-          <GamificationHeader profile={profile} />
+        <div className="max-w-6xl mx-auto px-6 mt-4">
+          <StreakWidget
+            currentStreak={profile.currentStreak}
+            longestStreak={profile.longestStreak}
+          />
         </div>
       ) : null}
 
@@ -259,6 +268,30 @@ export function DashboardPage() {
                       ) : (
                         <div className="mb-4" />
                       )}
+
+                      {/* Gamification context */}
+                      <div className="flex items-center gap-3 mb-2 text-xs text-slate-500">
+                        <span className="font-medium text-amber-600">⭐ +50 XP</span>
+                        {recipe.expectedDurationMinutes ? (
+                          <span>⏱️ {recipe.expectedDurationMinutes} min</span>
+                        ) : null}
+                      </div>
+
+                      {/* Session progress if active */}
+                      {getActiveSessionForRecipe(recipe.id) && (
+                        <div className="mb-2">
+                          <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-sky-400 rounded-full transition-all"
+                              style={{ width: '60%' }}
+                            />
+                          </div>
+                          <span className="text-[10px] text-slate-400 mt-0.5 inline-block">
+                            En progreso
+                          </span>
+                        </div>
+                      )}
+
                       <div className="flex items-center text-sm font-medium text-sky-600 mt-auto">
                         <span>Comenzar</span>
                         <IconArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />

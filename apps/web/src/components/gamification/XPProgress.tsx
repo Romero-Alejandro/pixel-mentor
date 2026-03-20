@@ -68,7 +68,7 @@ export function XPProgress({
         </div>
 
         {/* XP text inside bar */}
-        <div className="absolute inset-0 flex items-center justify-center">
+        <div className="absolute inset-0 flex items-center justify-center" data-xp-counter>
           <span className="text-[10px] font-bold text-slate-700 drop-shadow-sm">
             {currentXP} / {currentXP + xpInLevel} XP
           </span>

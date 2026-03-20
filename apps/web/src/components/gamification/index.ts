@@ -21,3 +21,25 @@ export type { LevelUpModalProps } from './LevelUpModal';
 
 export { BadgeEarnedModal } from './BadgeEarnedModal';
 export type { BadgeEarnedModalProps } from './BadgeEarnedModal';
+
+export { BadgeEarnedToast } from './BadgeEarnedToast';
+export type { BadgeEarnedToastProps } from './BadgeEarnedToast';
+
+export { BadgeToastQueue } from './BadgeToastQueue';
+
+export { StreakWidget } from './StreakWidget';
+export type { StreakWidgetProps } from './StreakWidget';
+
+export { XPParticle } from './XPParticle';
+export type { XPParticleProps } from './XPParticle';
+
+export { XPParticleSystem } from './XPParticleSystem';
+
+export { useXPParticles } from './useXPParticles';
+export type { UseXPParticlesResult } from './useXPParticles';
+
+export { CompactGamificationHeader } from './CompactGamificationHeader';
+export type { CompactGamificationHeaderProps } from './CompactGamificationHeader';
+
+export { SessionGamificationBar } from './SessionGamificationBar';
+export type { SessionGamificationBarProps } from './SessionGamificationBar';

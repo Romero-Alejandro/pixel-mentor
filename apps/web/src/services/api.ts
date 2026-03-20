@@ -112,5 +112,18 @@ export const api = {
     const { data } = await apiClient.post(`/api/sessions/${sessionId}/complete`);
     return SessionSchema.parse(data);
   },
+  getMissionReport: async (sessionId: string) => {
+    const { data } = await apiClient.get(`/api/gamification/mission-report/${sessionId}`);
+    return data as {
+      xpEarned: number;
+      accuracy: number;
+      conceptsMastered: string[];
+      currentLevel: number;
+      levelTitle: string;
+      newBadges: Array<{ code: string; name: string; icon: string }>;
+      totalXP: number;
+      currentStreak: number;
+    };
+  },
   streamInteractWithRecipe,
 };

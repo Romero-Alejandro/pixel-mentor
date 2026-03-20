@@ -17,6 +17,7 @@ import { authMiddleware } from './middleware/auth.js';
 
 import { createMetricsRouter } from '@/monitoring/routes/eval-metrics.route.js';
 import { createGamificationRouter } from './routes/gamification.js';
+import { createGamificationEventsRouter } from './routes/gamification-events.js';
 import type { GameEngineCore } from '@/game-engine/core';
 import type {
   IUserGamificationRepository,
@@ -234,8 +235,18 @@ export function createApp(deps: ServerDependencies): Express {
   app.use(
     '/api/gamification',
     protectedMiddleware,
-    createGamificationRouter(gameEngine, userGamificationRepository, badgeRepository),
+    createGamificationRouter(
+      gameEngine,
+      userGamificationRepository,
+      badgeRepository,
+      getSessionUseCase,
+      getRecipeUseCase,
+      prisma,
+    ),
   );
+
+  // Gamification SSE events stream (protected, requires auth)
+  app.use('/api/gamification', protectedMiddleware, createGamificationEventsRouter(logger));
 
   // Metrics endpoint for evaluation monitoring (public, no auth required)
   app.use('/api/metrics/evaluation', createMetricsRouter());

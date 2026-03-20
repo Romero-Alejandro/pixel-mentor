@@ -9,6 +9,17 @@ export interface Message {
   text: string;
 }
 
+export interface MissionReport {
+  xpEarned: number;
+  accuracy: number;
+  conceptsMastered: string[];
+  currentLevel: number;
+  levelTitle: string;
+  newBadges: Array<{ code: string; name: string; icon: string }>;
+  totalXP: number;
+  currentStreak: number;
+}
+
 export function useSessionLogic(sessionId: string | undefined, voiceSettings: VoiceSettings) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -17,6 +28,7 @@ export function useSessionLogic(sessionId: string | undefined, voiceSettings: Vo
   const [conversation, setConversation] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [sessionCompleted, setSessionCompleted] = useState(false);
+  const [missionReport, setMissionReport] = useState<MissionReport | null>(null);
 
   const { isSpeaking, speak, stopSpeaking } = useVoice();
   const isMounted = useRef(true);
@@ -71,6 +83,14 @@ export function useSessionLogic(sessionId: string | undefined, voiceSettings: Vo
         setSessionCompleted(true);
         const updated = await api.getSession(sessionId);
         if (isMounted.current) setSession(updated);
+
+        // Fetch real mission report
+        try {
+          const report = await api.getMissionReport(sessionId);
+          if (isMounted.current) setMissionReport(report);
+        } catch (e) {
+          console.warn('Could not fetch mission report:', e);
+        }
       }
 
       speak(response.voiceText, {
@@ -130,6 +150,7 @@ export function useSessionLogic(sessionId: string | undefined, voiceSettings: Vo
     conversation,
     isProcessing,
     sessionCompleted,
+    missionReport,
     isSpeaking,
     stopSpeaking,
     handleSend,
