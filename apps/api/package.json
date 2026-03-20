@@ -16,7 +16,8 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
-    "prisma:seed": "tsx prisma/seed-test-data.ts"
+    "prisma:seed": "tsx prisma/seed-test-data.ts",
+    "db:seed:gamification": "tsx prisma/seed-gamification.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
