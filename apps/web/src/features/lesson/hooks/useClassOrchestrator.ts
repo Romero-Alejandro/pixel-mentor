@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { FEEDBACK_DISPLAY_MS, estimateReadTime } from '@/config/lessonTiming';
-
 import { useLessonState } from './useLessonState';
 import { useChatStream } from './useChatStream';
 
+import { FEEDBACK_DISPLAY_MS, estimateReadTime } from '@/config/lessonTiming';
 import { api, streamInteractWithRecipe, type PedagogicalState } from '@/services/api';
 import { useVoice, type VoiceSettings } from '@/hooks/useVoice';
 import { useLessonStore } from '@/stores/lessonStore';
