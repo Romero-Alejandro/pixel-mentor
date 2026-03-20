@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 
 import { useAuthStore, useAuthRedirect } from './stores/authStore';
 import { useGamificationSSE } from './hooks/useGamificationSSE';
@@ -9,8 +9,6 @@ import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { LessonPage } from './pages/LessonPage';
 import { MissionReportPage } from './pages/MissionReportPage';
-import { SessionPage } from './pages/SessionPage';
-import { AchievementsPage } from './pages/AchievementsPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isHydrated, isAuthenticated, isValidating } = useAuthStore();
@@ -25,10 +23,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!isHydrated || isValidating) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-[#f0f9ff]">
         <div className="text-center">
-          <Spinner size="lg" />
-          <p className="mt-2 text-gray-600">Checking authentication...</p>
+          <Spinner size="lg" className="text-sky-500" />
+          <p className="mt-4 text-sky-800 font-bold">Verificando pase de explorador...</p>
         </div>
       </div>
     );
@@ -47,11 +45,9 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 
   const redirectPath = getRedirectPath();
 
-  const isSafePath = useMemo(() => {
-    return Boolean(
-      redirectPath && !redirectPath.startsWith('/login') && !redirectPath.startsWith('/register'),
-    );
-  }, [redirectPath]);
+  const isSafePath = Boolean(
+    redirectPath && !redirectPath.startsWith('/login') && !redirectPath.startsWith('/register'),
+  );
 
   useEffect(() => {
     if (isHydrated && !isValidating && isAuthenticated && isSafePath) {
@@ -61,10 +57,10 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 
   if (!isHydrated || isValidating) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-[#f0f9ff]">
         <div className="text-center">
-          <Spinner size="lg" />
-          <p className="mt-2 text-gray-600">Loading...</p>
+          <Spinner size="lg" className="text-sky-500" />
+          <p className="mt-4 text-sky-800 font-bold">Cargando...</p>
         </div>
       </div>
     );
@@ -80,7 +76,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function App() {
+export default function App() {
   const { isAuthenticated } = useAuthStore();
   useGamificationSSE(isAuthenticated);
 
@@ -126,20 +122,8 @@ function App() {
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/session/:sessionId"
-        element={
-          <ProtectedRoute>
-            <SessionPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route path="/achievements" element={<ProtectedRoute><AchievementsPage /></ProtectedRoute>} />
-      <Route path="/test/gamification" element={<GamificationTestPage />} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
 }
-
-export default App;
