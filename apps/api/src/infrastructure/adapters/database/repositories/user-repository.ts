@@ -2,6 +2,7 @@ import { prisma } from '../client.js';
 import { handlePrismaError } from '../error-handler.js';
 
 import type { User, UserRole } from '@/domain/entities/user.js';
+import { DEFAULT_COHORT } from '@/domain/entities/user.js';
 import type { UserRepository } from '@/domain/ports/user-repository.js';
 import { UserNotFoundError, UserAlreadyExistsError } from '@/domain/ports/user-repository.js';
 
@@ -17,6 +18,7 @@ const mapToDomain = (entity: PrismaUserWithoutPassword): User => {
     role: entity.role as UserRole,
     age: entity.age ?? undefined,
     quota: entity.quota,
+    cohort: entity.cohort ?? DEFAULT_COHORT,
     createdAt: entity.createdAt,
     updatedAt: entity.updatedAt,
   };
@@ -30,6 +32,7 @@ const mapToDomainWithPassword = (entity: PrismaUser): User => {
     role: entity.role as UserRole,
     age: entity.age ?? undefined,
     quota: entity.quota,
+    cohort: entity.cohort ?? DEFAULT_COHORT,
     passwordHash: entity.passwordHash,
     createdAt: entity.createdAt,
     updatedAt: entity.updatedAt,
@@ -47,6 +50,7 @@ export class PrismaUserRepository implements UserRepository {
         role: true,
         age: true,
         quota: true,
+        cohort: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -64,6 +68,7 @@ export class PrismaUserRepository implements UserRepository {
         role: true,
         age: true,
         quota: true,
+        cohort: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -92,6 +97,7 @@ export class PrismaUserRepository implements UserRepository {
           role: user.role,
           age: user.age ?? null,
           quota: user.quota ?? 0,
+          cohort: user.cohort ?? DEFAULT_COHORT,
         },
         select: {
           id: true,
@@ -100,6 +106,7 @@ export class PrismaUserRepository implements UserRepository {
           role: true,
           age: true,
           quota: true,
+          cohort: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -128,6 +135,7 @@ export class PrismaUserRepository implements UserRepository {
           role: true,
           age: true,
           quota: true,
+          cohort: true,
           createdAt: true,
           updatedAt: true,
         },

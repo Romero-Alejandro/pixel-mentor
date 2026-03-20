@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 
 import type { UserRepository } from '@/domain/ports/user-repository.js';
 import type { User, UserRole } from '@/domain/entities/user.js';
+import { DEFAULT_COHORT } from '@/domain/entities/user.js';
 import { config } from '@/config/index.js';
 
 export interface RegisterInput {
@@ -38,6 +39,7 @@ export class RegisterUseCase {
       role: input.role,
       age: input.age,
       quota: 0,
+      cohort: DEFAULT_COHORT,
     });
 
     const token = this.generateToken(user);

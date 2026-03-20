@@ -90,6 +90,7 @@ model User {
   role         Role     @default(STUDENT)
   age          Int?     @db.SmallInt
   quota        Int      @default(0)
+  cohort       String   @default("default") @db.VarChar(100)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -103,6 +104,7 @@ model User {
 
   @@index([email])
   @@index([role])
+  @@index([cohort])
   @@map("users")
 }
 
