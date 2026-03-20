@@ -1,4 +1,5 @@
 import { Readable } from 'node:stream';
+
 import type { TTSService } from '@/domain/ports/tts-service.js';
 
 export class MockTTSAdapter implements TTSService {

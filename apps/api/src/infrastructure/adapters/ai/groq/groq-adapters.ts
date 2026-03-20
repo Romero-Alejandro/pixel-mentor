@@ -1,5 +1,10 @@
 import type pino from 'pino';
 
+import { OpenAIBaseClientAdapter } from '../open-ai-base-adapter';
+import { AIResponseSchema, ClassificationSchema, ComprehensionSchema } from '../schemas';
+import { BaseRAGAdapter } from '../base-rag-adapter';
+import { BaseGenerativeAdapter } from '../base-llm-adapter';
+
 import type { AIService, AIResponse } from '@/domain/ports/ai-service.js';
 import type {
   QuestionClassifier,
@@ -10,10 +15,6 @@ import type {
 } from '@/domain/ports/question-classifier.js';
 import type { KnowledgeChunkRepository } from '@/domain/ports/knowledge-chunk-repository.js';
 import type { PromptRepository } from '@/domain/ports/prompt-repository.js';
-import { OpenAIBaseClientAdapter } from '../open-ai-base-adapter';
-import { AIResponseSchema, ClassificationSchema, ComprehensionSchema } from '../schemas';
-import { BaseRAGAdapter } from '../base-rag-adapter';
-import { BaseGenerativeAdapter } from '../base-llm-adapter';
 
 export class GroqAdapter extends BaseGenerativeAdapter implements AIService {
   private readonly client: any;

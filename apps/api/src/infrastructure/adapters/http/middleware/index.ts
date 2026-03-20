@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+
 import type { Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import type pino from 'pino';

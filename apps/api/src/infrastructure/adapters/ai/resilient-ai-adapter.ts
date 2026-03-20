@@ -1,3 +1,5 @@
+import type { GenerateResponseParams } from './base-llm-adapter.js';
+
 import type { AIService, AIResponse } from '@/domain/ports/ai-service.js';
 import type {
   QuestionClassifier,
@@ -9,7 +11,6 @@ import type {
 import type { QuestionClassification } from '@/domain/entities/question-classification.js';
 import type { RAGService } from '@/domain/ports/rag-service.js';
 import type { KnowledgeChunk } from '@/domain/entities/knowledge-chunk.js';
-import type { GenerateResponseParams } from './base-llm-adapter.js';
 
 export class ResilientAIAdapter implements AIService {
   constructor(private readonly instances: AIService[]) {

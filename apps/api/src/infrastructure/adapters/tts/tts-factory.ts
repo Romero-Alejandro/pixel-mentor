@@ -1,9 +1,12 @@
 import { Readable } from 'node:stream';
+
 import * as googleTTS from '@sefinek/google-tts-api';
-import { TTSService } from '@/domain/ports/tts-service';
+import type pino from 'pino';
+
 import { GoogleFreeTTSAdapter } from './google-free.adapter';
 import { MockTTSAdapter } from './mock-tts-adapter';
-import pino from 'pino';
+
+import type { TTSService } from '@/domain/ports/tts-service';
 
 export const TTS_EVENT_TYPES = {
   AUDIO: 'audio',

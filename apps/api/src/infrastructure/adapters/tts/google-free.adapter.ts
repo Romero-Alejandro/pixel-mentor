@@ -1,7 +1,10 @@
+import type { Readable } from 'node:stream';
+
 import * as googleTTS from '@sefinek/google-tts-api';
 import type pino from 'pino';
-import type { Readable } from 'node:stream';
+
 import { AudioProcessor } from './audio-processor.js';
+
 import { TTSStreamService } from '@/services/ttsStream.js';
 import type {
   TTSService,

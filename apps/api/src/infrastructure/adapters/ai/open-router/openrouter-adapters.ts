@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import type pino from 'pino';
 import type { z } from 'zod';
+
 import type { AIService, AIResponse } from '@/domain/ports/ai-service.js';
 import type { PromptRepository } from '@/domain/ports/prompt-repository.js';
 import type {

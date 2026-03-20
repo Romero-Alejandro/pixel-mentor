@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import type pino from 'pino';
 import type { z } from 'zod';
+
 import { cleanJsonResponse } from '@/utils/ai-utils.js';
 import type { AIService, AIResponse } from '@/domain/ports/ai-service.js';
 import type { QuestionClassification } from '@/domain/entities/question-classification.js';

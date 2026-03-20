@@ -1,4 +1,5 @@
 import type pino from 'pino';
+
 import {
   GeminiAIModelAdapter,
   GeminiClassifierAdapter,
@@ -17,6 +18,12 @@ import {
   GroqComprehensionEvaluatorAdapter,
   GroqRAGServiceAdapter,
 } from './groq/groq-adapters';
+import {
+  ResilientAIAdapter,
+  ResilientClassifierAdapter,
+  ResilientEvaluatorAdapter,
+  ResilientRAGAdapter,
+} from './resilient-ai-adapter';
 
 import type { AIService } from '@/domain/ports/ai-service.js';
 import type {
@@ -26,12 +33,6 @@ import type {
 import type { RAGService } from '@/domain/ports/rag-service.js';
 import type { PromptRepository } from '@/domain/ports/prompt-repository.js';
 import type { KnowledgeChunkRepository } from '@/domain/ports/knowledge-chunk-repository.js';
-import {
-  ResilientAIAdapter,
-  ResilientClassifierAdapter,
-  ResilientEvaluatorAdapter,
-  ResilientRAGAdapter,
-} from './resilient-ai-adapter';
 
 export interface AIAdapterFactoryOptions {
   provider: 'gemini' | 'openrouter' | 'groq';

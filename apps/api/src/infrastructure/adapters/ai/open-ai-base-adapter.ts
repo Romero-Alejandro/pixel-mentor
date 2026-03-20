@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import type pino from 'pino';
 import type { z } from 'zod';
+
 import { BaseLLMAdapter } from './base-llm-adapter';
 
 export abstract class OpenAIBaseClientAdapter extends BaseLLMAdapter {
