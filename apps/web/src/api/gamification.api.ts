@@ -44,16 +44,18 @@ export const gamificationApi = {
     };
   },
 
-  getBadges: async (): Promise<BadgesResponse> => {
-    const { data } = await apiClient.get(GamificationEndpoints.GET_BADGES);
-    return {
-      allBadges: BadgeInfoSchema.array().parse(data.allBadges),
-      earnedBadges: EarnedBadgeSchema.array().parse(data.earnedBadges),
-    };
+  getBadges: async (): Promise<any> => {
+    const { data } = await apiClient.get('/api/gamification/badges');
+    return data;
   },
 
-  getProgress: async (): Promise<GamificationSummary> => {
-    const { data } = await apiClient.get(GamificationEndpoints.GET_SUMMARY);
-    return GamificationSummarySchema.parse(data);
+  getUserBadges: async (): Promise<any> => {
+    const { data } = await apiClient.get('/api/gamification/badges/user');
+    return data;
+  },
+
+  getStreakHistory: async (): Promise<any> => {
+    const { data } = await apiClient.get('/api/gamification/streak-history');
+    return data;
   },
 };
