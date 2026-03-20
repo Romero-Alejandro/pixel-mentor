@@ -244,23 +244,6 @@ export function LessonPage() {
               className={isStart ? 'w-64 h-64 sm:w-80 sm:h-80' : 'w-52 h-52 sm:w-64 sm:h-64'}
             />
           </div>
-
-          {!isStart && uiState !== 'completed' ? (
-            <div className="mt-8 flex items-center gap-3 bg-white/90 backdrop-blur-md px-6 py-3 rounded-2xl border border-sky-100 shadow-lg animate-in fade-in slide-in-from-bottom-4">
-              <span className="flex gap-1.5">
-                {[0, 150, 300].map((d) => (
-                  <span
-                    key={d}
-                    className="w-2 h-2 bg-sky-400 rounded-full animate-bounce"
-                    style={{ animationDelay: `${d}ms` }}
-                  />
-                ))}
-              </span>
-              <span className="text-xs font-black text-sky-600 uppercase tracking-widest">
-                Tu tutor está hablando
-              </span>
-            </div>
-          ) : null}
         </section>
 
         <section
