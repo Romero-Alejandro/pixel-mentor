@@ -9,6 +9,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { LessonPage } from './pages/LessonPage';
 import { MissionReportPage } from './pages/MissionReportPage';
 import { SessionPage } from './pages/SessionPage';
+import { GamificationTestPage } from './pages/GamificationTestPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isHydrated, isAuthenticated, isValidating } = useAuthStore();
@@ -129,6 +130,7 @@ function App() {
           </ProtectedRoute>
         }
       />
+      <Route path="/test/gamification" element={<GamificationTestPage />} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

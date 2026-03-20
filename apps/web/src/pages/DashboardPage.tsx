@@ -12,8 +12,10 @@ import {
 
 import { useAuthStore } from '../stores/authStore';
 import { useAutoSelect } from '../hooks/useAutoSelect';
+import { useGamificationStore } from '../stores/gamification.store';
 import { api, type Recipe, type Session } from '../services/api';
 import { Button, Card, Badge, Spinner, CardSkeleton } from '../components/ui';
+import { GamificationHeader } from '../components/gamification/GamificationHeader';
 
 const isResumable = (status: string): boolean => {
   return ['IDLE', 'ACTIVE', 'PAUSED_FOR_QUESTION', 'AWAITING_CONFIRMATION', 'PAUSED_IDLE'].includes(
@@ -48,6 +50,7 @@ const getStatusBadge = (status: string) => {
 
 export function DashboardPage() {
   const { user, logout } = useAuthStore();
+  const { profile, fetchProfile } = useGamificationStore();
 
   const { getSessionToResume } = useAutoSelect(user?.id || null, {
     autoResume: true,
@@ -79,7 +82,10 @@ export function DashboardPage() {
     };
 
     fetchData();
-  }, [user]);
+
+    // Fetch gamification profile (fire-and-forget)
+    fetchProfile().catch(() => {});
+  }, [user, fetchProfile]);
 
   useEffect(() => {
     if (!isLoadingSessions && sessions.length > 0) {
@@ -153,6 +159,13 @@ export function DashboardPage() {
           </div>
         </div>
       </header>
+
+      {/* Gamification Header */}
+      {profile ? (
+        <div className="max-w-6xl mx-auto px-6 mt-6">
+          <GamificationHeader profile={profile} />
+        </div>
+      ) : null}
 
       <main className="max-w-6xl mx-auto px-6 py-8">
         {suggestedSession ? (
