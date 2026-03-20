@@ -21,6 +21,21 @@ import { ProgressService } from './domain/services/progress.service.js';
 import { EventService } from './domain/services/event.service.js';
 import { CompetencyService } from './domain/services/competency.service.js';
 import { TTSProviderFactory } from './infrastructure/adapters/tts/tts-factory';
+import { GameEngineCore } from './game-engine/index.js';
+import { LevelService } from './game-engine/level.service.js';
+import { StreakService } from './game-engine/streak.service.js';
+import {
+  StrategyRegistry,
+  LessonCompletionStrategy,
+  FirstLessonBadgeStrategy,
+  StreakMilestone7Strategy,
+  StreakMilestone30Strategy,
+  StreakBonusStrategy,
+} from './game-engine/strategies/index.js';
+import type {
+  IUserGamificationRepository,
+  IBadgeRepository,
+} from './domain/ports/gamification-ports.js';
 
 import { PrismaRecipeRepository } from '@/infrastructure/adapters/database/repositories/recipe-repository.js';
 import { PrismaConceptRepository } from '@/infrastructure/adapters/database/repositories/concept-repository.js';
@@ -33,22 +48,22 @@ import { PrismaAtomRepository } from '@/infrastructure/adapters/database/reposit
 import { PrismaActivityAttemptRepository } from '@/infrastructure/adapters/database/repositories/activity-attempt-repository.js';
 import { PrismaProgressRepository } from '@/infrastructure/adapters/database/repositories/progress-repository.js';
 import { PrismaEventLogRepository } from '@/infrastructure/adapters/database/repositories/event-log-repository.js';
-import { PrismaCompetencyRepository } from '@/infrastructure/adapters/database/repositories/competency-repository.js';
 import { PrismaTagRepository } from '@/infrastructure/adapters/database/repositories/tag-repository.js';
 import { PrismaRecipeTagRepository } from '@/infrastructure/adapters/database/repositories/recipe-tag-repository.js';
 import { PrismaCompetencyMasteryRepository } from '@/infrastructure/adapters/database/repositories/competency-mastery-repository.js';
 import { AIAdapterFactory } from '@/infrastructure/adapters/ai/ai-adapter-factory.js';
 import { FileSystemPromptRepository } from '@/infrastructure/adapters/prompts/file-system-prompt-repository.js';
 import { PostgresAdvisoryLockManager } from '@/infrastructure/adapters/database/repositories/advisory-lock.js';
+import { PrismaUserGamificationRepository } from '@/infrastructure/repositories/prisma-user-gamification.repository.js';
+import { PrismaBadgeRepository } from '@/infrastructure/repositories/prisma-badge.repository.js';
 import type { Config } from '@/config';
-
-// Import LessonEvaluatorUseCase and its dependencies
 import { LessonEvaluatorUseCase } from '@/evaluator/index.js';
 import { SafePromptBuilder } from '@/prompt/safe.prompt.builder.js';
 import { SchemaValidator } from '@/validation/schema.validator.js';
 import { LLMClientAdapter } from '@/llm/adapters/llm-client.adapter.js';
 import { getFeatureFlagService } from '@/config/index.js';
 
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function buildContainer(config: Config, logger: pino.Logger) {
   const repositories = {
     recipeRepository: new PrismaRecipeRepository(),
@@ -62,7 +77,7 @@ export function buildContainer(config: Config, logger: pino.Logger) {
     activityAttemptRepository: new PrismaActivityAttemptRepository(),
     progressRepository: new PrismaProgressRepository(),
     eventLogRepository: new PrismaEventLogRepository(),
-    competencyRepository: new PrismaCompetencyRepository(),
+    competencyRepository: new PrismaCompetencyMasteryRepository(),
     tagRepository: new PrismaTagRepository(),
     recipeTagRepository: new PrismaRecipeTagRepository(),
     competencyMasteryRepository: new PrismaCompetencyMasteryRepository(),
@@ -96,6 +111,38 @@ export function buildContainer(config: Config, logger: pino.Logger) {
     event: new EventService(repositories.eventLogRepository),
     competency: new CompetencyService(repositories.atomRepository),
   };
+
+  // Gamification repositories (implemented in GAM-04)
+  const gamificationRepositories: {
+    userGamificationRepository: IUserGamificationRepository;
+    badgeRepository: IBadgeRepository;
+    levelService: LevelService;
+    streakService: StreakService;
+  } = {
+    userGamificationRepository: new PrismaUserGamificationRepository(),
+    badgeRepository: new PrismaBadgeRepository(),
+    levelService: new LevelService(),
+    streakService: new StreakService(new PrismaUserGamificationRepository()),
+  };
+
+  // Create and configure strategy registry with all strategies
+  const strategyRegistry = new StrategyRegistry(logger);
+  strategyRegistry.register(new LessonCompletionStrategy());
+  strategyRegistry.register(new FirstLessonBadgeStrategy());
+  strategyRegistry.register(new StreakMilestone7Strategy());
+  strategyRegistry.register(new StreakMilestone30Strategy());
+  strategyRegistry.register(new StreakBonusStrategy());
+
+  // Initialize gamification engine
+  const gameEngine = new GameEngineCore(
+    gamificationRepositories.userGamificationRepository,
+    gamificationRepositories.badgeRepository,
+    strategyRegistry,
+    gamificationRepositories.streakService,
+    undefined, // Use default event bus
+    logger,
+  );
+  gameEngine.initialize();
 
   const useCases = {
     registerUseCase: new RegisterUseCase(repositories.userRepository),
@@ -155,5 +202,13 @@ export function buildContainer(config: Config, logger: pino.Logger) {
     ),
   };
 
-  return { repositories, providers, services, useCases };
+  return {
+    repositories,
+    providers,
+    services,
+    useCases,
+    gameEngine,
+    gamificationRepositories,
+    strategyRegistry,
+  };
 }

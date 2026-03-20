@@ -70,6 +70,10 @@ async function bootstrap(): Promise<void> {
     ...container.repositories,
     ...container.services,
     ttsService: container.providers.tts,
+    // Gamification
+    gameEngine: container.gameEngine,
+    userGamificationRepository: container.gamificationRepositories.userGamificationRepository,
+    badgeRepository: container.gamificationRepositories.badgeRepository,
   }).listen(config.PORT, () => {
     logger.info(`API running on port ${config.PORT}`);
   });

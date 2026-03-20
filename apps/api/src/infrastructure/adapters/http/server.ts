@@ -16,6 +16,12 @@ import { requestLoggerMiddleware } from './middleware/request-logger.js';
 import { authMiddleware } from './middleware/auth.js';
 
 import { createMetricsRouter } from '@/monitoring/routes/eval-metrics.route.js';
+import { createGamificationRouter } from './routes/gamification.js';
+import type { GameEngineCore } from '@/game-engine/core';
+import type {
+  IUserGamificationRepository,
+  IBadgeRepository,
+} from '@/domain/ports/gamification-ports';
 import type { AppRequest } from '@/types/express.js';
 import type { PrismaClient } from '@/infrastructure/adapters/database/client.js';
 import type { OrchestrateRecipeUseCase } from '@/application/use-cases';
@@ -59,6 +65,10 @@ export interface ServerDependencies {
   verifyTokenUseCase: VerifyTokenUseCase;
   questionAnsweringUseCase: QuestionAnsweringUseCase;
   ttsService: TTSService;
+  // Gamification
+  gameEngine: GameEngineCore;
+  userGamificationRepository: IUserGamificationRepository;
+  badgeRepository: IBadgeRepository;
 }
 
 export function createApp(deps: ServerDependencies): Express {
@@ -79,6 +89,9 @@ export function createApp(deps: ServerDependencies): Express {
     verifyTokenUseCase,
     questionAnsweringUseCase,
     ttsService,
+    gameEngine,
+    userGamificationRepository,
+    badgeRepository,
   } = deps;
 
   const app = express();
@@ -216,6 +229,13 @@ export function createApp(deps: ServerDependencies): Express {
   );
 
   app.use('/api/tts', ttsLimiter, protectedMiddleware, createTTSRouter(ttsService));
+
+  // Gamification routes (protected, requires auth)
+  app.use(
+    '/api/gamification',
+    protectedMiddleware,
+    createGamificationRouter(gameEngine, userGamificationRepository, badgeRepository),
+  );
 
   // Metrics endpoint for evaluation monitoring (public, no auth required)
   app.use('/api/metrics/evaluation', createMetricsRouter());
