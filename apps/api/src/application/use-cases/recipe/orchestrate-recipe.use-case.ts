@@ -13,6 +13,7 @@ import type { AIService, AIResponse } from '@/domain/ports/ai-service.js';
 import type {
   QuestionClassifier,
   ComprehensionEvaluator,
+  ComprehensionEvaluation,
 } from '@/domain/ports/question-classifier.js';
 import type { RAGService } from '@/domain/ports/rag-service.js';
 import type { AdvisoryLockManager } from '@/domain/ports/advisory-lock.js';
@@ -34,6 +35,22 @@ import {
   type RecipeConfig,
 } from '@/domain/entities/recipe-config.js';
 import { isTerminalStatus } from '@/domain/entities/session.js';
+import { DEFAULT_COHORT as USER_DEFAULT_COHORT } from '@/domain/entities/user.js';
+import type {
+  LessonEvaluatorUseCase,
+  EvaluationRequest,
+  EvaluationResult,
+} from '@/evaluator/index.js';
+import type { FeatureFlagService } from '@/config/evaluation-flags.js';
+
+// Metrics imports
+import {
+  EvaluationMetricsCollector,
+  EvaluationTimer,
+  type EngineType,
+  type EvaluationOutcome,
+  type EvaluationErrorType,
+} from '@/monitoring/index.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tipos del script auto-contenido
@@ -64,8 +81,6 @@ interface ActivityScript extends ContentScript {
   feedback: { correct: string; incorrect: string };
 }
 
-type StepScript = ContentScript | QuestionScript | ActivityScript;
-
 function isQuestionScript(s: unknown): s is QuestionScript {
   return typeof (s as QuestionScript)?.question === 'string';
 }
@@ -92,8 +107,10 @@ export class OrchestrateRecipeUseCase {
     private questionClassifier: QuestionClassifier,
     private ragService: RAGService,
     private comprehensionEvaluator: ComprehensionEvaluator,
+    private lessonEvaluator: LessonEvaluatorUseCase,
     private advisoryLockManager?: AdvisoryLockManager,
     private contextWindowService: ContextWindowService = new ContextWindowService(),
+    private featureFlagService?: FeatureFlagService,
   ) {
     // Mantenidos para compatibilidad futura
     void this.conceptRepo;
@@ -241,6 +258,245 @@ export class OrchestrateRecipeUseCase {
       aiResponse: type ? { text, responseType: type } : null,
       pausedForQuestion: false,
     });
+  }
+
+  // ─── evaluateWithLessonEngine ───────────────────────────────────────────
+  /**
+   * Evaluates a student's answer using the new LessonEvaluatorUseCase engine.
+   *
+   * Maps the existing script data to the new EvaluationRequest DTO:
+   * - TeacherConfig: centralTruth from expectedAnswer, empty keywords (future extraction possible)
+   * - LessonContext: built from recipe metadata
+   * - EvaluationRequest: studentAnswer = studentInput
+   */
+  private async evaluateWithLessonEngine(params: {
+    script: QuestionScript;
+    studentInput: string;
+    attemptNumber: number;
+    recipeTitle: string;
+    stepIndex: number;
+  }): Promise<ComprehensionEvaluation> {
+    // attemptNumber reserved for future use (adaptive hints based on attempts)
+    void params.attemptNumber;
+    const { script, studentInput, recipeTitle } = params;
+
+    // Build TeacherConfig from script
+    const teacherConfig = {
+      centralTruth: script.expectedAnswer ?? '',
+      requiredKeywords: [] as string[], // Could extract from expectedAnswer in future
+      maxScore: 10,
+    };
+
+    // Build LessonContext from recipe metadata
+    // Note: For more accurate context, we could extract subject/gradeLevel from recipe.meta
+    const lessonContext = {
+      subject: 'Educación General', // Could be extracted from recipe metadata
+      gradeLevel: 'Nivel General', // Could be extracted from recipe metadata
+      topic: recipeTitle,
+    };
+
+    // Build EvaluationRequest
+    const request: EvaluationRequest = {
+      studentAnswer: studentInput,
+      questionText: script.question,
+      teacherConfig,
+      lessonContext,
+    };
+
+    try {
+      const result: EvaluationResult = await this.lessonEvaluator.evaluate(request);
+
+      // Map EvaluationResult to ComprehensionEvaluation
+      return {
+        result: result.outcome,
+        confidence: result.confidence,
+        hint: result.improvementSuggestion,
+        shouldEscalate: false,
+      };
+    } catch (error) {
+      // Graceful fallback to incorrect on error
+      console.error('[OrchestrateRecipe] LessonEvaluator error:', error);
+      return {
+        result: 'incorrect',
+        confidence: 0,
+        hint: script.hint,
+        shouldEscalate: false,
+      };
+    }
+  }
+
+  // ─── evaluateWithLegacyEngine ───────────────────────────────────────────
+  /**
+   * Evaluates using the legacy ComprehensionEvaluator adapter.
+   * Maintains backward compatibility with existing implementations.
+   */
+  private async evaluateWithLegacyEngine(params: {
+    script: QuestionScript;
+    studentInput: string;
+    attemptNumber: number;
+  }): Promise<ComprehensionEvaluation> {
+    const { script, studentInput, attemptNumber } = params;
+
+    return this.comprehensionEvaluator.evaluate({
+      microQuestion: script.question,
+      expectedAnswer: script.expectedAnswer ?? '',
+      studentAnswer: studentInput,
+      attemptNumber,
+    });
+  }
+
+  // ─── evaluateAnswer ─────────────────────────────────────────────────────
+  /**
+   * Unified evaluation method that routes to the appropriate engine based on cohort feature flag.
+   * Determines the student's cohort and uses FeatureFlagService to decide which evaluator to use.
+   * Integrates with metrics collection for observability.
+   */
+  private async evaluateAnswer(params: {
+    script: QuestionScript;
+    studentInput: string;
+    attemptNumber: number;
+    recipeTitle: string;
+    stepIndex: number;
+    studentId?: string;
+  }): Promise<ComprehensionEvaluation> {
+    // Fetch student cohort for feature flag evaluation
+    const cohort = await this.getStudentCohort(params.studentId);
+    const useNewEngine = this.shouldUseNewEngine(cohort);
+    const engineType: EngineType = useNewEngine ? 'new' : 'old';
+
+    // Create metrics collector for this evaluation
+    const metrics = new EvaluationMetricsCollector();
+    const timer = new EvaluationTimer();
+    const completeTracking = metrics.startEvaluation(engineType, cohort);
+
+    // Log which engine is being used for observability
+    console.log(
+      `[EVAL ENGINE: ${engineType}] cohort=${cohort} requestId=${metrics.getRequestId()}`,
+    );
+
+    try {
+      let result: ComprehensionEvaluation;
+
+      if (useNewEngine) {
+        result = await this.evaluateWithLessonEngine(params);
+      } else {
+        result = await this.evaluateWithLegacyEngine(params);
+      }
+
+      // Record completion metrics
+      const latencyMs = timer.getElapsed();
+      const outcome = result.result as EvaluationOutcome;
+      metrics.recordCompletion(engineType, outcome, latencyMs, cohort);
+
+      console.log(
+        `[EVAL COMPLETE] engine=${engineType} outcome=${outcome} latency=${latencyMs}ms cohort=${cohort} requestId=${metrics.getRequestId()}`,
+      );
+
+      // Call the tracking completion function
+      completeTracking(outcome);
+
+      return result;
+    } catch (error) {
+      // Record error metrics
+      const latencyMs = timer.getElapsed();
+      const errorType = this.categorizeError(error);
+      metrics.recordError(errorType, error instanceof Error ? error.message : 'Unknown error');
+
+      console.error(
+        `[EVAL ERROR] engine=${engineType} error=${errorType} latency=${latencyMs}ms cohort=${cohort} requestId=${metrics.getRequestId()}`,
+        error,
+      );
+
+      // Call the tracking completion function with error
+      completeTracking(
+        undefined,
+        errorType,
+        error instanceof Error ? error.message : 'Unknown error',
+      );
+
+      // Return graceful fallback
+      return {
+        result: 'incorrect',
+        confidence: 0,
+        hint: params.script.hint,
+        shouldEscalate: false,
+      };
+    }
+  }
+
+  /**
+   * Categorize an error into a specific error type for metrics
+   */
+  private categorizeError(error: unknown): EvaluationErrorType {
+    if (error instanceof Error) {
+      const message = error.message.toLowerCase();
+
+      if (message.includes('timeout')) {
+        return 'timeout_error';
+      }
+      if (
+        message.includes('network') ||
+        message.includes('fetch') ||
+        message.includes('connection')
+      ) {
+        return 'network_error';
+      }
+      if (
+        message.includes('validation') ||
+        message.includes('schema') ||
+        message.includes('parse')
+      ) {
+        return 'validation_error';
+      }
+      if (
+        message.includes('llm') ||
+        message.includes('openai') ||
+        message.includes('gemini') ||
+        message.includes('anthropic')
+      ) {
+        return 'llm_error';
+      }
+    }
+    return 'unknown_error';
+  }
+
+  /**
+   * Retrieves the student's cohort from their user profile.
+   * Defaults to 'default' cohort if student not found or cohort not set.
+   */
+  private async getStudentCohort(studentId?: string): Promise<string> {
+    if (!studentId) {
+      return USER_DEFAULT_COHORT;
+    }
+
+    try {
+      const student = await this.userRepo.findById(studentId);
+      return student?.cohort ?? USER_DEFAULT_COHORT;
+    } catch {
+      console.warn(
+        `[OrchestrateRecipe] Failed to fetch student cohort for ${studentId}, using default`,
+      );
+      return USER_DEFAULT_COHORT;
+    }
+  }
+
+  /**
+   * Determines if the new evaluation engine should be used based on cohort configuration.
+   * Returns false (legacy engine) if FeatureFlagService is not available (backward compatibility).
+   */
+  private shouldUseNewEngine(cohort: string): boolean {
+    if (!this.featureFlagService) {
+      // FeatureFlagService not available - default to legacy engine for backward compatibility
+      return false;
+    }
+
+    try {
+      return this.featureFlagService.shouldUseNewEngine(cohort);
+    } catch (error) {
+      console.error(`[OrchestrateRecipe] FeatureFlagService error for cohort ${cohort}:`, error);
+      // Default to legacy engine on error to maintain backward compatibility
+      return false;
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -521,11 +777,13 @@ export class OrchestrateRecipeUseCase {
 
       if (isQuestionScript(script)) {
         // ── Pregunta de comprensión: evaluar con LLM ─────────────────────
-        const evaluation = await this.comprehensionEvaluator.evaluate({
-          microQuestion: (script as QuestionScript).question,
-          expectedAnswer: (script as QuestionScript).expectedAnswer ?? '',
-          studentAnswer: studentInput,
+        const evaluation = await this.evaluateAnswer({
+          script: script as QuestionScript,
+          studentInput,
           attemptNumber: failedAttempts + 1,
+          recipeTitle: recipe.title,
+          stepIndex: currentIdx,
+          studentId: userId,
         });
         const qs = script as QuestionScript;
         if (evaluation.result === 'correct') {
@@ -874,11 +1132,13 @@ export class OrchestrateRecipeUseCase {
       const script = currentStep.script;
 
       if (isQuestionScript(script)) {
-        const evaluation = await this.comprehensionEvaluator.evaluate({
-          microQuestion: (script as QuestionScript).question,
-          expectedAnswer: (script as QuestionScript).expectedAnswer ?? '',
-          studentAnswer: studentInput,
+        const evaluation = await this.evaluateAnswer({
+          script: script as QuestionScript,
+          studentInput,
           attemptNumber: failedAttempts + 1,
+          recipeTitle: recipe.title,
+          stepIndex: currentIdx,
+          studentId: userId,
         });
         const qs = script as QuestionScript;
         if (evaluation.result === 'correct') {
