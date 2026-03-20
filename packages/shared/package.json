@@ -11,7 +11,8 @@
     "./recipe": "./src/recipe.ts",
     "./session": "./src/session.ts",
     "./pedagogical": "./src/pedagogical.ts",
-    "./types/tts": "./src/types/tts.ts"
+    "./types/tts": "./src/types/tts.ts",
+    "./gamification": "./src/gamification/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

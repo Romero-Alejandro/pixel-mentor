@@ -1,5 +1,6 @@
 // Re-export all schemas and types from submodules
 export * from './auth';
+export * from './gamification';
 export * from './pedagogical';
 export * from './recipe';
 export * from './session';
