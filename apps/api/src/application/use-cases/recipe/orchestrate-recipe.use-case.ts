@@ -43,6 +43,11 @@ import type {
 } from '@/evaluator/index.js';
 import type { FeatureFlagService } from '@/config/evaluation-flags.js';
 
+// Gamification imports
+import { getEventBus } from '@/events/event-bus.js';
+import { GameDomainEvents } from '@/events/game-events.js';
+import type { LessonCompletedPayload } from '@/events/game-events.js';
+
 // Metrics imports
 import {
   EvaluationMetricsCollector,
@@ -115,6 +120,29 @@ export class OrchestrateRecipeUseCase {
     // Mantenidos para compatibilidad futura
     void this.conceptRepo;
     void this.activityRepo;
+  }
+
+  /**
+   * Emit LESSON_COMPLETED event to trigger gamification processing (XP, badges, streaks).
+   * Wrapped in try/catch so gamification failures never break session completion.
+   */
+  private async emitLessonCompleted(
+    userId: string,
+    lessonId: string,
+    lessonTitle: string,
+  ): Promise<void> {
+    try {
+      const eventBus = getEventBus();
+      const payload: LessonCompletedPayload = {
+        userId,
+        lessonId,
+        lessonTitle,
+        completedAt: new Date(),
+      };
+      await eventBus.emit(GameDomainEvents.LESSON_COMPLETED, payload);
+    } catch {
+      // Don't fail session completion if gamification fails
+    }
   }
 
   // ─── extractStaticContent ────────────────────────────────────────────────
@@ -634,6 +662,7 @@ export class OrchestrateRecipeUseCase {
     const currentStep = steps[currentIdx];
     if (!currentStep) {
       await this.sessionRepo.complete(sessionId);
+      await this.emitLessonCompleted(session.studentId, session.recipeId, recipe.title);
       return {
         voiceText: fillTemplate(this.config.greetings.completionMessage ?? '¡Felicitaciones!', {
           name: 'estudiante',
@@ -895,8 +924,10 @@ export class OrchestrateRecipeUseCase {
     };
 
     const persist = async () => {
-      if (willComplete) await this.sessionRepo.complete(sessionId);
-      else await this.sessionRepo.updateCheckpoint(sessionId, newCp);
+      if (willComplete) {
+        await this.sessionRepo.complete(sessionId);
+        await this.emitLessonCompleted(session.studentId, session.recipeId, recipe.title);
+      } else await this.sessionRepo.updateCheckpoint(sessionId, newCp);
     };
 
     if (this.advisoryLockManager) {
@@ -982,6 +1013,7 @@ export class OrchestrateRecipeUseCase {
     const currentStep = steps[currentIdx];
     if (!currentStep) {
       await this.sessionRepo.complete(sessionId);
+      await this.emitLessonCompleted(session.studentId, session.recipeId, recipe.title);
       yield {
         type: 'end',
         reason: 'completed',
@@ -1248,8 +1280,10 @@ export class OrchestrateRecipeUseCase {
     };
 
     const persist = async () => {
-      if (willComplete) await this.sessionRepo.complete(sessionId);
-      else await this.sessionRepo.updateCheckpoint(sessionId, newCp);
+      if (willComplete) {
+        await this.sessionRepo.complete(sessionId);
+        await this.emitLessonCompleted(session.studentId, session.recipeId, recipe.title);
+      } else await this.sessionRepo.updateCheckpoint(sessionId, newCp);
     };
 
     if (this.advisoryLockManager) {
