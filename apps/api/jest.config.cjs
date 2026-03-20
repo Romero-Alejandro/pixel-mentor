@@ -1,14 +1,22 @@
 module.exports = {
   testEnvironment: 'node',
-  roots: ['<rootDir>/src'],
+  roots: ['<rootDir>/src', '<rootDir>/tests'],
   moduleFileExtensions: ['ts', 'js', 'json', 'node'],
-  testMatch: ['**/__tests__/**/*.test.ts'],
+  testMatch: ['**/__tests__/**/*.test.ts', '**/tests/**/*.spec.ts'],
   transform: {
     '^.+\\.ts$': '@swc/jest',
   },
   moduleNameMapper: {
     '^@/(.*)\\.js$': '<rootDir>/src/$1.ts',
+    '^@/(.*)\\.ts$': '<rootDir>/src/$1.ts',
+    '^@/(.*)/index\\.ts$': '<rootDir>/src/$1/index.ts',
+    '^@/(.*)/index\\.js$': '<rootDir>/src/$1/index.ts',
+    '^@/prompt/(.*)$': '<rootDir>/src/prompt/$1.ts',
+    '^@/evaluator/(.*)$': '<rootDir>/src/evaluator/$1.ts',
+    '^@/config/(.*)$': '<rootDir>/src/config/$1.ts',
+    '^@/monitoring/(.*)$': '<rootDir>/src/monitoring/$1.ts',
     '^@/(.*)$': '<rootDir>/src/$1',
+    '^tests/(.*)$': '<rootDir>/tests/$1',
     '^\\.\\./client\\.js$': '<rootDir>/src/infrastructure/adapters/database/client.ts',
     '^\\.\\./error-handler\\.js$':
       '<rootDir>/src/infrastructure/adapters/database/error-handler.ts',

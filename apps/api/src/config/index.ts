@@ -1,6 +1,24 @@
 import { z } from 'zod';
 import 'dotenv/config';
 
+// Re-export feature flag types and services
+export {
+  FeatureFlagService,
+  featureFlagService,
+  getFeatureFlagService,
+  resetFeatureFlagService,
+  createFeatureFlagService,
+} from './evaluation-flags.js';
+
+export type {
+  EvaluationFlags,
+  CohortConfig,
+  TemplateEngineConfig,
+  KeywordExtractionConfig,
+  EvaluatorType,
+  PartialEvaluationFlags,
+} from './evaluation-flags.js';
+
 export const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('production'),
   PORT: z.coerce.number().int().positive().default(3001),
@@ -21,6 +39,7 @@ export const envSchema = z.object({
   RATE_LIMIT_MAX_INTERACT: z.coerce.number().int().positive().default(5),
   REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
   ENABLE_STREAMING: z.boolean().default(false),
+  USE_NEW_EVALUATOR_ENGINE: z.boolean().default(false),
 });
 
 export type Config = z.infer<typeof envSchema>;

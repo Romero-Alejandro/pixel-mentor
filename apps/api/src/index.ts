@@ -1,8 +1,11 @@
 import pino from 'pino';
-import { config } from '@/config';
+
+import { buildContainer } from './dependency-container';
+
+import { config, getFeatureFlagService } from '@/config';
 import { prisma } from '@/infrastructure/adapters/database/client.js';
 import { createApp } from '@/infrastructure/adapters/http/server.js';
-import { buildContainer } from './dependency-container';
+import { runStagingValidation } from '@/monitoring/index.js';
 
 const logger = pino({
   level: config.LOG_LEVEL,
@@ -54,6 +57,10 @@ async function bootstrap(): Promise<void> {
   await verifyDatabaseConnection();
 
   const container = buildContainer(config, logger);
+
+  // Run staging validation (logs banner if new engine is active)
+  const featureFlagService = getFeatureFlagService();
+  runStagingValidation(featureFlagService);
 
   const server = createApp({
     config,

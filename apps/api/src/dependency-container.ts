@@ -20,6 +20,7 @@ import { QuestionAnsweringUseCase } from './application/use-cases/question/quest
 import { ProgressService } from './domain/services/progress.service.js';
 import { EventService } from './domain/services/event.service.js';
 import { CompetencyService } from './domain/services/competency.service.js';
+import { TTSProviderFactory } from './infrastructure/adapters/tts/tts-factory';
 
 import { PrismaRecipeRepository } from '@/infrastructure/adapters/database/repositories/recipe-repository.js';
 import { PrismaConceptRepository } from '@/infrastructure/adapters/database/repositories/concept-repository.js';
@@ -39,9 +40,14 @@ import { PrismaCompetencyMasteryRepository } from '@/infrastructure/adapters/dat
 import { AIAdapterFactory } from '@/infrastructure/adapters/ai/ai-adapter-factory.js';
 import { FileSystemPromptRepository } from '@/infrastructure/adapters/prompts/file-system-prompt-repository.js';
 import { PostgresAdvisoryLockManager } from '@/infrastructure/adapters/database/repositories/advisory-lock.js';
-
 import type { Config } from '@/config';
-import { TTSProviderFactory } from './infrastructure/adapters/tts/tts-factory';
+
+// Import LessonEvaluatorUseCase and its dependencies
+import { LessonEvaluatorUseCase } from '@/evaluator/index.js';
+import { SafePromptBuilder } from '@/prompt/safe.prompt.builder.js';
+import { SchemaValidator } from '@/validation/schema.validator.js';
+import { LLMClientAdapter } from '@/llm/adapters/llm-client.adapter.js';
+import { getFeatureFlagService } from '@/config/index.js';
 
 export function buildContainer(config: Config, logger: pino.Logger) {
   const repositories = {
@@ -119,6 +125,12 @@ export function buildContainer(config: Config, logger: pino.Logger) {
       repositories.conceptRepository,
       providers.ai.aiModel,
     ),
+    // Create LessonEvaluatorUseCase with required dependencies
+    lessonEvaluator: new LessonEvaluatorUseCase(
+      new LLMClientAdapter(providers.ai.aiModel),
+      new SafePromptBuilder(),
+      new SchemaValidator(),
+    ),
     orchestrateUseCase: new OrchestrateRecipeUseCase(
       repositories.sessionRepository,
       repositories.interactionRepository,
@@ -131,7 +143,15 @@ export function buildContainer(config: Config, logger: pino.Logger) {
       providers.ai.questionClassifier,
       providers.ai.ragService,
       providers.ai.comprehensionEvaluator,
+      // LessonEvaluatorUseCase for new evaluation engine
+      new LessonEvaluatorUseCase(
+        new LLMClientAdapter(providers.ai.aiModel),
+        new SafePromptBuilder(),
+        new SchemaValidator(),
+      ),
       repositories.advisoryLock,
+      undefined, // contextWindowService
+      getFeatureFlagService(), // FeatureFlagService for cohort-based routing
     ),
   };
 

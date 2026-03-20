@@ -15,6 +15,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src/**/*", "tsup.config.ts", "prisma.config.ts"],
+  "include": ["src/**/*", "tests/**/*", "tsup.config.ts", "prisma.config.ts"],
   "exclude": ["src/**/__tests__", "node_modules", "dist"]
 }
