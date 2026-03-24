@@ -1,0 +1,21 @@
+{
+  "badgeEarned": [0, 956],
+  "levelUp": [956, 933],
+  "streakMaintained": [1889, 549],
+  "streakBroken": [2438, 784],
+  "answerCorrect": [3222, 827],
+  "answerIncorrect": [4049, 731],
+  "voiceRecordingStart": [4780, 1100],
+  "voiceRecordingStop": [5880, 1091],
+  "voiceResponseReceived": [6971, 290],
+  "toastSuccess": [7261, 191],
+  "toastInfo": [7452, 43],
+  "toastWarning": [7495, 724],
+  "activityStart": [8219, 225],
+  "activityComplete": [8444, 1002],
+  "lessonStart": [9446, 811],
+  "lessonComplete": [10257, 909],
+  "xpGain": [11166, 522],
+  "errorSubtle": [11688, 64],
+  "congrats": [11752, 1758]
+}
