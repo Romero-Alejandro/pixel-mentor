@@ -1,12 +1,23 @@
+import { useEffect } from 'react';
+
 import { useLessonStore } from '../../stores/lessonStore';
 import { useRecipeInteraction } from '../../hooks/useLessonQueries';
+import { useAudio } from '../../contexts/AudioContext';
+import { SpriteAudioEvent, MicroAudioEvent } from '../../audio/types/audio-events';
 
 export function LessonStart() {
   const { sessionId, studentName } = useLessonStore();
   const { mutateAsync: interactWithRecipe } = useRecipeInteraction();
   const setCurrentState = useLessonStore((state) => state.setCurrentState);
+  const { playMicro, playSprite } = useAudio();
+
+  // Sonido al aparecer el panel de inicio de lección
+  useEffect(() => {
+    playSprite(SpriteAudioEvent.LessonStart);
+  }, [playSprite]);
 
   const handleStartLesson = async () => {
+    playMicro(MicroAudioEvent.Click);
     console.log('LessonStart button clicked');
     console.log('sessionId:', sessionId);
 

@@ -1,20 +1,26 @@
 import { useEffect } from 'react';
 
+import { useAudio } from '../../contexts/AudioContext';
+import { MicroAudioEvent } from '../../audio/types/audio-events';
+
 interface ResumeToastProps {
   isVisible: boolean;
   onDismiss: () => void;
 }
 
 export function ResumeToast({ isVisible, onDismiss }: ResumeToastProps) {
+  const { playMicro } = useAudio();
+
   useEffect(() => {
     if (isVisible) {
+      playMicro(MicroAudioEvent.HoverOption);
       const timer = setTimeout(() => {
         onDismiss();
       }, 3000);
 
       return () => clearTimeout(timer);
     }
-  }, [isVisible, onDismiss]);
+  }, [isVisible, onDismiss, playMicro]);
 
   if (!isVisible) return null;
 

@@ -12,6 +12,12 @@ export interface FeedbackData {
   isCorrect: boolean;
   message: string;
   encouragement?: string;
+  xpAwarded?: number;
+}
+
+export interface QuestionResult {
+  question: string;
+  isCorrect: boolean;
 }
 
 const INITIAL_STATE = {
@@ -23,6 +29,7 @@ const INITIAL_STATE = {
   options: [] as Option[],
   feedbackData: null as FeedbackData | null,
   isProcessing: false,
+  questionResults: [] as QuestionResult[],
 };
 
 export function useLessonState() {
@@ -34,6 +41,9 @@ export function useLessonState() {
   const [options, setOptions] = useState<Option[]>(INITIAL_STATE.options);
   const [feedbackData, setFeedbackData] = useState<FeedbackData | null>(INITIAL_STATE.feedbackData);
   const [isProcessing, setIsProcessing] = useState(INITIAL_STATE.isProcessing);
+  const [questionResults, setQuestionResults] = useState<QuestionResult[]>(
+    INITIAL_STATE.questionResults,
+  );
 
   const resetState = useCallback(() => {
     setUIState(INITIAL_STATE.uiState);
@@ -44,6 +54,11 @@ export function useLessonState() {
     setOptions(INITIAL_STATE.options);
     setFeedbackData(INITIAL_STATE.feedbackData);
     setIsProcessing(INITIAL_STATE.isProcessing);
+    setQuestionResults(INITIAL_STATE.questionResults);
+  }, []);
+
+  const addQuestionResult = useCallback((question: string, isCorrect: boolean) => {
+    setQuestionResults((prev) => [...prev, { question, isCorrect }]);
   }, []);
 
   return {
@@ -63,6 +78,8 @@ export function useLessonState() {
     setFeedbackData,
     isProcessing,
     setIsProcessing,
+    questionResults,
+    addQuestionResult,
     resetState,
   };
 }

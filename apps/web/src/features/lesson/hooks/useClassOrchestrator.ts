@@ -29,6 +29,17 @@ interface LessonResponse {
     script?: { transition?: string; content?: string; closure?: string };
     activity?: { instruction: string; options?: Array<{ text: string; isCorrect: boolean }> };
   };
+  // Gamification data
+  xpEarned?: number;
+  accuracy?: {
+    correctFirstAttempts: number;
+    correctLastAttempts: number;
+    totalActivities: number;
+    skippedActivities: number;
+    accuracyPercent: number;
+    allCorrectOnFirstAttempt: boolean;
+    tier: 'perfect' | 'high' | 'medium' | 'low';
+  };
 }
 
 let _voiceSettings: VoiceSettings = {};
@@ -49,6 +60,9 @@ export function useClassOrchestrator() {
     setIsStreaming: setStoreStreaming,
     setStreamError,
     clearStream,
+    setIsRepeat,
+    setXpEarned,
+    setAccuracy,
   } = useLessonStore(
     useShallow((state) => ({
       setSessionId: state.setSessionId,
@@ -59,6 +73,9 @@ export function useClassOrchestrator() {
       setIsStreaming: state.setIsStreaming,
       setStreamError: state.setStreamError,
       clearStream: state.clearStream,
+      setIsRepeat: state.setIsRepeat,
+      setXpEarned: state.setXpEarned,
+      setAccuracy: state.setAccuracy,
     })),
   );
 
@@ -88,6 +105,8 @@ export function useClassOrchestrator() {
     setFeedbackData,
     setIsProcessing,
     resetState,
+    questionResults,
+    addQuestionResult,
   } = useLessonState();
 
   const [transitionText, setTransitionText] = useState('');
@@ -141,6 +160,8 @@ export function useClassOrchestrator() {
       feedback,
       sessionCompleted,
       lessonProgress,
+      xpEarned,
+      accuracy,
     } = raw;
 
     if (lessonProgress) {
@@ -150,6 +171,13 @@ export function useClassOrchestrator() {
     setCurrentState(pedagogicalState);
 
     if (pedagogicalState === 'COMPLETED' || sessionCompleted) {
+      // Store gamification data
+      if (xpEarned !== undefined) {
+        setXpEarned(xpEarned);
+      }
+      if (accuracy) {
+        setAccuracy(accuracy);
+      }
       setUIState('completed');
       speak(voiceText || '¡Misión cumplida!', _voiceSettings).catch(() => {});
       return;
@@ -157,7 +185,16 @@ export function useClassOrchestrator() {
 
     if (pedagogicalState === 'EVALUATION') {
       const msg = feedback || (isCorrect ? '¡Muy bien!' : '¡Sigue intentando!');
-      setFeedbackData({ isCorrect: !!isCorrect, message: msg });
+      // Calculate proportional XP per question
+      const totalActivities = accuracy?.totalActivities || totalSteps || 1;
+      const xpPerQuestion = Math.round((xpEarned ?? 50) / totalActivities);
+      // Record this question's result
+      addQuestionResult(questionText, !!isCorrect);
+      setFeedbackData({
+        isCorrect: !!isCorrect,
+        message: msg,
+        xpAwarded: isCorrect ? xpPerQuestion : undefined,
+      });
       setUIState('feedback');
 
       const startTime = Date.now();
@@ -302,12 +339,21 @@ export function useClassOrchestrator() {
       const startResult = await api.startRecipe(lessonId);
       sessionIdRef.current = startResult.sessionId;
       setSessionId(startResult.sessionId);
+      setIsRepeat(startResult.isRepeat === true);
 
       if (!isMountedRef.current) return Ok(undefined);
 
       speak(startResult.voiceText || '¡Bienvenido!', _voiceSettings).catch(() => {});
-      const firstStep = await doInteract('comenzar');
-      processResponse(firstStep);
+
+      // Only send 'comenzar' if the lesson needs to be started (AWAITING_START state).
+      // If resuming mid-lesson, process the start response directly.
+      if (startResult.needsStart !== false) {
+        const firstStep = await doInteract('comenzar');
+        processResponse(firstStep);
+      } else {
+        // Process the start response directly for resumed sessions
+        processResponse(startResult as LessonResponse);
+      }
 
       return Ok(undefined);
     } catch (e) {
@@ -355,6 +401,7 @@ export function useClassOrchestrator() {
     feedback: feedbackData,
     isProcessing,
     isSpeaking,
+    questionResults,
     startClass,
     submitAnswer,
     speakContent,

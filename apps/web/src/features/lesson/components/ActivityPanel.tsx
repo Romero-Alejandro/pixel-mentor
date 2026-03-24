@@ -1,5 +1,6 @@
 import { IconCheck, IconX, IconTargetArrow, IconHourglassHigh } from '@tabler/icons-react';
 
+import { useAudio } from '@/contexts/AudioContext';
 import { Spinner } from '@/components/ui';
 
 export function ActivityPanel({
@@ -17,6 +18,7 @@ export function ActivityPanel({
   selectedId: string | null;
   isCorrect: boolean | null;
 }) {
+  const { playSelect, playHover } = useAudio();
   const answered = selectedId !== null;
 
   const getOptionStyle = (opt: { id: string; isCorrect?: boolean }) => {
@@ -59,7 +61,13 @@ export function ActivityPanel({
         {options.map((opt, i) => (
           <button
             key={opt.id}
-            onClick={() => !answered && !isProcessing && onAnswer(opt.text, opt.id)}
+            onClick={() => {
+              if (!answered && !isProcessing) {
+                playSelect();
+                onAnswer(opt.text, opt.id);
+              }
+            }}
+            onMouseEnter={() => !answered && playHover()}
             disabled={answered || isProcessing}
             className={`w-full flex items-center gap-5 p-6 rounded-[2rem] text-left font-bold transition-all duration-200 group outline-none ${getOptionStyle(opt)}`}
           >

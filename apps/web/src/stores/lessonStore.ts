@@ -36,6 +36,19 @@ interface LessonState {
   studentName: string | null;
   // Session resume tracking
   wasResumed: boolean;
+  // Repeat tracking (lesson was completed before)
+  isRepeat: boolean;
+  // Gamification data
+  xpEarned: number | null;
+  accuracy: {
+    correctFirstAttempts: number;
+    correctLastAttempts: number;
+    totalActivities: number;
+    skippedActivities: number;
+    accuracyPercent: number;
+    allCorrectOnFirstAttempt: boolean;
+    tier: 'perfect' | 'high' | 'medium' | 'low';
+  } | null;
   // Auto-start state
   isStarting: boolean;
   error: string | null;
@@ -55,6 +68,9 @@ interface LessonState {
   setConfig: (config: LessonConfig | null) => void;
   setStudentName: (name: string | null) => void;
   setWasResumed: (resumed: boolean) => void;
+  setIsRepeat: (repeat: boolean) => void;
+  setXpEarned: (xp: number | null) => void;
+  setAccuracy: (accuracy: LessonState['accuracy']) => void;
   setIsStarting: (starting: boolean) => void;
   setError: (error: string | null) => void;
   incrementRetryCount: () => void;
@@ -77,6 +93,9 @@ const initialState = {
   config: null,
   studentName: null,
   wasResumed: false,
+  isRepeat: false,
+  xpEarned: null,
+  accuracy: null,
   isStarting: false,
   error: null,
   retryCount: 0,
@@ -99,6 +118,9 @@ export const useLessonStore = create<LessonState>()(
       setConfig: (config) => set({ config }),
       setStudentName: (name) => set({ studentName: name }),
       setWasResumed: (resumed) => set({ wasResumed: resumed }),
+      setIsRepeat: (repeat) => set({ isRepeat: repeat }),
+      setXpEarned: (xp) => set({ xpEarned: xp }),
+      setAccuracy: (accuracy) => set({ accuracy }),
       setIsStarting: (starting) => set({ isStarting: starting }),
       setError: (error) => set({ error }),
       incrementRetryCount: () => set((state) => ({ retryCount: state.retryCount + 1 })),

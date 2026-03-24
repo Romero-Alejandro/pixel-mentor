@@ -1,5 +1,9 @@
+import { useEffect, useRef } from 'react';
+
 import { type ActivityOption } from '../activity-card/ActivityCard';
 
+import { useAudio } from '@/contexts/AudioContext';
+import { SpriteAudioEvent } from '@/audio/types/audio-events';
 import { getEncouragementPhrase, getJoke } from '@/utils/dialogue';
 import { type LessonConfig } from '@/stores/lessonStore';
 
@@ -57,6 +61,20 @@ export function ContentPanel({
   config = null,
   pedagogicalState,
 }: ContentPanelProps) {
+  const { playSprite, playModalOpen } = useAudio();
+  const prevContentTypeRef = useRef(contentType);
+
+  useEffect(() => {
+    if (prevContentTypeRef.current !== contentType) {
+      if (contentType === 'activity') {
+        playSprite(SpriteAudioEvent.ActivityStart);
+      } else if (contentType === 'explanation' || contentType === 'question') {
+        playModalOpen();
+      }
+      prevContentTypeRef.current = contentType;
+    }
+  }, [contentType, playSprite, playModalOpen]);
+
   // === MODO PIZARRA: Durante actividades ===
   if (contentType === 'activity' && activityQuestion && activityOptions.length > 0) {
     return (

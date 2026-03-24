@@ -1,12 +1,35 @@
-import { IconStarFilled, IconAlertTriangleFilled } from '@tabler/icons-react';
+import { useEffect } from 'react';
+import { IconStarFilled, IconAlertTriangleFilled, IconBolt } from '@tabler/icons-react';
 
+import { useAudio } from '@/contexts/AudioContext';
+import { SpriteAudioEvent } from '@/audio/types/audio-events';
 import { Spinner } from '@/components/ui';
 
 export function FeedbackPanel({
   fb,
 }: {
-  fb: { isCorrect: boolean; message: string; encouragement?: string };
+  fb: { isCorrect: boolean; message: string; encouragement?: string; xpAwarded?: number };
 }) {
+  const { playSprite } = useAudio();
+
+  // Sonido cuando aparece el modal (independiente de correcto/incorrecto)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      playSprite(SpriteAudioEvent.ActivityStart); // o un sonido de "panel abierto"
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [playSprite]);
+
+  useEffect(() => {
+    if (fb.isCorrect) {
+      const timeout = setTimeout(() => {
+        playSprite(SpriteAudioEvent.AnswerCorrect);
+      }, 150);
+      return () => clearTimeout(timeout);
+    }
+    // No sound for incorrect answers (positive-only policy)
+  }, [fb.isCorrect, playSprite]);
+
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-8 text-center gap-10 w-full h-full animate-bounce-in">
       <div
@@ -35,6 +58,12 @@ export function FeedbackPanel({
           <p className="text-2xl text-slate-800 font-bold leading-relaxed">{fb.message}</p>
           {fb.encouragement ? (
             <p className="text-xl font-black text-sky-500 mt-6">{fb.encouragement}</p>
+          ) : null}
+          {fb.isCorrect && fb.xpAwarded ? (
+            <div className="mt-6 inline-flex items-center gap-2 bg-amber-50 border-4 border-amber-200 shadow-[0_4px_0_0_#fcd34d] px-5 py-3 rounded-2xl animate-bounce-in">
+              <IconBolt className="w-6 h-6 text-amber-500" stroke={2.5} />
+              <span className="text-2xl font-black text-amber-600">+{fb.xpAwarded} XP</span>
+            </div>
           ) : null}
         </div>
       </div>
