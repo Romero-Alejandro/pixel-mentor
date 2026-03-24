@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { useGamificationStore } from '../stores/gamification.store';
 import type { EarnedBadge } from '@pixel-mentor/shared/gamification';
+
+import { useGamificationStore } from '../stores/gamification.store';
 
 interface XPEarnedEvent {
   type: 'xp_earned';

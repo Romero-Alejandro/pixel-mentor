@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-
 import type { UserGamificationProfile } from '@pixel-mentor/shared/gamification';
 
 import { cn } from '@/utils/cn';

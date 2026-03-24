@@ -3,6 +3,8 @@ import type { LevelUpInfo } from '@pixel-mentor/shared/gamification';
 
 import { LevelBadge } from './LevelBadge';
 
+import { useAudio } from '@/contexts/AudioContext';
+import { SpriteAudioEvent } from '@/audio/types/audio-events';
 import { cn } from '@/utils/cn';
 import { Button } from '@/components/ui/Button';
 
@@ -17,6 +19,7 @@ export interface LevelUpModalProps {
 
 export function LevelUpModal({ levelUp, isOpen, onClose, className }: LevelUpModalProps) {
   const { newLevel, newLevelTitle, previousLevel } = levelUp;
+  const { playSprite } = useAudio();
 
   // Close on Escape key
   const handleKeyDown = useCallback(
@@ -28,14 +31,18 @@ export function LevelUpModal({ levelUp, isOpen, onClose, className }: LevelUpMod
 
   useEffect(() => {
     if (isOpen) {
+      const timeout = setTimeout(() => {
+        playSprite(SpriteAudioEvent.LevelUp);
+      }, 300);
       document.addEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'hidden';
       return () => {
+        clearTimeout(timeout);
         document.removeEventListener('keydown', handleKeyDown);
         document.body.style.overflow = '';
       };
     }
-  }, [isOpen, handleKeyDown]);
+  }, [isOpen, handleKeyDown, playSprite]);
 
   if (!isOpen) return null;
 

@@ -1,6 +1,8 @@
 import { useCallback, useEffect } from 'react';
 import type { EarnedBadge } from '@pixel-mentor/shared/gamification';
 
+import { useAudio } from '@/contexts/AudioContext';
+import { SpriteAudioEvent } from '@/audio/types/audio-events';
 import { cn } from '@/utils/cn';
 import { Button } from '@/components/ui/Button';
 
@@ -12,6 +14,7 @@ export interface BadgeEarnedModalProps {
 }
 
 export function BadgeEarnedModal({ badge, isOpen, onClose, className }: BadgeEarnedModalProps) {
+  const { playSprite } = useAudio();
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -21,14 +24,18 @@ export function BadgeEarnedModal({ badge, isOpen, onClose, className }: BadgeEar
 
   useEffect(() => {
     if (isOpen) {
+      const timeout = setTimeout(() => {
+        playSprite(SpriteAudioEvent.BadgeEarned);
+      }, 100);
       document.addEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'hidden';
       return () => {
+        clearTimeout(timeout);
         document.removeEventListener('keydown', handleKeyDown);
         document.body.style.overflow = '';
       };
     }
-  }, [isOpen, handleKeyDown]);
+  }, [isOpen, handleKeyDown, playSprite]);
 
   if (!isOpen) return null;
 

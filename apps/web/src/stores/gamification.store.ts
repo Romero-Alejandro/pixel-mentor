@@ -37,7 +37,12 @@ interface GamificationState {
   // SSE event handlers
   onXPEarned: (newTotalXP: number, reason: string) => void;
   onBadgeEarned: (badge: EarnedBadge) => void;
-  onLevelUp: (data: { newLevel: number; newLevelTitle: string; previousLevel: number; totalXP: number }) => void;
+  onLevelUp: (data: {
+    newLevel: number;
+    newLevelTitle: string;
+    previousLevel: number;
+    totalXP: number;
+  }) => void;
   onStreakUpdated: (currentStreak: number, longestStreak: number) => void;
 }
 
@@ -116,9 +121,7 @@ export const useGamificationStore = create<GamificationState>()((set) => ({
   // SSE event handlers
   onXPEarned: (newTotalXP: number, _reason: string) =>
     set((state) => ({
-      profile: state.profile
-        ? { ...state.profile, totalXP: newTotalXP }
-        : state.profile,
+      profile: state.profile ? { ...state.profile, totalXP: newTotalXP } : state.profile,
       particleTrigger: state.particleTrigger + 1,
     })),
 
@@ -153,8 +156,6 @@ export const useGamificationStore = create<GamificationState>()((set) => ({
 
   onStreakUpdated: (currentStreak: number, longestStreak: number) =>
     set((state) => ({
-      profile: state.profile
-        ? { ...state.profile, currentStreak, longestStreak }
-        : state.profile,
+      profile: state.profile ? { ...state.profile, currentStreak, longestStreak } : state.profile,
     })),
 }));

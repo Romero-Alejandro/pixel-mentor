@@ -1,5 +1,6 @@
 import type { UserGamificationProfile } from '@pixel-mentor/shared/gamification';
 
+import { useStreakAudio } from '@/hooks/useStreakAudio';
 import { cn } from '@/utils/cn';
 
 const LEVEL_EMOJIS: Record<number, string> = {
@@ -26,6 +27,7 @@ export interface SessionGamificationBarProps {
 }
 
 export function SessionGamificationBar({ profile, className }: SessionGamificationBarProps) {
+  useStreakAudio();
   const { currentLevel, levelTitle, totalXP, xpToNextLevel, currentStreak, badges } = profile;
 
   const emoji = LEVEL_EMOJIS[currentLevel] ?? '🌱';
