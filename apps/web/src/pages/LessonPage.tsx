@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { IconArrowLeft, IconAlertOctagon } from '@tabler/icons-react';
 
+import { useGamificationStore } from '@/stores/gamification.store';
+import { useAudio } from '@/contexts/AudioContext';
+import { SpriteAudioEvent } from '@/audio/types/audio-events';
 import { Mascot } from '@/components/mascot/Mascot';
 import { Spinner, Button } from '@/components/ui';
 import { LessonHeader } from '@/features/lesson/components/LessonHeader';
@@ -17,10 +20,25 @@ import { QuestionPanel } from '@/features/lesson/components/QuestionPanel';
 import { ActivityPanel } from '@/features/lesson/components/ActivityPanel';
 import { FeedbackPanel } from '@/features/lesson/components/FeedbackPanel';
 import { CompletedPanel } from '@/features/lesson/components/CompletedPanel';
+import { useLessonStore } from '@/stores/lessonStore';
 
 export function LessonPage() {
   const { lessonId } = useParams<{ lessonId: string }>();
   const { settings: voiceSettings, updateSettings } = useVoiceSettings();
+  const { particleTrigger } = useGamificationStore();
+  const { playSprite } = useAudio();
+  const isRepeat = useLessonStore((state) => state.isRepeat);
+  const xpEarned = useLessonStore((state) => state.xpEarned);
+  const accuracy = useLessonStore((state) => state.accuracy);
+
+  const prevParticleTrigger = useRef(particleTrigger);
+
+  useEffect(() => {
+    if (particleTrigger > prevParticleTrigger.current) {
+      playSprite(SpriteAudioEvent.XPGain);
+      prevParticleTrigger.current = particleTrigger;
+    }
+  }, [particleTrigger, playSprite]);
 
   useVoiceSettingsSync(voiceSettings);
 
@@ -37,6 +55,7 @@ export function LessonPage() {
     feedback,
     isProcessing,
     isSpeaking,
+    questionResults,
     startClass,
     submitAnswer,
     speakContent,
@@ -150,7 +169,15 @@ export function LessonPage() {
       currentPanel = feedback ? <FeedbackPanel fb={feedback} /> : null;
       break;
     case 'completed':
-      currentPanel = <CompletedPanel onRestart={handleRestart} />;
+      currentPanel = (
+        <CompletedPanel
+          onRestart={handleRestart}
+          isRepeat={isRepeat}
+          xpEarned={xpEarned ?? undefined}
+          accuracy={accuracy ?? undefined}
+          questionResults={questionResults}
+        />
+      );
       break;
   }
 

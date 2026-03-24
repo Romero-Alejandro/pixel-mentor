@@ -6,7 +6,10 @@ import { IconRocket, IconLogin2, IconUserPlus } from '@tabler/icons-react';
 import { useAuthStore } from '../stores/authStore';
 import { Button, Input, Card, Spinner } from '../components/ui';
 
+import { useAudio } from '@/contexts/AudioContext';
+
 export function LoginPage() {
+  const { playFocus, playClick, playClickSecondary } = useAudio();
   const navigate = useNavigate();
   const { login, isLoading, error, clearError } = useAuthStore(
     useShallow((state) => ({
@@ -22,11 +25,17 @@ export function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    playClick();
     clearError();
     try {
       await login(email, password);
       navigate('/dashboard');
     } catch {}
+  };
+
+  const handleRegisterClick = () => {
+    playClickSecondary();
+    // Navigation handled by Link
   };
 
   return (
@@ -59,6 +68,7 @@ export function LoginPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              onFocus={playFocus}
               required
               placeholder="tu@email.com"
               autoComplete="email"
@@ -70,6 +80,7 @@ export function LoginPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              onFocus={playFocus}
               required
               placeholder="••••••••"
               autoComplete="current-password"
@@ -98,6 +109,7 @@ export function LoginPage() {
             <Link
               to="/register"
               className="text-amber-600 hover:text-amber-500 transition-colors flex items-center gap-1"
+              onClick={handleRegisterClick}
             >
               <IconUserPlus className="w-5 h-5" />
               Crear cuenta
