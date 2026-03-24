@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import {
@@ -10,8 +10,11 @@ import {
   IconMapPin,
   IconClock,
   IconTrophy,
-  IconFlame,
-  IconChartBar,
+  IconPlayerPlay,
+  IconRefresh,
+  IconArrowRight,
+  IconBolt,
+  IconSparkles,
 } from '@tabler/icons-react';
 
 import { useAuthStore } from '../stores/authStore';
@@ -25,20 +28,72 @@ import { StreakWidget } from '../components/gamification/StreakWidget';
 import { StreakCalendar } from '@/components/gamification/StreakCalendar';
 import { XPChart } from '@/components/gamification/XPChart';
 import { BadgeGrid } from '@/components/gamification/BadgeGrid';
+import { useAudio } from '@/contexts/AudioContext';
+import { AudioControl } from '@/components/AudioControl';
+
+const LEVEL_EMOJIS: Record<number, string> = {
+  1: '🌱',
+  2: '🌿',
+  3: '🌸',
+  4: '🌳',
+  5: '🌲',
+  6: '⛰️',
+};
+
+interface LessonContext {
+  status: 'available' | 'in-progress' | 'practiced' | 'mastered';
+  session?: Session;
+  progressPercent?: number;
+  currentStep?: number;
+  totalSteps?: number;
+  actionLabel: string;
+  actionIcon: React.ReactNode;
+  statusMessage: string;
+}
+
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return '¡Buenos días';
+  if (hour < 18) return '¡Buenas tardes';
+  return '¡Buenas noches';
+}
 
 export function DashboardPage() {
+  const { playClick, playClickSecondary, playSelect, playStreakMaintained } = useAudio();
   const { user, logout } = useAuthStore(
     useShallow((state) => ({ user: state.user, logout: state.logout })),
   );
-  const { profile, fetchProfile } = useGamificationStore(
-    useShallow((state) => ({ profile: state.profile, fetchProfile: state.fetchProfile })),
+  const { profile, fetchProfile, particleTrigger, recordActivity } = useGamificationStore(
+    useShallow((state) => ({
+      profile: state.profile,
+      fetchProfile: state.fetchProfile,
+      particleTrigger: state.particleTrigger,
+      recordActivity: state.recordActivity,
+    })),
   );
+
+  const prevParticleTrigger = useRef(particleTrigger);
+
+  useEffect(() => {
+    if (particleTrigger > prevParticleTrigger.current) {
+      playStreakMaintained();
+      prevParticleTrigger.current = particleTrigger;
+    }
+  }, [particleTrigger, playStreakMaintained]);
 
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [achievements, setAchievements] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'streak' | 'badges' | 'progress'>('streak');
+
+  const { playModalOpen } = useAudio();
+
+  useEffect(() => {
+    if (!isLoading && recipes.length > 0) {
+      setTimeout(() => playModalOpen(), 500);
+    }
+  }, [isLoading, recipes.length, playModalOpen]);
 
   useEffect(() => {
     const loadAdventureData = async () => {
@@ -71,108 +126,227 @@ export function DashboardPage() {
 
     loadAdventureData();
     fetchProfile().catch(() => {});
-  }, [user, fetchProfile]);
+    // Record daily login to track streaks (backend handles deduplication for same day)
+    recordActivity('DAILY_LOGIN').catch(() => {});
+  }, [user, fetchProfile, recordActivity]);
 
-  const getMissionStatus = (recipeId: string) => {
-    const session = sessions.find((s) => s.recipeId === recipeId);
-    if (!session) return 'available';
-    if (session.status === 'COMPLETED') return 'completed';
-    return 'in-progress';
+  const getLessonContext = (recipe: Recipe, index: number): LessonContext => {
+    const session = sessions.find((s) => s.recipeId === recipe.id);
+    const totalSteps = recipe.steps?.length || 5;
+
+    // No session - available or locked
+    if (!session) {
+      const isLocked =
+        index > 0 &&
+        !sessions.some((s) => s.recipeId === recipes[index - 1]?.id && s.status === 'COMPLETED');
+
+      if (isLocked) {
+        return {
+          status: 'available',
+          actionLabel: 'Bloqueada',
+          actionIcon: <IconLock className="w-5 h-5" />,
+          statusMessage: 'Completa la misión anterior para desbloquear',
+        };
+      }
+
+      return {
+        status: 'available',
+        totalSteps,
+        actionLabel: '¡A jugar!',
+        actionIcon: <IconPlayerPlay className="w-5 h-5" />,
+        statusMessage: 'Nueva misión disponible',
+      };
+    }
+
+    // Completed session
+    if (session.status === 'COMPLETED') {
+      // totalWrongAnswers accumulates all wrong answers across the session
+      const wrongAnswers =
+        session.stateCheckpoint?.totalWrongAnswers ??
+        session.stateCheckpoint?.failedAttempts ??
+        session.failedAttempts ??
+        0;
+      const isPerfect = wrongAnswers === 0;
+      return {
+        status: isPerfect ? 'mastered' : 'practiced',
+        session,
+        totalSteps,
+        progressPercent: 100,
+        currentStep: totalSteps,
+        actionLabel: isPerfect ? 'Repetir' : 'Mejorar',
+        actionIcon: <IconRefresh className="w-5 h-5" />,
+        statusMessage: isPerfect ? '¡Dominado sin errores!' : 'Completado, ¡puedes mejorar!',
+      };
+    }
+
+    // In-progress session
+    const currentStep = session.stateCheckpoint?.currentStepIndex ?? 0;
+    const progressPercent = Math.round((currentStep / totalSteps) * 100);
+
+    return {
+      status: 'in-progress',
+      session,
+      currentStep,
+      totalSteps,
+      progressPercent,
+      actionLabel: 'Seguir',
+      actionIcon: <IconArrowRight className="w-5 h-5" />,
+      statusMessage: `Paso ${currentStep + 1} de ${totalSteps}`,
+    };
   };
 
   const safeStreakHistory = Array.isArray(achievements?.streakHistory)
     ? achievements.streakHistory
     : [];
 
-  return (
-    <div className="min-h-screen bg-[#f0f9ff] text-slate-800 pb-20 font-sans">
-      <header className="bg-white/80 backdrop-blur-xl border-b-4 border-sky-100 sticky top-0 z-20">
-        <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-amber-400 rounded-2xl flex items-center justify-center shadow-gummy shadow-amber-fun-dark border-2 border-amber-fun-dark rotate-3">
-              <IconRocket className="w-7 h-7 text-white" />
-            </div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-sky-900 hidden sm:block">
-              Pixel Mentor
-            </h1>
-          </div>
+  const handleTabChange = (tab: 'streak' | 'badges' | 'progress') => {
+    playClick();
+    setActiveTab(tab);
+  };
 
-          <div className="flex items-center gap-6">
+  const handleLogout = () => {
+    playClickSecondary();
+    logout();
+  };
+
+  const handleLessonNavigation = () => {
+    playSelect();
+  };
+
+  const xpPercent = profile
+    ? profile.xpToNextLevel > 0
+      ? Math.round((profile.totalXP / (profile.totalXP + profile.xpToNextLevel)) * 100)
+      : 100
+    : 0;
+
+  const completedCount = sessions.filter((s) => s.status === 'COMPLETED').length;
+  const levelEmoji = LEVEL_EMOJIS[profile?.currentLevel || 1] ?? '🌱';
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50">
+      <header className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b-4 border-sky-200 shadow-gummy shadow-sky-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+          <h1 className="text-2xl font-black text-sky-700 tracking-tight flex items-center gap-2">
+            <IconMoodSmile className="w-8 h-8 text-amber-400" stroke={2.5} />
+            PixelMentor
+          </h1>
+          <div className="flex items-center gap-4">
             {profile ? <CompactGamificationHeader profile={profile} /> : null}
-            <Button variant="danger" size="sm" onClick={logout}>
+            <AudioControl />
+            <button
+              onClick={handleLogout}
+              className="text-sm font-bold text-slate-500 hover:text-rose-500 transition-colors px-3 py-2 rounded-xl hover:bg-rose-50"
+            >
               Salir
-            </Button>
+            </button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 mt-10">
-        <div className="flex flex-col lg:flex-row gap-8 items-start">
-          <div className="w-full lg:w-1/3 space-y-6">
-            <div className="bg-white rounded-[2rem] p-6 border-4 border-amber-200 shadow-gummy shadow-amber-200 text-center animate-bounce-in">
-              <div className="w-20 h-20 mx-auto bg-sky-100 rounded-full flex items-center justify-center mb-4 border-4 border-sky-300">
-                <IconMoodSmile className="w-10 h-10 text-sky-500" stroke={2.5} />
-              </div>
-              <h2 className="text-xl font-black text-slate-800">¡Hola, {user?.name}!</h2>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Welcome message */}
+        <div className="mb-8 animate-bounce-in">
+          <h2 className="text-3xl sm:text-4xl font-black text-sky-900 tracking-tight">
+            {getGreeting()}, explorador! 👋
+          </h2>
+          <p className="text-lg text-sky-600 font-bold mt-1">
+            {completedCount === 0
+              ? '¡Tu aventura está por comenzar!'
+              : completedCount === 1
+                ? '¡Ya completaste tu primera misión! 🎉'
+                : `¡Llevas ${completedCount} misiones completadas! 🚀`}
+          </p>
+        </div>
 
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Left sidebar */}
+          <div className="w-full lg:w-1/3 space-y-6">
+            {/* Level card */}
+            <div className="bg-white rounded-[2rem] p-6 border-4 border-amber-200 shadow-gummy shadow-amber-200 relative overflow-hidden">
+              <div className="absolute -top-4 -right-4 text-7xl opacity-10 select-none">
+                {levelEmoji}
+              </div>
+              <div className="flex items-center gap-4 relative z-10">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-400 to-orange-400 flex items-center justify-center text-3xl shadow-lg border-4 border-white">
+                  {levelEmoji}
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-amber-600 uppercase tracking-wider">
+                    Nivel {profile?.currentLevel || 1}
+                  </p>
+                  <h2 className="text-xl font-black text-slate-800">
+                    {profile?.levelTitle || 'Semilla'}
+                  </h2>
+                </div>
+              </div>
               {profile ? (
-                <div className="mt-4 pt-4 border-t-4 border-slate-100 border-dashed">
-                  <div className="h-6 bg-slate-200 rounded-full overflow-hidden border-2 border-slate-300 relative shadow-inner">
-                    <div
-                      className="h-full bg-amber-400 transition-all duration-1000"
-                      style={{
-                        width: `${
-                          profile.xpToNextLevel > 0
-                            ? ((profile.totalXP % profile.xpToNextLevel) / profile.xpToNextLevel) *
-                              100
-                            : 100
-                        }%`,
-                      }}
-                    />
-                    <span className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-slate-700">
-                      {profile.totalXP % (profile.xpToNextLevel || 1)} /{' '}
-                      {profile.xpToNextLevel || 'Max'} XP
+                <div className="mt-4 relative z-10">
+                  <div className="flex justify-between items-end mb-1.5">
+                    <span className="text-xs font-bold text-slate-500">
+                      {profile.totalXP} XP ganados
+                    </span>
+                    <span className="text-xs font-bold text-amber-600">
+                      {profile.xpToNextLevel > 0
+                        ? `¡${profile.xpToNextLevel} XP para subir!`
+                        : '¡Nivel máximo! 🎉'}
                     </span>
                   </div>
-                  <p className="text-xs font-bold text-slate-500 mt-2 uppercase tracking-wider">
-                    Nivel {profile.currentLevel}: {profile.levelTitle}
-                  </p>
+                  <div className="w-full h-5 bg-amber-100 rounded-full overflow-hidden border-2 border-amber-200">
+                    <div
+                      className="h-full bg-gradient-to-r from-amber-400 to-orange-400 rounded-full transition-all duration-1000 ease-out relative"
+                      style={{ width: `${xpPercent}%` }}
+                    >
+                      {xpPercent > 15 && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-[10px] font-black text-white drop-shadow-sm">
+                            {xpPercent}%
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {profile.xpToNextLevel > 0 && (
+                    <p className="text-xs text-slate-400 font-bold mt-1.5 text-center">
+                      ¡Sigue jugando para subir de nivel! ⬆️
+                    </p>
+                  )}
                 </div>
               ) : null}
             </div>
 
+            {/* Achievements tabs */}
             {achievements ? (
               <div className="bg-white rounded-[2rem] p-6 border-4 border-sky-200 shadow-gummy shadow-sky-200">
                 <div className="flex gap-2 mb-6 bg-slate-100 p-1.5 rounded-2xl">
                   <button
-                    onClick={() => setActiveTab('streak')}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-bold transition-all ${
+                    onClick={() => handleTabChange('streak')}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-black transition-all ${
                       activeTab === 'streak'
                         ? 'bg-orange-400 text-white shadow-sm'
                         : 'text-slate-500 hover:bg-slate-200'
                     }`}
                   >
-                    <IconFlame className="w-4 h-4" /> Racha
+                    🔥 Racha
                   </button>
                   <button
-                    onClick={() => setActiveTab('badges')}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-bold transition-all ${
+                    onClick={() => handleTabChange('badges')}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-black transition-all ${
                       activeTab === 'badges'
                         ? 'bg-amber-400 text-white shadow-sm'
                         : 'text-slate-500 hover:bg-slate-200'
                     }`}
                   >
-                    <IconTrophy className="w-4 h-4" /> Medallas
+                    🏅 Medallas
                   </button>
                   <button
-                    onClick={() => setActiveTab('progress')}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-bold transition-all ${
+                    onClick={() => handleTabChange('progress')}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-black transition-all ${
                       activeTab === 'progress'
                         ? 'bg-emerald-400 text-white shadow-sm'
                         : 'text-slate-500 hover:bg-slate-200'
                     }`}
                   >
-                    <IconChartBar className="w-4 h-4" /> Avance
+                    📊 Avance
                   </button>
                 </div>
 
@@ -207,6 +381,7 @@ export function DashboardPage() {
             ) : null}
           </div>
 
+          {/* Missions map */}
           <div className="w-full lg:w-2/3">
             <h2 className="text-3xl font-black text-sky-900 mb-8 flex items-center gap-3">
               <IconMap className="w-8 h-8 text-sky-500" stroke={2.5} />
@@ -214,69 +389,151 @@ export function DashboardPage() {
             </h2>
 
             {isLoading ? (
-              <div className="flex justify-center py-20">
+              <div className="flex flex-col items-center justify-center py-20 gap-4">
                 <Spinner size="lg" className="text-sky-500" />
+                <p className="text-lg font-black text-sky-600 animate-pulse">
+                  Cargando aventuras...
+                </p>
               </div>
             ) : (
               <div className="space-y-6 relative pb-10">
                 <div className="absolute left-8 top-10 bottom-10 w-2 bg-sky-200 rounded-full -z-10 hidden sm:block" />
 
                 {recipes.map((recipe, index) => {
-                  const status = getMissionStatus(recipe.id);
+                  const context = getLessonContext(recipe, index);
+                  const isLocked = context.actionLabel === 'Bloqueada';
+                  const isMastered = context.status === 'mastered';
+                  const isPracticed = context.status === 'practiced';
+
                   return (
                     <Card
                       key={recipe.id}
-                      variant={
-                        status === 'completed'
-                          ? 'completed'
-                          : status === 'available' && index > 1
-                            ? 'locked'
-                            : 'mission'
-                      }
+                      variant={isMastered ? 'completed' : isLocked ? 'locked' : 'mission'}
                       className="relative overflow-hidden flex flex-col sm:flex-row items-center gap-6"
                     >
+                      {/* Status Icon */}
                       <div
                         className={`w-16 h-16 shrink-0 rounded-full flex items-center justify-center border-4 bg-white z-10 ${
-                          status === 'completed'
-                            ? 'border-emerald-200'
-                            : status === 'in-progress'
-                              ? 'border-amber-200'
-                              : 'border-sky-200'
+                          isMastered
+                            ? 'border-amber-300'
+                            : isPracticed
+                              ? 'border-sky-200'
+                              : context.status === 'in-progress'
+                                ? 'border-amber-200'
+                                : isLocked
+                                  ? 'border-slate-200'
+                                  : 'border-sky-200'
                         }`}
                       >
-                        {status === 'completed' ? (
-                          <IconStar className="w-8 h-8 text-emerald-400 fill-current" />
-                        ) : status === 'in-progress' ? (
+                        {isMastered ? (
+                          <IconTrophy className="w-8 h-8 text-amber-500" />
+                        ) : isPracticed ? (
+                          <IconRefresh className="w-8 h-8 text-sky-500" />
+                        ) : context.status === 'in-progress' ? (
                           <IconRocket className="w-8 h-8 text-amber-400 animate-pulse fill-current" />
+                        ) : isLocked ? (
+                          <IconLock className="w-8 h-8 text-slate-400" />
                         ) : (
                           <IconMapPin className="w-8 h-8 text-sky-400 fill-current" />
                         )}
                       </div>
 
+                      {/* Content */}
                       <div className="flex-1 text-center sm:text-left">
-                        <h3 className="text-xl font-bold text-slate-800">{recipe.title}</h3>
+                        <div className="flex items-center gap-2 justify-center sm:justify-start">
+                          <h3 className="text-xl font-bold text-slate-800">{recipe.title}</h3>
+                          {isMastered && (
+                            <span className="inline-flex items-center gap-0.5 bg-amber-100 border-2 border-amber-200 px-2 py-0.5 rounded-full text-xs font-black text-amber-700">
+                              <IconStar className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                              Dominado
+                            </span>
+                          )}
+                          {isPracticed && (
+                            <span className="inline-flex items-center gap-0.5 bg-sky-100 border-2 border-sky-200 px-2 py-0.5 rounded-full text-xs font-black text-sky-700">
+                              <IconRefresh className="w-3.5 h-3.5 text-sky-500" />
+                              Practicada
+                            </span>
+                          )}
+                        </div>
+
                         <p className="text-slate-500 font-medium mt-1 leading-relaxed">
                           {recipe.description}
                         </p>
 
-                        <div className="flex items-center justify-center sm:justify-start gap-3 mt-3 text-sm font-bold">
-                          <span className="flex items-center gap-1 text-amber-600 bg-amber-50 px-3 py-1 rounded-full border-2 border-amber-100">
-                            <IconStar className="w-4 h-4 fill-current" /> +50 XP
-                          </span>
+                        {/* Status Message */}
+                        <div
+                          className={`mt-2 text-sm font-bold flex items-center gap-1.5 justify-center sm:justify-start ${
+                            isMastered
+                              ? 'text-amber-600'
+                              : isPracticed
+                                ? 'text-sky-600'
+                                : context.status === 'in-progress'
+                                  ? 'text-amber-600'
+                                  : isLocked
+                                    ? 'text-slate-400'
+                                    : 'text-sky-600'
+                          }`}
+                        >
+                          {isMastered ? '🏆' : null}
+                          {isPracticed ? '💪' : null}
+                          {context.status === 'in-progress' ? '🚀' : null}
+                          {isLocked ? '🔒' : null}
+                          {context.status === 'available' && !isLocked ? '✨' : null}
+                          {context.statusMessage}
+                        </div>
+
+                        {/* Progress Bar for in-progress */}
+                        {context.status === 'in-progress' &&
+                        context.progressPercent !== undefined ? (
+                          <div className="mt-3 max-w-xs mx-auto sm:mx-0">
+                            <div className="flex justify-between text-xs font-bold text-slate-500 mb-1">
+                              <span>Tu progreso</span>
+                              <span>{context.progressPercent}%</span>
+                            </div>
+                            <div className="w-full h-3 bg-amber-100 rounded-full overflow-hidden border-2 border-amber-200">
+                              <div
+                                className="h-full bg-gradient-to-r from-amber-400 to-orange-400 rounded-full transition-all duration-500"
+                                style={{ width: `${context.progressPercent}%` }}
+                              />
+                            </div>
+                          </div>
+                        ) : null}
+
+                        {/* XP / Status badges */}
+                        <div className="flex items-center justify-center sm:justify-start gap-3 mt-3 text-sm font-bold flex-wrap">
+                          {isMastered ? (
+                            <span className="flex items-center gap-1 text-amber-600 bg-amber-50 px-3 py-1 rounded-full border-2 border-amber-100">
+                              <IconStar className="w-4 h-4 fill-current" /> ¡Dominado!
+                            </span>
+                          ) : isPracticed ? (
+                            <span className="flex items-center gap-1 text-sky-600 bg-sky-50 px-3 py-1 rounded-full border-2 border-sky-100">
+                              <IconBolt className="w-4 h-4" /> ¡Inténtalo de nuevo!
+                            </span>
+                          ) : context.status === 'in-progress' ? (
+                            <span className="flex items-center gap-1 text-amber-600 bg-amber-50 px-3 py-1 rounded-full border-2 border-amber-100">
+                              <IconRocket className="w-4 h-4" /> En progreso
+                            </span>
+                          ) : !isLocked ? (
+                            <span className="flex items-center gap-1 text-amber-600 bg-amber-50 px-3 py-1 rounded-full border-2 border-amber-100">
+                              <IconStar className="w-4 h-4 fill-current" /> Hasta +70 XP
+                            </span>
+                          ) : null}
                           {recipe.expectedDurationMinutes ? (
                             <span className="flex items-center gap-1 text-sky-600 bg-sky-50 px-3 py-1 rounded-full border-2 border-sky-100">
                               <IconClock className="w-4 h-4" /> {recipe.expectedDurationMinutes} min
                             </span>
                           ) : null}
+                          {context.totalSteps && !isLocked ? (
+                            <span className="flex items-center gap-1 text-violet-600 bg-violet-50 px-3 py-1 rounded-full border-2 border-violet-100">
+                              <IconSparkles className="w-4 h-4" /> {context.totalSteps} retos
+                            </span>
+                          ) : null}
                         </div>
                       </div>
 
+                      {/* Action Button */}
                       <div className="shrink-0 w-full sm:w-auto mt-4 sm:mt-0">
-                        {status === 'completed' ? (
-                          <Button variant="success" className="w-full" disabled>
-                            ¡Completada!
-                          </Button>
-                        ) : status === 'locked' && index > 1 ? (
+                        {isLocked ? (
                           <Button
                             variant="secondary"
                             className="w-full opacity-50 cursor-not-allowed"
@@ -285,12 +542,25 @@ export function DashboardPage() {
                             <IconLock className="w-5 h-5 mr-2" /> Bloqueada
                           </Button>
                         ) : (
-                          <Link to={`/lesson/${recipe.id}`} className="w-full block">
+                          <Link
+                            to={`/lesson/${recipe.id}`}
+                            className="w-full block"
+                            onClick={handleLessonNavigation}
+                          >
                             <Button
-                              variant={status === 'in-progress' ? 'secondary' : 'primary'}
-                              className="w-full shadow-lg"
+                              variant={
+                                isMastered
+                                  ? 'success'
+                                  : isPracticed
+                                    ? 'secondary'
+                                    : context.status === 'in-progress'
+                                      ? 'secondary'
+                                      : 'primary'
+                              }
+                              className="w-full shadow-lg flex items-center gap-2"
                             >
-                              {status === 'in-progress' ? 'Continuar' : '¡Jugar ahora!'}
+                              {context.actionIcon}
+                              {context.actionLabel}
                             </Button>
                           </Link>
                         )}
