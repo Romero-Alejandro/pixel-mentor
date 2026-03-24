@@ -31,6 +31,11 @@ export const SessionCheckpointSchema = z.object({
       stepIndex: z.number(),
     })
     .optional(),
+  questionCount: z.number().optional(),
+  lastQuestionTime: z.string().nullish(),
+  skippedActivities: z.array(z.string()).optional(),
+  failedAttempts: z.number().optional(),
+  totalWrongAnswers: z.number().optional(),
 });
 
 export type SessionCheckpoint = z.infer<typeof SessionCheckpointSchema>;

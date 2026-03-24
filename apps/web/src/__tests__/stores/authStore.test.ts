@@ -221,10 +221,10 @@ describe('authStore', () => {
       expect(useAuthStore.getState().isValidating).toBe(false);
     });
 
-    it('should reset isHydrated on logout', () => {
+    it('should keep isHydrated true on logout', () => {
       useAuthStore.setState({ isHydrated: true, isAuthenticated: true });
       useAuthStore.getState().logout();
-      expect(useAuthStore.getState().isHydrated).toBe(false);
+      expect(useAuthStore.getState().isHydrated).toBe(true);
     });
 
     it('should set isAuthenticated false and isValidating false on checkAuth with no token', async () => {

@@ -90,6 +90,7 @@ export const StartRecipeOutputSchema = z.object({
   ]),
   resumed: z.boolean().optional(),
   needsStart: z.boolean().optional(),
+  isRepeat: z.boolean().optional(),
   staticContent: StaticContentSchema.optional(),
   meta: z
     .object({

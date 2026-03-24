@@ -210,6 +210,9 @@ importers:
       tailwind-merge:
         specifier: ^3.5.0
         version: 3.5.0
+      use-sound:
+        specifier: ^5.0.0
+        version: 5.0.0(react@19.2.4)
       zod:
         specifier: ^4.3.6
         version: 4.3.6
@@ -3368,6 +3371,9 @@ packages:
   hosted-git-info@2.8.9:
     resolution: {integrity: sha512-mxIDAb9Lsm6DoOJ7xH+5+X4y1LU/4Hi50L9C5sIswK3JzULS4bwk1FvjdBgvYR4bzT4tuUQiC15FE2f5HbLvYw==}
 
+  howler@2.2.4:
+    resolution: {integrity: sha512-iARIBPgcQrwtEr+tALF+rapJ8qSc+Set2GJQl7xT1MQzWaVkFebdJhR3alVlSiUf5U7nAANKuj3aWpwerocD5w==}
+
   html-encoding-sniffer@6.0.0:
     resolution: {integrity: sha512-CV9TW3Y3f8/wT0BRFc1/KAVQ3TUHiXmaAb6VW9vtiMFf7SLoMd1PdAc4W3KFOFETBJUb90KatHqlsZMWV+R9Gg==}
     engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0}
@@ -5556,6 +5562,11 @@ packages:
   urix@0.1.0:
     resolution: {integrity: sha512-Am1ousAhSLBeB9cG/7k7r2R0zj50uDRlZHPGbazid5s9rlF1F/QKYObEKSIunSjIOkJZqwRRLpvewjEkM7pSqg==}
     deprecated: Please see https://github.com/lydell/urix#deprecated
+
+  use-sound@5.0.0:
+    resolution: {integrity: sha512-MNHT3FFC5HxNCrgZtrnpIMJI2cw/0D2xismcrtyht8BTuF5FhFhb57xO/jlQr2xJaFrc/0btzRQvGyHQwB7PVA==}
+    peerDependencies:
+      react: '>=16.8'
 
   use@3.1.1:
     resolution: {integrity: sha512-cwESVXlO3url9YWlFW/TA9cshCEhtu7IKJ/p5soJ/gGpj7vbvFrAY/eIioQ6Dw23KjZhYgiIo8HOs1nQ2vr/oQ==}
@@ -9443,6 +9454,8 @@ snapshots:
 
   hosted-git-info@2.8.9: {}
 
+  howler@2.2.4: {}
+
   html-encoding-sniffer@6.0.0(@noble/hashes@1.8.0):
     dependencies:
       '@exodus/bytes': 1.15.0(@noble/hashes@1.8.0)
@@ -12013,6 +12026,11 @@ snapshots:
       punycode: 2.3.1
 
   urix@0.1.0: {}
+
+  use-sound@5.0.0(react@19.2.4):
+    dependencies:
+      howler: 2.2.4
+      react: 19.2.4
 
   use@3.1.1: {}
 
