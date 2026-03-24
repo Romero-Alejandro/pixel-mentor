@@ -44,6 +44,15 @@ export interface LessonCompletedPayload {
   lessonTitle: string;
   durationSeconds?: number;
   completedAt: Date;
+  /** Accuracy data for XP scaling */
+  accuracy?: {
+    correctFirstAttempts: number;
+    correctLastAttempts: number;
+    totalActivities: number;
+    skippedActivities: number;
+    accuracyPercent: number;
+    allCorrectOnFirstAttempt: boolean;
+  };
 }
 
 /**

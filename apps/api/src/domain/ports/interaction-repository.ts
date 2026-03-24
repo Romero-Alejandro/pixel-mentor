@@ -15,6 +15,7 @@ export interface InteractionRepository {
   flagForReview(interactionId: string): Promise<Interaction>;
   markAsQuestion(interactionId: string): Promise<Interaction>;
   getLatestBySession(sessionId: string): Promise<Interaction | null>;
+  deleteBySession(sessionId: string): Promise<void>;
 }
 
 export class InteractionNotFoundError extends Error {

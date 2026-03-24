@@ -199,6 +199,7 @@ export function buildContainer(config: Config, logger: pino.Logger) {
       repositories.advisoryLock,
       undefined, // contextWindowService
       getFeatureFlagService(), // FeatureFlagService for cohort-based routing
+      repositories.activityAttemptRepository, // For accuracy calculation
     ),
   };
 

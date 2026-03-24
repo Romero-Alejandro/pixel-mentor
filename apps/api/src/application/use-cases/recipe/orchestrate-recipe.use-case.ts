@@ -9,6 +9,7 @@ import type { ConceptRepository } from '@/domain/ports/concept-repository.js';
 import type { ActivityRepository } from '@/domain/ports/activity-repository.js';
 import type { AtomRepository } from '@/domain/ports/atom-repository.js';
 import type { UserRepository } from '@/domain/ports/user-repository.js';
+import type { ActivityAttemptRepository } from '@/domain/ports/activity-attempt-repository.js';
 import type { AIService, AIResponse } from '@/domain/ports/ai-service.js';
 import type {
   QuestionClassifier,
@@ -116,6 +117,7 @@ export class OrchestrateRecipeUseCase {
     private advisoryLockManager?: AdvisoryLockManager,
     private contextWindowService: ContextWindowService = new ContextWindowService(),
     private featureFlagService?: FeatureFlagService,
+    private activityAttemptRepo?: ActivityAttemptRepository,
   ) {
     // Mantenidos para compatibilidad futura
     void this.conceptRepo;
@@ -123,21 +125,106 @@ export class OrchestrateRecipeUseCase {
   }
 
   /**
+   * Calculate accuracy for a completed lesson.
+   * Uses LAST attempt to determine if the student eventually mastered the material.
+   * Also tracks if all answers were correct on first attempt for bonus XP.
+   */
+  private async calculateAccuracy(
+    userId: string,
+    steps: Array<{ atomId: string; stepType?: string | null }>,
+    skippedAtomIds: string[],
+  ): Promise<{
+    correctFirstAttempts: number;
+    correctLastAttempts: number;
+    totalActivities: number;
+    skippedActivities: number;
+    accuracyPercent: number;
+    allCorrectOnFirstAttempt: boolean;
+    tier: 'perfect' | 'high' | 'medium' | 'low';
+  }> {
+    const activitySteps = steps.filter(
+      (s) => s.stepType === 'activity' || s.stepType === 'question',
+    );
+    const totalActivities = activitySteps.length;
+
+    let correctFirstAttempts = 0;
+    let correctLastAttempts = 0;
+    let allCorrectOnFirstAttempt = true;
+
+    if (totalActivities > 0 && this.activityAttemptRepo) {
+      for (const step of activitySteps) {
+        if (skippedAtomIds.includes(step.atomId)) continue;
+
+        const attempts = await this.activityAttemptRepo.findByUserIdAndAtomId(userId, step.atomId);
+
+        // Sort by attemptNo to get first and last
+        const sortedAttempts = attempts.sort((a, b) => a.attemptNo - b.attemptNo);
+        const firstAttempt = sortedAttempts[0];
+        const lastAttempt = sortedAttempts[sortedAttempts.length - 1];
+
+        // Check first attempt (for bonus calculation)
+        if (firstAttempt?.correct) {
+          correctFirstAttempts++;
+        } else {
+          allCorrectOnFirstAttempt = false;
+        }
+
+        // Check last attempt (for accuracy calculation - mastery)
+        if (lastAttempt?.correct) {
+          correctLastAttempts++;
+        }
+      }
+    }
+
+    const skippedActivities = skippedAtomIds.length;
+    const attemptedActivities = totalActivities - skippedActivities;
+
+    // Accuracy is based on LAST attempt (mastery)
+    const accuracyPercent =
+      attemptedActivities > 0 ? Math.round((correctLastAttempts / attemptedActivities) * 100) : 100;
+
+    // Determine tier based on last attempt accuracy
+    let tier: 'perfect' | 'high' | 'medium' | 'low';
+    if (accuracyPercent >= 100) tier = 'perfect';
+    else if (accuracyPercent >= 80) tier = 'high';
+    else if (accuracyPercent >= 50) tier = 'medium';
+    else tier = 'low';
+
+    return {
+      correctFirstAttempts,
+      correctLastAttempts,
+      totalActivities,
+      skippedActivities,
+      accuracyPercent,
+      allCorrectOnFirstAttempt,
+      tier,
+    };
+  }
+
+  /**
    * Emit LESSON_COMPLETED event to trigger gamification processing (XP, badges, streaks).
+   * Calculates accuracy from ActivityAttempt records and includes it in the payload.
    * Wrapped in try/catch so gamification failures never break session completion.
    */
   private async emitLessonCompleted(
     userId: string,
     lessonId: string,
     lessonTitle: string,
+    steps: Array<{ atomId: string; stepType?: string | null }>,
+    skippedAtomIds: string[],
   ): Promise<void> {
     try {
       const eventBus = getEventBus();
+
+      // Calculate accuracy
+      const accuracyData = await this.calculateAccuracy(userId, steps, skippedAtomIds);
+
       const payload: LessonCompletedPayload = {
         userId,
         lessonId,
         lessonTitle,
         completedAt: new Date(),
+        accuracy: accuracyData,
       };
       await eventBus.emit(GameDomainEvents.LESSON_COMPLETED, payload);
     } catch {
@@ -543,6 +630,8 @@ export class OrchestrateRecipeUseCase {
     if (!steps.length) throw new Error('Recipe has no steps');
 
     const existing = await this.sessionRepo.findByStudentAndRecipe(studentId, recipeId);
+
+    // Case 1: Active session exists → resume it
     if (existing && !isTerminalStatus(existing.status)) {
       const idx = existing.stateCheckpoint.currentStepIndex ?? 0;
       const needsToStart = existing.stateCheckpoint.currentState === 'AWAITING_START';
@@ -567,6 +656,43 @@ export class OrchestrateRecipeUseCase {
       };
     }
 
+    // Case 2: Completed/Escalated session exists → reuse it (reset instead of creating new)
+    if (existing && isTerminalStatus(existing.status)) {
+      // Delete old interactions to clean up DB
+      await this.interactionRepo.deleteBySession(existing.id);
+      // Reset the session to initial state
+      const resetSession = await this.sessionRepo.resetProgress(existing.id);
+      await this.sessionRepo.updateStatus(resetSession.id, 'ACTIVE');
+
+      const voiceText = [
+        fillTemplate(this.config.greetings.intro, {
+          name,
+          tutor: this.config.tutorName,
+          title: recipe.title,
+        }),
+        fillTemplate(this.config.greetings.readyPrompt, {
+          name,
+          tutor: this.config.tutorName,
+          title: recipe.title,
+        }),
+      ].join('. ');
+
+      await this.record(resetSession.id, 0, voiceText, 'greeting');
+
+      return {
+        sessionId: resetSession.id,
+        voiceText,
+        pedagogicalState: 'AWAITING_START' as PedagogicalState,
+        staticContent: this.extractStaticContent(steps[0]),
+        config: this.config as unknown as Record<string, unknown>,
+        resumed: false,
+        needsStart: true,
+        isRepeat: true,
+        lessonProgress: { currentStep: 0, totalSteps: steps.length },
+      };
+    }
+
+    // Case 3: No session exists → create new one
     const sessionId = randomUUID();
     const voiceText = [
       fillTemplate(this.config.greetings.intro, {
@@ -647,6 +773,7 @@ export class OrchestrateRecipeUseCase {
     let lastQuestionTime = cp.lastQuestionTime ?? null;
     let skippedActivities: string[] = cp.skippedActivities ?? [];
     let failedAttempts = cp.failedAttempts ?? 0;
+    let totalWrongAnswers = cp.totalWrongAnswers ?? 0;
     let savedStepIndex: number | undefined = cp.savedStepIndex;
     let doubtContext = cp.doubtContext;
 
@@ -662,7 +789,13 @@ export class OrchestrateRecipeUseCase {
     const currentStep = steps[currentIdx];
     if (!currentStep) {
       await this.sessionRepo.complete(sessionId);
-      await this.emitLessonCompleted(session.studentId, session.recipeId, recipe.title);
+      await this.emitLessonCompleted(
+        session.studentId,
+        session.recipeId,
+        recipe.title,
+        steps,
+        skippedActivities,
+      );
       return {
         voiceText: fillTemplate(this.config.greetings.completionMessage ?? '¡Felicitaciones!', {
           name: 'estudiante',
@@ -777,6 +910,7 @@ export class OrchestrateRecipeUseCase {
     let nextState: PedagogicalState = currentState;
     let nextIdx = currentIdx;
     let willComplete = false;
+    let isCorrectValue: boolean | undefined;
 
     // ── Máquina de estados ────────────────────────────────────────────────
 
@@ -818,15 +952,19 @@ export class OrchestrateRecipeUseCase {
         if (evaluation.result === 'correct') {
           voiceText = qs.feedback.correct;
           responseFeedback = qs.feedback.correct;
+          isCorrectValue = true;
           nextState = 'EVALUATION';
           failedAttempts = 0;
         } else if (evaluation.result === 'partial') {
           voiceText = qs.hint ?? evaluation.hint ?? qs.feedback.incorrect;
+          isCorrectValue = false;
           nextState = 'ACTIVITY_WAIT';
         } else {
           failedAttempts++;
+          totalWrongAnswers++;
           voiceText = qs.feedback.incorrect;
           responseFeedback = qs.feedback.incorrect;
+          isCorrectValue = false;
           nextState =
             failedAttempts >= this.config.skipAfterFailedAttempts && this.config.enableActivitySkip
               ? 'ACTIVITY_SKIP_OFFER'
@@ -841,12 +979,14 @@ export class OrchestrateRecipeUseCase {
 
         voiceText = isCorrect ? as.feedback.correct : as.feedback.incorrect;
         responseFeedback = voiceText;
+        isCorrectValue = isCorrect;
 
         if (isCorrect) {
           nextState = 'EVALUATION';
           failedAttempts = 0;
         } else {
           failedAttempts++;
+          totalWrongAnswers++;
           nextState =
             failedAttempts >= this.config.skipAfterFailedAttempts && this.config.enableActivitySkip
               ? 'ACTIVITY_SKIP_OFFER'
@@ -921,12 +1061,21 @@ export class OrchestrateRecipeUseCase {
       lastQuestionTime,
       skippedActivities,
       failedAttempts,
+      totalWrongAnswers,
     };
 
     const persist = async () => {
       if (willComplete) {
+        // Save checkpoint (including failedAttempts) BEFORE marking as completed
+        await this.sessionRepo.updateCheckpoint(sessionId, newCp);
         await this.sessionRepo.complete(sessionId);
-        await this.emitLessonCompleted(session.studentId, session.recipeId, recipe.title);
+        await this.emitLessonCompleted(
+          session.studentId,
+          session.recipeId,
+          recipe.title,
+          steps,
+          skippedActivities,
+        );
       } else await this.sessionRepo.updateCheckpoint(sessionId, newCp);
     };
 
@@ -946,14 +1095,26 @@ export class OrchestrateRecipeUseCase {
     const displayStep = willComplete ? currentStep : (steps[nextIdx] ?? currentStep);
     const staticContent = this.extractStaticContent(displayStep);
 
+    // Calculate accuracy and XP for completed lessons
+    let xpEarned: number | undefined;
+    let accuracyData: InteractRecipeOutput['accuracy'] = undefined;
+    if (willComplete && session.studentId) {
+      const accuracy = await this.calculateAccuracy(session.studentId, steps, skippedActivities);
+      const { calculateXPFromAccuracy } =
+        await import('@/game-engine/strategies/xp-reward.strategy.js');
+      xpEarned = calculateXPFromAccuracy(accuracy.accuracyPercent);
+      accuracyData = accuracy;
+    }
+
     return {
       voiceText,
       pedagogicalState: nextState,
       sessionCompleted: willComplete || undefined,
       feedback: responseFeedback,
-      isCorrect: aiResponse.isCorrect,
+      isCorrect: isCorrectValue ?? aiResponse.isCorrect,
       staticContent,
-      lessonProgress: { currentStep: nextIdx, totalSteps: steps.length },
+      xpEarned,
+      accuracy: accuracyData,
     };
   }
 
@@ -995,6 +1156,7 @@ export class OrchestrateRecipeUseCase {
     let lastQuestionTime = cp.lastQuestionTime ?? null;
     let skippedActivities: string[] = cp.skippedActivities ?? [];
     let failedAttempts = cp.failedAttempts ?? 0;
+    let totalWrongAnswers = cp.totalWrongAnswers ?? 0;
     let savedStepIndex: number | undefined = cp.savedStepIndex;
     let doubtContext = cp.doubtContext;
 
@@ -1013,7 +1175,13 @@ export class OrchestrateRecipeUseCase {
     const currentStep = steps[currentIdx];
     if (!currentStep) {
       await this.sessionRepo.complete(sessionId);
-      await this.emitLessonCompleted(session.studentId, session.recipeId, recipe.title);
+      await this.emitLessonCompleted(
+        session.studentId,
+        session.recipeId,
+        recipe.title,
+        steps,
+        skippedActivities,
+      );
       yield {
         type: 'end',
         reason: 'completed',
@@ -1182,6 +1350,7 @@ export class OrchestrateRecipeUseCase {
           nextState = 'ACTIVITY_WAIT';
         } else {
           failedAttempts++;
+          totalWrongAnswers++;
           voiceText = qs.feedback.incorrect;
           nextState =
             failedAttempts >= this.config.skipAfterFailedAttempts && this.config.enableActivitySkip
@@ -1201,6 +1370,7 @@ export class OrchestrateRecipeUseCase {
           failedAttempts = 0;
         } else {
           failedAttempts++;
+          totalWrongAnswers++;
           nextState =
             failedAttempts >= this.config.skipAfterFailedAttempts && this.config.enableActivitySkip
               ? 'ACTIVITY_SKIP_OFFER'
@@ -1277,12 +1447,21 @@ export class OrchestrateRecipeUseCase {
       lastQuestionTime,
       skippedActivities,
       failedAttempts,
+      totalWrongAnswers,
     };
 
     const persist = async () => {
       if (willComplete) {
+        // Save checkpoint (including failedAttempts) BEFORE marking as completed
+        await this.sessionRepo.updateCheckpoint(sessionId, newCp);
         await this.sessionRepo.complete(sessionId);
-        await this.emitLessonCompleted(session.studentId, session.recipeId, recipe.title);
+        await this.emitLessonCompleted(
+          session.studentId,
+          session.recipeId,
+          recipe.title,
+          steps,
+          skippedActivities,
+        );
       } else await this.sessionRepo.updateCheckpoint(sessionId, newCp);
     };
 

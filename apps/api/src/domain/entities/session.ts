@@ -31,6 +31,7 @@ export interface SessionCheckpoint {
   readonly lastQuestionTime?: string | null;
   readonly skippedActivities?: string[];
   readonly failedAttempts?: number;
+  readonly totalWrongAnswers?: number;
 }
 
 export interface Session {

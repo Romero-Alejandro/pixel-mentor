@@ -4,7 +4,10 @@ import type pino from 'pino';
 
 import type { GameEngineCore } from '@/game-engine/core';
 import type { LevelService } from '@/game-engine/level.service';
-import { BASE_LESSON_XP } from '@/game-engine/strategies/xp-reward.strategy';
+import {
+  calculateXPFromAccuracy,
+  getPerformanceTier,
+} from '@/game-engine/strategies/xp-reward.strategy';
 import { getBadgeEngine } from '@/game-engine/badge-engine';
 import { getEventBus } from '@/events/event-bus';
 import { GameDomainEvents } from '@/events/game-events';
@@ -256,11 +259,49 @@ export function createGamificationRouter(
       try {
         const userId = req.user!.id;
         const profile = await userGamificationRepo.findByUserId(userId);
+
+        // Query daily activities for the last 90 days
+        const ninetyDaysAgo = new Date();
+        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+        ninetyDaysAgo.setUTCHours(0, 0, 0, 0);
+
+        const activities = await prisma.dailyActivity.findMany({
+          where: {
+            userId,
+            date: { gte: ninetyDaysAgo },
+          },
+          orderBy: { date: 'asc' },
+          select: { date: true },
+        });
+
+        // Build a set of active dates for fast lookup
+        const activeDates = new Set(
+          activities.map((a) => {
+            const d = new Date(a.date);
+            return d.toISOString().split('T')[0];
+          }),
+        );
+
+        // Generate history array for last 90 days with active flag
+        const history: Array<{ date: string; active: boolean }> = [];
+        const today = new Date();
+        today.setUTCHours(0, 0, 0, 0);
+
+        for (let i = 89; i >= 0; i--) {
+          const d = new Date(today);
+          d.setDate(d.getDate() - i);
+          const dateStr = d.toISOString().split('T')[0];
+          history.push({
+            date: dateStr,
+            active: activeDates.has(dateStr),
+          });
+        }
+
         res.json({
           currentStreak: profile?.streak ?? 0,
           longestStreak: profile?.longestStreak ?? 0,
           lastActivityAt: profile?.lastActivityAt,
-          history: [],
+          history,
         });
       } catch (error) {
         next(error);
@@ -342,10 +383,11 @@ export function createGamificationRouter(
         const xpToNextLevel = await levelService.getXPForNextLevel(profile.level);
 
         // 3. Calculate XP earned from this session
-        // BASE_LESSON_XP is the fixed reward for lesson completion.
-        // Additional bonuses (streak, badges) are applied by the game engine
-        // but not tracked per-session, so we report the base amount.
-        const xpEarned = BASE_LESSON_XP;
+        // For now, we assume 100% accuracy (default behavior).
+        // TODO: Store accuracy in session and retrieve it here for accurate reporting.
+        const accuracyPercent = 100;
+        const xpEarned = calculateXPFromAccuracy(accuracyPercent);
+        const performanceTier = getPerformanceTier(accuracyPercent);
 
         // 4. Find new badges earned after session completion
         const newBadges = await prisma.userBadge.findMany({

@@ -23,6 +23,11 @@ function serializeCheckpoint(checkpoint: SessionCheckpoint): Prisma.InputJsonVal
           stepIndex: checkpoint.doubtContext.stepIndex,
         }
       : null,
+    questionCount: checkpoint.questionCount ?? 0,
+    lastQuestionTime: checkpoint.lastQuestionTime ?? null,
+    skippedActivities: checkpoint.skippedActivities ?? [],
+    failedAttempts: checkpoint.failedAttempts ?? 0,
+    totalWrongAnswers: checkpoint.totalWrongAnswers ?? 0,
   } as Prisma.InputJsonValue;
 }
 
@@ -41,6 +46,13 @@ function normalizeCheckpoint(raw: Record<string, unknown> | null | undefined): S
           };
         })()
       : undefined,
+    questionCount: data.questionCount ? Number(data.questionCount) : undefined,
+    lastQuestionTime: (data.lastQuestionTime as string) ?? undefined,
+    skippedActivities: Array.isArray(data.skippedActivities)
+      ? (data.skippedActivities as string[])
+      : undefined,
+    failedAttempts: data.failedAttempts ? Number(data.failedAttempts) : undefined,
+    totalWrongAnswers: data.totalWrongAnswers ? Number(data.totalWrongAnswers) : undefined,
   };
 }
 
@@ -55,6 +67,7 @@ const mapSessionToDomain = (entity: PrismaSession): Session => ({
   completedAt: entity.completedAt,
   escalatedAt: entity.escalatedAt,
   meta: entity.meta ?? undefined,
+  failedAttempts: entity.failedAttempts ?? undefined,
 });
 
 export class PrismaSessionRepository implements SessionRepository {
@@ -186,10 +199,19 @@ export class PrismaSessionRepository implements SessionRepository {
         where: { id: sessionId },
         data: {
           stateCheckpoint: {
-            currentState: 'ACTIVE_CLASS',
+            currentState: 'AWAITING_START',
             currentStepIndex: 0,
+            questionCount: 0,
+            lastQuestionTime: null,
+            skippedActivities: [],
+            failedAttempts: 0,
           },
           status: 'IDLE',
+          completedAt: null,
+          escalatedAt: null,
+          failedAttempts: 0,
+          outOfScope: false,
+          safetyFlag: null,
         },
       });
       return mapSessionToDomain(updated);

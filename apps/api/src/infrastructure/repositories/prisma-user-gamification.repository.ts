@@ -108,12 +108,15 @@ export class PrismaUserGamificationRepository implements IUserGamificationReposi
     const newLevelTitle = leveledUp ? this.levelService.getLevelTitle(newLevel) : undefined;
 
     // Update the user's XP and level
+    // NOTE: Do NOT update lastActivityAt here — only StreakService.recordActivity()
+    // should manage that field. Updating it here corrupts streak tracking because
+    // any XP award (lesson completion, badge, perfect attempt) would count as
+    // a streak activity, creating phantom days.
     await prisma.userGamification.update({
       where: { userId },
       data: {
         totalXP: newTotalXP,
         level: newLevel,
-        lastActivityAt: new Date(),
       },
     });
 

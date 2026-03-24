@@ -59,6 +59,7 @@ export const StartRecipeOutputSchema = z.object({
   ]),
   resumed: z.boolean().optional(),
   needsStart: z.boolean().optional(),
+  isRepeat: z.boolean().optional(),
   staticContent: StaticContentSchema.optional(),
   config: z.record(z.string(), z.unknown()).optional(),
 });
@@ -95,6 +96,17 @@ export const InteractRecipeOutputSchema = z.object({
   // Auto-advance fields for fluid class flow
   autoAdvance: z.boolean().optional(),
   autoAdvanceDelay: z.number().optional(),
+  // Gamification data for completed lessons
+  xpEarned: z.number().optional(),
+  accuracy: z
+    .object({
+      correctFirstAttempts: z.number(),
+      totalActivities: z.number(),
+      skippedActivities: z.number(),
+      accuracyPercent: z.number(),
+      tier: z.enum(['perfect', 'high', 'medium', 'low']),
+    })
+    .optional(),
 });
 export type InteractRecipeOutput = z.infer<typeof InteractRecipeOutputSchema>;
 

@@ -103,6 +103,7 @@ model User {
   consent         ParentalConsent?
   userGamification UserGamification?
   userBadges      UserBadge[]
+  dailyActivities DailyActivity[]
 
   @@index([email])
   @@index([role])
@@ -626,4 +627,17 @@ model LevelConfig {
   createdAt DateTime @default(now())
   
   @@map("level_configs")
+}
+
+model DailyActivity {
+  id        String   @id @default(uuid())
+  userId    String
+  date      DateTime @db.Date
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+  @@map("daily_activities")
 }
