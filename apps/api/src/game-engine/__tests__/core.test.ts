@@ -19,7 +19,7 @@ import { getEventBus, resetEventBus } from '@/events/event-bus';
 const createMockUGRepo = (overrides = {}): IUserGamificationRepository => ({
   findByUserId: jest.fn().mockResolvedValue(null),
   getOrCreate: jest.fn().mockResolvedValue(mockProfile()),
-  addXP: jest.fn().mockResolvedValue({ newXP: 50, leveledUp: false }),
+  addXP: jest.fn().mockResolvedValue({ newXP: 70, leveledUp: false }),
   updateStreak: jest.fn().mockResolvedValue(undefined),
   getLevelConfig: jest.fn().mockResolvedValue({ level: 1, title: 'Semilla', minXP: 0, icon: '🌱' }),
   getNextLevelConfig: jest
@@ -132,7 +132,7 @@ describe('GameEngineCore', () => {
       // Wait for event to be processed
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      expect(mockUGRepo.addXP).toHaveBeenCalledWith('user-123', 50);
+      expect(mockUGRepo.addXP).toHaveBeenCalledWith('user-123', 70);
     });
   });
 

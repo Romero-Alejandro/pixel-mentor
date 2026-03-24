@@ -44,6 +44,8 @@ export interface RewardContext {
     };
     /** User's already earned badge codes */
     earnedBadgeCodes?: string[];
+    /** IDs of lessons (recipeIds) the user has already completed (MASTERED) */
+    completedLessonIds?: string[];
     /** Additional event-specific data */
     [key: string]: unknown;
   };

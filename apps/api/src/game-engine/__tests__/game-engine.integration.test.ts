@@ -36,7 +36,7 @@ jest.mock('@/infrastructure/adapters/database/client', () => ({
 const createMockUGRepo = (overrides = {}): IUserGamificationRepository => ({
   findByUserId: jest.fn().mockResolvedValue(null),
   getOrCreate: jest.fn().mockResolvedValue(mockProfile()),
-  addXP: jest.fn().mockResolvedValue({ newXP: 50, leveledUp: false }),
+  addXP: jest.fn().mockResolvedValue({ newXP: 70, leveledUp: false }),
   updateStreak: jest.fn().mockResolvedValue(undefined),
   getLevelConfig: jest.fn().mockResolvedValue({ level: 1, title: 'Semilla', minXP: 0, icon: '🌱' }),
   getNextLevelConfig: jest
@@ -142,8 +142,8 @@ describe('GameEngineCore Integration Tests', () => {
       // Wait for event to be processed
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      // Verify LessonCompletionStrategy was executed (XP added)
-      expect(mockUGRepo.addXP).toHaveBeenCalledWith('user-123', 50);
+      // Verify LessonCompletionStrategy was executed (XP added - 70 for perfect accuracy)
+      expect(mockUGRepo.addXP).toHaveBeenCalledWith('user-123', 70);
 
       // Verify XP_CHANGED event was emitted
       expect(emitSpy).toHaveBeenCalledWith(

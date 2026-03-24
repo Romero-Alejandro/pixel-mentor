@@ -32,6 +32,7 @@ import type {
   RewardResult,
   GamificationProfile,
 } from '@/domain/ports/gamification-ports';
+import { prisma } from '@/infrastructure/adapters/database/client.js';
 
 /**
  * Level titles (Spanish) for level-up events.
@@ -130,6 +131,15 @@ export class GameEngineCore {
     const profile = await this.userGamificationRepo.findByUserId(userId);
     const earnedBadges = await this.badgeRepo.getUserBadges(userId);
 
+    // Query completed lessons (MASTERED UserProgress entries with recipeId)
+    const completedProgress = await prisma.userProgress.findMany({
+      where: { userId, status: 'MASTERED', recipeId: { not: null } },
+      select: { recipeId: true },
+    });
+    const completedLessonIds = completedProgress
+      .map((p) => p.recipeId)
+      .filter((id): id is string => id !== null);
+
     return {
       userId,
       event: {
@@ -144,10 +154,11 @@ export class GameEngineCore {
               streak: profile.streak,
               longestStreak: profile.longestStreak,
               totalBadges: profile.totalBadges,
-              completedLessons: 0, // TODO: Track this from UserGamification
+              completedLessons: completedLessonIds.length,
             }
           : undefined,
         earnedBadgeCodes: earnedBadges.map((b) => b.code),
+        completedLessonIds,
       },
     };
   }
@@ -222,11 +233,53 @@ export class GameEngineCore {
       // Emit game engine events for UI
       await this.emitRewardsEarned(payload.userId, result);
 
+      // Mark lesson as MASTERED in UserProgress (if not already)
+      await this.markLessonAsMastered(payload.userId, payload.lessonId);
+
       this.logger.info(
         `[GameEngine] Lesson completion processed: +${result.xpAwarded} XP, ${result.badgesEarned.length} badges`,
       );
     } catch (error) {
       this.logger.error({ err: error }, '[GameEngine] Error processing lesson completion');
+    }
+  }
+
+  /**
+   * Mark a lesson as MASTERED in UserProgress.
+   * This is used to track which lessons have been completed,
+   * so XP is only awarded on the first completion.
+   */
+  private async markLessonAsMastered(userId: string, recipeId: string): Promise<void> {
+    try {
+      const existing = await prisma.userProgress.findFirst({
+        where: { userId, recipeId },
+      });
+
+      if (existing) {
+        if (existing.status !== 'MASTERED') {
+          await prisma.userProgress.update({
+            where: { id: existing.id },
+            data: {
+              status: 'MASTERED',
+              attempts: { increment: 1 },
+              lastAttemptAt: new Date(),
+            },
+          });
+        }
+      } else {
+        await prisma.userProgress.create({
+          data: {
+            userId,
+            recipeId,
+            status: 'MASTERED',
+            attempts: 1,
+            lastAttemptAt: new Date(),
+          },
+        });
+      }
+    } catch (error) {
+      // Don't fail lesson completion if progress tracking fails
+      this.logger.error({ err: error }, '[GameEngine] Error marking lesson as MASTERED');
     }
   }
 

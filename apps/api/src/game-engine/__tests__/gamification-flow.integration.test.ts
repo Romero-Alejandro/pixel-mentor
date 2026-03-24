@@ -64,6 +64,7 @@ jest.mock('@/infrastructure/adapters/database/client', () => ({
     },
     userProgress: {
       count: jest.fn(),
+      findMany: jest.fn().mockResolvedValue([]),
     },
     activityAttempt: {
       count: jest.fn(),
@@ -100,7 +101,7 @@ const createMockUGRepo = (
 ): IUserGamificationRepository => ({
   findByUserId: jest.fn().mockResolvedValue(null),
   getOrCreate: jest.fn().mockResolvedValue(createMockProfile()),
-  addXP: jest.fn().mockResolvedValue({ newXP: 50, leveledUp: false }),
+  addXP: jest.fn().mockResolvedValue({ newXP: 70, leveledUp: false }),
   updateStreak: jest.fn().mockResolvedValue(undefined),
   getLevelConfig: jest.fn().mockResolvedValue({ level: 1, title: 'Semilla', minXP: 0, icon: '🌱' }),
   getNextLevelConfig: jest
@@ -201,12 +202,20 @@ describe('Gamification Flow Integration Tests (GAM-12)', () => {
         lessonId: 'lesson-1',
         lessonTitle: 'Introducción a TypeScript',
         completedAt: new Date(),
+        accuracy: {
+          correctFirstAttempts: 5,
+          correctLastAttempts: 5,
+          totalActivities: 5,
+          skippedActivities: 0,
+          accuracyPercent: 100,
+          allCorrectOnFirstAttempt: true,
+        },
       });
 
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      // LessonCompletionStrategy awards 50 XP
-      expect(mockUGRepo.addXP).toHaveBeenCalledWith('user-123', 50);
+      // LessonCompletionStrategy awards 70 XP for perfect accuracy with all first attempts correct
+      expect(mockUGRepo.addXP).toHaveBeenCalledWith('user-123', 70);
     });
 
     it('should emit XP_CHANGED event after lesson completion', async () => {
@@ -218,6 +227,14 @@ describe('Gamification Flow Integration Tests (GAM-12)', () => {
         lessonId: 'lesson-1',
         lessonTitle: 'Introducción a TypeScript',
         completedAt: new Date(),
+        accuracy: {
+          correctFirstAttempts: 5,
+          correctLastAttempts: 5,
+          totalActivities: 5,
+          skippedActivities: 0,
+          accuracyPercent: 100,
+          allCorrectOnFirstAttempt: true,
+        },
       });
 
       await new Promise((resolve) => setTimeout(resolve, 10));
@@ -226,7 +243,7 @@ describe('Gamification Flow Integration Tests (GAM-12)', () => {
       expect(xpEvents.length).toBeGreaterThanOrEqual(1);
       expect(xpEvents[0]).toMatchObject({
         userId: 'user-123',
-        delta: 50,
+        delta: 70,
         source: 'LESSON_COMPLETED',
       });
     });
@@ -243,8 +260,16 @@ describe('Gamification Flow Integration Tests (GAM-12)', () => {
       await getEventBus().emit(GameDomainEvents.LESSON_COMPLETED, {
         userId: 'user-123',
         lessonId: 'lesson-1',
-        lessonTitle: 'Test Lesson',
+        lessonTitle: 'Introducción a TypeScript',
         completedAt: new Date(),
+        accuracy: {
+          correctFirstAttempts: 5,
+          correctLastAttempts: 5,
+          totalActivities: 5,
+          skippedActivities: 0,
+          accuracyPercent: 100,
+          allCorrectOnFirstAttempt: true,
+        },
       });
 
       await new Promise((resolve) => setTimeout(resolve, 10));
@@ -266,6 +291,14 @@ describe('Gamification Flow Integration Tests (GAM-12)', () => {
         lessonId: 'lesson-1',
         lessonTitle: 'First Lesson',
         completedAt: new Date(),
+        accuracy: {
+          correctFirstAttempts: 5,
+          correctLastAttempts: 5,
+          totalActivities: 5,
+          skippedActivities: 0,
+          accuracyPercent: 100,
+          allCorrectOnFirstAttempt: true,
+        },
       });
 
       await new Promise((resolve) => setTimeout(resolve, 10));
@@ -302,6 +335,14 @@ describe('Gamification Flow Integration Tests (GAM-12)', () => {
         lessonId: 'lesson-2',
         lessonTitle: 'Second Lesson',
         completedAt: new Date(),
+        accuracy: {
+          correctFirstAttempts: 5,
+          correctLastAttempts: 5,
+          totalActivities: 5,
+          skippedActivities: 0,
+          accuracyPercent: 100,
+          allCorrectOnFirstAttempt: true,
+        },
       });
 
       await new Promise((resolve) => setTimeout(resolve, 10));
@@ -321,12 +362,20 @@ describe('Gamification Flow Integration Tests (GAM-12)', () => {
         lessonId: 'lesson-1',
         lessonTitle: 'First Lesson Ever',
         completedAt: new Date(),
+        accuracy: {
+          correctFirstAttempts: 5,
+          correctLastAttempts: 5,
+          totalActivities: 5,
+          skippedActivities: 0,
+          accuracyPercent: 100,
+          allCorrectOnFirstAttempt: true,
+        },
       });
 
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       // Verify XP was added
-      expect(mockUGRepo.addXP).toHaveBeenCalledWith('user-123', 50);
+      expect(mockUGRepo.addXP).toHaveBeenCalledWith('user-123', 70);
 
       // Verify badge was awarded
       expect(mockBadgeRepo.awardBadge).toHaveBeenCalledWith('user-123', 'FIRST_LESSON');
@@ -896,12 +945,20 @@ describe('Gamification Flow Integration Tests (GAM-12)', () => {
         lessonId: 'lesson-1',
         lessonTitle: 'Mi Primera Lección',
         completedAt: new Date(),
+        accuracy: {
+          correctFirstAttempts: 5,
+          correctLastAttempts: 5,
+          totalActivities: 5,
+          skippedActivities: 0,
+          accuracyPercent: 100,
+          allCorrectOnFirstAttempt: true,
+        },
       });
 
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       // Verify XP was added
-      expect(mockUGRepo.addXP).toHaveBeenCalledWith('user-123', 50);
+      expect(mockUGRepo.addXP).toHaveBeenCalledWith('user-123', 70);
 
       // Verify level up occurred
       const levelUpEvents = collectEventsOfType<LevelUpPayload>(emitSpy, GameEngineEvents.LEVEL_UP);
@@ -931,7 +988,7 @@ describe('Gamification Flow Integration Tests (GAM-12)', () => {
       // First lesson: XP + badge
       mockBadgeRepo.getUserBadges = jest.fn().mockResolvedValue([]);
       mockBadgeRepo.awardBadge = jest.fn().mockResolvedValue(true);
-      mockUGRepo.addXP = jest.fn().mockResolvedValue({ newXP: 50, leveledUp: false });
+      mockUGRepo.addXP = jest.fn().mockResolvedValue({ newXP: 70, leveledUp: false });
 
       engine.initialize();
 
@@ -941,6 +998,14 @@ describe('Gamification Flow Integration Tests (GAM-12)', () => {
         lessonId: 'lesson-1',
         lessonTitle: 'Lesson 1',
         completedAt: new Date(),
+        accuracy: {
+          correctFirstAttempts: 5,
+          correctLastAttempts: 5,
+          totalActivities: 5,
+          skippedActivities: 0,
+          accuracyPercent: 100,
+          allCorrectOnFirstAttempt: true,
+        },
       });
 
       await new Promise((resolve) => setTimeout(resolve, 10));
@@ -967,12 +1032,20 @@ describe('Gamification Flow Integration Tests (GAM-12)', () => {
         lessonId: 'lesson-2',
         lessonTitle: 'Lesson 2',
         completedAt: new Date(),
+        accuracy: {
+          correctFirstAttempts: 5,
+          correctLastAttempts: 5,
+          totalActivities: 5,
+          skippedActivities: 0,
+          accuracyPercent: 100,
+          allCorrectOnFirstAttempt: true,
+        },
       });
 
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       // XP should have been added for second lesson
-      expect(mockUGRepo.addXP).toHaveBeenCalledWith('user-123', 50);
+      expect(mockUGRepo.addXP).toHaveBeenCalledWith('user-123', 70);
     });
 
     it('should handle daily login → streak → bonus XP → level up chain', async () => {
@@ -1039,7 +1112,7 @@ describe('Gamification Flow Integration Tests (GAM-12)', () => {
       // Step 1: New user, first lesson
       mockBadgeRepo.getUserBadges = jest.fn().mockResolvedValue([]);
       mockBadgeRepo.awardBadge = jest.fn().mockResolvedValue(true);
-      mockUGRepo.addXP = jest.fn().mockResolvedValue({ newXP: 50, leveledUp: false });
+      mockUGRepo.addXP = jest.fn().mockResolvedValue({ newXP: 70, leveledUp: false });
 
       const emitSpy = jest.spyOn(getEventBus(), 'emit');
       engine.initialize();
@@ -1049,12 +1122,20 @@ describe('Gamification Flow Integration Tests (GAM-12)', () => {
         lessonId: 'lesson-1',
         lessonTitle: 'Getting Started',
         completedAt: new Date(),
+        accuracy: {
+          correctFirstAttempts: 5,
+          correctLastAttempts: 5,
+          totalActivities: 5,
+          skippedActivities: 0,
+          accuracyPercent: 100,
+          allCorrectOnFirstAttempt: true,
+        },
       });
 
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       // Verify first lesson flow
-      expect(mockUGRepo.addXP).toHaveBeenCalledWith('user-123', 50);
+      expect(mockUGRepo.addXP).toHaveBeenCalledWith('user-123', 70);
       expect(mockBadgeRepo.awardBadge).toHaveBeenCalledWith('user-123', 'FIRST_LESSON');
 
       // Step 2: Perfect activity attempt
@@ -1169,12 +1250,20 @@ describe('Gamification Flow Integration Tests (GAM-12)', () => {
         lessonId: 'lesson-1',
         lessonTitle: 'Selective Strategy Test',
         completedAt: new Date(),
+        accuracy: {
+          correctFirstAttempts: 5,
+          correctLastAttempts: 5,
+          totalActivities: 5,
+          skippedActivities: 0,
+          accuracyPercent: 100,
+          allCorrectOnFirstAttempt: true,
+        },
       });
 
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      // XP should be from LessonCompletionStrategy (50 XP), not streak bonus
-      expect(mockUGRepo.addXP).toHaveBeenCalledWith('user-123', 50);
+      // XP should be from LessonCompletionStrategy (70 XP with bonus), not streak bonus
+      expect(mockUGRepo.addXP).toHaveBeenCalledWith('user-123', 70);
     });
   });
 
@@ -1242,19 +1331,27 @@ describe('Gamification Flow Integration Tests (GAM-12)', () => {
       engine.initialize();
 
       mockBadgeRepo.getUserBadges = jest.fn().mockResolvedValue([]);
-      mockUGRepo.addXP = jest.fn().mockResolvedValue({ newXP: 50, leveledUp: false });
+      mockUGRepo.addXP = jest.fn().mockResolvedValue({ newXP: 70, leveledUp: false });
 
       await getEventBus().emit(GameDomainEvents.LESSON_COMPLETED, {
         userId: 'user-123',
         lessonId: 'lesson-1',
         lessonTitle: 'Re-init Test',
         completedAt: new Date(),
+        accuracy: {
+          correctFirstAttempts: 5,
+          correctLastAttempts: 5,
+          totalActivities: 5,
+          skippedActivities: 0,
+          accuracyPercent: 100,
+          allCorrectOnFirstAttempt: true,
+        },
       });
 
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       // Should work after re-init
-      expect(mockUGRepo.addXP).toHaveBeenCalledWith('user-123', 50);
+      expect(mockUGRepo.addXP).toHaveBeenCalledWith('user-123', 70);
     });
   });
 });

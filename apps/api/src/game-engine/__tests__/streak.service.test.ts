@@ -15,6 +15,9 @@ jest.mock('@/infrastructure/adapters/database/client', () => ({
       update: jest.fn(),
       findUnique: jest.fn(),
     },
+    dailyActivity: {
+      upsert: jest.fn(),
+    },
   },
 }));
 

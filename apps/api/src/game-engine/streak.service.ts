@@ -136,6 +136,21 @@ export class StreakService {
       },
     });
 
+    // Save daily activity record for streak history
+    await prisma.dailyActivity.upsert({
+      where: {
+        userId_date: {
+          userId,
+          date: today,
+        },
+      },
+      update: {},
+      create: {
+        userId,
+        date: today,
+      },
+    });
+
     this.logger.info(
       `[StreakService] Updated streak for user ${userId}: current=${newStreak}, longest=${newLongestStreak}, bonus=${bonusXP}`,
     );
