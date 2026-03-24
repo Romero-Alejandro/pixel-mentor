@@ -11,6 +11,9 @@ import {
   IconMasksTheater,
 } from '@tabler/icons-react';
 
+import { useAudio } from '../../contexts/AudioContext';
+import { MicroAudioEvent } from '../../audio/types/audio-events';
+
 import { cn } from '@/utils/cn';
 
 export interface VoiceSettings {
@@ -70,6 +73,7 @@ export function VoiceSettingsPanel({
 }: VoiceSettingsPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [previewing, setPreviewing] = useState(false);
+  const { playMicro } = useAudio();
 
   const languageId = useId();
   const speedId = useId();
@@ -107,7 +111,10 @@ export function VoiceSettingsPanel({
     <div className={cn('relative', className)}>
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          playMicro(isOpen ? MicroAudioEvent.ModalClose : MicroAudioEvent.ModalOpen);
+          setIsOpen(!isOpen);
+        }}
         aria-expanded={isOpen}
         aria-haspopup="true"
         className={cn(
@@ -155,7 +162,10 @@ export function VoiceSettingsPanel({
                     <button
                       key={char.id}
                       type="button"
-                      onClick={() => handleSettingsChange({ ...settings, character: char.id })}
+                      onClick={() => {
+                        playMicro(MicroAudioEvent.SelectOption);
+                        handleSettingsChange({ ...settings, character: char.id });
+                      }}
                       className={cn(
                         'flex flex-col items-center gap-2 p-3 rounded-2xl border-4 transition-all text-center cursor-pointer outline-none',
                         isSelected
@@ -201,6 +211,7 @@ export function VoiceSettingsPanel({
               <select
                 id={languageId}
                 value={settings.languageCode}
+                onFocus={() => playMicro(MicroAudioEvent.Focus)}
                 onChange={(e) =>
                   handleSettingsChange({ ...settings, languageCode: e.target.value })
                 }
@@ -233,6 +244,7 @@ export function VoiceSettingsPanel({
                 max="2.0"
                 step="0.1"
                 value={settings.speakingRate}
+                onFocus={() => playMicro(MicroAudioEvent.Focus)}
                 onChange={(e) =>
                   handleSettingsChange({ ...settings, speakingRate: parseFloat(e.target.value) })
                 }
@@ -259,6 +271,7 @@ export function VoiceSettingsPanel({
                 max="10"
                 step="1"
                 value={settings.pitch}
+                onFocus={() => playMicro(MicroAudioEvent.Focus)}
                 onChange={(e) =>
                   handleSettingsChange({ ...settings, pitch: parseInt(e.target.value) })
                 }

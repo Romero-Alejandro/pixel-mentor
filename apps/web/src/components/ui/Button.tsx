@@ -1,4 +1,7 @@
-import { type ButtonHTMLAttributes } from 'react';
+import { ButtonHTMLAttributes } from 'react';
+
+import { useAudio } from '../../contexts/AudioContext';
+import { MicroAudioEvent } from '../../audio/types/audio-events';
 
 import { Spinner } from './Spinner';
 
@@ -8,6 +11,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'danger' | 'success';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
+  audioEvent?: MicroAudioEvent;
 }
 
 export function Button({
@@ -18,6 +22,7 @@ export function Button({
   isLoading,
   disabled,
   children,
+  audioEvent = MicroAudioEvent.Click,
   ...props
 }: ButtonProps) {
   const baseStyles =
@@ -40,11 +45,19 @@ export function Button({
     lg: 'px-8 py-4 text-xl',
   };
 
+  const { playMicro } = useAudio();
+
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    playMicro(audioEvent);
+    props.onClick?.(e);
+  };
+
   return (
     <button
       ref={ref}
       className={cn(baseStyles, variants[variant], sizes[size], className)}
       disabled={disabled || isLoading}
+      onClick={handleClick}
       {...props}
     >
       {isLoading ? (

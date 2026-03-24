@@ -1,6 +1,8 @@
 import { useEffect, type HTMLAttributes } from 'react';
 import { IconX } from '@tabler/icons-react';
 
+import { useAudio } from '@/contexts/AudioContext';
+import { SpriteAudioEvent } from '@/audio/types/audio-events';
 import { cn } from '@/utils/cn';
 
 export interface ToastProps extends HTMLAttributes<HTMLDivElement> {
@@ -19,6 +21,22 @@ export function Toast({
   children,
   ...props
 }: ToastProps) {
+  const { playSprite } = useAudio();
+
+  useEffect(() => {
+    if (isVisible) {
+      const variantMap = {
+        success: SpriteAudioEvent.ToastSuccess,
+        info: SpriteAudioEvent.ToastInfo,
+        warning: SpriteAudioEvent.ToastWarning,
+      };
+      const sound = variantMap[variant as keyof typeof variantMap];
+      if (sound) {
+        playSprite(sound);
+      }
+    }
+  }, [isVisible, variant, playSprite]);
+
   useEffect(() => {
     if (isVisible && duration > 0) {
       const timer = setTimeout(onClose, duration);

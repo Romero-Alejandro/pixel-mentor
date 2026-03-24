@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { IconPlayerPlay, IconCheck, IconChevronDown } from '@tabler/icons-react';
 
+import { useAudio } from '../../contexts/AudioContext';
+import { MicroAudioEvent } from '../../audio/types/audio-events';
+
 import { VOICE_OPTIONS } from '@/hooks/useVoice';
 
 interface VoiceSelectorProps {
@@ -14,6 +17,7 @@ export function VoiceSelector({ onVoiceChange, className = '' }: VoiceSelectorPr
     return localStorage.getItem('pixel-mentor-selected-voice') || 'sofia';
   });
   const [isOpen, setIsOpen] = useState(false);
+  const { playMicro } = useAudio();
 
   // Load available voices
   useEffect(() => {
@@ -52,6 +56,7 @@ export function VoiceSelector({ onVoiceChange, className = '' }: VoiceSelectorPr
   // Handle voice selection
   const handleSelect = useCallback(
     (voiceId: string) => {
+      playMicro(MicroAudioEvent.SelectOption);
       setSelectedVoiceId(voiceId);
       localStorage.setItem('pixel-mentor-selected-voice', voiceId);
 
@@ -61,7 +66,7 @@ export function VoiceSelector({ onVoiceChange, className = '' }: VoiceSelectorPr
       }
       setIsOpen(false);
     },
-    [getVoiceForOption, onVoiceChange],
+    [getVoiceForOption, onVoiceChange, playMicro],
   );
 
   // Preview voice
@@ -95,7 +100,10 @@ export function VoiceSelector({ onVoiceChange, className = '' }: VoiceSelectorPr
   return (
     <div className={`relative ${className}`}>
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          playMicro(MicroAudioEvent.DropdownToggle);
+          setIsOpen(!isOpen);
+        }}
         className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-lg hover:border-sky-300 hover:bg-sky-50 transition-all duration-200 text-sm"
         aria-label="Seleccionar voz"
         aria-expanded={isOpen}

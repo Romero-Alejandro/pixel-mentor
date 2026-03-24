@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { IconMicrophone } from '@tabler/icons-react';
 
+import { useAudio } from '@/contexts/AudioContext';
+import { SpriteAudioEvent } from '@/audio/types/audio-events';
 import { useVoice } from '@/hooks/useVoice';
 import { Button } from '@/components/ui';
 
@@ -13,6 +15,7 @@ interface VoiceInputProps {
 export function VoiceInput({ onConfirm }: VoiceInputProps) {
   const [state, setState] = useState<VoiceInputState>('idle');
   const [understoodText, setUnderstoodText] = useState('');
+  const { playSprite } = useAudio();
 
   const {
     isListening,
@@ -25,6 +28,14 @@ export function VoiceInput({ onConfirm }: VoiceInputProps) {
   } = useVoice();
 
   const lastTranscriptRef = useRef('');
+
+  useEffect(() => {
+    if (state === 'listening') {
+      playSprite(SpriteAudioEvent.VoiceRecordingStart);
+    } else if (state === 'processing') {
+      playSprite(SpriteAudioEvent.VoiceRecordingStop);
+    }
+  }, [state, playSprite]);
 
   useEffect(() => {
     if (state === 'listening' && !isListening) {
@@ -55,6 +66,9 @@ export function VoiceInput({ onConfirm }: VoiceInputProps) {
 
   const reset = () => {
     lastTranscriptRef.current = '';
+    if (state === 'listening') {
+      playSprite(SpriteAudioEvent.VoiceRecordingStop);
+    }
     setState('idle');
     setUnderstoodText('');
     clearTranscript();

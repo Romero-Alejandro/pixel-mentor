@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 
 import { type VoiceSettings, DEFAULT_VOICE_SETTINGS } from './VoiceSettingsPanel';
 
-/**
+/**r
  * Hook para gestionar la configuración de voz del tutor.
  * Maneja el estado local y la persistencia en localStorage.
  */

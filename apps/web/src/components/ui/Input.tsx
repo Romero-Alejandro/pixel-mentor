@@ -1,4 +1,7 @@
-import { forwardRef, type InputHTMLAttributes } from 'react';
+import { forwardRef, type InputHTMLAttributes, useCallback } from 'react';
+
+import { useAudio } from '../../contexts/AudioContext';
+import { MicroAudioEvent } from '../../audio/types/audio-events';
 
 import { cn } from '@/utils/cn';
 
@@ -11,6 +14,23 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ className, label, error, helperText, id, ...props }, ref) => {
     const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
+    const { playMicro } = useAudio();
+
+    const handleFocus = useCallback(
+      (e: React.FocusEvent<HTMLInputElement>) => {
+        playMicro(MicroAudioEvent.InputFocus);
+        props.onFocus?.(e);
+      },
+      [playMicro, props],
+    );
+
+    const handleBlur = useCallback(
+      (e: React.FocusEvent<HTMLInputElement>) => {
+        playMicro(MicroAudioEvent.InputBlur);
+        props.onBlur?.(e);
+      },
+      [playMicro, props],
+    );
 
     return (
       <div className="w-full">
@@ -22,6 +42,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         <input
           ref={ref}
           id={inputId}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           className={cn(
             'w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-base',
             'focus:border-sky-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-100',
