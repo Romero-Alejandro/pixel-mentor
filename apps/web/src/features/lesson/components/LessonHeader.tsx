@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { IconArrowLeft } from '@tabler/icons-react';
+import { IconArrowLeft, IconRefresh } from '@tabler/icons-react';
 
 import { UIState } from '../hooks/useLessonState';
 
@@ -14,6 +14,7 @@ interface HeaderProps {
   voiceSettings: VoiceSettings;
   updateSettings: (settings: Partial<VoiceSettings>) => void;
   speakContent: () => void;
+  onReset?: () => void;
 }
 
 const UI_LABELS: Record<UIState, string> = {
@@ -33,6 +34,7 @@ export function LessonHeader({
   voiceSettings,
   updateSettings,
   speakContent,
+  onReset,
 }: HeaderProps) {
   return (
     <header className="sticky top-0 z-30 h-20 w-full border-b-4 border-sky-100 bg-white/80 px-4 backdrop-blur-md">
@@ -86,7 +88,21 @@ export function LessonHeader({
           ) : null}
         </div>
 
-        <div className="flex flex-1 justify-end">
+        <div className="flex flex-1 justify-end items-center gap-2">
+          {onReset && !isStart && (
+            <button
+              onClick={onReset}
+              className="group flex items-center gap-2 rounded-2xl px-4 py-2 border-4 border-transparent hover:border-rose-200 bg-transparent hover:bg-rose-50 text-slate-500 hover:text-rose-600 font-black transition-all cursor-pointer outline-none"
+              aria-label="Reiniciar clase"
+              title="Reiniciar clase"
+            >
+              <IconRefresh
+                className="h-5 w-5 transition-transform group-hover:rotate-180"
+                stroke={3}
+              />
+              <span className="hidden sm:inline tracking-wider uppercase text-xs">Reiniciar</span>
+            </button>
+          )}
           <VoiceSettingsPanel
             settings={voiceSettings}
             onSettingsChange={updateSettings}

@@ -26,8 +26,14 @@ interface LessonResponse {
   sessionCompleted?: boolean;
   lessonProgress?: { currentStep: number; totalSteps: number };
   staticContent?: {
-    script?: { transition?: string; content?: string; closure?: string };
-    activity?: { instruction: string; options?: Array<{ text: string; isCorrect: boolean }> };
+    script?: {
+      transition?: string | { text: string };
+      content?: string | { text: string };
+      closure?: string | { text: string };
+      question?: string | { text: string };
+      expectedAnswer?: string;
+    };
+    activity?: { instruction: string | { text: string }; options?: Array<{ text: string; isCorrect: boolean }> };
   };
   // Gamification data
   xpEarned?: number;
@@ -114,6 +120,7 @@ export function useClassOrchestrator() {
   const [fullVoiceText, setFullVoiceText] = useState('');
 
   const sessionIdRef = useRef<string | null>(null);
+  const lessonIdRef = useRef<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const contentRef = useRef('');
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -218,8 +225,17 @@ export function useClassOrchestrator() {
     const activity = staticContent?.activity;
     const hasOptions = Array.isArray(activity?.options) && activity.options.length > 0;
 
+    // Helper to extract text from string or {text: string} object
+    const extractText = (val: unknown): string => {
+      if (typeof val === 'string') return val;
+      if (val && typeof val === 'object' && 'text' in val && typeof (val as { text: unknown }).text === 'string') {
+        return (val as { text: string }).text;
+      }
+      return '';
+    };
+
     if (pedagogicalState === 'ACTIVITY_WAIT') {
-      setQuestionText(activity?.instruction || '');
+      setQuestionText(extractText(activity?.instruction));
       setOptions(
         hasOptions
           ? activity!.options!.map((o, i) => ({
@@ -231,14 +247,26 @@ export function useClassOrchestrator() {
       );
       setFeedbackData(null);
       setUIState(hasOptions ? 'activity' : 'question');
-      speak(voiceText || activity?.instruction || '', _voiceSettings).catch(() => {});
+      speak(voiceText || extractText(activity?.instruction) || '', _voiceSettings).catch(() => {});
       return;
     }
 
     if (staticContent?.script) {
-      setTransitionText(staticContent.script.transition || '');
-      setContentText(staticContent.script.content || '');
-      setClosureText(staticContent.script.closure || '');
+      const extractText = (val: unknown): string => {
+        if (typeof val === 'string') return val;
+        if (
+          val &&
+          typeof val === 'object' &&
+          'text' in val &&
+          typeof (val as { text: unknown }).text === 'string'
+        ) {
+          return (val as { text: string }).text;
+        }
+        return '';
+      };
+      setTransitionText(extractText(staticContent.script.transition));
+      setContentText(extractText(staticContent.script.content));
+      setClosureText(extractText(staticContent.script.closure));
     } else {
       setTransitionText('');
       setContentText(voiceText);
@@ -253,6 +281,7 @@ export function useClassOrchestrator() {
     const startTime = Date.now();
     await speak(voiceText, _voiceSettings);
     const elapsed = Date.now() - startTime;
+
     const totalDuration = estimateReadTime(voiceText);
 
     timerRef.current = setTimeout(
@@ -305,7 +334,7 @@ export function useClassOrchestrator() {
           }
         };
 
-        handlersRef.current.error = (e: MessageEvent) => {
+        handlersRef.current.error = () => {
           if (!isMountedRef.current) return;
           setStoreStreaming(false);
           cleanup();
@@ -331,28 +360,102 @@ export function useClassOrchestrator() {
   }
 
   async function startClass(lessonId: string): Promise<Result<void, Error>> {
+    console.log(
+      '%c[DEBUG] startClass called',
+      'color: cyan; font-weight: bold;',
+      'lessonId:',
+      lessonId,
+    );
+    console.log('%c[DEBUG] Stack trace:', 'color: cyan;');
+    console.trace();
     cleanup();
     abortControllerRef.current = new AbortController();
     setIsProcessing(true);
+    lessonIdRef.current = lessonId;
 
     try {
       const startResult = await api.startRecipe(lessonId);
+
       sessionIdRef.current = startResult.sessionId;
       setSessionId(startResult.sessionId);
       setIsRepeat(startResult.isRepeat === true);
 
       if (!isMountedRef.current) return Ok(undefined);
 
-      speak(startResult.voiceText || '¡Bienvenido!', _voiceSettings).catch(() => {});
+      // For resumed sessions (resumed=true and needsStart !== true), we need to:
+      // 1. Speak the welcome message
+      // 2. Also speak the current lesson content (from staticContent)
+      // The welcome message should NOT overwrite the lesson content
+      const isResumedSession = startResult.resumed === true && startResult.needsStart === false;
 
-      // Only send 'comenzar' if the lesson needs to be started (AWAITING_START state).
-      // If resuming mid-lesson, process the start response directly.
-      if (startResult.needsStart !== false) {
-        const firstStep = await doInteract('comenzar');
-        processResponse(firstStep);
+      if (isResumedSession) {
+        // Extract the lesson content from staticContent
+        const staticContent = startResult.staticContent;
+        if (staticContent?.script) {
+          const extractText = (val: unknown): string => {
+            if (typeof val === 'string') return val;
+            if (
+              val &&
+              typeof val === 'object' &&
+              'text' in val &&
+              typeof (val as { text: unknown }).text === 'string'
+            ) {
+              return (val as { text: string }).text;
+            }
+            return '';
+          };
+
+          const transition = extractText(staticContent.script.transition);
+          const content = extractText(staticContent.script.content);
+          const closure = extractText(staticContent.script.closure);
+          const lessonContent = [transition, content, closure].filter(Boolean).join(' ');
+
+          // Store the lesson content for later (not for display yet)
+          contentRef.current = lessonContent;
+
+          // FIRST: Show and speak just the welcome message
+          const welcomeText = startResult.voiceText || '¡Bienvenido de vuelta!';
+          setTransitionText('');
+          setContentText(welcomeText);
+          setClosureText('');
+          setFullVoiceText(welcomeText);
+          setFeedbackData(null);
+          setUIState('concentration');
+
+          // Speak just the welcome first
+          await speak(welcomeText, _voiceSettings);
+
+          // THEN: Update to show and speak the lesson content
+          setTransitionText(transition);
+          setContentText(content);
+          setClosureText(closure);
+          setFullVoiceText(lessonContent);
+          contentRef.current = lessonContent;
+
+          // Speak the lesson content
+          await speak(lessonContent, _voiceSettings);
+
+          // IMPORTANT: For resumed sessions, we need to call processResponse with the start result!
+          processResponse(startResult as LessonResponse);
+        } else {
+          // Fallback: just speak the welcome
+          setContentText(startResult.voiceText || '¡Bienvenido!');
+          setFullVoiceText(startResult.voiceText || '¡Bienvenido!');
+          speak(startResult.voiceText || '¡Bienvenido!', _voiceSettings).catch(() => {});
+        }
       } else {
-        // Process the start response directly for resumed sessions
-        processResponse(startResult as LessonResponse);
+        // Normal start or start that needs "comenzar" confirmation
+        speak(startResult.voiceText || '¡Bienvenido!', _voiceSettings).catch(() => {});
+
+        // Only send 'comenzar' if the lesson needs to be started (AWAITING_START state).
+        // If resuming mid-lesson, process the start response directly.
+        if (startResult.needsStart !== false) {
+          const firstStep = await doInteract('comenzar');
+          processResponse(firstStep);
+        } else {
+          // Process the start response directly for resumed sessions
+          processResponse(startResult as LessonResponse);
+        }
       }
 
       return Ok(undefined);
@@ -384,6 +487,40 @@ export function useClassOrchestrator() {
     clearStream();
   }
 
+  async function resetSession() {
+    const sid = sessionIdRef.current;
+    const lid = lessonIdRef.current;
+    if (!sid || !lid) return;
+
+    try {
+      await api.resetSession(sid);
+      // After resetting, restart the lesson
+      cleanup();
+      abortControllerRef.current = new AbortController();
+      setIsProcessing(true);
+
+      const startResult = await api.startRecipe(lid);
+      sessionIdRef.current = startResult.sessionId;
+      setSessionId(startResult.sessionId);
+      setIsRepeat(startResult.isRepeat === true);
+
+      if (!isMountedRef.current) return;
+
+      // Handle based on needsStart
+      if (startResult.needsStart !== false) {
+        speak(startResult.voiceText || '¡Bienvenido!', _voiceSettings).catch(() => {});
+        const firstStep = await doInteract('comenzar');
+        processResponse(firstStep);
+      } else {
+        // Process the start response directly for resumed sessions
+        processResponse(startResult as LessonResponse);
+      }
+    } catch (e) {
+      console.error('[resetSession] Failed:', e);
+      if (isMountedRef.current) setIsProcessing(false);
+    }
+  }
+
   function speakContent() {
     if (contentRef.current) speak(contentRef.current, _voiceSettings).catch(() => {});
   }
@@ -407,6 +544,7 @@ export function useClassOrchestrator() {
     speakContent,
     stopSpeaking: voiceStop,
     reset,
+    resetSession,
     getCurrentAudioElement: getAudio,
   };
 }

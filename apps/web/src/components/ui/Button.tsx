@@ -15,7 +15,6 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export function Button({
-  ref,
   className,
   variant = 'primary',
   size = 'md',
@@ -23,10 +22,11 @@ export function Button({
   disabled,
   children,
   audioEvent = MicroAudioEvent.Click,
-  ...props
+  onClick: userOnClick,
+  ...restProps
 }: ButtonProps) {
   const baseStyles =
-    'relative inline-flex items-center justify-center font-bold outline-none transition-all duration-150 rounded-2xl active:translate-y-1 active:shadow-gummy-active disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none';
+    'relative inline-flex items-center justify-center font-bold outline-none transition-all duration-150 rounded-2xl active:translate-y-1 active:shadow-gummy-active disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none';
 
   const variants = {
     primary:
@@ -48,17 +48,20 @@ export function Button({
   const { playMicro } = useAudio();
 
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    playMicro(audioEvent);
-    props.onClick?.(e);
+    try {
+      playMicro(audioEvent);
+    } catch {
+      // Audio error should not block the click action
+    }
+    userOnClick?.(e);
   };
 
   return (
     <button
-      ref={ref}
       className={cn(baseStyles, variants[variant], sizes[size], className)}
       disabled={disabled || isLoading}
       onClick={handleClick}
-      {...props}
+      {...restProps}
     >
       {isLoading ? (
         <>

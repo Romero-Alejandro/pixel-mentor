@@ -1,4 +1,5 @@
 import type { UserGamificationProfile } from '@pixel-mentor/shared/gamification';
+import { IconFlame, IconMedal } from '@tabler/icons-react';
 
 import { useStreakAudio } from '@/hooks/useStreakAudio';
 import { cn } from '@/utils/cn';
@@ -11,14 +12,13 @@ const LEVEL_EMOJIS: Record<number, string> = {
   5: '🌲',
   6: '⛰️',
 };
-
 const LEVEL_COLORS: Record<number, string> = {
-  1: 'bg-green-400',
-  2: 'bg-lime-400',
-  3: 'bg-pink-400',
-  4: 'bg-blue-400',
-  5: 'bg-purple-400',
-  6: 'bg-amber-400',
+  1: 'from-green-400 to-emerald-500',
+  2: 'from-lime-400 to-green-500',
+  3: 'from-pink-400 to-rose-500',
+  4: 'from-blue-400 to-sky-500',
+  5: 'from-purple-400 to-violet-500',
+  6: 'from-amber-400 to-orange-500',
 };
 
 export interface SessionGamificationBarProps {
@@ -31,70 +31,59 @@ export function SessionGamificationBar({ profile, className }: SessionGamificati
   const { currentLevel, levelTitle, totalXP, xpToNextLevel, currentStreak, badges } = profile;
 
   const emoji = LEVEL_EMOJIS[currentLevel] ?? '🌱';
-  const barColor = LEVEL_COLORS[currentLevel] ?? 'bg-green-400';
+  const barGradient = LEVEL_COLORS[currentLevel] ?? 'from-green-400 to-emerald-500';
 
-  // XP progress within current level
   const xpInLevel = xpToNextLevel > 0 ? totalXP % xpToNextLevel : 0;
   const percentDone = xpToNextLevel > 0 ? Math.round((xpInLevel / xpToNextLevel) * 100) : 100;
 
   return (
     <div
-      className={cn('flex items-center gap-2.5 text-xs h-10', className)}
+      className={cn(
+        'flex items-center gap-3 bg-slate-50 border-4 border-slate-200 shadow-[0_4px_0_0_#e2e8f0] px-4 py-1.5 rounded-2xl',
+        className,
+      )}
       role="status"
-      aria-label={`Nivel ${currentLevel}: ${levelTitle}, ${totalXP} XP, racha de ${currentStreak} días, ${badges.length} insignias`}
     >
-      {/* Level emoji + title */}
-      <span className="flex items-center gap-1 shrink-0">
-        <span className="text-sm" aria-hidden="true">
+      <span className="flex items-center gap-1.5 shrink-0 bg-white px-2 py-1 rounded-xl border-2 border-slate-100 shadow-sm">
+        <span className="text-lg" aria-hidden="true">
           {emoji}
         </span>
-        <span className="font-medium text-slate-700 truncate max-w-[100px]">
-          Nivel {currentLevel}: {levelTitle}
+        <span className="font-black text-slate-700 text-xs uppercase tracking-wider hidden sm:block">
+          {levelTitle}
         </span>
       </span>
 
-      {/* Mini XP progress bar */}
-      <div className="flex items-center gap-1.5 shrink-0">
+      <div className="flex items-center gap-2 shrink-0">
         <div
-          className="relative w-[60px] h-1 rounded-full bg-slate-200 overflow-hidden"
+          className="relative w-24 h-3 rounded-full bg-slate-200 border-2 border-slate-300 overflow-hidden"
           role="progressbar"
           aria-valuenow={percentDone}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label={`XP: ${percentDone}%`}
         >
           <div
-            className={cn('h-full rounded-full transition-all duration-500', barColor)}
+            className={cn(
+              'h-full rounded-full transition-all duration-500 bg-gradient-to-r',
+              barGradient,
+            )}
             style={{ width: `${percentDone}%` }}
           />
         </div>
-        <span className="font-bold text-slate-800 tabular-nums">{totalXP}XP</span>
+        <span className="font-black text-sky-700 text-xs tabular-nums bg-sky-100 px-2 py-0.5 rounded-lg border-2 border-sky-200">
+          {totalXP} XP
+        </span>
       </div>
 
-      {/* Divider */}
-      <div className="w-px h-4 bg-slate-200" />
+      <div className="w-1 h-1 bg-slate-300 rounded-full hidden sm:block" />
 
-      {/* Streak */}
-      <span
-        className="flex items-center gap-0.5 shrink-0"
-        aria-label={`Racha de ${currentStreak} días`}
-      >
-        <span className="text-xs" aria-hidden="true">
-          🔥
+      <div className="flex items-center gap-3 shrink-0">
+        <span className="flex items-center gap-1 bg-orange-50 text-orange-600 px-2 py-1 rounded-xl border-2 border-orange-200 font-black text-xs">
+          <IconFlame className="w-4 h-4 fill-orange-500 text-orange-500" />
+          {currentStreak}
         </span>
-        <span className="font-bold text-orange-600 tabular-nums">{currentStreak}</span>
-      </span>
-
-      {/* Badges */}
-      <span
-        className="flex items-center gap-0.5 shrink-0"
-        aria-label={`${badges.length} insignias`}
-      >
-        <span className="text-xs" aria-hidden="true">
-          🎖️
+        <span className="flex items-center gap-1 bg-amber-50 text-amber-700 px-2 py-1 rounded-xl border-2 border-amber-200 font-black text-xs">
+          <IconMedal className="w-4 h-4 fill-amber-500 text-amber-500" />
+          {badges.length}
         </span>
-        <span className="font-bold text-amber-700 tabular-nums">{badges.length}</span>
-      </span>
+      </div>
     </div>
   );
 }

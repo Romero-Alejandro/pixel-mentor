@@ -3,6 +3,12 @@ import { IconCheck, IconX, IconTargetArrow, IconHourglassHigh } from '@tabler/ic
 import { useAudio } from '@/contexts/AudioContext';
 import { Spinner } from '@/components/ui';
 
+interface ActivityOption {
+  id: string;
+  text: string;
+  isCorrect?: boolean;
+}
+
 export function ActivityPanel({
   question,
   options,
@@ -12,7 +18,7 @@ export function ActivityPanel({
   isCorrect,
 }: {
   question: string;
-  options: { id: string; text: string; isCorrect?: boolean }[];
+  options: ActivityOption[];
   onAnswer: (text: string, id: string) => void;
   isProcessing: boolean;
   selectedId: string | null;
@@ -21,32 +27,33 @@ export function ActivityPanel({
   const { playSelect, playHover } = useAudio();
   const answered = selectedId !== null;
 
-  const getOptionStyle = (opt: { id: string; isCorrect?: boolean }) => {
-    if (!answered) {
-      return 'border-4 border-slate-200 bg-white hover:border-amber-300 hover:bg-amber-50 hover:-translate-y-1 shadow-[0_6px_0_0_#e2e8f0] hover:shadow-[0_8px_0_0_#fcd34d] active:translate-y-1 active:shadow-none text-slate-700 cursor-pointer';
-    }
+  function getOptionStateClasses(opt: ActivityOption) {
+    if (!answered)
+      return 'border-slate-200 bg-white hover:border-amber-300 hover:bg-amber-50 hover:-translate-y-1 shadow-[0_6px_0_0_#e2e8f0] hover:shadow-[0_8px_0_0_#fcd34d] text-slate-700 cursor-pointer';
+
     if (opt.id === selectedId) {
       return isCorrect
-        ? 'border-4 border-emerald-500 bg-emerald-100 text-emerald-900 shadow-none translate-y-1'
-        : 'border-4 border-rose-500 bg-rose-100 text-rose-900 shadow-none translate-y-1';
+        ? 'border-emerald-500 bg-emerald-100 text-emerald-900 shadow-none translate-y-1'
+        : 'border-rose-500 bg-rose-100 text-rose-900 shadow-none translate-y-1';
     }
-    if (opt.isCorrect && isCorrect === false) {
-      return 'border-4 border-emerald-400 bg-emerald-50 text-emerald-800 opacity-90 shadow-none translate-y-1';
-    }
-    return 'border-4 border-slate-100 bg-slate-50 text-slate-400 opacity-50 shadow-none translate-y-1';
-  };
 
-  const getOptionLetterStyle = (opt: { id: string; isCorrect?: boolean }) => {
+    if (opt.isCorrect && isCorrect === false) {
+      return 'border-emerald-400 bg-emerald-50 text-emerald-800 opacity-90 shadow-none translate-y-1';
+    }
+
+    return 'border-slate-100 bg-slate-50 text-slate-400 opacity-50 shadow-none translate-y-1';
+  }
+
+  function getLetterBadgeClasses(opt: ActivityOption) {
     if (!answered)
-      return 'bg-slate-100 text-slate-500 group-hover:bg-amber-400 group-hover:text-white border-4 border-slate-200 group-hover:border-amber-500 shadow-sm';
+      return 'bg-slate-100 text-slate-500 group-hover:bg-amber-400 group-hover:text-white border-slate-200 group-hover:border-amber-500 shadow-sm';
     if (opt.id === selectedId)
       return isCorrect
-        ? 'bg-emerald-500 text-white border-4 border-emerald-600'
-        : 'bg-rose-500 text-white border-4 border-rose-600';
-    if (opt.isCorrect && isCorrect === false)
-      return 'bg-emerald-400 text-white border-4 border-emerald-500';
-    return 'bg-slate-100 text-slate-400 border-4 border-slate-200';
-  };
+        ? 'bg-emerald-500 text-white border-emerald-600'
+        : 'bg-rose-500 text-white border-rose-600';
+    if (opt.isCorrect && isCorrect === false) return 'bg-emerald-400 text-white border-emerald-500';
+    return 'bg-slate-100 text-slate-400 border-slate-200';
+  }
 
   return (
     <div className="flex-1 flex flex-col p-6 sm:p-10 gap-6 w-full h-full justify-center overflow-y-auto custom-scrollbar animate-bounce-in">
@@ -69,10 +76,10 @@ export function ActivityPanel({
             }}
             onMouseEnter={() => !answered && playHover()}
             disabled={answered || isProcessing}
-            className={`w-full flex items-center gap-5 p-6 rounded-[2rem] text-left font-bold transition-all duration-200 group outline-none ${getOptionStyle(opt)}`}
+            className={`w-full flex items-center gap-5 p-6 rounded-[2rem] text-left border-4 font-bold transition-all duration-200 group outline-none ${getOptionStateClasses(opt)}`}
           >
             <span
-              className={`w-14 h-14 flex items-center justify-center rounded-2xl text-2xl font-black transition-colors shrink-0 ${getOptionLetterStyle(opt)}`}
+              className={`w-14 h-14 border-4 flex items-center justify-center rounded-2xl text-2xl font-black transition-colors shrink-0 ${getLetterBadgeClasses(opt)}`}
             >
               {String.fromCharCode(65 + i)}
             </span>
@@ -88,6 +95,7 @@ export function ActivityPanel({
                 )}
               </span>
             ) : null}
+
             {answered && isCorrect === false && opt.isCorrect && opt.id !== selectedId ? (
               <span className="animate-bounce-in shrink-0 bg-white rounded-full p-2 shadow-sm border-4 border-slate-200">
                 <IconCheck className="w-10 h-10 text-emerald-400 opacity-80" stroke={4} />

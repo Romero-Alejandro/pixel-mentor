@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 export interface AutoStartConfig {
   maxRetries?: number;
@@ -22,32 +22,17 @@ export function useAutoStart(
   const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMountedRef = useRef(true);
   const hasStartedRef = useRef(false);
-  const onStartClassRef = useRef(onStartClass);
 
-  useEffect(() => {
-    onStartClassRef.current = onStartClass;
-  }, [onStartClass]);
+  function getBackoffDelay(attempt: number): number {
+    return Math.min(baseDelayMs * Math.pow(2, attempt), maxDelayMs);
+  }
 
-  const getBackoffDelay = useCallback(
-    (attempt: number): number => {
-      const delay = baseDelayMs * Math.pow(2, attempt);
-      return Math.min(delay, maxDelayMs);
-    },
-    [baseDelayMs, maxDelayMs],
-  );
+  function cleanup() {
+    if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
+    if (abortControllerRef.current) abortControllerRef.current.abort();
+  }
 
-  const cleanup = useCallback(() => {
-    if (retryTimeoutRef.current) {
-      clearTimeout(retryTimeoutRef.current);
-      retryTimeoutRef.current = null;
-    }
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
-  }, []);
-
-  const startWithRetry = useCallback(async () => {
+  function startWithRetry() {
     if (!lessonId || hasStartedRef.current || !isMountedRef.current) return;
 
     cleanup();
@@ -58,12 +43,12 @@ export function useAutoStart(
     setIsStarting(true);
     setError(null);
 
-    const attempt = async (attemptNumber: number): Promise<void> => {
+    async function attempt(attemptNumber: number) {
       if (!isMountedRef.current || signal.aborted) return;
 
       try {
         setIsStarting(true);
-        const result = await onStartClassRef.current(lessonId);
+        const result = await onStartClass(lessonId!);
 
         if (!result.ok) throw result.error || new Error('Falla en el inicio');
 
@@ -79,31 +64,25 @@ export function useAutoStart(
 
         if (attemptNumber < maxRetries) {
           const delay = getBackoffDelay(attemptNumber);
-          if (isMountedRef.current) {
-            setRetryCount(attemptNumber + 1);
-            setError(`${errorMessage}. Reintentando en ${Math.round(delay / 1000)}s...`);
-            setIsStarting(false); // <--- Permite mostrar el banner de error/reintento
-          }
+          setRetryCount(attemptNumber + 1);
+          setError(`${errorMessage}. Reintentando en ${Math.round(delay / 1000)}s...`);
+          setIsStarting(false);
 
-          retryTimeoutRef.current = setTimeout(() => {
-            attempt(attemptNumber + 1);
-          }, delay);
+          retryTimeoutRef.current = setTimeout(() => attempt(attemptNumber + 1), delay);
         } else {
-          if (isMountedRef.current) {
-            setError(`No se pudo conectar después de ${maxRetries} intentos.`);
-            setIsStarting(false);
-          }
+          setError(`No se pudo conectar después de ${maxRetries} intentos.`);
+          setIsStarting(false);
         }
       }
-    };
+    }
 
     attempt(0);
-  }, [lessonId, maxRetries, getBackoffDelay, cleanup]);
+  }
 
-  const retry = useCallback(() => {
+  function retry() {
     hasStartedRef.current = false;
     startWithRetry();
-  }, [startWithRetry]);
+  }
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -114,7 +93,7 @@ export function useAutoStart(
       isMountedRef.current = false;
       cleanup();
     };
-  }, [lessonId, autoStart, startWithRetry, cleanup]);
+  }, [lessonId, autoStart]);
 
   return { isStarting, error, retryCount, retry };
 }

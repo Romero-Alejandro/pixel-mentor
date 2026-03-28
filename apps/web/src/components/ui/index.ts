@@ -29,3 +29,4 @@ export {
 
 export { ErrorBanner, CompactError } from './ErrorBanner';
 export type { ErrorBannerProps, CompactErrorProps } from './ErrorBanner';
+export * from './Modal';

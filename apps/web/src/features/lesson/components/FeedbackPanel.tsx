@@ -31,9 +31,9 @@ export function FeedbackPanel({
   }, [fb.isCorrect, playSprite]);
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center gap-10 w-full h-full animate-bounce-in">
+    <div className="flex-1 flex flex-col items-center justify-center p-4 text-center gap-10 w-full h-full animate-bounce-in">
       <div
-        className={`relative w-48 h-48 rounded-full flex items-center justify-center border-[12px] ${
+        className={`relative w-28 h-28 rounded-full flex items-center justify-center border-[9px] ${
           fb.isCorrect
             ? 'bg-emerald-100 border-emerald-300 shadow-[0_12px_0_0_#6ee7b7]'
             : 'bg-amber-100 border-amber-300 shadow-[0_12px_0_0_#fcd34d]'
@@ -41,9 +41,9 @@ export function FeedbackPanel({
       >
         <div className="absolute inset-0 rounded-full animate-ping opacity-30 bg-inherit" />
         {fb.isCorrect ? (
-          <IconStarFilled className="w-24 h-24 text-emerald-500 animate-pulse" />
+          <IconStarFilled className="w-18 h-18 text-emerald-500 animate-pulse" />
         ) : (
-          <IconAlertTriangleFilled className="w-24 h-24 text-amber-500 animate-pulse" />
+          <IconAlertTriangleFilled className="w-18 h-18 text-amber-500 animate-pulse" />
         )}
       </div>
 
