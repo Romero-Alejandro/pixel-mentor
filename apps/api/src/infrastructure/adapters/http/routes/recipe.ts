@@ -64,6 +64,7 @@ export function createRecipeRouter(
 
         response.json(result);
       } catch (error) {
+        console.error('[POST /interact] Error:', error);
         if (error instanceof z.ZodError) {
           response.status(400).json({ error: 'Validation error', details: error.issues });
           return;

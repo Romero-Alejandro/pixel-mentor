@@ -7,7 +7,6 @@
 
 import { prisma } from '@/infrastructure/adapters/database/client.js';
 import { LevelService } from '@/game-engine/level.service.js';
-
 import type {
   IUserGamificationRepository,
   GamificationProfile,

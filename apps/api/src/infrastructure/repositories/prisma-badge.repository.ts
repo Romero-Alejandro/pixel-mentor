@@ -6,7 +6,6 @@
  */
 
 import { prisma } from '@/infrastructure/adapters/database/client.js';
-
 import type { IBadgeRepository } from '@/domain/ports/gamification-ports.js';
 
 export class PrismaBadgeRepository implements IBadgeRepository {

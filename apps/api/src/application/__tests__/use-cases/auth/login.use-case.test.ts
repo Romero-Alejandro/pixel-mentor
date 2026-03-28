@@ -28,6 +28,8 @@ describe('LoginUseCase', () => {
       findByEmail: jest.fn(),
       findById: jest.fn(),
       findByEmailWithPassword: jest.fn(),
+      findByIdentifier: jest.fn(),
+      findByIdentifierWithPassword: jest.fn(),
       create: jest.fn(),
       updateRole: jest.fn(),
       delete: jest.fn(),
@@ -41,13 +43,14 @@ describe('LoginUseCase', () => {
 
   describe('execute()', () => {
     const validInput = {
-      email: 'test@example.com',
+      identifier: 'test@example.com',
       password: 'password123',
     };
 
     const userWithPassword: User = {
       id: 'user-id-123',
       email: 'test@example.com',
+      username: 'testuser',
       name: 'Test User',
       role: 'STUDENT',
       quota: 0,
@@ -56,19 +59,19 @@ describe('LoginUseCase', () => {
       updatedAt: new Date(),
     };
 
-    it('should login successfully with valid credentials', async () => {
-      mockUserRepo.findByEmailWithPassword.mockResolvedValueOnce(userWithPassword);
+    it('should login successfully with email identifier', async () => {
+      mockUserRepo.findByIdentifierWithPassword.mockResolvedValueOnce(userWithPassword);
       (argon2.verify as jest.Mock).mockResolvedValueOnce(true);
       (jwt.sign as jest.Mock).mockReturnValueOnce('jwt-token');
 
       const result = await useCase.execute(validInput);
 
-      expect(mockUserRepo.findByEmailWithPassword).toHaveBeenCalledWith(validInput.email);
+      expect(mockUserRepo.findByIdentifierWithPassword).toHaveBeenCalledWith(validInput.identifier);
       expect(argon2.verify).toHaveBeenCalledWith('hashedPassword', validInput.password);
       expect(result).toHaveProperty('token', 'jwt-token');
       expect(result.user).toEqual(
         expect.objectContaining({
-          email: validInput.email,
+          email: validInput.identifier,
           name: 'Test User',
           role: 'STUDENT',
         }),
@@ -76,32 +79,54 @@ describe('LoginUseCase', () => {
       expect(result.user).not.toHaveProperty('passwordHash');
     });
 
-    it('should throw error if user not found', async () => {
-      mockUserRepo.findByEmailWithPassword.mockResolvedValueOnce(null);
+    it('should login successfully with username identifier', async () => {
+      const usernameInput = { identifier: 'testuser', password: 'password123' };
+      mockUserRepo.findByIdentifierWithPassword.mockResolvedValueOnce(userWithPassword);
+      (argon2.verify as jest.Mock).mockResolvedValueOnce(true);
+      (jwt.sign as jest.Mock).mockReturnValueOnce('jwt-token');
 
-      await expect(useCase.execute(validInput)).rejects.toThrow('Invalid credentials');
+      const result = await useCase.execute(usernameInput);
+
+      expect(mockUserRepo.findByIdentifierWithPassword).toHaveBeenCalledWith('testuser');
+      expect(result).toHaveProperty('token', 'jwt-token');
+      expect(result.user).not.toHaveProperty('passwordHash');
+    });
+
+    it('should throw InvalidCredentialsError if user not found', async () => {
+      mockUserRepo.findByIdentifierWithPassword.mockResolvedValueOnce(null);
+
+      await expect(useCase.execute(validInput)).rejects.toMatchObject({
+        code: 'INVALID_CREDENTIALS',
+        httpStatus: 401,
+      });
       expect(argon2.verify).not.toHaveBeenCalled();
     });
 
-    it('should throw error if password is incorrect', async () => {
-      mockUserRepo.findByEmailWithPassword.mockResolvedValueOnce(userWithPassword);
+    it('should throw InvalidCredentialsError if password is incorrect', async () => {
+      mockUserRepo.findByIdentifierWithPassword.mockResolvedValueOnce(userWithPassword);
       (argon2.verify as jest.Mock).mockResolvedValueOnce(false);
 
-      await expect(useCase.execute(validInput)).rejects.toThrow('Invalid credentials');
+      await expect(useCase.execute(validInput)).rejects.toMatchObject({
+        code: 'INVALID_CREDENTIALS',
+        httpStatus: 401,
+      });
     });
 
-    it('should throw error if user has no password hash', async () => {
+    it('should throw InvalidCredentialsError if user has no password hash', async () => {
       const userWithoutPassword: User = {
         ...userWithPassword,
         passwordHash: undefined,
       };
-      mockUserRepo.findByEmailWithPassword.mockResolvedValueOnce(userWithoutPassword);
+      mockUserRepo.findByIdentifierWithPassword.mockResolvedValueOnce(userWithoutPassword);
 
-      await expect(useCase.execute(validInput)).rejects.toThrow('Invalid credentials');
+      await expect(useCase.execute(validInput)).rejects.toMatchObject({
+        code: 'INVALID_CREDENTIALS',
+        httpStatus: 401,
+      });
     });
 
     it('should generate JWT with correct payload', async () => {
-      mockUserRepo.findByEmailWithPassword.mockResolvedValueOnce(userWithPassword);
+      mockUserRepo.findByIdentifierWithPassword.mockResolvedValueOnce(userWithPassword);
       (argon2.verify as jest.Mock).mockResolvedValueOnce(true);
       (jwt.sign as jest.Mock).mockReturnValueOnce('jwt-token');
 
@@ -119,7 +144,7 @@ describe('LoginUseCase', () => {
     });
 
     it('should return user without password hash', async () => {
-      mockUserRepo.findByEmailWithPassword.mockResolvedValueOnce(userWithPassword);
+      mockUserRepo.findByIdentifierWithPassword.mockResolvedValueOnce(userWithPassword);
       (argon2.verify as jest.Mock).mockResolvedValueOnce(true);
       (jwt.sign as jest.Mock).mockReturnValueOnce('jwt-token');
 

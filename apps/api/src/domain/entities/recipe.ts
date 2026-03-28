@@ -4,7 +4,7 @@ import type { Concept } from './concept';
 
 export type RecipeStatus = 'draft' | 'published' | 'archived';
 
-export type StepType = 'content' | 'activity' | 'intro' | 'closure';
+export type StepType = 'content' | 'activity' | 'question' | 'intro' | 'closure';
 
 // Script for a recipe step (static content)
 export interface StepTransition {
@@ -37,13 +37,7 @@ export interface StepClosure {
   readonly text: string;
 }
 
-export interface StepScript {
-  readonly transition: StepTransition;
-  readonly content: StepContent;
-  readonly examples: readonly StepExample[];
-  readonly comprehensionCheck?: StepComprehensionCheck;
-  readonly closure: StepClosure;
-}
+export interface StepScript extends Record<string, unknown> {}
 
 export interface ContentChunk {
   readonly text: string;

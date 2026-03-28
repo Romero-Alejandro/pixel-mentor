@@ -1,10 +1,8 @@
 import { ResetSessionUseCase } from '../../../use-cases/session/reset-session.use-case';
 import type { SessionRepository } from '../../../../domain/ports/session-repository';
-import type { InteractionRepository } from '../../../../domain/ports/interaction-repository';
 
 describe('ResetSessionUseCase', () => {
   let mockSessionRepo: jest.Mocked<SessionRepository>;
-  let mockInteractionRepo: jest.Mocked<InteractionRepository>;
   let useCase: ResetSessionUseCase;
 
   const sessionId = 'session-123';
@@ -56,19 +54,8 @@ describe('ResetSessionUseCase', () => {
       resetProgress: jest.fn(),
       incrementFailedAttempts: jest.fn(),
     };
-    mockInteractionRepo = {
-      findById: jest.fn(),
-      findBySession: jest.fn(),
-      findBySessionOrdered: jest.fn(),
-      create: jest.fn(),
-      addAIResponse: jest.fn(),
-      confirmComprehension: jest.fn(),
-      flagForReview: jest.fn(),
-      markAsQuestion: jest.fn(),
-      getLatestBySession: jest.fn(),
-    };
 
-    useCase = new ResetSessionUseCase(mockSessionRepo, mockInteractionRepo);
+    useCase = new ResetSessionUseCase(mockSessionRepo);
   });
 
   afterEach(() => {
@@ -81,36 +68,23 @@ describe('ResetSessionUseCase', () => {
       await expect(useCase.execute(sessionId)).rejects.toThrow();
     });
 
-    it('should reset session and create audit interaction', async () => {
+    it('should reset session and update status to ACTIVE', async () => {
       mockSessionRepo.findById.mockResolvedValue(mockSession);
       mockSessionRepo.resetProgress.mockResolvedValue(mockResetSession);
-      mockInteractionRepo.create.mockResolvedValue({
-        id: 'interaction-123',
-        sessionId: resetSessionId,
-        turnNumber: 0,
-        transcript: 'Session reset by user',
-        aiResponse: null,
-        pausedForQuestion: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+      mockSessionRepo.updateStatus.mockResolvedValue({
+        ...mockResetSession,
+        status: 'ACTIVE',
       } as any);
 
       const result = await useCase.execute(sessionId);
 
       expect(mockSessionRepo.findById).toHaveBeenCalledWith(sessionId);
       expect(mockSessionRepo.resetProgress).toHaveBeenCalledWith(sessionId);
-      expect(mockInteractionRepo.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          sessionId,
-          transcript: 'Session reset by user',
-          turnNumber: 0,
-        }),
-      );
-      expect(result).toEqual({
-        message: 'Session reset to segment 1',
-        sessionId: resetSessionId,
-        resetToSegment: 1,
-      });
+      expect(mockSessionRepo.updateStatus).toHaveBeenCalledWith(resetSessionId, 'ACTIVE');
+      // Verify it returns a valid session object
+      expect(result.id).toBe(resetSessionId);
+      expect(result.status).toBe('ACTIVE');
+      expect(result.stateCheckpoint.currentStepIndex).toBe(0);
     });
 
     it('should propagate resetProgress errors', async () => {

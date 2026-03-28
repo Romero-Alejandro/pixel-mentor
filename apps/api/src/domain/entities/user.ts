@@ -3,6 +3,7 @@ export type UserRole = 'STUDENT' | 'TEACHER' | 'ADMIN';
 export interface User {
   readonly id: string;
   readonly email: string;
+  readonly username?: string;
   readonly name: string;
   readonly role: UserRole;
   readonly age?: number; // Only for students
