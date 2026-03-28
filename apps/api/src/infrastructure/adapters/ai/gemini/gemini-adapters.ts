@@ -81,13 +81,23 @@ export class GeminiAIModelAdapter extends BaseGenerativeAdapter implements AISer
   }
 
   async generateAnswer(params: any): Promise<{ answer: string }> {
-    const prompt = `Responde esto usando el contexto:\nContexto: ${params.context}\nPregunta: ${params.question}`;
+    // Use question as prompt, context is optional extra info
+    let prompt = params.question;
+    if (params.context && params.context.trim()) {
+      prompt = `${params.context}\n\n${prompt}`;
+    }
+
     try {
       const model = this.client.getGenerativeModel({ model: this.defaultModel });
       const result = await model.generateContent(prompt);
-      return { answer: result.response?.text() || 'Buena pregunta, sigamos practicando.' };
+      const text = result.response?.text();
+      if (text && text.trim()) {
+        return { answer: text.trim() };
+      }
+      return { answer: 'No se pudo generar contenido.' };
     } catch (error) {
-      return { answer: 'Buena pregunta, sigamos practicando.' };
+      console.error('[Gemini] generateAnswer error:', error);
+      return { answer: 'Error al generar contenido.' };
     }
   }
 
