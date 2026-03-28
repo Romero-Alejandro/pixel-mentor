@@ -89,6 +89,7 @@ export const InteractRecipeOutputSchema = z.object({
     'COMPLETED',
   ]),
   sessionCompleted: z.boolean().optional(),
+  lessonProgress: z.object({ currentStep: z.number(), totalSteps: z.number() }).optional(),
   feedback: z.string().optional(),
   isCorrect: z.boolean().nullish(),
   extraExplanation: z.string().optional(),
@@ -180,3 +181,275 @@ export const InteractionChunkSchema = z.discriminatedUnion('type', [
   }),
 ]);
 export type InteractionChunk = z.infer<typeof InteractionChunkSchema>;
+
+// ==================== Recipe CRUD DTOs ====================
+
+// Step script schemas per stepType
+const StepTransitionSchema = z.object({
+  text: z.string().min(1),
+});
+
+const ContentChunkSchema = z.object({
+  text: z.string().min(1),
+  pauseAfter: z.number().int().min(0),
+});
+
+const StepContentSchema2 = z.object({
+  text: z.string().min(1),
+  chunks: z.array(ContentChunkSchema).min(1),
+});
+
+const StepExampleSchema = z.object({
+  text: z.string().min(1),
+  visual: z
+    .object({
+      type: z.enum(['image', 'animation', 'equation']),
+      src: z.string().url().optional(),
+    })
+    .optional(),
+});
+
+const StepComprehensionCheckSchema = z.object({
+  question: z.string().min(1),
+  expectedAnswer: z.string().min(1),
+  feedback: z.object({
+    correct: z.string().min(1),
+    incorrect: z.string().min(1),
+  }),
+});
+
+const StepClosureSchema = z.object({
+  text: z.string().min(1),
+});
+
+// Full step script for content type
+const StepScriptSchemaContent = z.object({
+  transition: StepTransitionSchema,
+  content: StepContentSchema2,
+  examples: z.array(StepExampleSchema).min(1),
+  comprehensionCheck: StepComprehensionCheckSchema.optional(),
+  closure: StepClosureSchema,
+});
+
+// Activity script structure (from frontend StepEditor)
+const StepScriptSchemaActivity = z.object({
+  kind: z.literal('activity'),
+  transition: z.union([z.string(), z.object({ text: z.string() })]).optional(),
+  instruction: z.union([z.string().min(1), z.object({ text: z.string().min(1) })]),
+  options: z
+    .array(
+      z.object({
+        text: z.string(),
+        isCorrect: z.boolean(),
+      }),
+    )
+    .optional(),
+  feedback: z.object({
+    correct: z.string(),
+    incorrect: z.string(),
+    partial: z.string().optional(),
+  }),
+  closure: z.string().optional(),
+});
+
+// Question script structure (from frontend StepEditor)
+const StepScriptSchemaQuestion = z.object({
+  kind: z.literal('question'),
+  transition: z.union([z.string(), z.object({ text: z.string() })]).optional(),
+  question: z.union([z.string().min(1), z.object({ text: z.string().min(1) })]),
+  expectedAnswer: z.string().optional(),
+  feedback: z.object({
+    correct: z.string(),
+    incorrect: z.string(),
+  }),
+  hint: z.string().optional(),
+});
+
+// Union of all valid script formats
+export const StepScriptSchema = z.union([
+  StepScriptSchemaContent,
+  StepScriptSchemaActivity,
+  StepScriptSchemaQuestion,
+]);
+
+export type StepScript = z.infer<typeof StepScriptSchema>;
+
+// Activity content schema
+const ActivityOptionSchema2 = z.object({
+  text: z.string().min(1),
+  isCorrect: z.boolean(),
+});
+
+const ActivityFeedbackSchema = z.object({
+  correct: z.string().min(1),
+  incorrect: z.string().min(1),
+  partial: z.string().optional(),
+});
+
+export const ActivityContentSchema2 = z.object({
+  instruction: z.union([z.string().min(1), z.object({ text: z.string().min(1) })]),
+  options: z.array(ActivityOptionSchema2).optional(),
+  feedback: ActivityFeedbackSchema,
+});
+export type ActivityContent2 = z.infer<typeof ActivityContentSchema2>;
+
+// Question schema for question type steps
+const QuestionAnswerSchema = z.object({
+  question: z.union([z.string().min(1), z.object({ text: z.string().min(1) })]),
+  expectedAnswer: z.string().min(1),
+  feedback: z.object({
+    correct: z.string().min(1),
+    incorrect: z.string().min(1),
+  }),
+});
+
+export const QuestionSchema = z.object({
+  question: z.union([z.string().min(1), z.object({ text: z.string().min(1) })]),
+  answer: QuestionAnswerSchema,
+});
+export type Question = z.infer<typeof QuestionSchema>;
+
+// Recipe Step Input (for creating/updating steps)
+export const RecipeStepInputSchema = z
+  .object({
+    atomId: z
+      .string()
+      .regex(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)
+      .optional(),
+    order: z.number().int().min(0).optional(),
+    conceptId: z
+      .string()
+      .regex(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)
+      .optional(),
+    activityId: z
+      .string()
+      .regex(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)
+      .optional(),
+    stepType: z.enum(['content', 'activity', 'question', 'intro', 'closure']).default('content'),
+    script: StepScriptSchema.optional(),
+    activity: ActivityContentSchema2.optional(),
+    question: QuestionSchema.optional(),
+  })
+  .refine(
+    (data) => {
+      // Helper to check if instruction/question is valid (string or object with text)
+      const hasValidInstruction = (instruction: unknown): boolean => {
+        if (typeof instruction === 'string') return instruction.length > 0;
+        if (typeof instruction === 'object' && instruction !== null) {
+          const obj = instruction as { text?: string };
+          return typeof obj.text === 'string' && obj.text.length > 0;
+        }
+        return false;
+      };
+
+      // If stepType is 'content', must have script
+      if (data.stepType === 'content' && !data.script) {
+        return false;
+      }
+      // If stepType is 'activity', must have activity OR script with kind='activity'
+      if (data.stepType === 'activity') {
+        const hasActivity =
+          data.activity && hasValidInstruction(data.activity.instruction);
+        const hasScriptActivity =
+          data.script &&
+          typeof data.script === 'object' &&
+          (data.script as any).kind === 'activity' &&
+          hasValidInstruction((data.script as any).instruction);
+        if (!hasActivity && !hasScriptActivity) {
+          return false;
+        }
+      }
+      // If stepType is 'question', must have question OR script with kind='question'
+      if (data.stepType === 'question') {
+        // Check question.content for string or object format
+        const hasQuestionContent = (q: unknown): boolean => {
+          if (typeof q === 'string') return q.length > 0;
+          if (typeof q === 'object' && q !== null) {
+            const obj = q as { text?: string };
+            return typeof obj.text === 'string' && obj.text.length > 0;
+          }
+          return false;
+        };
+        const hasQuestion = data.question && hasQuestionContent(data.question.question);
+        const hasScriptQuestion =
+          data.script &&
+          typeof data.script === 'object' &&
+          (data.script as any).kind === 'question' &&
+          hasQuestionContent((data.script as any).question);
+        if (!hasQuestion && !hasScriptQuestion) {
+          return false;
+        }
+      }
+      // If stepType is 'intro' or 'closure', must have script
+      if ((data.stepType === 'intro' || data.stepType === 'closure') && !data.script) {
+        return false;
+      }
+      return true;
+    },
+    { message: 'Invalid step content for the specified stepType' },
+  );
+export type RecipeStepInput = z.infer<typeof RecipeStepInputSchema>;
+
+// Recipe Output (response)
+export const RecipeStepOutputSchema = z.object({
+  id: z.string().uuid(),
+  recipeId: z.string().uuid(),
+  atomId: z.string().uuid().nullable(),
+  order: z.number().int(),
+  condition: z.any().nullable(),
+  onCondition: z.string().nullable(),
+  createdAt: z.string().datetime(),
+  conceptId: z.string().uuid().nullable(),
+  activityId: z.string().uuid().nullable(),
+  script: StepScriptSchema.nullable(),
+  stepType: z.string().nullable(),
+});
+export type RecipeStepOutput = z.infer<typeof RecipeStepOutputSchema>;
+
+export const RecipeOutputSchema = z.object({
+  id: z.string().uuid(),
+  canonicalId: z.string(),
+  title: z.string(),
+  description: z.string().nullable(),
+  expectedDurationMinutes: z.number().int().nullable(),
+  version: z.string(),
+  published: z.boolean(),
+  moduleId: z.string().uuid().nullable(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+  steps: z.array(RecipeStepOutputSchema),
+});
+export type RecipeOutput = z.infer<typeof RecipeOutputSchema>;
+
+// Create Recipe Input
+export const CreateRecipeInputSchema = z.object({
+  title: z.string().min(1).max(255),
+  description: z.string().max(1000).optional(),
+  expectedDurationMinutes: z.number().int().min(1).max(480).optional(),
+  moduleId: z
+    .string()
+    .regex(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)
+    .optional(),
+  published: z.boolean().optional().default(false),
+  steps: z.array(RecipeStepInputSchema).optional(),
+});
+export type CreateRecipeInput = z.infer<typeof CreateRecipeInputSchema>;
+
+// Update Recipe Input
+export const UpdateRecipeInputSchema = z.object({
+  title: z.string().min(1).max(255).optional(),
+  description: z.string().max(1000).optional(),
+  expectedDurationMinutes: z.number().int().min(1).max(480).optional(),
+  moduleId: z
+    .string()
+    .regex(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)
+    .optional(),
+  published: z.boolean().optional(),
+});
+export type UpdateRecipeInput = z.infer<typeof UpdateRecipeInputSchema>;
+
+// Reorder Steps Input - relaxed to accept any non-empty strings for debugging
+export const ReorderStepsInputSchema = z.object({
+  stepIds: z.array(z.string()).min(1),
+});
+export type ReorderStepsInput = z.infer<typeof ReorderStepsInputSchema>;
