@@ -80,11 +80,19 @@ enum ProgressStatus {
   FAILED
 }
 
+enum ClassStatus {
+  DRAFT
+  UNDER_REVIEW
+  PUBLISHED
+  ARCHIVED
+}
+
 // ==================== CORE MODELS ====================
 
 model User {
   id           String   @id @default(uuid())
   email        String   @unique @db.VarChar(255)
+  username     String?  @unique @db.VarChar(50)
   passwordHash String   @db.VarChar(255)
   name         String   @db.VarChar(255)
   role         Role     @default(STUDENT)
@@ -105,7 +113,12 @@ model User {
   userBadges      UserBadge[]
   dailyActivities DailyActivity[]
 
+  // Class relations
+  createdClasses   Class[]        @relation("ClassAuthor")
+  classTemplates   ClassTemplate[]
+
   @@index([email])
+  @@index([username])
   @@index([role])
   @@index([cohort])
   @@map("users")
@@ -190,6 +203,10 @@ model Recipe {
   progressEntries UserProgress[]
   attachments     AssetAttachment[]
   sessions        Session[]
+
+  // Class relations
+  classLessons          ClassLesson[]
+  classVersionLessons  ClassVersionLesson[]
 
   @@index([published, moduleId])
   @@map("recipes")
@@ -640,4 +657,120 @@ model DailyActivity {
   @@unique([userId, date])
   @@index([userId, date])
   @@map("daily_activities")
+}
+
+// ==================== CLASS MODELS ====================
+
+// Template for creating classes
+model ClassTemplate {
+  id          String   @id @default(cuid())
+  name        String   @db.VarChar(255)
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tutorId     String
+  tutor       User     @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+  classes     Class[]
+
+  @@index([tutorId])
+  @@map("class_templates")
+}
+
+// The mutable class entity being edited by the tutor
+model Class {
+  id                String   @id @default(cuid())
+  title             String   @db.VarChar(255)
+  description       String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  tutorId           String
+  tutor             User     @relation("ClassAuthor", fields: [tutorId], references: [id], onDelete: Cascade)
+
+  classTemplateId   String?  @map("class_template_id")
+  classTemplate    ClassTemplate? @relation(fields: [classTemplateId], references: [id], onDelete: SetNull)
+
+  // Current version tracking
+  currentVersionId String?  @map("current_version_id")
+  versions          ClassVersion[]
+
+  // Status and versioning
+  status            ClassStatus @default(DRAFT)
+  version           Int        @default(0)
+
+  // Lessons in the current draft
+  lessons           ClassLesson[]
+
+  @@index([tutorId])
+  @@index([status])
+  @@map("classes")
+}
+
+// Individual lesson within a class (mutable draft)
+model ClassLesson {
+  id          String   @id @default(cuid())
+  classId     String
+  class       Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  recipeId    String
+  recipe      Recipe   @relation(fields: [recipeId], references: [id], onDelete: Restrict)
+
+  order       Int      @db.SmallInt
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([classId, order])
+  @@index([classId])
+  @@index([recipeId])
+  @@map("class_lessons")
+}
+
+// An immutable, published version of a class
+model ClassVersion {
+  id          String    @id @default(cuid())
+  classId     String    @map("class_id")
+  class       Class     @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  version     String    @default("0.0.1") @db.VarChar(20)
+  publishedAt DateTime? @default(now())
+  isPublished Boolean   @default(false)
+
+  title       String    @db.VarChar(255)
+  description String?
+  slug        String    @db.VarChar(255)
+  status      ClassStatus @default(PUBLISHED)
+
+  // Lessons snapshot for this version
+  lessons     ClassVersionLesson[]
+
+  @@unique([classId, version])
+  @@index([classId])
+  @@index([slug])
+  @@map("class_versions")
+}
+
+// Individual lesson snapshot for a published class version
+model ClassVersionLesson {
+  id              String        @id @default(cuid())
+  classVersionId  String        @map("class_version_id")
+  classVersion    ClassVersion  @relation(fields: [classVersionId], references: [id], onDelete: Cascade)
+
+  recipeId        String?
+  recipe          Recipe?       @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+
+  order           Int           @db.SmallInt
+  title           String        @db.VarChar(255)
+  duration        Int?          @db.SmallInt // minutes
+
+  // Snapshot of recipe content at publish time
+  recipeSnapshot  Json? // Snapshot of recipe title, description at publish time
+
+  createdAt       DateTime      @default(now())
+
+  @@unique([classVersionId, order])
+  @@index([classVersionId])
+  @@index([recipeId])
+  @@map("class_version_lessons")
 }
