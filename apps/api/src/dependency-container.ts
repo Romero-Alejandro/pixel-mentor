@@ -16,6 +16,7 @@ import { CompleteSessionUseCase } from './application/use-cases/session/complete
 import { RegisterUseCase } from './application/use-cases/auth/register.use-case.js';
 import { LoginUseCase } from './application/use-cases/auth/login.use-case.js';
 import { VerifyTokenUseCase } from './application/use-cases/auth/verify-token.use-case.js';
+import { AdminUserService } from './application/services/admin-user.service.js';
 import { QuestionAnsweringUseCase } from './application/use-cases/question/question-answering.use-case.js';
 import { ProgressService } from './domain/services/progress.service.js';
 import { EventService } from './domain/services/event.service.js';
@@ -24,6 +25,11 @@ import { TTSProviderFactory } from './infrastructure/adapters/tts/tts-factory';
 import { GameEngineCore } from './game-engine/index.js';
 import { LevelService } from './game-engine/level.service.js';
 import { StreakService } from './game-engine/streak.service.js';
+import { ClassService } from './application/services/class.service.js';
+import { ClassAIService } from './application/services/class-ai.service.js';
+import { RecipeAIService } from './application/services/recipe-ai.service.js';
+import { ClassTemplateService } from './application/services/class-template.service.js';
+import { RecipeService } from './application/services/recipe.service.js';
 import {
   StrategyRegistry,
   LessonCompletionStrategy,
@@ -56,6 +62,10 @@ import { FileSystemPromptRepository } from '@/infrastructure/adapters/prompts/fi
 import { PostgresAdvisoryLockManager } from '@/infrastructure/adapters/database/repositories/advisory-lock.js';
 import { PrismaUserGamificationRepository } from '@/infrastructure/repositories/prisma-user-gamification.repository.js';
 import { PrismaBadgeRepository } from '@/infrastructure/repositories/prisma-badge.repository.js';
+import { PrismaClassRepository } from '@/infrastructure/repositories/prisma-class.repository.js';
+import { PrismaClassLessonRepository } from '@/infrastructure/repositories/prisma-class-lesson.repository.js';
+import { PrismaClassVersionRepository } from '@/infrastructure/repositories/prisma-class-version.repository.js';
+import { PrismaClassTemplateRepository } from '@/infrastructure/repositories/prisma-class-template.repository.js';
 import type { Config } from '@/config';
 import { LessonEvaluatorUseCase } from '@/evaluator/index.js';
 import { SafePromptBuilder } from '@/prompt/safe.prompt.builder.js';
@@ -83,6 +93,11 @@ export function buildContainer(config: Config, logger: pino.Logger) {
     competencyMasteryRepository: new PrismaCompetencyMasteryRepository(),
     promptRepository: new FileSystemPromptRepository(),
     advisoryLock: PostgresAdvisoryLockManager.getInstance(),
+    // Class repositories
+    classRepository: new PrismaClassRepository(),
+    classLessonRepository: new PrismaClassLessonRepository(),
+    classVersionRepository: new PrismaClassVersionRepository(),
+    classTemplateRepository: new PrismaClassTemplateRepository(),
   };
 
   const providers = {
@@ -111,6 +126,36 @@ export function buildContainer(config: Config, logger: pino.Logger) {
     event: new EventService(repositories.eventLogRepository),
     competency: new CompetencyService(repositories.atomRepository),
   };
+
+  // Class services
+  const classService = new ClassService(
+    repositories.classRepository,
+    repositories.classLessonRepository,
+    repositories.classVersionRepository,
+  );
+
+  const classAIService = new ClassAIService(
+    repositories.classRepository,
+    repositories.classLessonRepository,
+    providers.ai.aiModel,
+  );
+
+  const classTemplateService = new ClassTemplateService(
+    repositories.classTemplateRepository,
+    repositories.classRepository,
+  );
+
+  // Admin services
+  const adminUserService = new AdminUserService(repositories.userRepository);
+
+  // Recipe service
+  const recipeService = new RecipeService(
+    repositories.recipeRepository,
+    repositories.atomRepository,
+  );
+
+  // Recipe AI service
+  const recipeAIService = new RecipeAIService(providers.ai.aiModel);
 
   // Gamification repositories (implemented in GAM-04)
   const gamificationRepositories: {
@@ -148,10 +193,7 @@ export function buildContainer(config: Config, logger: pino.Logger) {
     registerUseCase: new RegisterUseCase(repositories.userRepository),
     loginUseCase: new LoginUseCase(repositories.userRepository),
     verifyTokenUseCase: new VerifyTokenUseCase(repositories.userRepository),
-    resetSessionUseCase: new ResetSessionUseCase(
-      repositories.sessionRepository,
-      repositories.interactionRepository,
-    ),
+    resetSessionUseCase: new ResetSessionUseCase(repositories.sessionRepository),
     completeSessionUseCase: new CompleteSessionUseCase(repositories.sessionRepository),
     getRecipeUseCase: new GetRecipeUseCase(repositories.recipeRepository),
     listRecipesUseCase: new ListRecipesUseCase(repositories.recipeRepository),
@@ -211,5 +253,11 @@ export function buildContainer(config: Config, logger: pino.Logger) {
     gameEngine,
     gamificationRepositories,
     strategyRegistry,
+    classService,
+    classAIService,
+    classTemplateService,
+    recipeService,
+    recipeAIService,
+    adminUserService,
   };
 }

@@ -3,7 +3,11 @@ import { handlePrismaError } from '../error-handler.js';
 
 import type { User, UserRole } from '@/domain/entities/user.js';
 import { DEFAULT_COHORT } from '@/domain/entities/user.js';
-import type { UserRepository } from '@/domain/ports/user-repository.js';
+import type {
+  UserRepository,
+  UserListOptions,
+  UserListResult,
+} from '@/domain/ports/user-repository.js';
 import { UserNotFoundError, UserAlreadyExistsError } from '@/domain/ports/user-repository.js';
 
 type PrismaUser = NonNullable<Awaited<ReturnType<typeof prisma.user.findUnique>>>;
@@ -14,6 +18,7 @@ const mapToDomain = (entity: PrismaUserWithoutPassword): User => {
   return {
     id: entity.id,
     email: entity.email,
+    username: entity.username ?? undefined,
     name: entity.name,
     role: entity.role as UserRole,
     age: entity.age ?? undefined,
@@ -28,6 +33,7 @@ const mapToDomainWithPassword = (entity: PrismaUser): User => {
   return {
     id: entity.id,
     email: entity.email,
+    username: entity.username ?? undefined,
     name: entity.name,
     role: entity.role as UserRole,
     age: entity.age ?? undefined,
@@ -46,6 +52,7 @@ export class PrismaUserRepository implements UserRepository {
       select: {
         id: true,
         email: true,
+        username: true,
         name: true,
         role: true,
         age: true,
@@ -64,6 +71,7 @@ export class PrismaUserRepository implements UserRepository {
       select: {
         id: true,
         email: true,
+        username: true,
         name: true,
         role: true,
         age: true,
@@ -83,6 +91,38 @@ export class PrismaUserRepository implements UserRepository {
     return user ? mapToDomainWithPassword(user) : null;
   }
 
+  async findByIdentifier(identifier: string): Promise<User | null> {
+    // identifier can be either email or username
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [{ email: identifier }, { username: identifier }],
+      },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        name: true,
+        role: true,
+        age: true,
+        quota: true,
+        cohort: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+    return user ? mapToDomain(user) : null;
+  }
+
+  async findByIdentifierWithPassword(identifier: string): Promise<User | null> {
+    // identifier can be either email or username
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [{ email: identifier }, { username: identifier }],
+      },
+    });
+    return user ? mapToDomainWithPassword(user) : null;
+  }
+
   async create(user: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<User> {
     if (!user.passwordHash) {
       throw new Error('Password hash is required');
@@ -92,6 +132,7 @@ export class PrismaUserRepository implements UserRepository {
       const created = await prisma.user.create({
         data: {
           email: user.email,
+          username: user.username,
           passwordHash: user.passwordHash, // non-null, checked above
           name: user.name,
           role: user.role,
@@ -102,6 +143,7 @@ export class PrismaUserRepository implements UserRepository {
         select: {
           id: true,
           email: true,
+          username: true,
           name: true,
           role: true,
           age: true,
@@ -131,6 +173,7 @@ export class PrismaUserRepository implements UserRepository {
         select: {
           id: true,
           email: true,
+          username: true,
           name: true,
           role: true,
           age: true,
@@ -153,5 +196,53 @@ export class PrismaUserRepository implements UserRepository {
     } catch (error) {
       handlePrismaError(error, UserNotFoundError, id);
     }
+  }
+
+  async findAll(options: UserListOptions = {}): Promise<UserListResult> {
+    const { role, search, page = 1, limit = 20 } = options;
+
+    const where: Record<string, unknown> = {};
+
+    if (role) {
+      where.role = role;
+    }
+
+    if (search) {
+      where.OR = [
+        { email: { contains: search, mode: 'insensitive' } },
+        { name: { contains: search, mode: 'insensitive' } },
+        { username: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          name: true,
+          role: true,
+          age: true,
+          quota: true,
+          cohort: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.user.count({ where }),
+    ]);
+
+    return {
+      users: users.map(mapToDomain),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 }

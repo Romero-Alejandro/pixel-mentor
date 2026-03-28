@@ -75,6 +75,15 @@ async function bootstrap(): Promise<void> {
     userGamificationRepository: container.gamificationRepositories.userGamificationRepository,
     badgeRepository: container.gamificationRepositories.badgeRepository,
     levelService: container.gamificationRepositories.levelService,
+    // Class services
+    classService: container.classService,
+    classAIService: container.classAIService,
+    classTemplateService: container.classTemplateService,
+    // Recipe services
+    recipeService: container.recipeService,
+    recipeAIService: container.recipeAIService,
+    // Admin services
+    adminUserService: container.adminUserService,
   }).listen(config.PORT, () => {
     logger.info(`API running on port ${config.PORT}`);
   });
