@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
-import { api, type Session, type PedagogicalState } from '../services/api';
-
+import { api, type Session, type PedagogicalState } from '@/services/api';
 import { useVoice, type VoiceSettings } from '@/hooks/useVoice';
 
 export interface Message {
@@ -33,7 +32,7 @@ export function useSessionLogic(sessionId: string | undefined, voiceSettings: Vo
   const { isSpeaking, speak, stopSpeaking } = useVoice();
   const isMounted = useRef(true);
 
-  const fetchSession = useCallback(async () => {
+  async function fetchSession() {
     if (!sessionId) return;
     try {
       setIsLoading(true);
@@ -48,11 +47,9 @@ export function useSessionLogic(sessionId: string | undefined, voiceSettings: Vo
         setError(err instanceof Error ? err.message : 'Error al cargar la sesión.');
       }
     } finally {
-      if (isMounted.current) {
-        setIsLoading(false);
-      }
+      if (isMounted.current) setIsLoading(false);
     }
-  }, [sessionId]);
+  }
 
   useEffect(() => {
     isMounted.current = true;
@@ -61,9 +58,9 @@ export function useSessionLogic(sessionId: string | undefined, voiceSettings: Vo
       isMounted.current = false;
       stopSpeaking();
     };
-  }, [fetchSession, stopSpeaking]);
+  }, [sessionId]);
 
-  const handleSend = useCallback(async () => {
+  async function handleSend() {
     if (!inputText.trim() || !sessionId || isProcessing) return;
 
     const userText = inputText.trim();
@@ -84,7 +81,6 @@ export function useSessionLogic(sessionId: string | undefined, voiceSettings: Vo
         const updated = await api.getSession(sessionId);
         if (isMounted.current) setSession(updated);
 
-        // Fetch real mission report
         try {
           const report = await api.getMissionReport(sessionId);
           if (isMounted.current) setMissionReport(report);
@@ -106,11 +102,10 @@ export function useSessionLogic(sessionId: string | undefined, voiceSettings: Vo
     } finally {
       if (isMounted.current) setIsProcessing(false);
     }
-  }, [inputText, sessionId, isProcessing, stopSpeaking, speak, voiceSettings]);
+  }
 
-  const handleReset = useCallback(async () => {
+  async function handleReset() {
     if (!sessionId || isProcessing) return;
-
     if (!window.confirm('¿Confirmar reinicio de sesión? Los datos se perderán.')) return;
 
     setIsProcessing(true);
@@ -131,15 +126,12 @@ export function useSessionLogic(sessionId: string | undefined, voiceSettings: Vo
     } finally {
       if (isMounted.current) setIsProcessing(false);
     }
-  }, [sessionId, isProcessing, stopSpeaking]);
+  }
 
-  const handlePreviewVoice = useCallback(
-    async (settings: VoiceSettings) => {
-      stopSpeaking();
-      await speak('Hola, soy tu tutor. Vamos a aprender juntos.', settings);
-    },
-    [speak, stopSpeaking],
-  );
+  async function handlePreviewVoice(settings: VoiceSettings) {
+    stopSpeaking();
+    await speak('Hola, soy tu tutor. Vamos a aprender juntos.', settings);
+  }
 
   return {
     session,

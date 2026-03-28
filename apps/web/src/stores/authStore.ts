@@ -15,8 +15,14 @@ interface AuthState {
   error: string | null;
   redirectPath: string | null;
 
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string, role: Role) => Promise<void>;
+  login: (identifier: string, password: string) => Promise<void>;
+  register: (
+    email: string,
+    password: string,
+    name: string,
+    role: Role,
+    username?: string,
+  ) => Promise<void>;
   checkAuth: () => Promise<void>;
   logout: () => void;
   clearError: () => void;
@@ -48,10 +54,10 @@ export const useAuthStore = create<AuthState>()(
           isValidating: false,
         });
       },
-      login: async (email: string, password: string) => {
+      login: async (identifier: string, password: string) => {
         set({ isLoading: true, error: null });
         try {
-          const result = await api.login({ email, password });
+          const result = await api.login({ identifier, password });
           setToken(result.token);
           set({
             user: result.user,
@@ -61,15 +67,21 @@ export const useAuthStore = create<AuthState>()(
             isHydrated: true,
           });
         } catch (err: unknown) {
-          const message = err instanceof Error ? err.message : 'Login failed';
+          const message = err instanceof Error ? err.message : 'Error al iniciar sesión';
           set({ error: message, isLoading: false });
           throw err;
         }
       },
-      register: async (email: string, password: string, name: string, role: Role) => {
+      register: async (
+        email: string,
+        password: string,
+        name: string,
+        _role: Role,
+        username?: string,
+      ) => {
         set({ isLoading: true, error: null });
         try {
-          const result = await api.register({ email, password, name, role });
+          const result = await api.register({ email, password, name, username });
           setToken(result.token);
           set({
             user: result.user,
@@ -79,7 +91,7 @@ export const useAuthStore = create<AuthState>()(
             isHydrated: true,
           });
         } catch (err: unknown) {
-          const message = err instanceof Error ? err.message : 'Registration failed';
+          const message = err instanceof Error ? err.message : 'Error al registrar';
           set({ error: message, isLoading: false });
           throw err;
         }

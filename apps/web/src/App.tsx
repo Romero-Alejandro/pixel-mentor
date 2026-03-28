@@ -9,6 +9,12 @@ import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { LessonPage } from './pages/LessonPage';
 import { MissionReportPage } from './pages/MissionReportPage';
+import { ClassListPage } from './pages/ClassListPage';
+import { ClassEditorPage } from './pages/ClassEditorPage';
+import { ClassTemplatesPage } from './pages/ClassTemplatesPage';
+import { AdminUsersPage } from './pages/AdminUsersPage';
+import { RecipesPage } from './pages/RecipesPage';
+import { RecipeEditorPage } from './pages/RecipeEditorPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isHydrated, isAuthenticated, isValidating } = useAuthStore();
@@ -76,6 +82,27 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function TeacherRoute({ children }: { children: React.ReactNode }) {
+  const { isHydrated, isAuthenticated, user } = useAuthStore();
+
+  if (!isHydrated || !isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#f0f9ff]">
+        <div className="text-center">
+          <Spinner size="lg" className="text-sky-500" />
+          <p className="mt-4 text-sky-800 font-bold">Verificando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (user?.role !== 'TEACHER' && user?.role !== 'ADMIN') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <>{children}</>;
+}
+
 export default function App() {
   const { isAuthenticated } = useAuthStore();
   useGamificationSSE(isAuthenticated);
@@ -119,6 +146,89 @@ export default function App() {
         element={
           <ProtectedRoute>
             <MissionReportPage />
+          </ProtectedRoute>
+        }
+      />
+      {/* Class Routes - Teacher only */}
+      <Route
+        path="/classes"
+        element={
+          <ProtectedRoute>
+            <TeacherRoute>
+              <ClassListPage />
+            </TeacherRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/classes/new"
+        element={
+          <ProtectedRoute>
+            <TeacherRoute>
+              <ClassEditorPage />
+            </TeacherRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/classes/:classId/edit"
+        element={
+          <ProtectedRoute>
+            <TeacherRoute>
+              <ClassEditorPage />
+            </TeacherRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/templates"
+        element={
+          <ProtectedRoute>
+            <TeacherRoute>
+              <ClassTemplatesPage />
+            </TeacherRoute>
+          </ProtectedRoute>
+        }
+      />
+      {/* Admin Routes */}
+      <Route
+        path="/admin/users"
+        element={
+          <ProtectedRoute>
+            <TeacherRoute>
+              <AdminUsersPage />
+            </TeacherRoute>
+          </ProtectedRoute>
+        }
+      />
+      {/* Unit Routes - Teacher only */}
+      <Route
+        path="/units"
+        element={
+          <ProtectedRoute>
+            <TeacherRoute>
+              <RecipesPage />
+            </TeacherRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/units/new/edit"
+        element={
+          <ProtectedRoute>
+            <TeacherRoute>
+              <RecipeEditorPage />
+            </TeacherRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/units/:recipeId/edit"
+        element={
+          <ProtectedRoute>
+            <TeacherRoute>
+              <RecipeEditorPage />
+            </TeacherRoute>
           </ProtectedRoute>
         }
       />

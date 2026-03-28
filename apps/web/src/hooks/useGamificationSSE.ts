@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { EarnedBadge } from '@pixel-mentor/shared/gamification';
 
 import { useGamificationStore } from '../stores/gamification.store';
+import { getToken } from '../services/api';
 
 interface XPEarnedEvent {
   type: 'xp_earned';
@@ -38,7 +39,9 @@ export function useGamificationSSE(enabled = true) {
   useEffect(() => {
     if (!enabled) return;
 
-    const eventSource = new EventSource('/api/gamification/events');
+    const token = getToken();
+    const url = token ? `/api/gamification/events?token=${token}` : '/api/gamification/events';
+    const eventSource = new EventSource(url);
     eventSourceRef.current = eventSource;
 
     eventSource.onopen = () => {

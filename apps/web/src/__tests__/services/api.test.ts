@@ -46,10 +46,10 @@ describe('ApiService', () => {
       };
       mockPost.mockResolvedValueOnce(mockResponse);
 
-      const result = await api.login({ email: 'test@test.com', password: 'password123' });
+      const result = await api.login({ identifier: 'test@test.com', password: 'password123' });
 
       expect(mockPost).toHaveBeenCalledWith('/api/auth/login', {
-        email: 'test@test.com',
+        identifier: 'test@test.com',
         password: 'password123',
       });
       expect(result).toHaveProperty('token', 'jwt-token-123');
@@ -66,7 +66,7 @@ describe('ApiService', () => {
       });
       mockPost.mockRejectedValueOnce(mockError);
 
-      await expect(api.login({ email: 'test@test.com', password: 'wrong' })).rejects.toThrow(
+      await expect(api.login({ identifier: 'test@test.com', password: 'wrong' })).rejects.toThrow(
         'Request failed with status code 401',
       );
     });
@@ -74,9 +74,9 @@ describe('ApiService', () => {
     it('should throw error on network failure', async () => {
       mockPost.mockRejectedValueOnce(new Error('Network error'));
 
-      await expect(api.login({ email: 'test@test.com', password: 'password123' })).rejects.toThrow(
-        'Network error',
-      );
+      await expect(
+        api.login({ identifier: 'test@test.com', password: 'password123' }),
+      ).rejects.toThrow('Network error');
     });
   });
 
@@ -94,14 +94,14 @@ describe('ApiService', () => {
         email: 'test@test.com',
         password: 'password123',
         name: 'Test',
-        role: 'STUDENT',
+        username: 'testuser',
       });
 
       expect(mockPost).toHaveBeenCalledWith('/api/auth/register', {
         email: 'test@test.com',
         password: 'password123',
         name: 'Test',
-        role: 'STUDENT',
+        username: 'testuser',
       });
       expect(result).toHaveProperty('token', 'jwt-token-123');
     });
