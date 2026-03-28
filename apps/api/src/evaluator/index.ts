@@ -1,23 +1,34 @@
 /**
  * Lesson Evaluator Module
  *
- * Exports the LessonEvaluatorUseCase and all related types for rubric-based
- * student answer evaluation.
+ * Exports the LessonEvaluatorUseCase and all related types for pedagogical
+ * student answer evaluation using the 3-step flow.
  */
 
-export {
-  LessonEvaluatorUseCase,
-  EvaluationResponseSchema,
-  createLessonEvaluator,
-} from './lesson.evaluator';
+export { LessonEvaluatorUseCase, createLessonEvaluator } from './lesson.evaluator';
 
+// Re-export from types
+export { EVALUATION_OUTCOME } from './types';
 export type {
-  EvaluationRequest,
-  EvaluationResult,
   EvaluationOutcome,
-  TeacherConfig,
+  ExtractedConcepts,
   LessonContext,
   StudentProfile,
-  RubricCriterion,
+  TeacherConfig,
+  EvaluationRequest,
+  EvaluationResult,
+} from './types';
+
+// Re-export from schemas
+export {
+  ExtractConceptsResponseSchema,
+  ClassificationResponseSchema,
+  FeedbackResponseSchema,
+  EvaluationResponseSchema,
+} from './schemas';
+export type {
+  ExtractConceptsResponse,
+  ClassificationResponse,
+  FeedbackResponse,
   EvaluationResponse,
-} from './lesson.evaluator';
+} from './schemas';

@@ -1,11 +1,16 @@
 /**
  * Lesson Evaluator Module
  *
- * Provides rubric-based evaluation of student answers using LLM with:
- * - Safe prompt construction with XML delimiters
- * - Zod schema validation for LLM responses
- * - Configurable teacher rubric (keywords, central truth, exemplars)
- * - Graceful error handling with fallback responses
+ * Provides pedagogical evaluation of student answers using a 3-step LLM flow:
+ * 1. Extract Concepts - Analyze student's answer to extract key ideas
+ * 2. Classify - Classify into 6 pedagogical categories based on extracted concepts
+ * 3. Generate Feedback - Produce positive, child-friendly feedback
+ *
+ * Key improvements over previous version:
+ * - No rigid keyword penalties (conceptual evaluation only)
+ * - 6-category classification (vs 3)
+ * - Coherent feedback (always matches classification)
+ * - Adapted for children's language and level
  *
  * @example
  * ```typescript
@@ -16,216 +21,68 @@
  * );
  *
  * const result = await evaluator.evaluate({
- *   studentAnswer: 'La fotosíntesis es el proceso por el cual...',
+ *   studentAnswer: 'Las plantas usan el sol para comer',
  *   questionText: '¿Qué es la fotosíntesis?',
  *   teacherConfig: {
  *     centralTruth: 'La fotosíntesis es el proceso...',
- *     requiredKeywords: ['clorofila', 'luz solar', 'dióxido de carbono'],
+ *     requiredKeywords: ['clorofila', 'luz solar'],
  *     maxScore: 10
  *   },
  *   lessonContext: {
  *     subject: 'Ciencias Naturales',
- *     gradeLevel: '6to grado',
+ *     gradeLevel: '3er grado',
  *     topic: 'Fotosíntesis'
  *   },
  *   studentProfile: {
- *     name: 'María',
- *     learningStyle: 'visual'
+ *     name: 'María'
  *   }
  * });
+ *
+ * console.log(result.outcome); // 'intuitive_correct'
+ * console.log(result.score);    // 8
+ * console.log(result.feedback); // '¡Muy bien! Has entendido...'
  * ```
  */
 
 import { z } from 'zod';
 
-import type { ILLMClient, LLMExecutionOptions } from '@/llm/client.interface.js';
+import { EVALUATION_OUTCOME, type EvaluationResult, type EvaluationRequest } from './types';
+
+import type { ILLMClient, LLMExecutionOptions } from '@/llm/client.interface';
 import type {
   ISafePromptBuilder,
   PromptValues,
-} from '@/prompt/interfaces/safe-prompt-builder.interface.js';
-import { SchemaValidationError } from '@/validation/schema.validator.js';
-import type { ISchemaValidator } from '@/validation/schema.validator.js';
+} from '@/prompt/interfaces/safe-prompt-builder.interface';
+import { SchemaValidationError } from '@/validation/schema.validator';
+import type { ISchemaValidator } from '@/validation/schema.validator';
 
-// ============================================================
-// DTOs and Types
-// ============================================================
+import {
+  EXTRACT_CONCEPTS_USER_TEMPLATE,
+  CLASSIFY_USER_TEMPLATE,
+  GENERATE_FEEDBACK_USER_TEMPLATE,
+  buildExtractConceptsPrompt,
+  buildClassifyPrompt,
+  buildFeedbackPrompt,
+} from './prompts';
+import {
+  ExtractConceptsResponseSchema,
+  ClassificationResponseSchema,
+  FeedbackResponseSchema,
+  type ExtractConceptsResponse,
+  type ClassificationResponse,
+  type FeedbackResponse,
+} from './schemas';
 
-/**
- * Context about the lesson being evaluated.
- */
-export interface LessonContext {
-  /** Subject matter (e.g., 'Ciencias Naturales', 'Matemáticas') */
-  readonly subject: string;
-
-  /** Educational grade level (e.g., '6to grado', 'Secundaria') */
-  readonly gradeLevel: string;
-
-  /** Specific topic within the subject (e.g., 'Fotosíntesis', 'Ecuaciones lineales') */
-  readonly topic: string;
-}
-
-/**
- * Optional profile information about the student.
- */
-export interface StudentProfile {
-  /** Student's name for personalized feedback */
-  readonly name?: string;
-
-  /** Student's preferred learning style for adaptive feedback */
-  readonly learningStyle?: 'visual' | 'auditory' | 'kinesthetic' | 'reading';
-}
-
-/**
- * Teacher's rubric configuration for evaluation.
- */
-export interface TeacherConfig {
-  /**
-   * The central truth or correct answer that defines the expected understanding.
-   * Student answers should substantially match this to receive high scores.
-   */
-  readonly centralTruth: string;
-
-  /**
-   * Required keywords that must be present in the student's answer.
-   * Case-insensitive matching. Partial matches count.
-   */
-  readonly requiredKeywords: readonly string[];
-
-  /**
-   * Optional exemplars showing correct, partial, and incorrect answers.
-   * Used to calibrate the LLM's evaluation criteria.
-   */
-  readonly exemplars?: Readonly<{
-    correct: string[];
-    partial: string[];
-    incorrect: string[];
-  }>;
-
-  /**
-   * Maximum achievable score for this evaluation.
-   * @default 10
-   */
-  readonly maxScore?: number;
-}
-
-/**
- * Criterion for rubric-based evaluation.
- * Supports extensible evaluation rules beyond simple keyword matching.
- */
-export interface RubricCriterion {
-  /** Unique identifier for the criterion */
-  readonly id: string;
-
-  /** Human-readable description of what this criterion evaluates */
-  readonly description: string;
-
-  /** Whether this criterion is mandatory for a correct answer */
-  readonly required: boolean;
-
-  /** Weight of this criterion in the final score (0-1) */
-  readonly weight: number;
-}
-
-/**
- * Request for evaluating a student's answer.
- */
-export interface EvaluationRequest {
-  /** The student's submitted answer */
-  readonly studentAnswer: string;
-
-  /** The original question that was answered */
-  readonly questionText: string;
-
-  /** Teacher's rubric configuration for evaluation */
-  readonly teacherConfig: TeacherConfig;
-
-  /** Context about the lesson */
-  readonly lessonContext: LessonContext;
-
-  /** Optional student profile for adaptive feedback */
-  readonly studentProfile?: StudentProfile;
-}
-
-/**
- * Evaluation outcome classification.
- */
-export type EvaluationOutcome = 'correct' | 'partial' | 'incorrect';
-
-/**
- * Result of evaluating a student's answer.
- */
-export interface EvaluationResult {
-  /**
-   * Classification of the answer quality:
-   * - 'correct': Answer meets all or most requirements
-   * - 'partial': Answer shows understanding but misses key elements
-   * - 'incorrect': Answer does not address the question or contains errors
-   */
-  readonly outcome: EvaluationOutcome;
-
-  /**
-   * Numeric score from 0 to maxScore (typically 10).
-   * Represents the degree of correctness.
-   */
-  readonly score: number;
-
-  /**
-   * Constructive feedback for the student explaining the evaluation.
-   * Always positive and encouraging, never empty.
-   */
-  readonly feedback: string;
-
-  /**
-   * Optional suggestion for how the student can improve their answer.
-   */
-  readonly improvementSuggestion?: string;
-
-  /**
-   * Confidence level of the evaluation (0-1).
-   * Higher values indicate the evaluator is more certain about the evaluation.
-   */
-  readonly confidence: number;
-}
-
-// ============================================================
-// Zod Schema for LLM Response Validation
-// ============================================================
-
-/**
- * Schema for validating LLM response structure.
- * Ensures the LLM returns a properly formatted evaluation.
- */
-export const EvaluationResponseSchema = z.object({
-  /**
-   * The evaluation outcome classification.
-   */
-  outcome: z.enum(['correct', 'partial', 'incorrect']),
-
-  /**
-   * Numeric score from 0 to 10.
-   */
-  score: z.number().min(0).max(10),
-
-  /**
-   * Feedback message for the student.
-   */
-  feedback: z.string(),
-
-  /**
-   * Optional suggestion for improvement.
-   */
-  improvementSuggestion: z.string().optional(),
-
-  /**
-   * Confidence level (0-1) of the evaluation.
-   */
-  confidence: z.number().min(0).max(1).optional(),
-});
-
-/**
- * Type inferred from the evaluation response schema.
- */
-export type EvaluationResponse = z.infer<typeof EvaluationResponseSchema>;
+// Re-export types for external use
+export type {
+  EvaluationOutcome,
+  ExtractedConcepts,
+  LessonContext,
+  StudentProfile,
+  TeacherConfig,
+  EvaluationRequest,
+  EvaluationResult,
+} from './types';
 
 // ============================================================
 // Fallback Response
@@ -236,10 +93,10 @@ export type EvaluationResponse = z.infer<typeof EvaluationResponseSchema>;
  * Always returns encouraging feedback to maintain student motivation.
  */
 const FALLBACK_RESULT: EvaluationResult = {
-  outcome: 'incorrect',
+  outcome: EVALUATION_OUTCOME.NO_RESPONSE,
   score: 0,
   feedback:
-    '¡Sigue intentando! Cada respuesta es una oportunidad de aprendizaje. Revisa la pregunta e intenta novamente.',
+    '¡Sigue intentando! Cada respuesta es una oportunidad de aprendizaje. Revisa la pregunta e intenta nuevamente.',
   confidence: 0,
 };
 
@@ -254,99 +111,18 @@ const ENCOURAGING_MESSAGES: readonly string[] = [
 ];
 
 // ============================================================
-// Prompt Template (Spanish)
-// ============================================================
-
-/**
- * System prompt for the evaluation LLM.
- * Instructs the LLM to evaluate conceptually, not just keyword matching.
- */
-const EVALUATION_SYSTEM_PROMPT = `Eres un evaluador pedagógico experto. Tu tarea es evaluar las respuestas de estudiantes de manera justa, constructiva y motivadora.
-
-INSTRUCCIONES DE EVALUACIÓN:
-1. Evalúa la respuesta del estudiante CONCEPTUALMENTE, no solo por palabras clave
-2. Busca la comprensión real del tema, no la memorización
-3. Considera el contexto educativo (nivel, materia, tema)
-4. Proporciona retroalimentación POSITIVA y CONSTRUCTIVA
-5. Si la respuesta tiene errores, sé amable y ofrece sugerencias útiles
-
-CRITERIOS DE CALIFICACIÓN:
-- 'correct': La respuesta demuestra comprensión del concepto
-- 'partial': La respuesta muestra ideas relacionadas pero incomplete
-- 'incorrect': La respuesta no aborda la pregunta o contiene conceptos erróneos
-
-IMPORTANTE:
-- La puntuación maxima es 10 puntos
-- Nunca digas que la respuesta está "completamente equivocada"
-- Siempre ofrece al menos una observación positiva
-- Si hay errores conceptuales, explica gentilmente el concepto correcto`;
-
-/**
- * User prompt template for evaluation.
- * Uses safe XML delimiters for untrusted student input.
- */
-const EVALUATION_USER_TEMPLATE = `PREGUNTA:
-{{questionText}}
-
-RESPUESTA DEL ESTUDIANTE:
-{{studentAnswer}}
-
-CONTEXTO DE LA LECCIÓN:
-- Materia: {{subject}}
-- Nivel: {{gradeLevel}}
-- Tema: {{tema}}
-
-RÚBRICA DEL DOCENTE:
-Verdad Central: {{centralTruth}}
-{{#if requiredKeywords}}
-Palabras Clave Requeridas: {{requiredKeywords}}
-{{/if}}
-{{exemplarsSection}}
-{{#if studentName}}
-NOMBRE DEL ESTUDIANTE: {{studentName}}
-{{/if}}
-
-INSTRUCCIONES ESPECÍFICAS:
-- Evalúa si la respuesta captura la verdad central de manera conceptual
-- Verifica la presencia de las palabras clave requeridas (si se especificaron)
-- Considera el nivel educativo del estudiante
-- Usa los ejemplos como referencia para calibrar tu evaluación
-
-RESPUESTA EN FORMATO JSON:
-Devuelve SOLO un objeto JSON válido con esta estructura exacta:
-{
-  "outcome": "correct" | "partial" | "incorrect",
-  "score": número_del_0_al_10,
-  "feedback": "retroalimentación constructiva y positiva",
-  "improvementSuggestion": "sugerencia opcional de mejora",
-  "confidence": número_del_0_al_1
-}`;
-
-// ============================================================
 // Lesson Evaluator Use Case
 // ============================================================
 
 /**
  * LessonEvaluatorUseCase
  *
- * Orchestrates the evaluation of student answers using LLM with rubric-based scoring.
+ * Orchestrates the 3-step pedagogical evaluation of student answers.
  *
  * Design principles:
- * - Single Responsibility: only orchestrates evaluation flow, delegates prompt building and validation
- * - Open/Closed: rubric logic can be extended via custom implementations
+ * - Single Responsibility: orchestrates only the flow, delegates prompt building and validation
+ * - Open/Closed: new classification categories can be added via schemas
  * - Dependency Inversion: depends on abstractions (interfaces), not concrete implementations
- *
- * @example
- * ```typescript
- * // With dependency injection
- * const evaluator = new LessonEvaluatorUseCase(
- *   llmClient,           // ILLMClient
- *   promptBuilder,       // ISafePromptBuilder
- *   schemaValidator      // ISchemaValidator<EvaluationResponse>
- * );
- *
- * const result = await evaluator.evaluate(request);
- * ```
  */
 export class LessonEvaluatorUseCase {
   /**
@@ -354,7 +130,7 @@ export class LessonEvaluatorUseCase {
    */
   private readonly defaultExecutionOptions: Required<LLMExecutionOptions> = {
     maxAttempts: 3,
-    timeoutMs: 10000,
+    timeoutMs: 15000, // Increased timeout for 3-step flow
     backoffStrategy: 'exponential',
     backoffFactor: 2,
   };
@@ -368,8 +144,8 @@ export class LessonEvaluatorUseCase {
    */
   constructor(
     private readonly llmClient: ILLMClient,
-    private readonly promptBuilder: ISafePromptBuilder,
-    private readonly schemaValidator: ISchemaValidator<EvaluationResponse>,
+    private readonly promptBuilder: ISafePromptBuilder, // Used for prompt building flexibility
+    private readonly schemaValidator: ISchemaValidator<unknown>,
   ) {
     if (!llmClient) {
       throw new Error('LLM client is required');
@@ -383,111 +159,159 @@ export class LessonEvaluatorUseCase {
   }
 
   /**
-   * Evaluates a student's answer against the teacher's rubric.
+   * Evaluates a student's answer using the 3-step pedagogical flow.
    *
    * Process:
-   * 1. Builds safe prompt with rubric configuration
-   * 2. Executes LLM call with retry logic
-   * 3. Validates LLM response against Zod schema
-   * 4. Applies rubric adjustments (keywords, central truth)
-   * 5. Returns structured evaluation result
+   * 1. Normalize input (clean text, handle children's language)
+   * 2. Extract concepts from student's answer (LLM)
+   * 3. Classify based on extracted concepts (LLM)
+   * 4. Generate coherent feedback (LLM)
+   * 5. Return structured evaluation result
    *
    * @param request - The evaluation request containing student answer and rubric
    * @returns Promise resolving to the evaluation result
-   *
-   * @example
-   * ```typescript
-   * const result = await evaluator.evaluate({
-   *   studentAnswer: 'La fotosíntesis usa luz solar...',
-   *   questionText: '¿Qué es la fotosíntesis?',
-   *   teacherConfig: {
-   *     centralTruth: 'La fotosíntesis es...',
-   *     requiredKeywords: ['clorofila', 'luz'],
-   *   },
-   *   lessonContext: {
-   *     subject: 'Ciencias',
-   *     gradeLevel: '6to',
-   *     topic: 'Plantas'
-   *   }
-   * });
-   *
-   * console.log(result.outcome); // 'correct' | 'partial' | 'incorrect'
-   * console.log(result.score);    // 0-10
-   * console.log(result.feedback); // Feedback message
-   * ```
    */
   async evaluate(request: EvaluationRequest): Promise<EvaluationResult> {
     try {
-      // Step 1: Build the safe prompt
-      const prompt = this.buildEvaluationPrompt(request);
+      // Step 1: Normalize input
+      const normalizedAnswer = this.normalizeInput(request.studentAnswer);
 
-      // Step 2: Execute LLM call with retry
-      const rawResponse = await this.executeWithRetry(prompt);
+      // Step 2: Extract concepts (LLM Step 1)
+      const extractedConcepts = await this.extractConcepts(request.questionText, normalizedAnswer);
 
-      // Step 3: Validate and parse the response
-      const validatedResponse = this.validateAndParseResponse(rawResponse);
+      // Step 3: Classify response (LLM Step 2)
+      const classification = await this.classifyResponse(request, extractedConcepts);
 
-      // Step 4: Apply rubric adjustments
-      const adjustedResult = this.applyRubricAdjustments(validatedResponse, request);
+      // Step 4: Generate feedback (LLM Step 3)
+      const feedbackResult = await this.generateFeedback(request, classification);
 
       // Step 5: Ensure positive feedback
-      return this.ensurePositiveFeedback(adjustedResult);
+      return this.ensurePositiveFeedback({
+        outcome: classification.outcome,
+        score: classification.score,
+        feedback: feedbackResult.feedback,
+        improvementSuggestion: classification.improvementSuggestion,
+        confidence: classification.confidence ?? 0.8,
+      });
     } catch (error) {
       return this.handleError(error);
     }
   }
 
   /**
-   * Builds a safe evaluation prompt from the request.
+   * Normalizes the student's input for processing.
+   * Handles common children's writing patterns without penalizing.
    *
-   * @param request - The evaluation request
-   * @returns The constructed prompt string
+   * @param input - Raw student answer
+   * @returns Normalized answer
    */
-  private buildEvaluationPrompt(request: EvaluationRequest): string {
-    const { studentAnswer, questionText, teacherConfig, lessonContext, studentProfile } = request;
-    const maxScore = teacherConfig.maxScore ?? 10;
-
-    // Format required keywords as comma-separated string
-    const keywordsStr =
-      teacherConfig.requiredKeywords.length > 0
-        ? teacherConfig.requiredKeywords.join(', ')
-        : 'Ninguna específica';
-
-    // Pre-process exemplars into formatted markdown sections
-    const exemplarsSection = this.buildExemplarsSection(teacherConfig.exemplars);
-
-    // Build base values for the template
-    const baseValues: PromptValues = {
-      questionText: questionText,
-      studentAnswer: studentAnswer,
-      subject: lessonContext.subject,
-      gradeLevel: lessonContext.gradeLevel,
-      tema: lessonContext.topic,
-      centralTruth: teacherConfig.centralTruth,
-      requiredKeywords: keywordsStr,
-      maxScore: String(maxScore),
-      studentName: studentProfile?.name ?? '',
-      exemplarsSection: exemplarsSection,
-    };
-
-    // Handle exemplars if present - create extended values
-    const values: PromptValues = baseValues;
-
-    // Build the full prompt with system and user messages
-    const userPrompt = this.promptBuilder
-      .setTemplate(EVALUATION_USER_TEMPLATE)
-      .setValues(values)
-      .build();
-
-    return `${EVALUATION_SYSTEM_PROMPT}\n\n${userPrompt}`;
+  private normalizeInput(input: string): string {
+    // Basic normalization: trim and remove excessive whitespace
+    return input.trim().replace(/\s+/g, ' ');
   }
 
   /**
-   * Builds the exemplars section for the prompt.
-   * Pre-processes exemplars arrays into formatted markdown strings.
+   * Step 1: Extract concepts from the student's answer.
+   * Uses LLM to understand the ideas expressed, regardless of terminology.
+   *
+   * @param questionText - The original question
+   * @param studentAnswer - The student's answer
+   * @returns Extracted concepts
+   */
+  private async extractConcepts(
+    questionText: string,
+    studentAnswer: string,
+  ): Promise<ExtractConceptsResponse> {
+    const prompt = buildExtractConceptsPrompt(
+      questionText,
+      studentAnswer,
+      EXTRACT_CONCEPTS_USER_TEMPLATE,
+      {},
+    );
+
+    const rawResponse = await this.executeWithRetry(prompt);
+    return this.validateSchema(rawResponse, ExtractConceptsResponseSchema);
+  }
+
+  /**
+   * Step 2: Classify the response using the 6-category pedagogical system.
+   * Uses the extracted concepts and teacher rubric for classification.
+   *
+   * @param request - The original evaluation request
+   * @param concepts - Extracted concepts from step 1
+   * @returns Classification result
+   */
+  private async classifyResponse(
+    request: EvaluationRequest,
+    concepts: ExtractConceptsResponse,
+  ): Promise<ClassificationResponse> {
+    const { teacherConfig, questionText, lessonContext, studentProfile } = request;
+    const maxScore = teacherConfig.maxScore ?? 10;
+
+    // Build concepts string for the prompt
+    const conceptsStr = concepts.ideas.join('; ');
+
+    // Pre-process exemplars
+    const exemplarsSection = this.buildExemplarsSection(teacherConfig.exemplars);
+
+    const values: PromptValues = {
+      questionText: questionText,
+      studentAnswer: request.studentAnswer,
+      subject: lessonContext.subject,
+      gradeLevel: lessonContext.gradeLevel,
+      topic: lessonContext.topic,
+      centralTruth: teacherConfig.centralTruth,
+      requiredKeywords:
+        teacherConfig.requiredKeywords.length > 0
+          ? teacherConfig.requiredKeywords.join(', ')
+          : 'Ninguna específica',
+      extractedConcepts: conceptsStr,
+      exemplarsSection: exemplarsSection,
+      studentName: studentProfile?.name ?? 'Estudiante',
+      maxScore: String(maxScore),
+    };
+
+    const prompt = buildClassifyPrompt(CLASSIFY_USER_TEMPLATE, values, maxScore);
+
+    const rawResponse = await this.executeWithRetry(prompt);
+    return this.validateSchema(rawResponse, ClassificationResponseSchema);
+  }
+
+  /**
+   * Step 3: Generate pedagogical feedback based on classification.
+   * Ensures feedback is always positive and matches the classification.
+   *
+   * @param request - The original evaluation request
+   * @param classification - The classification from step 2
+   * @returns Generated feedback
+   */
+  private async generateFeedback(
+    request: EvaluationRequest,
+    classification: ClassificationResponse,
+  ): Promise<FeedbackResponse> {
+    const maxScore = request.teacherConfig.maxScore ?? 10;
+
+    const values: PromptValues = {
+      questionText: request.questionText,
+      studentAnswer: request.studentAnswer,
+      outcome: classification.outcome,
+      score: String(classification.score),
+      maxScore: String(maxScore),
+      justification: classification.justification,
+      studentName: request.studentProfile?.name ?? 'Estudiante',
+    };
+
+    const prompt = buildFeedbackPrompt(GENERATE_FEEDBACK_USER_TEMPLATE, values, maxScore);
+
+    const rawResponse = await this.executeWithRetry(prompt);
+    return this.validateSchema(rawResponse, FeedbackResponseSchema);
+  }
+
+  /**
+   * Builds the exemplars section for the classification prompt.
    *
    * @param exemplars - The exemplars from teacher config
-   * @returns Formatted markdown section, or empty string if no exemplars
+   * @returns Formatted markdown section
    */
   private buildExemplarsSection(
     exemplars?: Readonly<{
@@ -497,42 +321,22 @@ export class LessonEvaluatorUseCase {
     }>,
   ): string {
     if (!exemplars) {
-      return '';
+      return 'Sin ejemplos disponibles';
     }
 
     const sections: string[] = [];
 
-    // Build correct exemplars section
     if (exemplars.correct && exemplars.correct.length > 0) {
-      const correctFormatted = exemplars.correct.map((item) => `- ${item}`).join('\n');
-      sections.push(
-        `### Ejemplos de Respuestas
-
-#### Respuestas Correctas
-${correctFormatted}`,
-      );
+      sections.push(`Correctas:\n${exemplars.correct.map((i) => `- ${i}`).join('\n')}`);
     }
-
-    // Build partial exemplars section
     if (exemplars.partial && exemplars.partial.length > 0) {
-      const partialFormatted = exemplars.partial.map((item) => `- ${item}`).join('\n');
-      sections.push(`#### Respuestas Parciales
-${partialFormatted}`);
+      sections.push(`Parciales:\n${exemplars.partial.map((i) => `- ${i}`).join('\n')}`);
     }
-
-    // Build incorrect exemplars section
     if (exemplars.incorrect && exemplars.incorrect.length > 0) {
-      const incorrectFormatted = exemplars.incorrect.map((item) => `- ${item}`).join('\n');
-      sections.push(`#### Respuestas Incorrectas
-${incorrectFormatted}`);
+      sections.push(`Incorrectas:\n${exemplars.incorrect.map((i) => `- ${i}`).join('\n')}`);
     }
 
-    // If no sections were built, return empty string
-    if (sections.length === 0) {
-      return '';
-    }
-
-    return `\n${sections.join('\n\n')}\n`;
+    return sections.length > 0 ? sections.join('\n\n') : 'Sin ejemplos disponibles';
   }
 
   /**
@@ -546,204 +350,24 @@ ${incorrectFormatted}`);
   }
 
   /**
-   * Validates and parses the LLM response against the schema.
+   * Validates and parses the LLM response against a Zod schema.
    *
    * @param rawResponse - Raw text response from LLM
-   * @returns Validated evaluation response
+   * @param schema - Zod schema to validate against
+   * @returns Validated response
    * @throws {Error} When validation fails
    */
-  private validateAndParseResponse(rawResponse: string): EvaluationResponse {
+  private validateSchema<T>(rawResponse: string, schema: z.ZodSchema<T>): T {
     try {
-      return this.schemaValidator.validate(rawResponse, EvaluationResponseSchema);
+      return this.schemaValidator.validate(rawResponse, schema) as T;
     } catch (error) {
       if (error instanceof SchemaValidationError) {
         throw error;
       }
-      // Wrap unexpected errors
       throw new Error(
         `Failed to validate LLM response: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
     }
-  }
-
-  /**
-   * Applies rubric-based adjustments to the evaluation.
-   *
-   * Logic:
-   * - Check required keywords presence (case-insensitive)
-   * - Check central truth match (case-insensitive, trimmed)
-   * - Adjust outcome, score, and confidence based on rubric rules
-   *
-   * @param response - The validated LLM response
-   * @param request - The original evaluation request
-   * @returns Adjusted evaluation result
-   */
-  private applyRubricAdjustments(
-    response: EvaluationResponse,
-    request: EvaluationRequest,
-  ): EvaluationResult {
-    const { teacherConfig, studentAnswer } = request;
-    const normalizedAnswer = studentAnswer.toLowerCase().trim();
-
-    // Check keyword presence
-    const keywordMatches = this.countKeywordMatches(
-      teacherConfig.requiredKeywords,
-      normalizedAnswer,
-    );
-    const keywordRatio =
-      teacherConfig.requiredKeywords.length > 0
-        ? keywordMatches / teacherConfig.requiredKeywords.length
-        : 1;
-
-    // Check central truth match
-    const truthMatchRatio = this.calculateTruthMatch(teacherConfig.centralTruth, normalizedAnswer);
-
-    // Calculate adjusted score based on rubric rules
-    const maxScore = teacherConfig.maxScore ?? 10;
-    let adjustedScore = response.score;
-
-    // Apply keyword penalty (reduce score if key keywords missing)
-    if (keywordRatio < 1 && teacherConfig.requiredKeywords.length > 0) {
-      const keywordPenalty = (1 - keywordRatio) * 3; // Up to 3 point penalty
-      adjustedScore = Math.max(0, adjustedScore - keywordPenalty);
-    }
-
-    // Adjust based on truth match
-    if (truthMatchRatio < 0.3 && response.outcome === 'correct') {
-      // Override if LLM marked correct but answer doesn't match truth
-      return {
-        ...response,
-        score: Math.min(adjustedScore, maxScore * 0.5),
-        outcome: 'partial',
-        confidence: Math.min(response.confidence ?? 0.8, 0.7),
-      };
-    }
-
-    // Calculate confidence adjustment
-    const confidenceAdjustment = Math.min(keywordRatio, truthMatchRatio);
-    const adjustedConfidence = Math.min(
-      (response.confidence ?? 0.8) * confidenceAdjustment + 0.2,
-      1,
-    );
-
-    // Adjust outcome based on combined rubric score
-    let adjustedOutcome = response.outcome;
-    const combinedScore = adjustedScore / maxScore;
-
-    if (combinedScore >= 0.8 && keywordRatio >= 0.7 && truthMatchRatio >= 0.5) {
-      adjustedOutcome = 'correct';
-    } else if (combinedScore >= 0.4 || keywordRatio >= 0.5 || truthMatchRatio >= 0.3) {
-      adjustedOutcome = 'partial';
-    } else {
-      adjustedOutcome = 'incorrect';
-    }
-
-    return {
-      outcome: adjustedOutcome,
-      score: Math.round(adjustedScore * 10) / 10, // Round to 1 decimal
-      feedback: response.feedback,
-      improvementSuggestion: response.improvementSuggestion,
-      confidence: Math.round(adjustedConfidence * 100) / 100, // Round to 2 decimals
-    };
-  }
-
-  /**
-   * Counts how many required keywords are present in the answer.
-   *
-   * @param keywords - Required keywords to check
-   * @param answer - Normalized student answer
-   * @returns Number of matching keywords
-   */
-  private countKeywordMatches(keywords: readonly string[], answer: string): number {
-    let matches = 0;
-    for (const keyword of keywords) {
-      const normalizedKeyword = keyword.toLowerCase().trim();
-      if (answer.includes(normalizedKeyword)) {
-        matches++;
-      }
-    }
-    return matches;
-  }
-
-  /**
-   * Calculates how well the answer matches the central truth.
-   *
-   * Uses simple word overlap ratio as a heuristic.
-   * In production, this could use embeddings or more sophisticated matching.
-   *
-   * @param centralTruth - The expected correct answer
-   * @param answer - Normalized student answer
-   * @returns Match ratio from 0 to 1
-   */
-  private calculateTruthMatch(centralTruth: string, answer: string): number {
-    // Extract key words from central truth (words longer than 4 characters)
-    const truthWords = centralTruth
-      .toLowerCase()
-      .split(/\s+/)
-      .filter((word) => word.length > 4 && !this.isStopWord(word));
-
-    if (truthWords.length === 0) {
-      return 0.5; // Default if no significant words
-    }
-
-    // Count matching words
-    let matchCount = 0;
-    for (const word of truthWords) {
-      if (answer.includes(word)) {
-        matchCount++;
-      }
-    }
-
-    return matchCount / truthWords.length;
-  }
-
-  /**
-   * Checks if a word is a common Spanish stop word.
-   *
-   * @param word - Word to check
-   * @returns True if the word is a stop word
-   */
-  private isStopWord(word: string): boolean {
-    const stopWords = new Set([
-      'que',
-      'del',
-      'los',
-      'las',
-      'para',
-      'con',
-      'por',
-      'una',
-      'uno',
-      'este',
-      'esta',
-      'como',
-      'pero',
-      'más',
-      'muy',
-      'sobre',
-      'entre',
-      'cuando',
-      'donde',
-      'porque',
-      'aunque',
-      'también',
-      'puede',
-      'ser',
-      'está',
-      'hay',
-      'hace',
-      'hacer',
-      'tiene',
-      'tener',
-      'esto',
-      'estos',
-      'estas',
-      'ese',
-      'esa',
-      'esos',
-      'esas',
-    ]);
-    return stopWords.has(word);
   }
 
   /**
