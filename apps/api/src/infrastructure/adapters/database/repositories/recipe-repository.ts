@@ -10,6 +10,22 @@ export class PrismaRecipeRepository implements RecipeRepository {
     return this.mapRecipe(raw);
   }
 
+  async findByIdWithSteps(id: string): Promise<Recipe | null> {
+    const raw = await prisma.recipe.findUnique({
+      where: { id },
+      include: {
+        steps: {
+          orderBy: { order: 'asc' },
+        },
+      },
+    });
+    if (!raw) return null;
+    return {
+      ...this.mapRecipe(raw),
+      steps: raw.steps.map(this.mapRecipeStep),
+    };
+  }
+
   async findAll(): Promise<Recipe[]> {
     const raw = await prisma.recipe.findMany();
     return raw.map(this.mapRecipe);
@@ -87,6 +103,10 @@ export class PrismaRecipeRepository implements RecipeRepository {
         order: step.order,
         condition: step.condition,
         onCondition: step.onCondition,
+        stepType: step.stepType,
+        script: step.script as any,
+        conceptId: step.conceptId,
+        activityId: step.activityId,
       },
     });
     return this.mapRecipeStep(raw);
@@ -100,6 +120,10 @@ export class PrismaRecipeRepository implements RecipeRepository {
         order: step.order,
         condition: step.condition,
         onCondition: step.onCondition,
+        script: step.script as any,
+        stepType: step.stepType,
+        conceptId: step.conceptId,
+        activityId: step.activityId,
       },
     });
     return this.mapRecipeStep(raw);
@@ -107,6 +131,12 @@ export class PrismaRecipeRepository implements RecipeRepository {
 
   async deleteStep(stepId: string): Promise<void> {
     await prisma.recipeStep.delete({ where: { id: stepId } });
+  }
+
+  async findStepById(stepId: string): Promise<RecipeStep | null> {
+    const raw = await prisma.recipeStep.findUnique({ where: { id: stepId } });
+    if (!raw) return null;
+    return this.mapRecipeStep(raw);
   }
 
   private mapRecipe(raw: any): Recipe {

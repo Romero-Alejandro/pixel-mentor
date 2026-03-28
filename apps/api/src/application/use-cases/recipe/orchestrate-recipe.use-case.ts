@@ -1,5 +1,16 @@
 import { randomUUID } from 'node:crypto';
 
+// Helper to extract text from string | {text: string} object
+type TextOrTextObject = string | { text: string };
+function extractText(val: TextOrTextObject | undefined | null): string {
+  if (!val) return '';
+  if (typeof val === 'string') return val;
+  if (typeof val === 'object' && 'text' in val && typeof val.text === 'string') {
+    return val.text;
+  }
+  return '';
+}
+
 import type { SessionRepository } from '@/domain/ports/session-repository.js';
 import { SessionNotFoundError } from '@/domain/ports/session-repository.js';
 import type { InteractionRepository } from '@/domain/ports/interaction-repository.js';
@@ -42,6 +53,7 @@ import type {
   EvaluationRequest,
   EvaluationResult,
 } from '@/evaluator/index.js';
+import type { EvaluationOutcome as PedagogicalOutcome } from '@/evaluator/index.js';
 import type { FeatureFlagService } from '@/config/evaluation-flags.js';
 
 // Gamification imports
@@ -88,12 +100,17 @@ interface ActivityScript extends ContentScript {
 }
 
 function isQuestionScript(s: unknown): s is QuestionScript {
-  return typeof (s as QuestionScript)?.question === 'string';
+  const q = (s as QuestionScript)?.question;
+  // Accept both string and {text: string} object
+  return typeof q === 'string' || (typeof q === 'object' && q !== null && 'text' in q);
 }
 
 function isActivityScript(s: unknown): s is ActivityScript {
   const opts = (s as ActivityScript)?.options;
-  return Array.isArray(opts) && opts.length > 0;
+  const inst = (s as ActivityScript)?.instruction;
+  // Check if it has options OR has instruction (string or object)
+  const hasInstruction = typeof inst === 'string' || (typeof inst === 'object' && inst !== null && 'text' in inst);
+  return (Array.isArray(opts) && opts.length > 0) || hasInstruction;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -247,7 +264,20 @@ export class OrchestrateRecipeUseCase {
     script?: unknown;
   }): StaticContent | undefined {
     const { stepType, script } = step;
-    if (!stepType || !script) return undefined;
+    if (!stepType) return undefined;
+
+    // Even if script is null/undefined, return a basic staticContent with stepType
+    if (!script) {
+      return {
+        stepType: 'content' as const,
+        script: {
+          transition: '',
+          content: '',
+          examples: [],
+          closure: '',
+        },
+      };
+    }
 
     // ── Contenido / intro / closure ──────────────────────────────────────
     if (stepType === 'content' || stepType === 'intro' || stepType === 'closure') {
@@ -265,16 +295,17 @@ export class OrchestrateRecipeUseCase {
 
     // ── Pregunta de comprensión (respuesta libre) ─────────────────────────
     if (stepType === 'question' && isQuestionScript(script)) {
+      const questionText = extractText(script.question);
       return {
         stepType: 'activity', // La UI lo trata como panel interactivo
         script: {
-          transition: script.transition ?? '',
-          content: script.question,
+          transition: extractText(script.transition),
+          content: questionText,
           examples: [],
           closure: '',
         },
         activity: {
-          instruction: script.question,
+          instruction: questionText,
           options: [], // Sin opciones = input libre en el frontend
           feedback: {
             correct: script.feedback.correct,
@@ -287,16 +318,17 @@ export class OrchestrateRecipeUseCase {
 
     // ── Actividad / examen (opción múltiple) ──────────────────────────────
     if ((stepType === 'activity' || stepType === 'exam') && isActivityScript(script)) {
+      const instructionText = extractText(script.instruction);
       return {
         stepType: 'activity',
         script: {
-          transition: script.transition ?? '',
-          content: script.instruction,
+          transition: extractText(script.transition),
+          content: instructionText,
           examples: [],
-          closure: script.closure ?? '',
+          closure: extractText(script.closure),
         },
         activity: {
-          instruction: script.instruction,
+          instruction: instructionText,
           options: script.options.map((o) => ({ text: o.text, isCorrect: o.isCorrect })),
           feedback: {
             correct: script.feedback.correct,
@@ -324,14 +356,28 @@ export class OrchestrateRecipeUseCase {
     const { stepType, script } = step;
     if (!script) return '';
 
+    // Helper to extract text from either string or { text } object
+    const txt = (val: unknown): string => {
+      if (typeof val === 'string') return val;
+      if (
+        val &&
+        typeof val === 'object' &&
+        'text' in val &&
+        typeof (val as { text: unknown }).text === 'string'
+      ) {
+        return (val as { text: string }).text;
+      }
+      return '';
+    };
+
     if (stepType === 'question' && isQuestionScript(script)) {
-      return [script.transition, script.question].filter(Boolean).join(' ');
+      return [txt(script.transition), txt(script.question)].filter(Boolean).join(' ');
     }
     if ((stepType === 'activity' || stepType === 'exam') && isActivityScript(script)) {
-      return [script.transition, script.instruction].filter(Boolean).join(' ');
+      return [txt(script.transition), txt(script.instruction)].filter(Boolean).join(' ');
     }
     const s = script as ContentScript;
-    return [s.transition, s.content, s.closure].filter(Boolean).join(' ');
+    return [txt(s.transition), txt(s.content), txt(s.closure)].filter(Boolean).join(' ');
   }
 
   // ─── Helpers de clasificación de paso ───────────────────────────────────
@@ -421,12 +467,22 @@ export class OrchestrateRecipeUseCase {
     try {
       const result: EvaluationResult = await this.lessonEvaluator.evaluate(request);
 
-      // Map EvaluationResult to ComprehensionEvaluation
+      // Map 6-category EvaluationOutcome to 3-category ComprehensionEvaluation
+      // This mapping ensures backward compatibility with the frontend
+      const pedagogicalOutcome = result.outcome as PedagogicalOutcome;
+      const mappedResult = this.mapPedagogicalOutcomeToComprehension(pedagogicalOutcome);
+
+      // Map confidence (normalize if needed)
+      const mappedConfidence = this.normalizePedagogicalConfidence(
+        result.confidence,
+        pedagogicalOutcome,
+      );
+
       return {
-        result: result.outcome,
-        confidence: result.confidence,
+        result: mappedResult,
+        confidence: mappedConfidence,
         hint: result.improvementSuggestion,
-        shouldEscalate: false,
+        shouldEscalate: this.shouldEscalateBasedOnPedagogicalOutcome(pedagogicalOutcome),
       };
     } catch (error) {
       // Graceful fallback to incorrect on error
@@ -438,6 +494,59 @@ export class OrchestrateRecipeUseCase {
         shouldEscalate: false,
       };
     }
+  }
+
+  /**
+   * Maps the 6-category pedagogical outcome to the 3-category legacy outcome.
+   * This ensures backward compatibility with the frontend while using the new evaluator.
+   */
+  private mapPedagogicalOutcomeToComprehension(
+    outcome: PedagogicalOutcome,
+  ): 'correct' | 'partial' | 'incorrect' {
+    switch (outcome) {
+      case 'conceptually_correct':
+      case 'intuitive_correct':
+        return 'correct';
+      case 'partially_correct':
+      case 'relevant_but_incomplete':
+        return 'partial';
+      case 'conceptual_error':
+      case 'no_response':
+        return 'incorrect';
+      default:
+        // Fallback for any unknown outcome
+        return 'incorrect';
+    }
+  }
+
+  /**
+   * Normalizes confidence based on the pedagogical evaluation outcome.
+   * Higher confidence for correct answers, lower for partial.
+   */
+  private normalizePedagogicalConfidence(confidence: number, outcome: PedagogicalOutcome): number {
+    // Ensure confidence is between 0 and 1
+    const normalized = Math.max(0, Math.min(1, confidence));
+
+    // Boost confidence for conceptually correct answers
+    if (outcome === 'conceptually_correct' && normalized < 0.8) {
+      return 0.9;
+    }
+
+    // Keep higher confidence for intuitive correct (shows understanding)
+    if (outcome === 'intuitive_correct' && normalized < 0.7) {
+      return 0.8;
+    }
+
+    return normalized;
+  }
+
+  /**
+   * Determines if the evaluation should escalate based on the pedagogical outcome.
+   * Used to trigger additional help for struggling students.
+   */
+  private shouldEscalateBasedOnPedagogicalOutcome(outcome: PedagogicalOutcome): boolean {
+    // Escalate on conceptual errors or no response to provide extra support
+    return outcome === 'conceptual_error' || outcome === 'no_response';
   }
 
   // ─── evaluateWithLegacyEngine ───────────────────────────────────────────
@@ -660,8 +769,9 @@ export class OrchestrateRecipeUseCase {
     if (existing && isTerminalStatus(existing.status)) {
       // Delete old interactions to clean up DB
       await this.interactionRepo.deleteBySession(existing.id);
-      // Reset the session to initial state
+      // Reset the session to initial state and set to ACTIVE
       const resetSession = await this.sessionRepo.resetProgress(existing.id);
+      // Update to ACTIVE status (resetProgress sets IDLE)
       await this.sessionRepo.updateStatus(resetSession.id, 'ACTIVE');
 
       const voiceText = [
@@ -705,13 +815,14 @@ export class OrchestrateRecipeUseCase {
         tutor: this.config.tutorName,
         title: recipe.title,
       }),
-    ].join('. ');
+    ].join(' ');
 
+    // Create session directly with ACTIVE status to avoid race conditions
     await this.sessionRepo.create({
       id: sessionId,
       studentId,
       recipeId,
-      status: 'IDLE',
+      status: 'ACTIVE',
       stateCheckpoint: {
         currentState: 'AWAITING_START',
         currentStepIndex: 0,
@@ -721,7 +832,6 @@ export class OrchestrateRecipeUseCase {
         failedAttempts: 0,
       },
     });
-    await this.sessionRepo.updateStatus(sessionId, 'ACTIVE');
     await this.record(sessionId, 0, voiceText, 'greeting');
 
     return {
@@ -746,10 +856,20 @@ export class OrchestrateRecipeUseCase {
     userId?: string,
   ): Promise<InteractRecipeOutput> {
     const session = await this.sessionRepo.findById(sessionId);
+    console.log(
+      '[interact] Session from DB - id:',
+      sessionId,
+      'status:',
+      session?.status,
+      'state:',
+      session?.stateCheckpoint?.currentState,
+    );
     if (!session) throw new SessionNotFoundError(sessionId);
     if (userId && session.studentId !== userId)
       throw Object.assign(new Error('Forbidden'), { statusCode: 403 });
-    if (session.status !== 'ACTIVE') throw new Error(`Session not active: ${session.status}`);
+    // Allow both ACTIVE and IDLE status - IDLE sessions can still interact
+    if (session.status !== 'ACTIVE' && session.status !== 'IDLE')
+      throw new Error(`Session not active: ${session.status}`);
 
     const recipe = await this.recipeRepo.findById(session.recipeId);
     if (!recipe) throw new RecipeNotFoundError(session.recipeId);
@@ -862,6 +982,9 @@ export class OrchestrateRecipeUseCase {
       lessonMetadata: { title: recipe.title, concepts: [] },
     });
     const action = determineClassificationAction(classification);
+    console.log(
+      `[DEBUG] Classification result: intent=${classification.intent}, confidence=${classification.confidence}, action=${action.type}`,
+    );
 
     let ragContext: any;
     if (
@@ -1093,6 +1216,9 @@ export class OrchestrateRecipeUseCase {
 
     // FIX CLAVE: usar nextIdx (paso destino) para el staticContent
     const displayStep = willComplete ? currentStep : (steps[nextIdx] ?? currentStep);
+    console.log(
+      `[DEBUG] extractStaticContent: nextIdx=${nextIdx}, currentIdx=${currentIdx}, willComplete=${willComplete}, displayStep.stepType=${displayStep?.stepType}, displayStep.script=${displayStep?.script ? 'exists' : 'null/undefined'}`,
+    );
     const staticContent = this.extractStaticContent(displayStep);
 
     // Calculate accuracy and XP for completed lessons
@@ -1139,6 +1265,9 @@ export class OrchestrateRecipeUseCase {
     this.config = parseRecipeConfig(recipe.meta);
 
     const steps = await this.recipeRepo.findStepsByRecipeId(session.recipeId);
+    console.log(
+      `[DEBUG] interactStream() - Steps loaded: ${steps.length} for recipe ${session.recipeId}, currentStepIndex: ${session.stateCheckpoint?.currentStepIndex ?? 0}`,
+    );
     if (!steps.length) throw new Error('Recipe has no steps');
 
     const history = await this.interactionRepo.findBySessionOrdered(sessionId);

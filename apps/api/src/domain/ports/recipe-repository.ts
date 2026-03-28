@@ -11,6 +11,7 @@ export interface RecipeStepWithContent extends RecipeStep {
 
 export interface RecipeRepository {
   findById(id: string): Promise<Recipe | null>;
+  findByIdWithSteps(id: string): Promise<Recipe | null>;
   findAll(): Promise<Recipe[]>;
   findPublished(): Promise<Recipe[]>;
   create(recipe: Omit<Recipe, 'createdAt' | 'updatedAt' | 'steps'>): Promise<Recipe>;
@@ -21,6 +22,7 @@ export interface RecipeRepository {
   createStep(step: Omit<RecipeStep, 'createdAt'>): Promise<RecipeStep>;
   updateStep(stepId: string, step: Partial<RecipeStep>): Promise<RecipeStep>;
   deleteStep(stepId: string): Promise<void>;
+  findStepById(stepId: string): Promise<RecipeStep | null>;
 }
 
 export class RecipeNotFoundError extends Error {

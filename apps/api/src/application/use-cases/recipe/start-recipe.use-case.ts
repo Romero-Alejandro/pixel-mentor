@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { RecipeRepository } from '@/domain/ports/recipe-repository.js';
 import { RecipeNotFoundError } from '@/domain/ports/recipe-repository.js';
 import type { SessionRepository } from '@/domain/ports/session-repository.js';
-import { isTerminalStatus } from '@/domain/entities/session.js';
+import { isTerminalStatus, startSession } from '@/domain/entities/session.js';
 
 export class StartRecipeUseCase {
   constructor(
@@ -27,16 +27,24 @@ export class StartRecipeUseCase {
 
     // Create new session (either no existing session or existing session is terminal)
     const sessionId = randomUUID();
-    await this.sessionRepo.create({
+    const newSession = startSession({
       id: sessionId,
       studentId,
       recipeId,
-      status: 'IDLE',
+      status: 'ACTIVE', // Must be ACTIVE for interact() to work
       stateCheckpoint: {
-        currentState: 'ACTIVE_CLASS',
+        currentState: 'AWAITING_START',
         currentStepIndex: 0,
+        questionCount: 0,
+        lastQuestionTime: null,
+        skippedActivities: [],
+        failedAttempts: 0,
       },
-    });
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      lastActivityAt: new Date(),
+    } as any);
+    await this.sessionRepo.create(newSession);
 
     return { sessionId, resumed: false };
   }
