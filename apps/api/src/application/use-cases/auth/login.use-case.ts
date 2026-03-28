@@ -3,10 +3,11 @@ import jwt from 'jsonwebtoken';
 
 import type { UserRepository } from '@/domain/ports/user-repository.js';
 import type { User } from '@/domain/entities/user.js';
+import { InvalidCredentialsError } from '@/domain/ports/auth-errors.js';
 import { config } from '@/config/index.js';
 
 export interface LoginInput {
-  email: string;
+  identifier: string; // email OR username
   password: string;
 }
 
@@ -21,20 +22,18 @@ export class LoginUseCase {
   constructor(private userRepo: UserRepository) {}
 
   async execute(input: LoginInput): Promise<LoginOutput> {
-    const user = await this.userRepo.findByEmailWithPassword(input.email);
+    // Use findByIdentifier to resolve email or username
+    const user = await this.userRepo.findByIdentifierWithPassword(input.identifier);
     if (!user || !user.passwordHash) {
-      console.log('[LoginUseCase] User not found or no password hash');
-      throw new Error('Invalid credentials');
+      throw new InvalidCredentialsError();
     }
 
     const valid = await argon2.verify(user.passwordHash, input.password);
     if (!valid) {
-      console.log('[LoginUseCase] Invalid password');
-      throw new Error('Invalid credentials');
+      throw new InvalidCredentialsError();
     }
 
     const token = this.generateToken(user);
-    console.log('[LoginUseCase] Token generated for user:', user.email);
 
     return {
       user: this.sanitizeUser(user),
@@ -54,7 +53,6 @@ export class LoginUseCase {
   }
 
   private sanitizeUser(user: User): Omit<User, 'passwordHash'> {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { passwordHash, ...sanitized } = user;
     return sanitized;
   }

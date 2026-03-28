@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 
 import type { UserRepository } from '@/domain/ports/user-repository.js';
 import type { VerifyTokenUseCase } from '@/application/use-cases/auth/verify-token.use-case.js';
+import { TokenInvalidError, TokenExpiredError } from '@/domain/ports/auth-errors.js';
 
 export interface AuthRequest extends Request {
   user?: {
@@ -21,21 +22,21 @@ export function authMiddleware(userRepo: UserRepository, verifyTokenUseCase: Ver
       if (authHeader && authHeader.startsWith('Bearer ')) {
         token = authHeader.slice(7);
       } else if (req.query.token && typeof req.query.token === 'string') {
-        // Support token in query string (useful for EventSource SSE connections)
         token = req.query.token;
       }
 
       if (!token) {
-        res.status(401).json({ error: 'No token provided' });
+        res
+          .status(401)
+          .json({ error: 'No se proporcionó token de autenticación', code: 'TOKEN_MISSING' });
         return;
       }
 
       const payload = await verifyTokenUseCase.execute(token);
 
-      // Optionally verify user still exists
       const user = await userRepo.findById(payload.userId);
       if (!user) {
-        res.status(404).json({ error: 'User not found' });
+        res.status(401).json({ error: 'Usuario no encontrado', code: 'USER_NOT_FOUND' });
         return;
       }
 
@@ -46,15 +47,35 @@ export function authMiddleware(userRepo: UserRepository, verifyTokenUseCase: Ver
       };
       next();
     } catch (error) {
-      if (error instanceof jwt.JsonWebTokenError) {
-        res.status(401).json({ error: 'Invalid token' });
+      if (error instanceof TokenInvalidError || error instanceof jwt.JsonWebTokenError) {
+        res.status(401).json({ error: 'Token inválido', code: 'TOKEN_INVALID' });
         return;
       }
-      if (error instanceof jwt.TokenExpiredError) {
-        res.status(401).json({ error: 'Token expired' });
+      if (error instanceof TokenExpiredError || error instanceof jwt.TokenExpiredError) {
+        res.status(401).json({ error: 'La sesión ha expirado', code: 'TOKEN_EXPIRED' });
         return;
       }
       next(error);
     }
+  };
+}
+
+// Role-based authorization middleware factory
+export function requireRole(...roles: string[]) {
+  return (req: AuthRequest, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      res.status(401).json({ error: 'No autenticado', code: 'NOT_AUTHENTICATED' });
+      return;
+    }
+
+    if (!roles.includes(req.user.role)) {
+      res.status(403).json({
+        error: 'No tienes permisos para realizar esta acción',
+        code: 'FORBIDDEN',
+      });
+      return;
+    }
+
+    next();
   };
 }

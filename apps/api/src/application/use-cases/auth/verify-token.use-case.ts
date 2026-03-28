@@ -2,6 +2,11 @@ import jwt from 'jsonwebtoken';
 
 import type { UserRepository } from '@/domain/ports/user-repository.js';
 import type { UserRole } from '@/domain/entities/user.js';
+import {
+  TokenInvalidError,
+  TokenExpiredError,
+  UserNotFoundError,
+} from '@/domain/ports/auth-errors.js';
 import { config } from '@/config/index.js';
 
 export interface AuthTokenPayload {
@@ -18,15 +23,18 @@ export class VerifyTokenUseCase {
       const payload = jwt.verify(token, config.JWT_SECRET) as AuthTokenPayload;
       const user = await this.userRepo.findById(payload.userId);
       if (!user) {
-        throw new Error('User not found');
+        throw new UserNotFoundError();
       }
       return payload;
     } catch (error) {
+      if (error instanceof UserNotFoundError) {
+        throw error;
+      }
       if (error instanceof jwt.JsonWebTokenError) {
-        throw new Error('Invalid token');
+        throw new TokenInvalidError();
       }
       if (error instanceof jwt.TokenExpiredError) {
-        throw new Error('Token expired');
+        throw new TokenExpiredError();
       }
       throw error;
     }

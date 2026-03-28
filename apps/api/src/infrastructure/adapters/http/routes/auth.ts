@@ -1,23 +1,26 @@
-import { Router, type Request, type Response, type NextFunction } from 'express';
+import {
+  Router,
+  type Request,
+  type Response,
+  type NextFunction,
+  type RequestHandler,
+} from 'express';
 import { z } from 'zod';
 
 import type { UserRepository } from '@/domain/ports/user-repository.js';
-import type {
-  RegisterUseCase,
-  LoginUseCase,
-  VerifyTokenUseCase,
-} from '@/application/use-cases/auth/index.js';
+import type { RegisterUseCase, LoginUseCase } from '@/application/use-cases/auth/index.js';
+import type { AuthError } from '@/domain/ports/auth-errors.js';
 
 const RegisterBodySchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
   name: z.string().min(1).max(100),
-  role: z.enum(['STUDENT', 'TEACHER', 'ADMIN']).default('STUDENT'),
   age: z.number().int().positive().optional(),
+  username: z.string().min(3).max(30).optional(),
 });
 
 const LoginBodySchema = z.object({
-  email: z.string().email(),
+  identifier: z.string().min(1),
   password: z.string().min(1),
 });
 
@@ -26,7 +29,6 @@ export class AuthController {
     private userRepo: UserRepository,
     private registerUseCase: RegisterUseCase,
     private loginUseCase: LoginUseCase,
-    private verifyTokenUseCase: VerifyTokenUseCase,
   ) {}
 
   async register(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -37,8 +39,8 @@ export class AuthController {
         email: validated.email,
         password: validated.password,
         name: validated.name,
-        role: validated.role,
         age: validated.age,
+        username: validated.username,
       });
 
       res.status(201).json({
@@ -47,7 +49,9 @@ export class AuthController {
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
-        res.status(400).json({ error: 'Validation error', details: error.issues });
+        res
+          .status(400)
+          .json({ error: 'Error de validación', code: 'VALIDATION_ERROR', details: error.issues });
         return;
       }
       next(error);
@@ -59,7 +63,7 @@ export class AuthController {
       const validated = LoginBodySchema.parse(req.body);
 
       const result = await this.loginUseCase.execute({
-        email: validated.email,
+        identifier: validated.identifier,
         password: validated.password,
       });
 
@@ -69,11 +73,17 @@ export class AuthController {
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
-        res.status(400).json({ error: 'Validation error', details: error.issues });
+        res
+          .status(400)
+          .json({ error: 'Error de validación', code: 'VALIDATION_ERROR', details: error.issues });
         return;
       }
-      if (error instanceof Error && error.message.includes('Invalid')) {
-        res.status(401).json({ error: 'Invalid email or password' });
+      if (
+        error instanceof Error &&
+        'code' in error &&
+        (error as AuthError).code === 'INVALID_CREDENTIALS'
+      ) {
+        res.status(401).json({ error: 'Credenciales inválidas', code: 'INVALID_CREDENTIALS' });
         return;
       }
       next(error);
@@ -82,35 +92,27 @@ export class AuthController {
 
   async me(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const authHeader = req.headers.authorization;
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        res.status(401).json({ error: 'No token provided' });
+      const authReq = req as Request & {
+        user?: {
+          id: string;
+          email: string;
+          role: string;
+        };
+      };
+
+      if (!authReq.user) {
+        res.status(401).json({ error: 'No autenticado', code: 'NOT_AUTHENTICATED' });
         return;
       }
 
-      const token = authHeader.slice(7);
-      const payload = await this.verifyTokenUseCase.execute(token);
-
-      // Fetch full user (without passwordHash)
-      const user = await this.userRepo.findById(payload.userId);
+      const user = await this.userRepo.findById(authReq.user.id);
       if (!user) {
-        res.status(404).json({ error: 'User not found' });
+        res.status(404).json({ error: 'Usuario no encontrado', code: 'USER_NOT_FOUND' });
         return;
       }
 
       res.json({ user });
     } catch (error) {
-      if (error instanceof Error) {
-        const message = error.message;
-        if (message === 'Token expired') {
-          res.status(401).json({ error: 'Token expired' });
-          return;
-        }
-        if (message === 'Invalid token') {
-          res.status(401).json({ error: 'Invalid token' });
-          return;
-        }
-      }
       next(error);
     }
   }
@@ -120,24 +122,22 @@ export function createAuthRouter(
   userRepo: UserRepository,
   registerUseCase: RegisterUseCase,
   loginUseCase: LoginUseCase,
-  verifyTokenUseCase: VerifyTokenUseCase,
+  protectedMiddleware: RequestHandler,
 ) {
-  const controller = new AuthController(
-    userRepo,
-    registerUseCase,
-    loginUseCase,
-    verifyTokenUseCase,
-  );
+  const controller = new AuthController(userRepo, registerUseCase, loginUseCase);
 
   const router = Router();
 
+  // Public routes - no auth required
   router.post('/register', (req: Request, res: Response, next: NextFunction) =>
     controller.register(req, res, next),
   );
   router.post('/login', (req: Request, res: Response, next: NextFunction) =>
     controller.login(req, res, next),
   );
-  router.get('/me', (req: Request, res: Response, next: NextFunction) =>
+
+  // Protected route - auth required
+  router.get('/me', protectedMiddleware, (req: Request, res: Response, next: NextFunction) =>
     controller.me(req, res, next),
   );
 
