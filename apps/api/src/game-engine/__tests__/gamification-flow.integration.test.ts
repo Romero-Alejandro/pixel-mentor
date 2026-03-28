@@ -17,7 +17,8 @@
 
 import { GameEngineCore } from '../core';
 import { StrategyRegistry } from '../strategies/strategy-registry';
-import { StreakService, IClock } from '../streak.service';
+import type { IClock } from '../streak.service';
+import { StreakService } from '../streak.service';
 import {
   LessonCompletionStrategy,
   FirstLessonBadgeStrategy,
@@ -25,6 +26,7 @@ import {
   StreakMilestone30Strategy,
   StreakBonusStrategy,
 } from '../strategies';
+
 import type {
   IUserGamificationRepository,
   IBadgeRepository,

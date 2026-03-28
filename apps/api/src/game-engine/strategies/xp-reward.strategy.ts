@@ -17,6 +17,7 @@
 
 import type { IRewardStrategy } from './reward-strategy.interface';
 import type { RewardContext, Reward } from './reward.types';
+
 import type { LessonCompletedPayload } from '@/events/game-events';
 import { GameDomainEvents } from '@/events/game-events';
 

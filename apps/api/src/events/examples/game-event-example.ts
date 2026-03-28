@@ -3,7 +3,11 @@
  * This shows the decoupling between domain and game engine.
  */
 import { getEventBus, GameDomainEvents } from '../index';
-import type { LessonCompletedPayload, ActivityAttemptPayload, DailyLoginPayload } from '../game-events';
+import type {
+  LessonCompletedPayload,
+  ActivityAttemptPayload,
+  DailyLoginPayload,
+} from '../game-events';
 
 interface GameEngine {
   handleLessonCompleted: (userId: string, payload: LessonCompletedPayload) => Promise<void>;
@@ -38,11 +42,7 @@ export function setupGameEventListeners(gameEngine: GameEngine): void {
   });
 }
 
-export function emitLessonCompleted(
-  userId: string,
-  lessonId: string,
-  lessonTitle: string,
-): void {
+export function emitLessonCompleted(userId: string, lessonId: string, lessonTitle: string): void {
   const bus = getEventBus();
   bus.emit(GameDomainEvents.LESSON_COMPLETED, {
     userId,

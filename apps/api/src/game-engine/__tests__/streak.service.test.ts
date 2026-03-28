@@ -2,7 +2,9 @@
  * Unit tests for StreakService.
  */
 
-import { StreakService, IClock, SystemClock } from '../streak.service';
+import type { IClock } from '../streak.service';
+import { StreakService, SystemClock } from '../streak.service';
+
 import type {
   IUserGamificationRepository,
   GamificationProfile,

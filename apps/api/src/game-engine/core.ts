@@ -12,9 +12,10 @@ import pino from 'pino';
 
 import type { RewardContext } from './strategies/reward.types';
 import type { StrategyRegistry } from './strategies/strategy-registry';
+import type { StreakService } from './streak.service';
+
 import type { EventBus } from '@/events/event-bus';
 import { getEventBus } from '@/events/event-bus';
-import type { StreakService } from './streak.service';
 import type {
   LessonCompletedPayload,
   ActivityAttemptPayload,

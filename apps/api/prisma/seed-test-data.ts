@@ -292,7 +292,7 @@ async function main() {
 
     await prisma.$executeRaw`
       DELETE FROM "users"
-      WHERE "email" IN ('student@test.pixel-mentor', 'teacher@test.pixel-mentor')
+      WHERE "email" IN ('student@test.pixel-mentor.local', 'teacher@test.pixel-mentor.local')
     `;
 
     console.log('🗑️ Cleared previous test data');
@@ -300,7 +300,8 @@ async function main() {
     await prisma.user.create({
       data: {
         id: TEST_STUDENT_ID,
-        email: 'student@test.pixel-mentor',
+        email: 'student@test.pixel-mentor.local',
+        username: 'valentina',
         passwordHash: studentPasswordHash,
         name: 'Valentina',
         role: 'STUDENT',
@@ -312,7 +313,8 @@ async function main() {
     await prisma.user.create({
       data: {
         id: TEST_TEACHER_ID,
-        email: 'teacher@test.pixel-mentor',
+        email: 'teacher@test.pixel-mentor.local',
+        username: 'profe_garcia',
         passwordHash: teacherPasswordHash,
         name: 'Profe García',
         role: 'TEACHER',

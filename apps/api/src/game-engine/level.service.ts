@@ -7,9 +7,9 @@
  * - Generating level titles
  */
 
-import { prisma } from '@/infrastructure/adapters/database/client.js';
-
 import { LEVEL_TITLES } from './constants';
+
+import { prisma } from '@/infrastructure/adapters/database/client.js';
 
 export class LevelService {
   /**

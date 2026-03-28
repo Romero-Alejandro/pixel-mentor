@@ -10,8 +10,6 @@
 
 import pino from 'pino';
 
-import { prisma } from '@/infrastructure/adapters/database/client.js';
-import type { IUserGamificationRepository } from '@/domain/ports/gamification-ports.js';
 import type { StreakResult } from './streak.types';
 import {
   calculateStreakBonus,
@@ -19,6 +17,9 @@ import {
   isStreakBroken,
   getStartOfDayUTC,
 } from './streak-calculator';
+
+import { prisma } from '@/infrastructure/adapters/database/client.js';
+import type { IUserGamificationRepository } from '@/domain/ports/gamification-ports.js';
 
 /**
  * Clock interface for time-dependent operations.

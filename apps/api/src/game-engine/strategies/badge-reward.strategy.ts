@@ -8,6 +8,7 @@
 
 import type { IRewardStrategy } from './reward-strategy.interface';
 import type { RewardContext, Reward } from './reward.types';
+
 import { GameDomainEvents } from '@/events/game-events';
 
 /**
