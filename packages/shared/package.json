@@ -12,7 +12,8 @@
     "./session": "./src/session.ts",
     "./pedagogical": "./src/pedagogical.ts",
     "./types/tts": "./src/types/tts.ts",
-    "./gamification": "./src/gamification/index.ts"
+    "./gamification": "./src/gamification/index.ts",
+    "./schemas/class": "./src/schemas/class.schema.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

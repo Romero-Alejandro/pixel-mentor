@@ -1,11 +1,18 @@
 import { z } from 'zod';
 
 // ==================== Static Content Types ====================
+// Accepts both old format (strings) and new format (objects from backend)
 export const StepContentSchema = z.object({
-  transition: z.string(),
-  content: z.string(),
-  examples: z.array(z.string()),
-  closure: z.string(),
+  transition: z.union([z.string(), z.object({ text: z.string() })]),
+  content: z.union([
+    z.string(),
+    z.object({
+      text: z.string(),
+      chunks: z.array(z.object({ text: z.string(), pauseAfter: z.number() })).optional(),
+    }),
+  ]),
+  examples: z.array(z.union([z.string(), z.object({ text: z.string() })])),
+  closure: z.union([z.string(), z.object({ text: z.string() })]),
 });
 
 export const ActivityOptionSchema = z.object({
@@ -39,10 +46,15 @@ export type StaticContent = z.infer<typeof StaticContentSchema>;
 export const RecipeStepSchema = z.object({
   id: z.string(),
   recipeId: z.string(),
-  atomId: z.string(),
+  atomId: z.string().nullable(),
   order: z.number(),
-  condition: z.any().optional(),
-  onCondition: z.string().optional(),
+  condition: z.any().nullable().optional(),
+  onCondition: z.string().nullable().optional(),
+  createdAt: z.string().optional(),
+  conceptId: z.string().nullable().optional(),
+  activityId: z.string().nullable().optional(),
+  stepType: z.string().nullable().optional(),
+  script: z.any().nullable().optional(),
 });
 
 export const RecipeTagSchema = z.object({
@@ -54,8 +66,8 @@ export const RecipeSchema = z.object({
   id: z.string(),
   canonicalId: z.string(),
   title: z.string(),
-  description: z.string().optional(),
-  expectedDurationMinutes: z.number().optional(),
+  description: z.string().nullable().optional(),
+  expectedDurationMinutes: z.number().nullable().optional(),
   version: z.string(),
   published: z.boolean(),
   moduleId: z.string().nullable().optional(),
@@ -88,6 +100,7 @@ export const StartRecipeOutputSchema = z.object({
     'ACTIVITY_SKIP_OFFER',
     'ACTIVITY_REPEAT',
   ]),
+  lessonProgress: z.object({ currentStep: z.number(), totalSteps: z.number() }).optional(),
   resumed: z.boolean().optional(),
   needsStart: z.boolean().optional(),
   isRepeat: z.boolean().optional(),
@@ -142,6 +155,7 @@ export const InteractRecipeOutputSchema = z.object({
     'ACTIVITY_REPEAT',
   ]),
   sessionCompleted: z.boolean().optional(),
+  lessonProgress: z.object({ currentStep: z.number(), totalSteps: z.number() }).optional(),
   feedback: z.string().optional(),
   isCorrect: z.boolean().nullish(),
   extraExplanation: z.string().optional(),
