@@ -20,7 +20,7 @@ export function LoginPage() {
     })),
   );
 
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -28,7 +28,7 @@ export function LoginPage() {
     playClick();
     clearError();
     try {
-      await login(email, password);
+      await login(identifier, password);
       navigate('/dashboard');
     } catch {}
   };
@@ -64,14 +64,14 @@ export function LoginPage() {
             ) : null}
 
             <Input
-              label="Correo electrónico"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              label="Correo electrónico o nombre de usuario"
+              type="text"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
               onFocus={playFocus}
               required
-              placeholder="tu@email.com"
-              autoComplete="email"
+              placeholder="tu@email.com o nombre de usuario"
+              autoComplete="username"
               className="border-4 rounded-2xl font-semibold"
             />
 

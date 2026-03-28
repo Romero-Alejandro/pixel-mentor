@@ -9,10 +9,12 @@ export function RegisterPage() {
   const navigate = useNavigate();
   const { register, isLoading, error, clearError } = useAuthStore();
   const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [validationError, setValidationError] = useState('');
+  const [usernameError, setUsernameError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,8 +31,19 @@ export function RegisterPage() {
       return;
     }
 
+    // Validate username if provided
+    if (username) {
+      const usernameRegex = /^[a-zA-Z0-9_]{3,30}$/;
+      if (!usernameRegex.test(username)) {
+        setUsernameError(
+          'El nombre de usuario debe tener entre 3 y 30 caracteres, y solo puede contener letras, números y guiones bajos.',
+        );
+        return;
+      }
+    }
+
     try {
-      await register(email, password, name, 'STUDENT');
+      await register(email, password, name, 'STUDENT', username);
       navigate('/dashboard');
     } catch {
       // Error is handled by the store
@@ -58,22 +71,34 @@ export function RegisterPage() {
           <p className="text-slate-500 mt-1">Únete a Pixel Mentor</p>
         </div>
 
-        <Card variant="outlined" padding="lg">
+        <Card>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {error || validationError ? (
+            {error || validationError || usernameError ? (
               <div className="p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl">
-                {error || validationError}
+                {error || validationError || usernameError}
               </div>
             ) : null}
 
             <Input
-              label="Nombre"
+              label="Nombre completo"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
               placeholder="Tu nombre"
               autoComplete="name"
+            />
+
+            <Input
+              label="Nombre de usuario (opcional)"
+              type="text"
+              value={username}
+              onChange={(e) => {
+                setUsername(e.target.value.toLowerCase());
+                setUsernameError('');
+              }}
+              placeholder="tu_nombre_de_usuario"
+              autoComplete="username"
             />
 
             <Input
