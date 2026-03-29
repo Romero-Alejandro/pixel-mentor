@@ -1,5 +1,7 @@
 // Domain entity for Class with state machine
 
+import { validateClassTransition, type ValidatedClassStatus } from '@/domain/validators/index.js';
+
 export type ClassStatus = 'DRAFT' | 'UNDER_REVIEW' | 'PUBLISHED' | 'ARCHIVED';
 
 // ==================== Lesson Entities ====================
@@ -221,11 +223,9 @@ export function getValidTransitions(current: ClassStatus): readonly ClassStatus[
 
 /**
  * Applies a status transition if valid
- * @returns The new status if transition is valid, null otherwise
+ * @returns The new status if transition is valid, throws AppError otherwise
  */
-export function transitionStatus(current: ClassStatus, next: ClassStatus): ClassStatus | null {
-  if (isValidStatusTransition(current, next)) {
-    return next;
-  }
-  return null;
+export function transitionStatus(current: ClassStatus, next: ClassStatus): ClassStatus {
+  validateClassTransition(current as ValidatedClassStatus, next as ValidatedClassStatus);
+  return next;
 }

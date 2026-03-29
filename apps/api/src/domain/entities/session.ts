@@ -1,4 +1,8 @@
 import type { PedagogicalState } from './pedagogical-state';
+import {
+  validateSessionTransition,
+  type ValidatedSessionStatus,
+} from '@/domain/validators/index.js';
 
 export type SessionStatus =
   | 'IDLE'
@@ -76,10 +80,12 @@ export function createSession(parameters: {
 }
 
 export function startSession(session: Session): Session {
+  validateSessionTransition(session.status as ValidatedSessionStatus, 'ACTIVE');
   return { ...session, status: 'ACTIVE', lastActivityAt: new Date() };
 }
 
 export function pauseForQuestion(session: Session, checkpoint: SessionCheckpoint): Session {
+  validateSessionTransition(session.status as ValidatedSessionStatus, 'PAUSED_FOR_QUESTION');
   return {
     ...session,
     status: 'PAUSED_FOR_QUESTION',
@@ -89,21 +95,26 @@ export function pauseForQuestion(session: Session, checkpoint: SessionCheckpoint
 }
 
 export function awaitConfirmation(session: Session): Session {
+  validateSessionTransition(session.status as ValidatedSessionStatus, 'AWAITING_CONFIRMATION');
   return { ...session, status: 'AWAITING_CONFIRMATION', lastActivityAt: new Date() };
 }
 
 export function pauseIdle(session: Session): Session {
+  validateSessionTransition(session.status as ValidatedSessionStatus, 'PAUSED_IDLE');
   return { ...session, status: 'PAUSED_IDLE', lastActivityAt: new Date() };
 }
 
 export function resumeSession(session: Session): Session {
+  validateSessionTransition(session.status as ValidatedSessionStatus, 'ACTIVE');
   return { ...session, status: 'ACTIVE', lastActivityAt: new Date() };
 }
 
 export function completeSession(session: Session): Session {
+  validateSessionTransition(session.status as ValidatedSessionStatus, 'COMPLETED');
   return { ...session, status: 'COMPLETED', completedAt: new Date(), lastActivityAt: new Date() };
 }
 
 export function escalateSession(session: Session): Session {
+  validateSessionTransition(session.status as ValidatedSessionStatus, 'ESCALATED');
   return { ...session, status: 'ESCALATED', escalatedAt: new Date(), lastActivityAt: new Date() };
 }
