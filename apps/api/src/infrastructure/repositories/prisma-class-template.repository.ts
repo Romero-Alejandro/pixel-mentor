@@ -2,12 +2,13 @@
  * Prisma-based ClassTemplate Repository.
  *
  * Implements IClassTemplateRepository using Prisma ORM.
- * Handles all database operations for ClassTemplate entities.
+ * Extends PrismaBaseRepository for common CRUD operations.
  */
 
 import { prisma } from '@/infrastructure/adapters/database/client.js';
 import type { IClassTemplateRepository } from '@/domain/repositories/class.repository.js';
 import type { ClassTemplateEntity } from '@/domain/entities/class.entity.js';
+import { PrismaBaseRepository } from './prisma-base.repository.js';
 
 /**
  * Maps Prisma ClassTemplate model to ClassTemplateEntity
@@ -30,84 +31,66 @@ function mapPrismaToClassTemplateEntity(prismaTemplate: {
   };
 }
 
-export class PrismaClassTemplateRepository implements IClassTemplateRepository {
-  /**
-   * Find a template by its unique ID
-   */
-  async findById(id: string): Promise<ClassTemplateEntity | null> {
-    const template = await prisma.classTemplate.findUnique({
-      where: { id },
-    });
+type PrismaClassTemplate = {
+  id: string;
+  name: string;
+  description: string | null;
+  tutorId: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
-    if (!template) {
-      return null;
-    }
+type CreateTemplateInput = Omit<ClassTemplateEntity, 'id' | 'createdAt' | 'updatedAt'>;
+type UpdateTemplateInput = Partial<Omit<ClassTemplateEntity, 'id' | 'createdAt' | 'updatedAt'>>;
 
-    return mapPrismaToClassTemplateEntity(template);
+export class PrismaClassTemplateRepository
+  extends PrismaBaseRepository<
+    ClassTemplateEntity,
+    PrismaClassTemplate,
+    CreateTemplateInput,
+    UpdateTemplateInput
+  >
+  implements IClassTemplateRepository
+{
+  constructor() {
+    super(prisma.classTemplate as any, mapPrismaToClassTemplateEntity);
   }
 
   /**
    * Find all templates for a specific tutor
    */
   async findByTutorId(tutorId: string): Promise<ClassTemplateEntity[]> {
-    const templates = await prisma.classTemplate.findMany({
+    return this.findAll({
       where: { tutorId },
       orderBy: { createdAt: 'desc' },
     });
-
-    return templates.map(mapPrismaToClassTemplateEntity);
   }
 
   /**
    * Create a new template
+   * Override to handle field mapping
    */
-  async create(
-    templateData: Omit<ClassTemplateEntity, 'id' | 'createdAt' | 'updatedAt'>,
-  ): Promise<ClassTemplateEntity> {
-    const created = await prisma.classTemplate.create({
-      data: {
-        name: templateData.name,
-        description: templateData.description,
-        tutorId: templateData.tutorId,
-      },
-    });
+  async create(templateData: CreateTemplateInput): Promise<ClassTemplateEntity> {
+    const data = {
+      name: templateData.name,
+      description: templateData.description,
+      tutorId: templateData.tutorId,
+    };
 
-    return mapPrismaToClassTemplateEntity(created);
+    return super.create(data as any);
   }
 
   /**
    * Update an existing template
+   * Override to handle field mapping
    */
-  async update(
-    id: string,
-    templateData: Partial<Omit<ClassTemplateEntity, 'id' | 'createdAt' | 'updatedAt'>>,
-  ): Promise<ClassTemplateEntity> {
-    const updateData: Record<string, unknown> = {};
-
-    if (templateData.name !== undefined) {
-      updateData.name = templateData.name;
-    }
-    if (templateData.description !== undefined) {
-      updateData.description = templateData.description;
-    }
-    if (templateData.tutorId !== undefined) {
-      updateData.tutorId = templateData.tutorId;
-    }
-
-    const updated = await prisma.classTemplate.update({
-      where: { id },
-      data: updateData,
+  async update(id: string, templateData: UpdateTemplateInput): Promise<ClassTemplateEntity> {
+    const updateData = this.prepareUpdateData({
+      name: templateData.name,
+      description: templateData.description,
+      tutorId: templateData.tutorId,
     });
 
-    return mapPrismaToClassTemplateEntity(updated);
-  }
-
-  /**
-   * Delete a template by its ID
-   */
-  async delete(id: string): Promise<void> {
-    await prisma.classTemplate.delete({
-      where: { id },
-    });
+    return super.update(id, updateData as any);
   }
 }

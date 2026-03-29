@@ -2,12 +2,13 @@
  * Prisma-based ClassLesson Repository.
  *
  * Implements IClassLessonRepository using Prisma ORM.
- * Handles all database operations for ClassLesson entities.
+ * Extends PrismaBaseRepository for common CRUD operations.
  */
 
 import { prisma } from '@/infrastructure/adapters/database/client.js';
 import type { IClassLessonRepository } from '@/domain/repositories/class.repository.js';
 import type { ClassLessonEntity } from '@/domain/entities/class.entity.js';
+import { PrismaBaseRepository } from './prisma-base.repository.js';
 
 /**
  * Maps Prisma ClassLesson model to ClassLessonEntity
@@ -32,7 +33,32 @@ function mapPrismaToClassLessonEntity(prismaLesson: {
   };
 }
 
-export class PrismaClassLessonRepository implements IClassLessonRepository {
+type PrismaClassLesson = {
+  id: string;
+  classId: string;
+  recipeId: string;
+  order: number;
+  createdAt: Date;
+  updatedAt: Date;
+  recipe?: { id: string; title: string; expectedDurationMinutes: number | null } | null;
+};
+
+type CreateLessonInput = Omit<ClassLessonEntity, 'id' | 'createdAt' | 'updatedAt'>;
+type UpdateLessonInput = Partial<Omit<ClassLessonEntity, 'id' | 'createdAt' | 'updatedAt'>>;
+
+export class PrismaClassLessonRepository
+  extends PrismaBaseRepository<
+    ClassLessonEntity,
+    PrismaClassLesson,
+    CreateLessonInput,
+    UpdateLessonInput
+  >
+  implements IClassLessonRepository
+{
+  constructor() {
+    super(prisma.classLesson as any, mapPrismaToClassLessonEntity);
+  }
+
   /**
    * Find all lessons for a specific class
    */
@@ -48,55 +74,30 @@ export class PrismaClassLessonRepository implements IClassLessonRepository {
 
   /**
    * Create a new lesson
+   * Override to handle field mapping
    */
-  async create(
-    lessonData: Omit<ClassLessonEntity, 'id' | 'createdAt' | 'updatedAt'>,
-  ): Promise<ClassLessonEntity> {
-    const created = await prisma.classLesson.create({
-      data: {
-        classId: lessonData.classId,
-        recipeId: lessonData.recipeId,
-        order: lessonData.order,
-      },
-    });
+  async create(lessonData: CreateLessonInput): Promise<ClassLessonEntity> {
+    const data = {
+      classId: lessonData.classId,
+      recipeId: lessonData.recipeId,
+      order: lessonData.order,
+    };
 
-    return mapPrismaToClassLessonEntity(created);
+    return super.create(data as any);
   }
 
   /**
    * Update an existing lesson
+   * Override to handle field mapping
    */
-  async update(
-    id: string,
-    lessonData: Partial<Omit<ClassLessonEntity, 'id' | 'createdAt' | 'updatedAt'>>,
-  ): Promise<ClassLessonEntity> {
-    const updateData: Record<string, unknown> = {};
-
-    if (lessonData.classId !== undefined) {
-      updateData.classId = lessonData.classId;
-    }
-    if (lessonData.recipeId !== undefined) {
-      updateData.recipeId = lessonData.recipeId;
-    }
-    if (lessonData.order !== undefined) {
-      updateData.order = lessonData.order;
-    }
-
-    const updated = await prisma.classLesson.update({
-      where: { id },
-      data: updateData,
+  async update(id: string, lessonData: UpdateLessonInput): Promise<ClassLessonEntity> {
+    const updateData = this.prepareUpdateData({
+      classId: lessonData.classId,
+      recipeId: lessonData.recipeId,
+      order: lessonData.order,
     });
 
-    return mapPrismaToClassLessonEntity(updated);
-  }
-
-  /**
-   * Delete a lesson by its ID
-   */
-  async delete(id: string): Promise<void> {
-    await prisma.classLesson.delete({
-      where: { id },
-    });
+    return super.update(id, updateData as any);
   }
 
   /**
