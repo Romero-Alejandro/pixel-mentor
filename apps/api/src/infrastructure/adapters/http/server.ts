@@ -11,6 +11,7 @@ import { createSessionsRouter } from './routes/sessions.js';
 import { createAuthRouter } from './routes/auth.js';
 import { createAdminRouter } from './routes/admin.js';
 import { createTTSRouter } from './routes/tts.js';
+import { healthRouter } from './routes/health.js';
 import { requestIdMiddleware } from './middleware/request-id.js';
 import { timeoutMiddleware } from './middleware/timeout.js';
 import { requestLoggerMiddleware } from './middleware/request-logger.js';
@@ -222,23 +223,8 @@ export function createApp(deps: ServerDependencies): Express {
 
   app.use(requestLoggerMiddleware(logger));
 
-  // @ts-expect-error - Express 5 compatibility
-  app.get('/health', async (req: AppRequest, res: Response) => {
-    const requestLogger = req.logger ?? logger;
-    const health: Record<string, unknown> = { status: 'ok', timestamp: new Date().toISOString() };
-
-    try {
-      await prisma.$queryRaw`SELECT 1`;
-      health.database = 'healthy';
-    } catch (dbError) {
-      requestLogger.error(dbError, 'Health check database failure');
-      health.database = 'unhealthy';
-      health.status = 'error';
-    }
-
-    const statusCode = health.status === 'ok' ? 200 : 503;
-    res.status(statusCode).json(health);
-  });
+  // Health check routes (public, no rate limiting)
+  app.use('/health', healthRouter);
 
   // @ts-expect-error - Express 5 compatibility
   app.get('/api', (_req: AppRequest, res: Response) => {
