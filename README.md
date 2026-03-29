@@ -247,36 +247,23 @@ pnpm --filter @pixel-mentor/api test -- --testPathPattern="orchestrate-lesson-fl
 
 ## 📡 API Reference
 
-El servidor expone una API RESTful en el puerto configurado (por defecto 3001).
+La documentación completa de la API se encuentra en el archivo **[docs/API_REFERENCE.md](docs/API_REFERENCE.md)**.
 
-### Endpoints Principales
+Este documento incluye:
 
-| Método | Ruta                    | Descripción                                            |
-| ------ | ----------------------- | ------------------------------------------------------ |
-| `GET`  | `/health`               | Verifica estado de la base de datos y servicio.        |
-| `GET`  | `/api`                  | Información de la API (nombre, versión, estado).       |
-| `POST` | `/api/leccion/start`    | Inicia una nueva sesión de tutoría.                    |
-| `POST` | `/api/leccion/interact` | Procesa la interacción del estudiante (transcripción). |
-| `GET`  | `/api/lessons`          | Lista lecciones disponibles.                           |
-| `GET`  | `/api/lessons/:id`      | Obtiene detalles de una lección.                       |
-| `GET`  | `/api/sessions`         | Lista sesiones de usuario.                             |
-| `GET`  | `/api/sessions/:id`     | Obtiene estado de una sesión específica.               |
+- Descripción general de la API, autenticación y roles.
+- Convenciones globales (formatos de fecha, UUID, paginación).
+- Referencia detallada de todos los endpoints organizados por dominio: Auth, Classes, Recipes, Sessions, Gamification, Admin, AI, TTS, Health.
+- Esquemas de validación (Zod) para cada parámetro.
+- Formatos de respuesta y códigos de error.
+- Ejemplos de consultas cURL.
 
-### Ejemplo de Solicitud (Iniciar Lección)
+Para una comprensión rápida de la arquitectura, consulte también:
 
-```bash
-curl -X POST http://localhost:3001/api/leccion/start \
-  -H "Content-Type: application/json" \
-  -d '{
-    "lessonId": "uuid-de-leccion",
-    "studentId": "uuid-de-estudiante"
-  }'
-```
+- [Estructura de Directorios y Responsabilidades](#-estructura-del-proyecto)
+- [Patrones de Diseño](#-patrones-de-diseño)
 
-### Autenticación
-
-Los endpoints protegidos requieren un token JWT en el header:
-`Authorization: Bearer <token>`
+---
 
 ## 📜 Licencia
 
