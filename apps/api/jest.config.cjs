@@ -15,6 +15,10 @@ module.exports = {
     '^@/evaluator/(.*)$': '<rootDir>/src/evaluator/$1.ts',
     '^@/config/(.*)$': '<rootDir>/src/config/$1.ts',
     '^@/monitoring/(.*)$': '<rootDir>/src/monitoring/$1.ts',
+    '^@/domain/errors/(.*)$': '<rootDir>/src/domain/errors/$1.ts',
+    '^@/domain/validators/(.*)$': '<rootDir>/src/domain/validators/$1.ts',
+    '^@/infrastructure/http/(.*)$': '<rootDir>/src/infrastructure/http/$1.ts',
+    '^@/infrastructure/transactions/(.*)$': '<rootDir>/src/infrastructure/transactions/$1.ts',
     '^@/(.*)$': '<rootDir>/src/$1',
     '^tests/(.*)$': '<rootDir>/tests/$1',
     '^\\.\\./client\\.js$': '<rootDir>/src/infrastructure/adapters/database/client.ts',
@@ -32,6 +36,9 @@ module.exports = {
       '<rootDir>/src/infrastructure/adapters/http/middleware/timeout.ts',
     '^\\./middleware/request-logger\\.js$':
       '<rootDir>/src/infrastructure/adapters/http/middleware/request-logger.ts',
+    // Domain relative imports
+    '^\\./app-error\\.js$': '<rootDir>/src/domain/errors/app-error.ts',
+    '^\\./entity-validators\\.js$': '<rootDir>/src/domain/validators/entity-validators.ts',
   },
   collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts', '!src/__tests__/**'],
   coverageThreshold: {

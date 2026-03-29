@@ -194,7 +194,7 @@ export function buildContainer(config: Config, logger: pino.Logger) {
     loginUseCase: new LoginUseCase(repositories.userRepository),
     verifyTokenUseCase: new VerifyTokenUseCase(repositories.userRepository),
     resetSessionUseCase: new ResetSessionUseCase(repositories.sessionRepository),
-    completeSessionUseCase: new CompleteSessionUseCase(repositories.sessionRepository),
+    completeSessionUseCase: new CompleteSessionUseCase(),
     getRecipeUseCase: new GetRecipeUseCase(repositories.recipeRepository),
     listRecipesUseCase: new ListRecipesUseCase(repositories.recipeRepository),
     getSessionUseCase: new GetSessionUseCase(repositories.sessionRepository),
