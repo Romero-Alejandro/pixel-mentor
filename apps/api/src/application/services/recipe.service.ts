@@ -10,59 +10,22 @@ import type { AtomRepository } from '@/domain/ports/atom-repository.js';
 import type { Recipe, RecipeStep, StepType, StepScript } from '@/domain/entities/recipe.js';
 import { AtomType } from '@/domain/entities/atom.js';
 
-// Import AtomType enum
+// Import errors from centralized module
+import {
+  RecipeNotFoundError,
+  RecipeOwnershipError,
+  RecipeValidationError,
+  StepNotFoundError,
+} from '@/domain/errors/index.js';
 
-// ==================== Error Classes ====================
-
-export class RecipeNotFoundError extends Error {
-  readonly code = 'RECIPE_NOT_FOUND' as const;
-  readonly recipeId: string;
-  constructor(recipeId: string) {
-    super(`Recipe with ID ${recipeId} not found`);
-    this.name = 'RecipeNotFoundError';
-    this.recipeId = recipeId;
-  }
-}
-
-export class RecipeOwnershipError extends Error {
-  readonly code = 'RECIPE_OWNERSHIP_ERROR' as const;
-  readonly recipeId: string;
-  readonly userId: string;
-  constructor(recipeId: string, userId: string) {
-    super(`User ${userId} does not have permission to modify recipe ${recipeId}`);
-    this.name = 'RecipeOwnershipError';
-    this.recipeId = recipeId;
-    this.userId = userId;
-  }
-}
-
-export class RecipeInUseError extends Error {
-  readonly code = 'RECIPE_IN_USE' as const;
-  readonly recipeId: string;
-  constructor(recipeId: string) {
-    super(`Recipe ${recipeId} is in use by lessons and cannot be deleted`);
-    this.name = 'RecipeInUseError';
-    this.recipeId = recipeId;
-  }
-}
-
-export class RecipeValidationError extends Error {
-  readonly code = 'RECIPE_VALIDATION_ERROR' as const;
-  constructor(message: string) {
-    super(message);
-    this.name = 'RecipeValidationError';
-  }
-}
-
-export class StepNotFoundError extends Error {
-  readonly code = 'STEP_NOT_FOUND' as const;
-  readonly stepId: string;
-  constructor(stepId: string) {
-    super(`Step with ID ${stepId} not found`);
-    this.name = 'StepNotFoundError';
-    this.stepId = stepId;
-  }
-}
+// Re-export errors for backward compatibility
+export {
+  RecipeNotFoundError,
+  RecipeOwnershipError,
+  RecipeInUseError,
+  RecipeValidationError,
+  StepNotFoundError,
+} from '@/domain/errors/index.js';
 
 // ==================== DTOs ====================
 

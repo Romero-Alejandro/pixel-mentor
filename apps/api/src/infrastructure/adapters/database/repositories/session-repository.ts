@@ -3,12 +3,12 @@ import { prisma } from '../client.js';
 import { handlePrismaError } from '../error-handler.js';
 
 import type { Session, SessionStatus, SessionCheckpoint } from '@/domain/entities/session';
-import type { PedagogicalState } from '@/domain/entities/pedagogical-state';
 import type { SessionRepository } from '@/domain/ports/session-repository';
 import {
   SessionNotFoundError,
   SessionAlreadyCompletedError,
 } from '@/domain/ports/session-repository';
+import { normalizeCheckpoint } from '@/domain/validators/index.js';
 
 type PrismaSession = NonNullable<Awaited<ReturnType<typeof prisma.session.findUnique>>>;
 
@@ -29,31 +29,6 @@ function serializeCheckpoint(checkpoint: SessionCheckpoint): Prisma.InputJsonVal
     failedAttempts: checkpoint.failedAttempts ?? 0,
     totalWrongAnswers: checkpoint.totalWrongAnswers ?? 0,
   } as Prisma.InputJsonValue;
-}
-
-function normalizeCheckpoint(raw: Record<string, unknown> | null | undefined): SessionCheckpoint {
-  const data = raw ?? {};
-  return {
-    currentState: (data.currentState as PedagogicalState) ?? 'ACTIVE_CLASS',
-    currentStepIndex: Number(data.currentStepIndex ?? 0),
-    savedStepIndex: data.savedStepIndex ? Number(data.savedStepIndex) : undefined,
-    doubtContext: data.doubtContext
-      ? (() => {
-          const ctx = data.doubtContext as any;
-          return {
-            question: ctx.question,
-            stepIndex: Number(ctx.stepIndex),
-          };
-        })()
-      : undefined,
-    questionCount: data.questionCount ? Number(data.questionCount) : undefined,
-    lastQuestionTime: (data.lastQuestionTime as string) ?? undefined,
-    skippedActivities: Array.isArray(data.skippedActivities)
-      ? (data.skippedActivities as string[])
-      : undefined,
-    failedAttempts: data.failedAttempts ? Number(data.failedAttempts) : undefined,
-    totalWrongAnswers: data.totalWrongAnswers ? Number(data.totalWrongAnswers) : undefined,
-  };
 }
 
 const mapSessionToDomain = (entity: PrismaSession): Session => ({

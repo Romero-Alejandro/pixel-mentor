@@ -11,21 +11,11 @@ import type {
 } from '@/domain/repositories/class.repository.js';
 import type { ClassTemplateEntity } from '@/domain/entities/class.entity.js';
 
-// ==================== Error Classes ====================
+// Import errors from centralized module
+import { TemplateNotFoundError, TemplateOwnershipError } from '@/domain/errors/index.js';
 
-export class TemplateNotFoundError extends Error {
-  constructor(templateId: string) {
-    super(`Template not found: ${templateId}`);
-    this.name = 'TemplateNotFoundError';
-  }
-}
-
-export class TemplateOwnershipError extends Error {
-  constructor(templateId: string, tutorId: string) {
-    super(`User ${tutorId} does not have permission to modify template ${templateId}`);
-    this.name = 'TemplateOwnershipError';
-  }
-}
+// Re-export errors for backward compatibility
+export { TemplateNotFoundError, TemplateOwnershipError } from '@/domain/errors/index.js';
 
 // ==================== DTOs ====================
 
