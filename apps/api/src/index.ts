@@ -1,4 +1,5 @@
-import type { Server } from 'http';
+import type { Server } from 'node:http';
+
 import pino from 'pino';
 
 import { buildContainer } from './dependency-container';

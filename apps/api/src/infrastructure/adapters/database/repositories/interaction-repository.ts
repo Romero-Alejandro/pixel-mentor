@@ -50,7 +50,7 @@ export class PrismaInteractionRepository implements InteractionRepository {
         sessionId: interaction.sessionId,
         turnNumber: interaction.turnNumber,
         transcript: interaction.transcript,
-        aiResponse: interaction.aiResponse,
+        aiResponse: interaction.aiResponse as any,
         comprehensionConfirmed: false,
         questionAsked: false,
         pausedForQuestion: false,

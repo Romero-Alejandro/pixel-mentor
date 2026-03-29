@@ -30,7 +30,6 @@ import {
   SessionAlreadyCompletedError,
   ActiveSessionExistsError,
 } from '@/domain/errors/index.js';
-
 import { mapErrorToResponse, getHttpStatus } from '@/infrastructure/http/error-mapper.js';
 
 // ==================== Test Suite ====================

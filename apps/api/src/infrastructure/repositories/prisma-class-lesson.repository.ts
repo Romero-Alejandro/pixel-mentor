@@ -5,10 +5,11 @@
  * Extends PrismaBaseRepository for common CRUD operations.
  */
 
+import { PrismaBaseRepository } from './prisma-base.repository.js';
+
 import { prisma } from '@/infrastructure/adapters/database/client.js';
 import type { IClassLessonRepository } from '@/domain/repositories/class.repository.js';
 import type { ClassLessonEntity } from '@/domain/entities/class.entity.js';
-import { PrismaBaseRepository } from './prisma-base.repository.js';
 
 /**
  * Maps Prisma ClassLesson model to ClassLessonEntity

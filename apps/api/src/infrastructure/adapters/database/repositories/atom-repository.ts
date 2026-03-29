@@ -1,6 +1,6 @@
 import { prisma } from '../client';
 
-import type { Atom } from '@/domain/entities/atom';
+import type { Atom, AtomOption } from '@/domain/entities/atom';
 import type { AtomRepository } from '@/domain/ports/atom-repository';
 
 export class PrismaAtomRepository implements AtomRepository {
@@ -31,8 +31,8 @@ export class PrismaAtomRepository implements AtomRepository {
         title: atom.title,
         description: atom.description,
         type: atom.type,
-        ssmlChunks: atom.ssmlChunks,
-        content: atom.content,
+        ssmlChunks: atom.ssmlChunks as any,
+        content: atom.content as any,
         locale: atom.locale,
         durationSeconds: atom.durationSeconds,
         difficulty: atom.difficulty,
@@ -51,8 +51,8 @@ export class PrismaAtomRepository implements AtomRepository {
         title: data.title,
         description: data.description,
         type: data.type,
-        ssmlChunks: data.ssmlChunks,
-        content: data.content,
+        ssmlChunks: data.ssmlChunks as any,
+        content: data.content as any,
         locale: data.locale,
         durationSeconds: data.durationSeconds,
         difficulty: data.difficulty,
@@ -82,7 +82,7 @@ export class PrismaAtomRepository implements AtomRepository {
     }));
   }
 
-  async createOption(option: any): Promise<any> {
+  async createOption(option: AtomOption): Promise<AtomOption> {
     const raw = await prisma.atomOption.create({
       data: {
         atomId: option.atomId,
@@ -92,7 +92,7 @@ export class PrismaAtomRepository implements AtomRepository {
         feedback: option.feedback,
       },
     });
-    return raw;
+    return raw as unknown as AtomOption; // raw is Prisma model, cast to domain type
   }
 
   async findCompetenciesByAtomId(atomId: string): Promise<any[]> {

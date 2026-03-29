@@ -556,7 +556,7 @@ export function createClassRouter(deps: ClassRouterDependencies): Router {
         }
 
         // Get class lessons
-        let lessons = await classLessonRepository.findByClassId(classId);
+        const lessons = await classLessonRepository.findByClassId(classId);
 
         // Debug logging
         console.log(

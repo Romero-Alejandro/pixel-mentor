@@ -53,11 +53,11 @@ export class PrismaActivityAttemptRepository implements ActivityAttemptRepositor
         atomId: attempt.atomId,
         atomOptionId: attempt.atomOptionId,
         attemptNo: attempt.attemptNo,
-        response: attempt.response,
+        response: attempt.response as any,
         correct: attempt.correct,
         elapsedMs: attempt.elapsedMs,
         hintUsed: attempt.hintUsed,
-        meta: attempt.meta,
+        meta: attempt.meta as any,
       },
     });
     return this.mapAttempt(raw);
@@ -69,11 +69,11 @@ export class PrismaActivityAttemptRepository implements ActivityAttemptRepositor
       data: {
         atomOptionId: data.atomOptionId,
         attemptNo: data.attemptNo,
-        response: data.response,
+        response: data.response as any,
         correct: data.correct,
         elapsedMs: data.elapsedMs,
         hintUsed: data.hintUsed,
-        meta: data.meta,
+        meta: data.meta as any,
       },
     });
     return this.mapAttempt(raw);

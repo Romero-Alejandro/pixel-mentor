@@ -5,9 +5,10 @@
  * and convert them to consistent HTTP responses.
  */
 
-import type { Response } from 'express';
-import { AppError, ErrorCodes } from '@/domain/errors/app-error.js';
+import type { Response, Request, NextFunction } from 'express';
 import type { ZodError } from 'zod';
+
+import { AppError, ErrorCodes } from '@/domain/errors/app-error.js';
 
 // ==================== Response Types ====================
 
@@ -143,8 +144,6 @@ function extractZodErrors(error: ZodError): Record<string, string[]> {
 }
 
 // ==================== Express Error Handler Middleware ====================
-
-import type { Request, NextFunction } from 'express';
 
 /**
  * Express error handler middleware

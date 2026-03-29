@@ -4,8 +4,9 @@
  * Tests the lessonProgress field schema changes and step progression logic.
  */
 
-import { describe, it, expect } from '@jest/globals';
 import { randomUUID } from 'node:crypto';
+
+import { describe, it, expect } from '@jest/globals';
 
 // Test the schema changes
 import { InteractRecipeOutputSchema, StartRecipeOutputSchema } from '@pixel-mentor/shared/recipe';
@@ -164,11 +165,11 @@ describe('Step Progression Logic', () => {
   it('should handle various continue phrases', () => {
     const continuePhrases = ['sí', 'si', 'next', 'continue', 'adelante', 'vamos', 'listo'];
 
-    continuePhrases.forEach((phrase) => {
+    for (const phrase of continuePhrases) {
       const result = calculateNextStep(0, 5, phrase);
       expect(result.nextStep).toBe(1);
       expect(result.completed).toBe(false);
-    });
+    }
   });
 });
 
@@ -205,10 +206,10 @@ describe('Activity and Question State Handling', () => {
     const interactions = ['Rosa', 'incorrecta', 'otra respuesta'];
 
     // Multiple interactions at same step should not advance
-    interactions.forEach((input) => {
+    for (const input of interactions) {
       const result = calculateNextStep(currentStep, totalSteps, input);
       expect(result.nextStep).toBe(1); // stays at activity
-    });
+    }
   });
 });
 

@@ -6,6 +6,7 @@
  */
 
 import type { Request, Response, NextFunction } from 'express';
+
 import { sendErrorResponse } from '@/infrastructure/http/error-mapper.js';
 
 type AsyncRouteHandler = (req: Request, res: Response, next: NextFunction) => Promise<void>;

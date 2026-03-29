@@ -41,7 +41,7 @@ export class PrismaEventLogRepository implements EventLogRepository {
         userId: event.userId,
         sessionId: event.sessionId,
         eventType: event.eventType,
-        data: event.data,
+        data: event.data as any,
       },
     });
     return this.mapEventLog(raw);

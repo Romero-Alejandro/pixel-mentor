@@ -149,7 +149,10 @@ ${objectives}
 Devuelve SOLO JSON válido.`;
   }
 
-  private parseAIResponse(aiResponse: string, input: GenerateRecipeDraftInput): GeneratedRecipeDraft {
+  private parseAIResponse(
+    aiResponse: string,
+    input: GenerateRecipeDraftInput,
+  ): GeneratedRecipeDraft {
     let cleanedResponse = aiResponse.trim();
     if (cleanedResponse.startsWith('```json')) cleanedResponse = cleanedResponse.slice(7);
     if (cleanedResponse.startsWith('```')) cleanedResponse = cleanedResponse.slice(3);
@@ -164,10 +167,15 @@ Devuelve SOLO JSON válido.`;
     }
   }
 
-  private sanitizeRecipeDraft(parsed: Record<string, unknown>, input: GenerateRecipeDraftInput): GeneratedRecipeDraft {
+  private sanitizeRecipeDraft(
+    parsed: Record<string, unknown>,
+    input: GenerateRecipeDraftInput,
+  ): GeneratedRecipeDraft {
     const title = typeof parsed.title === 'string' ? parsed.title : `Aprende sobre ${input.topic}`;
-    const description = typeof parsed.description === 'string' ? parsed.description : `Unidad sobre ${input.topic}`;
-    const expectedDuration = typeof parsed.expectedDurationMinutes === 'number' ? parsed.expectedDurationMinutes : 30;
+    const description =
+      typeof parsed.description === 'string' ? parsed.description : `Unidad sobre ${input.topic}`;
+    const expectedDuration =
+      typeof parsed.expectedDurationMinutes === 'number' ? parsed.expectedDurationMinutes : 30;
 
     let steps: GeneratedStep[] = [];
     if (Array.isArray(parsed.steps)) {
@@ -182,20 +190,35 @@ Devuelve SOLO JSON válido.`;
     }
 
     if (steps.length < 3) {
-      steps = this.generateEnhancedFallbackSteps(input.topic, `${input.targetAgeMin}-${input.targetAgeMax}`);
+      steps = this.generateEnhancedFallbackSteps(
+        input.topic,
+        `${input.targetAgeMin}-${input.targetAgeMax}`,
+      );
     }
 
-    const qv = parsed.qualityValidation as { passed?: boolean; errors?: string[]; warnings?: string[] } | undefined;
-    const qualityValidation = qv ? {
-      passed: Boolean(qv.passed),
-      errors: Array.isArray(qv.errors) ? qv.errors : [],
-      warnings: Array.isArray(qv.warnings) ? qv.warnings : [],
-    } : { passed: true, errors: [], warnings: [] };
+    const qv = parsed.qualityValidation as
+      | { passed?: boolean; errors?: string[]; warnings?: string[] }
+      | undefined;
+    const qualityValidation = qv
+      ? {
+          passed: Boolean(qv.passed),
+          errors: Array.isArray(qv.errors) ? qv.errors : [],
+          warnings: Array.isArray(qv.warnings) ? qv.warnings : [],
+        }
+      : { passed: true, errors: [], warnings: [] };
 
-    return { title, description, expectedDurationMinutes: expectedDuration, steps, qualityValidation };
+    return {
+      title,
+      description,
+      expectedDurationMinutes: expectedDuration,
+      steps,
+      qualityValidation,
+    };
   }
 
-  private validateStepType(type: unknown): 'intro' | 'content' | 'activity' | 'closure' | 'question' {
+  private validateStepType(
+    type: unknown,
+  ): 'intro' | 'content' | 'activity' | 'closure' | 'question' {
     const validTypes = ['intro', 'content', 'activity', 'closure', 'question'];
     if (typeof type === 'string' && validTypes.includes(type)) return type as any;
     return 'content';
@@ -218,9 +241,12 @@ Devuelve SOLO JSON válido.`;
       const options = s.options as Array<{ text?: string; isCorrect?: boolean }> | undefined;
       let optionsArr: Array<{ text: string; isCorrect: boolean }> = [];
       if (Array.isArray(options) && options.length > 0) {
-        optionsArr = options.map(o => ({ text: o?.text || 'Opción', isCorrect: Boolean(o?.isCorrect) }));
+        optionsArr = options.map((o) => ({
+          text: o?.text || 'Opción',
+          isCorrect: Boolean(o?.isCorrect),
+        }));
       }
-      if (optionsArr.length === 0 || !optionsArr.some(o => o.isCorrect)) {
+      if (optionsArr.length === 0 || !optionsArr.some((o) => o.isCorrect)) {
         optionsArr = [
           { text: 'Respuesta correcta', isCorrect: true },
           { text: 'Opción incorrecta 1', isCorrect: false },
@@ -228,7 +254,7 @@ Devuelve SOLO JSON válido.`;
         ];
       }
 
-      const feedback = s.feedback as Record<string, string> || {};
+      const feedback = (s.feedback as Record<string, string>) || {};
       return {
         kind: 'activity',
         instruction: instructionObj,
@@ -250,8 +276,8 @@ Devuelve SOLO JSON válido.`;
         questionObj = { text: q.text || '¿Qué aprendiste?' };
       }
 
-      const feedback = s.feedback as Record<string, string> || {};
-      const expectedAnswer = s.expectedAnswer as string || 'Una respuesta';
+      const feedback = (s.feedback as Record<string, string>) || {};
+      const expectedAnswer = (s.expectedAnswer as string) || 'Una respuesta';
 
       return {
         kind: 'question',
@@ -305,13 +331,51 @@ Devuelve SOLO JSON válido.`;
   private generateEnhancedFallbackSteps(topic: string, _ageRange: string): GeneratedStep[] {
     const examples = this.getTopicExamples(topic);
     return [
-      { order: 1, stepType: 'intro', title: '¡Descubre!', script: { transition: { text: `¡Hola! Vamos a aprender sobre ${topic}` }, content: { text: `Hoy exploraremos ${topic}`, chunks: [{ text: `Exploraremos ${topic}`, pauseAfter: 500 }] }, closure: { text: '¡Vamos!' } } },
-      { order: 2, stepType: 'content', title: '¿Qué es?', script: { transition: { text: 'Conozamos más...' }, content: { text: examples.concept || `${topic} es interesante`, chunks: [{ text: examples.concept || `${topic}`, pauseAfter: 500 }] }, examples: examples.list, closure: { text: '¡Excelente!' } } },
-      { order: 3, stepType: 'content', title: 'Más detalles', script: { transition: { text: '¡Muy bien!' }, content: { text: examples.detail || `Ahora sabes más sobre ${topic}`, chunks: [{ text: examples.detail || `Más sobre ${topic}`, pauseAfter: 500 }] }, examples: examples.list2, closure: { text: '¡Perfecto!' } } },
-      { 
-        order: 4, 
-        stepType: 'activity', 
-        title: '¡Practica!', 
+      {
+        order: 1,
+        stepType: 'intro',
+        title: '¡Descubre!',
+        script: {
+          transition: { text: `¡Hola! Vamos a aprender sobre ${topic}` },
+          content: {
+            text: `Hoy exploraremos ${topic}`,
+            chunks: [{ text: `Exploraremos ${topic}`, pauseAfter: 500 }],
+          },
+          closure: { text: '¡Vamos!' },
+        },
+      },
+      {
+        order: 2,
+        stepType: 'content',
+        title: '¿Qué es?',
+        script: {
+          transition: { text: 'Conozamos más...' },
+          content: {
+            text: examples.concept || `${topic} es interesante`,
+            chunks: [{ text: examples.concept || `${topic}`, pauseAfter: 500 }],
+          },
+          examples: examples.list,
+          closure: { text: '¡Excelente!' },
+        },
+      },
+      {
+        order: 3,
+        stepType: 'content',
+        title: 'Más detalles',
+        script: {
+          transition: { text: '¡Muy bien!' },
+          content: {
+            text: examples.detail || `Ahora sabes más sobre ${topic}`,
+            chunks: [{ text: examples.detail || `Más sobre ${topic}`, pauseAfter: 500 }],
+          },
+          examples: examples.list2,
+          closure: { text: '¡Perfecto!' },
+        },
+      },
+      {
+        order: 4,
+        stepType: 'activity',
+        title: '¡Practica!',
         script: examples.activity || {
           kind: 'activity',
           instruction: { text: `¿Qué aprendiste sobre ${topic}?` },
@@ -321,11 +385,45 @@ Devuelve SOLO JSON válido.`;
             { text: 'Otra opción', isCorrect: false },
           ],
           feedback: { correct: '¡Muy bien!', incorrect: 'Intenta de nuevo' },
-        }
+        },
       },
-      { order: 5, stepType: 'question', title: '¿Qué aprendimos?', script: { kind: 'question', question: { text: `¿Qué sabes ahora de ${topic}?` }, expectedAnswer: 'Algo aprendido', feedback: { correct: '¡Correcto!', incorrect: 'Piensa en lo que aprendiste' } } },
-      { order: 6, stepType: 'content', title: 'Repaso', script: { transition: { text: '¡Excelente!' }, content: { text: `Hoy aprendiste sobre ${topic}`, chunks: [{ text: `Aprendiste sobre ${topic}`, pauseAfter: 500 }] }, closure: { text: '¡Sigue aprendiendo!' } } },
-      { order: 7, stepType: 'closure', title: '¡Lo lograste!', script: { transition: { text: '¡Felicidades!' }, content: { text: `Ahora sabes sobre ${topic}. ¡Sigue explorando!`, chunks: [{ text: `Sabes sobre ${topic}`, pauseAfter: 500 }] }, closure: { text: '¡Eres un gran estudiante!' } } },
+      {
+        order: 5,
+        stepType: 'question',
+        title: '¿Qué aprendimos?',
+        script: {
+          kind: 'question',
+          question: { text: `¿Qué sabes ahora de ${topic}?` },
+          expectedAnswer: 'Algo aprendido',
+          feedback: { correct: '¡Correcto!', incorrect: 'Piensa en lo que aprendiste' },
+        },
+      },
+      {
+        order: 6,
+        stepType: 'content',
+        title: 'Repaso',
+        script: {
+          transition: { text: '¡Excelente!' },
+          content: {
+            text: `Hoy aprendiste sobre ${topic}`,
+            chunks: [{ text: `Aprendiste sobre ${topic}`, pauseAfter: 500 }],
+          },
+          closure: { text: '¡Sigue aprendiendo!' },
+        },
+      },
+      {
+        order: 7,
+        stepType: 'closure',
+        title: '¡Lo lograste!',
+        script: {
+          transition: { text: '¡Felicidades!' },
+          content: {
+            text: `Ahora sabes sobre ${topic}. ¡Sigue explorando!`,
+            chunks: [{ text: `Sabes sobre ${topic}`, pauseAfter: 500 }],
+          },
+          closure: { text: '¡Eres un gran estudiante!' },
+        },
+      },
     ];
   }
 
@@ -337,35 +435,74 @@ Devuelve SOLO JSON válido.`;
     activity?: GeneratedStep['script'];
   } {
     const t = topic.toLowerCase();
-    
+
     const examples: Record<string, any> = {
       'las vocales': {
         concept: 'Las vocales son las estrellas del idioma: A, E, I, O, U.',
         detail: 'La A es como una montaña, la E como una puerta abierta.',
         list: [{ text: 'MANZANA tiene A' }, { text: 'CASA tiene A' }],
         list2: [{ text: 'ELEFANTE tiene E' }, { text: 'PEDRO tiene E' }],
-        activity: { kind: 'activity', instruction: { text: '¿Qué vocal tiene MANZANA?' }, options: [{ text: 'A', isCorrect: true }, { text: 'E', isCorrect: false }, { text: 'I', isCorrect: false }], feedback: { correct: '¡Exacto! MANZANA tiene A', incorrect: 'Pista: es la primera letra' } },
+        activity: {
+          kind: 'activity',
+          instruction: { text: '¿Qué vocal tiene MANZANA?' },
+          options: [
+            { text: 'A', isCorrect: true },
+            { text: 'E', isCorrect: false },
+            { text: 'I', isCorrect: false },
+          ],
+          feedback: {
+            correct: '¡Exacto! MANZANA tiene A',
+            incorrect: 'Pista: es la primera letra',
+          },
+        },
       },
       'el sol': {
         concept: 'El Sol es una estrella que nos da luz y calor.',
         detail: 'El Sol es tan grande que caben millones de planetas dentro.',
         list: [{ text: 'Nos da luz' }, { text: 'Nos da calor' }],
         list2: [{ text: 'Es una estrella' }, { text: 'Da energía a la Tierra' }],
-        activity: { kind: 'activity', instruction: { text: '¿Qué nos da el Sol?' }, options: [{ text: 'Luz y calor', isCorrect: true }, { text: 'Lluvia', isCorrect: false }, { text: 'Frío', isCorrect: false }], feedback: { correct: '¡Exacto!', incorrect: 'Pista: lo sientes cuando sales afuera' } },
+        activity: {
+          kind: 'activity',
+          instruction: { text: '¿Qué nos da el Sol?' },
+          options: [
+            { text: 'Luz y calor', isCorrect: true },
+            { text: 'Lluvia', isCorrect: false },
+            { text: 'Frío', isCorrect: false },
+          ],
+          feedback: { correct: '¡Exacto!', incorrect: 'Pista: lo sientes cuando sales afuera' },
+        },
       },
       'los animales': {
         concept: 'Los animales son seres vivos que se mueven, comen y respiran.',
         detail: 'Hay animales domésticos y salvajes.',
         list: [{ text: 'El perro es doméstico' }, { text: 'El león es salvaje' }],
         list2: [{ text: 'Los peces nadan' }, { text: 'Los pájaros vuelan' }],
-        activity: { kind: 'activity', instruction: { text: '¿Cuál es doméstico?' }, options: [{ text: 'Perro', isCorrect: true }, { text: 'León', isCorrect: false }, { text: 'Tigre', isCorrect: false }], feedback: { correct: '¡Muy bien!', incorrect: 'Pista: vive en casa' } },
+        activity: {
+          kind: 'activity',
+          instruction: { text: '¿Cuál es doméstico?' },
+          options: [
+            { text: 'Perro', isCorrect: true },
+            { text: 'León', isCorrect: false },
+            { text: 'Tigre', isCorrect: false },
+          ],
+          feedback: { correct: '¡Muy bien!', incorrect: 'Pista: vive en casa' },
+        },
       },
       'las sumas': {
         concept: 'Sumar es juntar números para obtener un resultado mayor.',
         detail: '2 + 3 = 5 significa que juntamos 2 y 3.',
         list: [{ text: '2 + 3 = 5' }, { text: '1 + 4 = 5' }],
         list2: [{ text: '5 + 1 = 6' }, { text: '2 + 2 = 4' }],
-        activity: { kind: 'activity', instruction: { text: '¿Cuánto es 2 + 3?' }, options: [{ text: '5', isCorrect: true }, { text: '4', isCorrect: false }, { text: '6', isCorrect: false }], feedback: { correct: '¡Exacto! 2 + 3 = 5', incorrect: 'Pista: cuenta 2 y suma 3' } },
+        activity: {
+          kind: 'activity',
+          instruction: { text: '¿Cuánto es 2 + 3?' },
+          options: [
+            { text: '5', isCorrect: true },
+            { text: '4', isCorrect: false },
+            { text: '6', isCorrect: false },
+          ],
+          feedback: { correct: '¡Exacto! 2 + 3 = 5', incorrect: 'Pista: cuenta 2 y suma 3' },
+        },
       },
     };
 

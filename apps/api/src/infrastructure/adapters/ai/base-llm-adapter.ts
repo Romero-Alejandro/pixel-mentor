@@ -58,7 +58,7 @@ export abstract class BaseGenerativeAdapter extends BaseLLMAdapter {
       currentState: state,
       conversationHistory: params.conversationHistory as PromptParams['conversationHistory'],
       currentQuestion: params.currentQuestion as PromptParams['currentQuestion'],
-      ragContext: params.ragContext,
+      ragContext: params.ragContext as PromptParams['ragContext'],
       currentSegment: params.currentSegment as PromptParams['currentSegment'],
       totalSegments: params.totalSegments as number | undefined,
       persona: params.persona as string | undefined,

@@ -44,18 +44,9 @@
  * ```
  */
 
-import { z } from 'zod';
+import type { z } from 'zod';
 
 import { EVALUATION_OUTCOME, type EvaluationResult, type EvaluationRequest } from './types';
-
-import type { ILLMClient, LLMExecutionOptions } from '@/llm/client.interface';
-import type {
-  ISafePromptBuilder,
-  PromptValues,
-} from '@/prompt/interfaces/safe-prompt-builder.interface';
-import { SchemaValidationError } from '@/validation/schema.validator';
-import type { ISchemaValidator } from '@/validation/schema.validator';
-
 import {
   EXTRACT_CONCEPTS_USER_TEMPLATE,
   CLASSIFY_USER_TEMPLATE,
@@ -72,6 +63,14 @@ import {
   type ClassificationResponse,
   type FeedbackResponse,
 } from './schemas';
+
+import type { ILLMClient, LLMExecutionOptions } from '@/llm/client.interface';
+import type {
+  ISafePromptBuilder,
+  PromptValues,
+} from '@/prompt/interfaces/safe-prompt-builder.interface';
+import { SchemaValidationError } from '@/validation/schema.validator';
+import type { ISchemaValidator } from '@/validation/schema.validator';
 
 // Re-export types for external use
 export type {

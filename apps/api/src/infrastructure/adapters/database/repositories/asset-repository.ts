@@ -26,7 +26,7 @@ export class PrismaAssetRepository implements AssetRepository {
         url: asset.url,
         mime: asset.mime,
         size: asset.size,
-        meta: asset.meta,
+        meta: asset.meta as any,
       },
     });
     return this.mapAsset(raw);
@@ -40,7 +40,7 @@ export class PrismaAssetRepository implements AssetRepository {
         url: data.url,
         mime: data.mime,
         size: data.size,
-        meta: data.meta,
+        meta: data.meta as any,
       },
     });
     return this.mapAsset(raw);

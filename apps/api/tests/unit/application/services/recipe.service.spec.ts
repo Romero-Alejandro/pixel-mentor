@@ -379,7 +379,9 @@ describe('RecipeService', () => {
           atomId: expect.any(String), // Atom ID should be generated
           order: 0,
           stepType: 'content',
-          script: expect.objectContaining({ content: { text: 'c' } }),
+          script: expect.objectContaining({
+            content: expect.objectContaining({ text: 'Content' }),
+          }),
         }),
       );
       expect(result).toBeDefined();
@@ -440,7 +442,9 @@ describe('RecipeService', () => {
         expect.objectContaining({
           content: expect.objectContaining({
             type: 'content',
-            script: expect.objectContaining({ content: { text: 'New C' } }),
+            script: expect.objectContaining({
+              content: expect.objectContaining({ text: 'New C' }),
+            }),
           }),
         }),
       );
@@ -448,7 +452,9 @@ describe('RecipeService', () => {
         'step-123',
         expect.objectContaining({
           order: 5,
-          script: expect.objectContaining({ content: { text: 'New C' } }),
+          script: expect.objectContaining({
+            content: expect.objectContaining({ text: 'New C' }),
+          }),
         }),
       );
       expect(result).toBeDefined();
@@ -499,7 +505,15 @@ describe('RecipeService', () => {
 
       await service.reorderSteps('recipe-123', stepIds, 'user-123');
 
-      expect(recipeRepository.updateStep).toHaveBeenCalledTimes(3);
+      // Two updates per step: temporary negative, then final order
+      expect(recipeRepository.updateStep).toHaveBeenCalledTimes(6);
+
+      // Verify temporary negative ordering
+      expect(recipeRepository.updateStep).toHaveBeenCalledWith(mockStep2.id, { order: -1 });
+      expect(recipeRepository.updateStep).toHaveBeenCalledWith(mockStep.id, { order: -2 });
+      expect(recipeRepository.updateStep).toHaveBeenCalledWith(mockStep3.id, { order: -3 });
+
+      // Verify final ordering
       expect(recipeRepository.updateStep).toHaveBeenCalledWith(mockStep2.id, { order: 0 });
       expect(recipeRepository.updateStep).toHaveBeenCalledWith(mockStep.id, { order: 1 });
       expect(recipeRepository.updateStep).toHaveBeenCalledWith(mockStep3.id, { order: 2 });

@@ -19,8 +19,6 @@ import { authMiddleware, requireRole } from './middleware/auth.js';
 import { createGamificationRouter } from './routes/gamification.js';
 import { createGamificationEventsRouter } from './routes/gamification-events.js';
 import { createClassRouter, type ClassRouterDependencies } from './routes/classes.js';
-import type { IClassLessonRepository } from '@/domain/repositories/class.repository.js';
-import type { StartRecipeUseCase } from '@/application/use-cases/recipe/start-recipe.use-case.js';
 import {
   createClassAIRouter,
   createClassAISuggestionsRouter,
@@ -32,6 +30,8 @@ import {
   type ClassTemplateRouterDependencies,
 } from './routes/class-templates.js';
 
+import type { StartRecipeUseCase } from '@/application/use-cases/recipe/start-recipe.use-case.js';
+import type { IClassLessonRepository } from '@/domain/repositories/class.repository.js';
 import { createMetricsRouter } from '@/monitoring/routes/eval-metrics.route.js';
 import type { LevelService } from '@/game-engine/level.service.js';
 import type { GameEngineCore } from '@/game-engine/core';

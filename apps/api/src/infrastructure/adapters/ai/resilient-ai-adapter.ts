@@ -50,7 +50,7 @@ export class ResilientAIAdapter implements AIService {
     if (instances.length === 0) throw new Error('No AI instances provided for resilience');
 
     // Create circuit breaker for each instance
-    instances.forEach((instance, index) => {
+    for (const [index, instance] of instances.entries()) {
       const name = `ai-${instance.constructor.name}-${index}`;
       this.breakers.set(
         name,
@@ -62,7 +62,7 @@ export class ResilientAIAdapter implements AIService {
           },
         }),
       );
-    });
+    }
   }
 
   async generateResponse(params: GenerateResponseParams): Promise<AIResponse> {
@@ -184,7 +184,7 @@ export class ResilientClassifierAdapter implements QuestionClassifier {
   private readonly breakers: Map<string, CircuitBreaker> = new Map();
 
   constructor(private readonly instances: QuestionClassifier[]) {
-    instances.forEach((instance, index) => {
+    for (const [index, instance] of instances.entries()) {
       const name = `classifier-${instance.constructor.name}-${index}`;
       this.breakers.set(
         name,
@@ -193,7 +193,7 @@ export class ResilientClassifierAdapter implements QuestionClassifier {
           resetTimeout: 30000,
         }),
       );
-    });
+    }
   }
 
   async classify(payload: ClassificationPayload): Promise<QuestionClassification> {
@@ -244,7 +244,7 @@ export class ResilientEvaluatorAdapter implements ComprehensionEvaluator {
   private readonly breakers: Map<string, CircuitBreaker> = new Map();
 
   constructor(private readonly instances: ComprehensionEvaluator[]) {
-    instances.forEach((instance, index) => {
+    for (const [index, instance] of instances.entries()) {
       const name = `evaluator-${instance.constructor.name}-${index}`;
       this.breakers.set(
         name,
@@ -253,7 +253,7 @@ export class ResilientEvaluatorAdapter implements ComprehensionEvaluator {
           resetTimeout: 30000,
         }),
       );
-    });
+    }
   }
 
   async evaluate(payload: ComprehensionPayload): Promise<ComprehensionEvaluation> {
@@ -304,7 +304,7 @@ export class ResilientRAGAdapter implements RAGService {
   private readonly breakers: Map<string, CircuitBreaker> = new Map();
 
   constructor(private readonly instances: RAGService[]) {
-    instances.forEach((instance, index) => {
+    for (const [index, instance] of instances.entries()) {
       const name = `rag-${instance.constructor.name}-${index}`;
       this.breakers.set(
         name,
@@ -313,7 +313,7 @@ export class ResilientRAGAdapter implements RAGService {
           resetTimeout: 30000,
         }),
       );
-    });
+    }
   }
 
   async retrieveChunks(query: any): Promise<{

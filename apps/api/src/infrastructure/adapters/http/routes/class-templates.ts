@@ -48,109 +48,115 @@ export function createClassTemplateRouter(deps: ClassTemplateRouterDependencies)
    * GET /api/class-templates - List tutor's templates
    * Auth: TEACHER role required
    */
-  router.get('/',
+  router.get(
+    '/',
     // @ts-expect-error - Express 5 compatibility
     async (req: AppRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const tutorId = req.user?.id;
-      if (!tutorId) {
-        res.status(401).json({ error: 'Unauthorized' });
-        return;
+      try {
+        const tutorId = req.user?.id;
+        if (!tutorId) {
+          res.status(401).json({ error: 'Unauthorized' });
+          return;
+        }
+
+        // Check TEACHER role
+        if (req.user?.role !== 'TEACHER' && req.user?.role !== 'ADMIN') {
+          res.status(403).json({ error: 'Forbidden: TEACHER role required' });
+          return;
+        }
+
+        const templates = await classTemplateService.listTemplates(tutorId);
+
+        res.status(200).json({ templates });
+      } catch (error) {
+        next(error);
       }
-
-      // Check TEACHER role
-      if (req.user?.role !== 'TEACHER' && req.user?.role !== 'ADMIN') {
-        res.status(403).json({ error: 'Forbidden: TEACHER role required' });
-        return;
-      }
-
-      const templates = await classTemplateService.listTemplates(tutorId);
-
-      res.status(200).json({ templates });
-    } catch (error) {
-      next(error);
-    }
-  });
+    },
+  );
 
   /**
    * POST /api/class-templates - Create a new template
    * Auth: TEACHER role required
    */
-  router.post('/',
+  router.post(
+    '/',
     // @ts-expect-error - Express 5 compatibility
     async (req: AppRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const tutorId = req.user?.id;
-      if (!tutorId) {
-        res.status(401).json({ error: 'Unauthorized' });
-        return;
+      try {
+        const tutorId = req.user?.id;
+        if (!tutorId) {
+          res.status(401).json({ error: 'Unauthorized' });
+          return;
+        }
+
+        // Check TEACHER role
+        if (req.user?.role !== 'TEACHER' && req.user?.role !== 'ADMIN') {
+          res.status(403).json({ error: 'Forbidden: TEACHER role required' });
+          return;
+        }
+
+        // Parse and validate request body
+        const validatedData = ClassTemplateCreateSchema.parse(req.body);
+
+        const input: CreateTemplateInput = {
+          name: validatedData.name,
+          description: validatedData.description,
+        };
+
+        const template = await classTemplateService.createTemplate(tutorId, input);
+
+        res.status(201).json(template);
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          res.status(400).json({ error: 'Validation error', details: error.issues });
+          return;
+        }
+        next(error);
       }
-
-      // Check TEACHER role
-      if (req.user?.role !== 'TEACHER' && req.user?.role !== 'ADMIN') {
-        res.status(403).json({ error: 'Forbidden: TEACHER role required' });
-        return;
-      }
-
-      // Parse and validate request body
-      const validatedData = ClassTemplateCreateSchema.parse(req.body);
-
-      const input: CreateTemplateInput = {
-        name: validatedData.name,
-        description: validatedData.description,
-      };
-
-      const template = await classTemplateService.createTemplate(tutorId, input);
-
-      res.status(201).json(template);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ error: 'Validation error', details: error.issues });
-        return;
-      }
-      next(error);
-    }
-  });
+    },
+  );
 
   /**
    * GET /api/class-templates/:id - Get template details
    * Auth: TEACHER role required
    */
-  router.get('/:id',
+  router.get(
+    '/:id',
     // @ts-expect-error - Express 5 compatibility
     async (req: AppRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const id = req.params.id as string;
-      const tutorId = req.user?.id;
+      try {
+        const id = req.params.id as string;
+        const tutorId = req.user?.id;
 
-      if (!tutorId) {
-        res.status(401).json({ error: 'Unauthorized' });
-        return;
+        if (!tutorId) {
+          res.status(401).json({ error: 'Unauthorized' });
+          return;
+        }
+
+        // Check TEACHER role
+        if (req.user?.role !== 'TEACHER' && req.user?.role !== 'ADMIN') {
+          res.status(403).json({ error: 'Forbidden: TEACHER role required' });
+          return;
+        }
+
+        const template = await classTemplateService.getTemplate(id);
+
+        // Check ownership (or admin can view any)
+        if (template.tutorId !== tutorId && req.user?.role !== 'ADMIN') {
+          res.status(403).json({ error: 'Forbidden: You do not own this template' });
+          return;
+        }
+
+        res.status(200).json(template);
+      } catch (error) {
+        if (error instanceof TemplateNotFoundError) {
+          res.status(404).json({ error: error.message });
+          return;
+        }
+        next(error);
       }
-
-      // Check TEACHER role
-      if (req.user?.role !== 'TEACHER' && req.user?.role !== 'ADMIN') {
-        res.status(403).json({ error: 'Forbidden: TEACHER role required' });
-        return;
-      }
-
-      const template = await classTemplateService.getTemplate(id);
-
-      // Check ownership (or admin can view any)
-      if (template.tutorId !== tutorId && req.user?.role !== 'ADMIN') {
-        res.status(403).json({ error: 'Forbidden: You do not own this template' });
-        return;
-      }
-
-      res.status(200).json(template);
-    } catch (error) {
-      if (error instanceof TemplateNotFoundError) {
-        res.status(404).json({ error: error.message });
-        return;
-      }
-      next(error);
-    }
-  });
+    },
+  );
 
   /**
    * PATCH /api/class-templates/:id - Update template

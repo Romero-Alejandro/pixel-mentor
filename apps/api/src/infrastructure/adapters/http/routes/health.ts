@@ -8,6 +8,7 @@
  */
 
 import { Router, type Response } from 'express';
+
 import { getHealthCheckService, type HealthStatus } from '@/infrastructure/observability/index.js';
 
 const router = Router();
