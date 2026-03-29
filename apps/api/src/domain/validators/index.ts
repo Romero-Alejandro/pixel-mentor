@@ -5,7 +5,10 @@ export {
   PositiveIntSchema,
   NonNegativeIntSchema,
   DateSchema,
+  PedagogicalStateSchema,
   SessionStatusSchema,
+  DoubtContextSchema,
+  SessionCheckpointSchema,
   ClassStatusSchema,
   StepTypeSchema,
   RecipeStepSchema,
@@ -18,9 +21,14 @@ export {
   validateSessionTransition,
   validateClassTransition,
   validateRecipeStepsOrder,
+  normalizeCheckpoint,
   validateOrThrow,
   assertDefined,
   assertValidUUID,
 } from './entity-validators.js';
 
-export type { ValidatedSessionStatus, ValidatedClassStatus } from './entity-validators.js';
+export type {
+  ValidatedSessionStatus,
+  ValidatedSessionCheckpoint,
+  ValidatedClassStatus,
+} from './entity-validators.js';

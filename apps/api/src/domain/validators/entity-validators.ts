@@ -35,6 +35,22 @@ export const NonNegativeIntSchema = z.number().int().min(0, 'Must be a non-negat
  */
 export const DateSchema = z.union([z.date(), z.string().datetime()]);
 
+// ==================== Pedagogical State Schema ====================
+
+export const PedagogicalStateSchema = z.enum([
+  'AWAITING_START',
+  'ACTIVE_CLASS',
+  'RESOLVING_DOUBT',
+  'CLARIFYING',
+  'EXPLANATION',
+  'ACTIVITY_WAIT',
+  'ACTIVITY_INACTIVITY_WARNING',
+  'ACTIVITY_SKIP_OFFER',
+  'QUESTION',
+  'EVALUATION',
+  'COMPLETED',
+]);
+
 // ==================== Session Validation ====================
 
 export const SessionStatusSchema = z.enum([
@@ -48,6 +64,51 @@ export const SessionStatusSchema = z.enum([
 ]);
 
 export type ValidatedSessionStatus = z.infer<typeof SessionStatusSchema>;
+
+/**
+ * Doubt context schema
+ */
+export const DoubtContextSchema = z.object({
+  question: z.string(),
+  stepIndex: z.number().int().min(0),
+});
+
+/**
+ * Session checkpoint schema with full validation
+ */
+export const SessionCheckpointSchema = z.object({
+  currentState: PedagogicalStateSchema.default('ACTIVE_CLASS'),
+  currentStepIndex: z.number().int().min(0).default(0),
+  savedStepIndex: z.number().int().min(0).optional(),
+  doubtContext: DoubtContextSchema.optional(),
+  questionCount: z.number().int().min(0).default(0),
+  lastQuestionTime: z.string().nullable().default(null),
+  skippedActivities: z.array(z.string()).default([]),
+  failedAttempts: z.number().int().min(0).default(0),
+  totalWrongAnswers: z.number().int().min(0).default(0),
+});
+
+export type ValidatedSessionCheckpoint = z.infer<typeof SessionCheckpointSchema>;
+
+/**
+ * Normalizes and validates a checkpoint from raw database data
+ * Provides safe defaults for missing or invalid fields
+ */
+export function normalizeCheckpoint(
+  raw: Record<string, unknown> | null | undefined,
+): ValidatedSessionCheckpoint {
+  const result = SessionCheckpointSchema.safeParse(raw ?? {});
+
+  if (!result.success) {
+    // Log warning but don't throw - provide safe defaults
+    console.warn('Invalid checkpoint data, using defaults:', result.error.issues);
+    return SessionCheckpointSchema.parse({});
+  }
+
+  return result.data;
+}
+
+// ==================== Session Transitions ====================
 
 /**
  * Valid session status transitions
