@@ -18,6 +18,7 @@ import { z } from 'zod';
 import type { AdminUserService } from '@/application/services/admin-user.service.js';
 import type { AuthError } from '@/domain/ports/auth-errors.js';
 import { UserAlreadyExistsError, UserNotFoundError } from '@/domain/ports/user-repository.js';
+import { DeleteUserParamsSchema, GetUserParamsSchema } from '@/application/dto/index.js';
 
 // ==================== Schemas ====================
 
@@ -136,10 +137,18 @@ export function createAdminRouter(adminUserService: AdminUserService): Router {
    */
   router.get('/users/:id', async (req: AdminRequest, res: Response, next: NextFunction) => {
     try {
-      const id = String(req.params.id);
-      const user = await adminUserService.getUser(id);
+      const validated = GetUserParamsSchema.parse(req.params);
+      const user = await adminUserService.getUser(validated.id);
       res.json({ user });
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          error: 'Parámetros de ruta inválidos',
+          code: 'VALIDATION_ERROR',
+          details: error.issues,
+        });
+        return;
+      }
       if (error instanceof UserNotFoundError) {
         res.status(404).json({
           error: 'Usuario no encontrado',
@@ -199,13 +208,21 @@ export function createAdminRouter(adminUserService: AdminUserService): Router {
    */
   router.delete('/users/:id', async (req: AdminRequest, res: Response, next: NextFunction) => {
     try {
-      const id = String(req.params.id);
+      const validated = DeleteUserParamsSchema.parse(req.params);
       const adminId = req.user!.id;
 
-      await adminUserService.deleteUser(id, adminId);
+      await adminUserService.deleteUser(validated.id, adminId);
 
       res.status(204).send();
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          error: 'Parámetros de ruta inválidos',
+          code: 'VALIDATION_ERROR',
+          details: error.issues,
+        });
+        return;
+      }
       if (error instanceof UserNotFoundError) {
         res.status(404).json({
           error: 'Usuario no encontrado',

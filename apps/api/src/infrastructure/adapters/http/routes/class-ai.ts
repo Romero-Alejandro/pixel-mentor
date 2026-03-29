@@ -14,6 +14,7 @@ import type {
   GenerateClassDraftInput,
 } from '@/application/services/class-ai.service.js';
 import { ClassNotFoundError } from '@/application/services/class.service.js';
+import { SuggestImprovementsParamsSchema } from '@/application/dto/index.js';
 
 // Inline schema to avoid module resolution issues
 const GenerateClassDraftInputSchema = z.object({
@@ -102,7 +103,9 @@ export function createClassAISuggestionsRouter(deps: ClassAIRouterDependencies):
     // @ts-expect-error - Express 5 compatibility
     async (req: AppRequest, res: Response, next: NextFunction): Promise<void> => {
       try {
-        const classId = req.params.id as string;
+        // Validate classId parameter
+        const rawId = req.params.id as string;
+        const { id: classId } = SuggestImprovementsParamsSchema.parse({ id: rawId });
 
         // Check TEACHER role
         if (req.user?.role !== 'TEACHER' && req.user?.role !== 'ADMIN') {
@@ -116,6 +119,10 @@ export function createClassAISuggestionsRouter(deps: ClassAIRouterDependencies):
       } catch (error) {
         if (error instanceof ClassNotFoundError) {
           res.status(404).json({ error: error.message });
+          return;
+        }
+        if (error instanceof z.ZodError) {
+          res.status(400).json({ error: 'Validation error', details: error.issues });
           return;
         }
         next(error);

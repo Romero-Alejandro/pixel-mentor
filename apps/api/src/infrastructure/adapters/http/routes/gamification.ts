@@ -24,6 +24,7 @@ import type {
 import type { GetSessionUseCase } from '@/application/use-cases/session/get-session.use-case';
 import type { GetRecipeUseCase } from '@/application/use-cases/recipe/get-recipe.use-case';
 import type { PrismaClient } from '@/infrastructure/adapters/database/client.js';
+import { GetMissionReportParamsSchema } from '@/application/dto/index.ts';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -363,10 +364,15 @@ export function createGamificationRouter(
       try {
         const { sessionId: rawSessionId } = req.params;
         const sessionId = Array.isArray(rawSessionId) ? rawSessionId[0] : rawSessionId;
+
+        // Validate sessionId parameter
+        const validated = GetMissionReportParamsSchema.parse({ sessionId });
+        const { sessionId: validSessionId } = validated;
+
         const userId = req.user!.id;
 
         // 1. Get session and verify ownership
-        const session = await getSessionUseCase.execute(sessionId);
+        const session = await getSessionUseCase.execute(validSessionId);
         if (session.studentId !== userId) {
           res.status(403).json({ error: 'Session does not belong to user' });
           return;
@@ -435,6 +441,10 @@ export function createGamificationRouter(
 
         res.json(report);
       } catch (error) {
+        if (error instanceof z.ZodError) {
+          res.status(400).json({ error: 'Validation error', details: error.issues });
+          return;
+        }
         next(error);
       }
     },

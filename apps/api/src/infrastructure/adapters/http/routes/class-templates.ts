@@ -19,6 +19,11 @@ import {
   TemplateNotFoundError,
   TemplateOwnershipError,
 } from '@/application/services/class-template.service.js';
+import {
+  ListClassesOptionsSchema,
+  GetClassParamsSchema,
+  DeleteClassParamsSchema,
+} from '@/application/dto';
 
 // Inline schemas to avoid module resolution issues
 const ClassTemplateCreateSchema = z.object({
@@ -65,10 +70,28 @@ export function createClassTemplateRouter(deps: ClassTemplateRouterDependencies)
           return;
         }
 
+        // Validate query parameters (for security - reject malformed queries)
+        const query: Record<string, unknown> = {};
+        if (req.query.status !== undefined) {
+          query.status = req.query.status;
+        }
+        if (req.query.page !== undefined) {
+          query.page = req.query.page ? parseInt(String(req.query.page), 10) : undefined;
+        }
+        if (req.query.limit !== undefined) {
+          query.limit = req.query.limit ? parseInt(String(req.query.limit), 10) : undefined;
+        }
+        // Parse to validate - result not used yet (service doesn't support filtering)
+        ListClassesOptionsSchema.parse(query);
+
         const templates = await classTemplateService.listTemplates(tutorId);
 
         res.status(200).json({ templates });
       } catch (error) {
+        if (error instanceof z.ZodError) {
+          res.status(400).json({ error: 'Validation error', details: error.issues });
+          return;
+        }
         next(error);
       }
     },
@@ -125,7 +148,9 @@ export function createClassTemplateRouter(deps: ClassTemplateRouterDependencies)
     // @ts-expect-error - Express 5 compatibility
     async (req: AppRequest, res: Response, next: NextFunction): Promise<void> => {
       try {
-        const id = req.params.id as string;
+        // Validate path parameters
+        const validated = GetClassParamsSchema.parse({ id: req.params.id as string });
+        const id = validated.id;
         const tutorId = req.user?.id;
 
         if (!tutorId) {
@@ -149,6 +174,10 @@ export function createClassTemplateRouter(deps: ClassTemplateRouterDependencies)
 
         res.status(200).json(template);
       } catch (error) {
+        if (error instanceof z.ZodError) {
+          res.status(400).json({ error: 'Validation error', details: error.issues });
+          return;
+        }
         if (error instanceof TemplateNotFoundError) {
           res.status(404).json({ error: error.message });
           return;
@@ -219,7 +248,9 @@ export function createClassTemplateRouter(deps: ClassTemplateRouterDependencies)
     // @ts-expect-error - Express 5 compatibility
     async (req: AppRequest, res: Response, next: NextFunction): Promise<void> => {
       try {
-        const id = req.params.id as string;
+        // Validate path parameters
+        const validated = DeleteClassParamsSchema.parse({ id: req.params.id as string });
+        const id = validated.id;
         const tutorId = req.user?.id;
 
         if (!tutorId) {
@@ -237,6 +268,10 @@ export function createClassTemplateRouter(deps: ClassTemplateRouterDependencies)
 
         res.status(204).send();
       } catch (error) {
+        if (error instanceof z.ZodError) {
+          res.status(400).json({ error: 'Validation error', details: error.issues });
+          return;
+        }
         if (error instanceof TemplateNotFoundError) {
           res.status(404).json({ error: error.message });
           return;

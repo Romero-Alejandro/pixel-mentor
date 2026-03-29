@@ -6,7 +6,12 @@ import type { GetSessionUseCase } from '@/application/use-cases/session/get-sess
 import type { ListSessionsUseCase } from '@/application/use-cases/session/list-sessions.use-case';
 import type { ResetSessionUseCase } from '@/application/use-cases/session/reset-session.use-case';
 import type { CompleteSessionUseCase } from '@/application/use-cases/session/complete-session.use-case';
-import { GetSessionInputSchema, ListSessionsInputSchema } from '@/application/dto';
+import {
+  GetSessionInputSchema,
+  ListSessionsInputSchema,
+  ReplaySessionParamsSchema,
+  CompleteSessionParamsSchema,
+} from '@/application/dto';
 
 export interface AppRequest extends Request {
   logger?: pino.Logger;
@@ -92,10 +97,14 @@ export function createSessionsRouter(
     '/:id/replay',
     async (request: Request, response: Response, next: NextFunction): Promise<void> => {
       try {
-        const sessionId = request.params.id as string;
-        const result = await resetSessionUseCase.execute(sessionId);
+        const params = ReplaySessionParamsSchema.parse(request.params);
+        const result = await resetSessionUseCase.execute(params.id);
         response.json(result);
       } catch (error) {
+        if (error instanceof z.ZodError) {
+          response.status(400).json({ error: 'Validation error', details: error.issues });
+          return;
+        }
         next(error);
       }
     },
@@ -105,10 +114,14 @@ export function createSessionsRouter(
     '/:id/complete',
     async (request: Request, response: Response, next: NextFunction): Promise<void> => {
       try {
-        const sessionId = request.params.id as string;
-        const result = await completeSessionUseCase.execute(sessionId);
+        const params = CompleteSessionParamsSchema.parse(request.params);
+        const result = await completeSessionUseCase.execute(params.id);
         response.json(result);
       } catch (error) {
+        if (error instanceof z.ZodError) {
+          response.status(400).json({ error: 'Validation error', details: error.issues });
+          return;
+        }
         next(error);
       }
     },
