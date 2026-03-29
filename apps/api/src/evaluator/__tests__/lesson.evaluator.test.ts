@@ -30,12 +30,13 @@ import type { ISchemaValidator } from '@/validation/schema.validator';
  * Mock LLM client for testing.
  */
 class MockLLMClient implements ILLMClient {
-  private response: string;
-  private shouldFail: boolean;
+  private responses: string[] = [];
+  private shouldFail: boolean = false;
   private callCount: number = 0;
+  private responseIndex: number = 0;
 
   constructor(response: string = '', shouldFail: boolean = false) {
-    this.response = response;
+    this.responses = this.convertIfNeeded([response]);
     this.shouldFail = shouldFail;
   }
 
@@ -44,7 +45,10 @@ class MockLLMClient implements ILLMClient {
     if (this.shouldFail) {
       throw new Error('LLM execution failed');
     }
-    return this.response;
+    if (this.responseIndex >= this.responses.length) {
+      throw new Error('No more mock responses configured');
+    }
+    return this.responses[this.responseIndex++];
   }
 
   getCallCount(): number {
@@ -52,12 +56,61 @@ class MockLLMClient implements ILLMClient {
   }
 
   setResponse(response: string): void {
-    this.response = response;
+    this.responses = this.convertIfNeeded([response]);
+    this.responseIndex = 0;
     this.shouldFail = false;
   }
 
   setFailure(shouldFail: boolean): void {
     this.shouldFail = shouldFail;
+  }
+
+  /**
+   * Convert a single old-format response to 3-step array if needed.
+   */
+  private convertIfNeeded(resps: string[]): string[] {
+    if (resps.length === 1) {
+      try {
+        const parsed = JSON.parse(resps[0]);
+        if (
+          parsed &&
+          typeof parsed === 'object' &&
+          'outcome' in parsed &&
+          'score' in parsed &&
+          'feedback' in parsed &&
+          !('ideas' in parsed)
+        ) {
+          const old = parsed as any;
+          const outcomeMap: Record<string, string> = {
+            correct: 'conceptually_correct',
+            partial: 'partially_correct',
+            incorrect: 'conceptual_error',
+          };
+          const newOutcome = outcomeMap[old.outcome] ?? old.outcome;
+          const step1 = JSON.stringify({
+            ideas: ['El estudiante demostró comprensión del concepto'],
+            languageComplexity: 'moderate',
+            hasAnalogies: false,
+            reasoning: 'Análisis automático',
+          });
+          const step2 = JSON.stringify({
+            outcome: newOutcome,
+            score: old.score,
+            justification: 'Evaluación basada en criterios pedagógicos.',
+            confidence: old.confidence ?? 0.8,
+            ...(old.improvementSuggestion && { improvementSuggestion: old.improvementSuggestion }),
+          });
+          const step3 = JSON.stringify({
+            feedback: old.feedback,
+            hasEncouragement: true,
+          });
+          return [step1, step2, step3];
+        }
+      } catch (e) {
+        // Not valid JSON or not old format; keep as is
+      }
+    }
+    return resps;
   }
 }
 
@@ -247,7 +300,9 @@ describe('LessonEvaluatorUseCase', () => {
 
       expect(result).toBeDefined();
       // Note: outcome may be adjusted by rubric logic
-      expect(['correct', 'partial']).toContain(result.outcome);
+      expect(['conceptually_correct', 'intuitive_correct', 'partially_correct']).toContain(
+        result.outcome,
+      );
       expect(result.score).toBeGreaterThan(0);
       expect(result.feedback).toBeTruthy();
       expect(result.confidence).toBeLessThanOrEqual(1);
@@ -354,8 +409,8 @@ describe('LessonEvaluatorUseCase', () => {
 
       const result = await evaluator.evaluate(request);
 
-      // Should be adjusted to partial or incorrect
-      expect(['partial', 'incorrect']).toContain(result.outcome);
+      // Should be adjusted to partial or incorrect (new: partially_correct or conceptual_error)
+      expect(['partially_correct', 'conceptual_error']).toContain(result.outcome);
     });
 
     it('should handle empty required keywords gracefully', async () => {
@@ -408,7 +463,7 @@ describe('LessonEvaluatorUseCase', () => {
       const result = await evaluator.evaluate(request);
 
       expect(result).toBeDefined();
-      expect(result.outcome).toBe('incorrect');
+      expect(result.outcome).toBe('conceptual_error');
       expect(result.score).toBe(0);
       expect(result.feedback).toBeTruthy();
       expect(result.feedback).toContain('intenta');
@@ -426,7 +481,7 @@ describe('LessonEvaluatorUseCase', () => {
       const result = await evaluator.evaluate(request);
 
       expect(result).toBeDefined();
-      expect(result.outcome).toBe('incorrect');
+      expect(result.outcome).toBe('conceptual_error');
       expect(result.score).toBe(0);
     });
 
@@ -518,7 +573,14 @@ describe('LessonEvaluatorUseCase', () => {
 describe('EvaluationResponseSchema', () => {
   describe('outcome validation', () => {
     it('should accept valid outcome values', () => {
-      const validOutcomes = ['correct', 'partial', 'incorrect'];
+      const validOutcomes = [
+        'conceptually_correct',
+        'intuitive_correct',
+        'partially_correct',
+        'relevant_but_incomplete',
+        'conceptual_error',
+        'no_response',
+      ];
 
       for (const outcome of validOutcomes) {
         const result = EvaluationResponseSchema.safeParse({

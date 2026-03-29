@@ -5,7 +5,7 @@
  * Uses LLM to generate class structure and suggest improvements.
  */
 
-import { ClassNotFoundError } from './class.service.js';
+import { ClassNotFoundError } from '@/domain/errors/index.js';
 
 import type { AIService } from '@/domain/ports/ai-service.js';
 import type {

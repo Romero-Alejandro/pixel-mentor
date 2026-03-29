@@ -92,7 +92,7 @@ export type {
  * Always returns encouraging feedback to maintain student motivation.
  */
 const FALLBACK_RESULT: EvaluationResult = {
-  outcome: EVALUATION_OUTCOME.NO_RESPONSE,
+  outcome: EVALUATION_OUTCOME.CONCEPTUAL_ERROR,
   score: 0,
   feedback:
     '¡Sigue intentando! Cada respuesta es una oportunidad de aprendizaje. Revisa la pregunta e intenta nuevamente.',

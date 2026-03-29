@@ -57,13 +57,18 @@ module.exports = {
     '^\\./entity-validators\\.js$': '<rootDir>/src/domain/validators/entity-validators.ts',
     // Config imports
     '^\\./evaluation-flags\\.js$': '<rootDir>/src/config/evaluation-flags.ts',
-    // Infrastructure relative imports (inside infrastructure packages)
+    // Infrastructure relative imports
     '^\\./health-check\\.service\\.js$':
       '<rootDir>/src/infrastructure/observability/health-check.service.ts',
     '^\\./cache\\.service\\.js$': '<rootDir>/src/infrastructure/cache/cache.service.ts',
     '^\\./circuit-breaker\\.js$': '<rootDir>/src/infrastructure/resilience/circuit-breaker.ts',
     '^\\./transaction\\.service\\.js$':
       '<rootDir>/src/infrastructure/transactions/transaction.service.ts',
+    // Repository relative imports (for base repository)
+    '^\\./prisma-base\\.repository\\.js$':
+      '<rootDir>/src/infrastructure/repositories/prisma-base.repository.ts',
+    '^\\./prisma-class-lesson\\.repository\\.js$':
+      '<rootDir>/src/infrastructure/repositories/prisma-class-lesson.repository.ts',
   },
   collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts', '!src/__tests__/**'],
   coverageThreshold: {

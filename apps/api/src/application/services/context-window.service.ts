@@ -17,7 +17,13 @@ export class ContextWindowService {
     const limit = maxTokens || this.config.maxTokens;
     // Naive estimation: assume ~50 tokens per turn
     const estimatedTurnTokens = 50;
-    const maxTurns = Math.floor(limit / estimatedTurnTokens);
+    // If limit is 0, no tokens allowed
+    if (limit === 0) {
+      return [];
+    }
+    // Calculate maximum turns that can fit; ensure at least 1 turn if limit > 0
+    const calculatedTurns = Math.floor(limit / estimatedTurnTokens);
+    const maxTurns = calculatedTurns === 0 ? 1 : calculatedTurns;
     return history.slice(-maxTurns);
   }
 
@@ -25,7 +31,8 @@ export class ContextWindowService {
     history: Interaction[],
     keepRecent: number = this.config.keepRecentTurns,
   ): string {
-    const olderTurns = history.slice(0, -keepRecent);
+    // Handle keepRecent = 0 to summarize all turns
+    const olderTurns = keepRecent === 0 ? history : history.slice(0, -keepRecent);
     if (olderTurns.length === 0) {
       return '';
     }

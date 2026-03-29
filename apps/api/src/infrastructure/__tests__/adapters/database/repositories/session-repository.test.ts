@@ -30,7 +30,7 @@ describe('PrismaSessionRepository', () => {
   const mockSession = {
     id: randomUUID(),
     studentId: randomUUID(),
-    lessonId: randomUUID(),
+    recipeId: randomUUID(),
     status: 'active',
     stateCheckpoint: {
       currentState: 'ACTIVE_CLASS',
@@ -66,19 +66,19 @@ describe('PrismaSessionRepository', () => {
     });
   });
 
-  describe('findByStudentAndLesson', () => {
+  describe('findByStudentAndRecipe', () => {
     it('should return session when found', async () => {
       (prisma.session.findFirst as jest.Mock).mockResolvedValueOnce(mockSession);
 
-      const result = await repository.findByStudentAndLesson(
+      const result = await repository.findByStudentAndRecipe(
         mockSession.studentId,
-        mockSession.lessonId,
+        mockSession.recipeId,
       );
 
       expect(prisma.session.findFirst).toHaveBeenCalledWith({
         where: {
           studentId: mockSession.studentId,
-          lessonId: mockSession.lessonId,
+          recipeId: mockSession.recipeId,
         },
       });
       expect(result).toEqual(expect.objectContaining({ id: mockSession.id }));
@@ -87,9 +87,9 @@ describe('PrismaSessionRepository', () => {
     it('should return null when not found', async () => {
       (prisma.session.findFirst as jest.Mock).mockResolvedValueOnce(null);
 
-      const result = await repository.findByStudentAndLesson(
+      const result = await repository.findByStudentAndRecipe(
         'non-existent-student',
-        'non-existent-lesson',
+        'non-existent-recipe',
       );
 
       expect(result).toBeNull();
@@ -128,38 +128,50 @@ describe('PrismaSessionRepository', () => {
     });
   });
 
-  describe('create', () => {
-    it('should create a new session', async () => {
-      const newSessionId = randomUUID();
-      const newSessionData = {
-        id: newSessionId,
-        studentId: mockSession.studentId,
-        lessonId: mockSession.lessonId,
-        status: 'idle' as const,
-        stateCheckpoint: {
-          currentState: 'ACTIVE_CLASS' as const,
-          currentSegmentIndex: 0,
-          currentQuestionIndex: 0,
-        },
-        currentInteractionId: null,
-        lastActivityAt: new Date(),
-        completedAt: null,
-        escalatedAt: null,
-      };
+   describe('create', () => {
+     it('should create a new session', async () => {
+       const newSessionId = randomUUID();
+       const newSessionData = {
+         id: newSessionId,
+         studentId: mockSession.studentId,
+         recipeId: mockSession.recipeId,
+         status: 'idle' as const,
+         stateCheckpoint: {
+           currentState: 'ACTIVE_CLASS' as const,
+           currentStepIndex: 0,
+           questionCount: 0,
+           lastQuestionTime: null,
+           skippedActivities: [],
+           failedAttempts: 0,
+         },
+         currentInteractionId: null,
+         lastActivityAt: new Date(),
+         completedAt: null,
+         escalatedAt: null,
+       };
 
-      (prisma.session.create as jest.Mock).mockResolvedValueOnce(mockSession);
+       (prisma.session.create as jest.Mock).mockResolvedValueOnce(mockSession);
 
-      const result = await repository.create(newSessionData);
+       const result = await repository.create(newSessionData);
 
-      expect(prisma.session.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          id: newSessionId,
-          studentId: newSessionData.studentId,
-          lessonId: newSessionData.lessonId,
-          status: 'idle',
-        }),
+       expect(prisma.session.create).toHaveBeenCalledWith({
+         data: expect.objectContaining({
+           id: newSessionId,
+           studentId: newSessionData.studentId,
+           recipeId: newSessionData.recipeId,
+           status: 'idle',
+           stateCheckpoint: expect.objectContaining({
+             currentState: 'ACTIVE_CLASS',
+             currentStepIndex: 0,
+             questionCount: 0,
+             lastQuestionTime: null,
+             skippedActivities: [],
+             failedAttempts: 0,
+           }),
+         }),
+       });
+        expect(result).toEqual(expect.objectContaining({ id: newSessionId }));
       });
-      expect(result.id).toBe(mockSession.id);
     });
   });
 
