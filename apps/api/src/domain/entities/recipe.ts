@@ -68,7 +68,7 @@ export interface RecipeStep {
   readonly recipeId: string;
   readonly atomId: string;
   readonly order: number;
-  readonly condition?: any;
+  readonly condition?: unknown;
   readonly onCondition?: string;
   readonly createdAt: Date;
   // New fields for static content

@@ -4,17 +4,17 @@ export interface ActivityAttempt {
   readonly atomId: string;
   readonly atomOptionId?: string;
   readonly attemptNo: number;
-  readonly response?: any;
+  readonly response?: unknown;
   readonly correct?: boolean;
   readonly elapsedMs?: number;
   readonly hintUsed: number;
-  readonly meta?: any;
+  readonly meta?: unknown;
   readonly createdAt: Date;
   // Optional relations for optimized queries (N+1 prevention)
   readonly atom?: {
     readonly id: string;
     readonly type: string;
-    readonly content?: any;
+    readonly content?: unknown;
     readonly options?: readonly {
       readonly id: string;
       readonly text: string;
@@ -34,11 +34,11 @@ export function createActivityAttempt(parameters: {
   atomId: string;
   attemptNo?: number;
   atomOptionId?: string;
-  response?: any;
+  response?: unknown;
   correct?: boolean;
   elapsedMs?: number;
   hintUsed?: number;
-  meta?: any;
+  meta?: unknown;
 }): ActivityAttempt {
   return {
     id: parameters.id,

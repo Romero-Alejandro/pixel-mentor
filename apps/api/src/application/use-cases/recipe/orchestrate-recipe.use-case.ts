@@ -28,6 +28,14 @@ import type {
   ComprehensionEvaluation,
 } from '@/domain/ports/question-classifier.js';
 import type { RAGService } from '@/domain/ports/rag-service.js';
+// Metrics imports
+import {
+  EvaluationMetricsCollector,
+  EvaluationTimer,
+  type EngineType,
+  type EvaluationOutcome,
+  type EvaluationErrorType,
+} from '@/monitoring/index.js';
 import type { AdvisoryLockManager } from '@/domain/ports/advisory-lock.js';
 import { createSessionLockId } from '@/domain/ports/advisory-lock.js';
 import type { PedagogicalState } from '@/domain/entities/pedagogical-state.js';
@@ -52,25 +60,28 @@ import type {
   LessonEvaluatorUseCase,
   EvaluationRequest,
   EvaluationResult,
+  EvaluationOutcome as PedagogicalOutcome,
 } from '@/evaluator/index.js';
-import type { EvaluationOutcome as PedagogicalOutcome } from '@/evaluator/index.js';
 import type { FeatureFlagService } from '@/config/evaluation-flags.js';
+import type { RecipeStep } from '@/domain/entities/recipe.js';
+import type { KnowledgeChunk } from '@/domain/entities/knowledge-chunk.js';
 
 // Gamification imports
 import { getEventBus } from '@/events/event-bus.js';
 import { GameDomainEvents } from '@/events/game-events.js';
 import type { LessonCompletedPayload } from '@/events/game-events.js';
 
-// Metrics imports
-import {
-  EvaluationMetricsCollector,
-  EvaluationTimer,
-  type EngineType,
-  type EvaluationOutcome,
-  type EvaluationErrorType,
-} from '@/monitoring/index.js';
-
 // ─────────────────────────────────────────────────────────────────────────────
+// Tipos del script auto-contenido
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Type for RAG service returned chunks with similarity scores
+type RAGChunk = {
+  chunk: KnowledgeChunk;
+  similarityScore: number;
+  citations?: unknown[];
+};
+
 // Tipos del script auto-contenido
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -109,7 +120,8 @@ function isActivityScript(s: unknown): s is ActivityScript {
   const opts = (s as ActivityScript)?.options;
   const inst = (s as ActivityScript)?.instruction;
   // Check if it has options OR has instruction (string or object)
-  const hasInstruction = typeof inst === 'string' || (typeof inst === 'object' && inst !== null && 'text' in inst);
+  const hasInstruction =
+    typeof inst === 'string' || (typeof inst === 'object' && inst !== null && 'text' in inst);
   return (Array.isArray(opts) && opts.length > 0) || hasInstruction;
 }
 
@@ -390,12 +402,12 @@ export class OrchestrateRecipeUseCase {
     return this.requiresStudentInput(step?.stepType) ? 'ACTIVITY_WAIT' : 'EXPLANATION';
   }
 
-  private advanceStep(steps: any[], current: number): number | null {
+  private advanceStep(steps: readonly RecipeStep[], current: number): number | null {
     const next = current + 1;
     return next < steps.length ? next : null;
   }
 
-  private findPreviousContentStep(steps: any[], from: number): number | null {
+  private findPreviousContentStep(steps: readonly RecipeStep[], from: number): number | null {
     for (let i = from - 1; i >= 0; i--) {
       if (!this.requiresStudentInput(steps[i].stepType)) return i;
     }
@@ -986,7 +998,7 @@ export class OrchestrateRecipeUseCase {
       `[DEBUG] Classification result: intent=${classification.intent}, confidence=${classification.confidence}, action=${action.type}`,
     );
 
-    let ragContext: any;
+    let ragContext: RAGChunk[] | undefined;
     if (
       action.type === 'ACCEPT' &&
       classification.intent === 'question' &&
@@ -1008,14 +1020,19 @@ export class OrchestrateRecipeUseCase {
         conversationHistory: recentHistory,
         ragContext,
         currentSegment: {
-          chunkText: currentAtom.content || currentAtom.title,
+          chunkText:
+            typeof currentAtom.content === 'string' ? currentAtom.content : currentAtom.title,
           order: currentStep.order,
         },
         totalSegments: steps.length,
         historySummary,
       });
-    } catch (e: any) {
-      console.warn('[Orchestrator] LLM fallback:', e.message);
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        console.warn('[Orchestrator] LLM fallback:', e.message);
+      } else {
+        console.warn('[Orchestrator] LLM fallback:', String(e));
+      }
       aiResponse = this.getFallbackResponse(currentState, currentAtom.title);
     }
 
@@ -1402,7 +1419,8 @@ export class OrchestrateRecipeUseCase {
       conversationHistory: recentHistory,
       ragContext,
       currentSegment: {
-        chunkText: currentAtom.content || currentAtom.title,
+        chunkText:
+          typeof currentAtom.content === 'string' ? currentAtom.content : currentAtom.title,
         order: currentStep.order,
       },
       totalSegments: steps.length,

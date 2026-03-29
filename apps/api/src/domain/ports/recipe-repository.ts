@@ -1,12 +1,14 @@
 import type { Recipe, RecipeStep } from '../entities/recipe';
+import type { Concept } from '../entities/concept';
+import type { Activity } from '../entities/activity';
 
 export interface RecipeWithConcepts extends Recipe {
-  readonly concepts?: readonly any[];
+  readonly concepts?: readonly Concept[];
 }
 
 export interface RecipeStepWithContent extends RecipeStep {
-  readonly concept?: any;
-  readonly activity?: any;
+  readonly concept?: Concept | null | undefined;
+  readonly activity?: Activity | null | undefined;
 }
 
 export interface RecipeRepository {

@@ -4,7 +4,7 @@ export interface Asset {
   readonly url: string;
   readonly mime?: string;
   readonly size?: number;
-  readonly meta?: any;
+  readonly meta?: unknown;
   readonly uploadedAt: Date;
 }
 
@@ -14,7 +14,7 @@ export function createAsset(parameters: {
   url: string;
   mime?: string;
   size?: number;
-  meta?: any;
+  meta?: unknown;
 }): Asset {
   return {
     id: parameters.id,

@@ -10,7 +10,7 @@ export interface InteractionRepository {
       'createdAt' | 'updatedAt' | 'comprehensionConfirmed' | 'flaggedForReview' | 'questionAsked'
     >,
   ): Promise<Interaction>;
-  addAIResponse(interactionId: string, aiResponse: any): Promise<Interaction>;
+  addAIResponse(interactionId: string, aiResponse: unknown): Promise<Interaction>;
   confirmComprehension(interactionId: string): Promise<Interaction>;
   flagForReview(interactionId: string): Promise<Interaction>;
   markAsQuestion(interactionId: string): Promise<Interaction>;

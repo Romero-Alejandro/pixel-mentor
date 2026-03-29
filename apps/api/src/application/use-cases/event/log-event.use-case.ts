@@ -6,7 +6,11 @@ import type { EventLog, EventType } from '@/domain/entities/event-log.js';
 export class LogEventUseCase {
   constructor(private eventLogRepo: EventLogRepository) {}
 
-  async execute(sessionId: string, eventType: EventType, data?: any): Promise<{ eventId: string }> {
+  async execute(
+    sessionId: string,
+    eventType: EventType,
+    data?: unknown,
+  ): Promise<{ eventId: string }> {
     const eventId = randomUUID();
 
     const event = {

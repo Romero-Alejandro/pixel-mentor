@@ -7,7 +7,7 @@ export interface RAGService {
     queryEmbedding?: number[];
     k?: number;
   }): Promise<{
-    chunks: { chunk: KnowledgeChunk; similarityScore: number; citations?: any[] }[];
+    chunks: { chunk: KnowledgeChunk; similarityScore: number; citations?: unknown[] }[];
     totalAvailable: number;
     retrievalMethod: string;
   }>;

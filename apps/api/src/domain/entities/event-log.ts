@@ -14,7 +14,7 @@ export interface EventLog {
   readonly userId?: string;
   readonly sessionId?: string;
   readonly eventType: EventType;
-  readonly data: any;
+  readonly data: unknown;
   readonly timestamp: Date;
 }
 
@@ -23,7 +23,7 @@ export function createEventLog(parameters: {
   userId?: string;
   sessionId?: string;
   eventType: EventType;
-  data: any;
+  data: unknown;
 }): EventLog {
   return {
     id: parameters.id,

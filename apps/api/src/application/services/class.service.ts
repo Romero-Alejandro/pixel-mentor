@@ -385,7 +385,7 @@ export class ClassService {
     }
 
     // Build update data with only defined fields
-    const updateData: Record<string, any> = {};
+    const updateData: { recipeId?: string; order?: number } = {};
     if (data.recipeId !== undefined) updateData.recipeId = data.recipeId;
     if (data.order !== undefined) updateData.order = data.order;
 

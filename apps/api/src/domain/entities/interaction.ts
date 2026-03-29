@@ -3,7 +3,7 @@ export interface Interaction {
   readonly sessionId: string;
   readonly turnNumber: number;
   readonly transcript: string;
-  readonly aiResponse?: any; // JSON flexible según el nuevo schema
+  readonly aiResponse?: unknown;
   readonly comprehensionConfirmed: boolean;
   readonly questionAsked: boolean;
   readonly pausedForQuestion: boolean;
@@ -17,7 +17,7 @@ export function createInteraction(parameters: {
   sessionId: string;
   turnNumber: number;
   transcript: string;
-  aiResponse?: any;
+  aiResponse?: unknown;
   questionAsked?: boolean;
   pausedForQuestion?: boolean;
 }): Interaction {
@@ -37,7 +37,7 @@ export function createInteraction(parameters: {
   };
 }
 
-export function setAIResponse(interaction: Interaction, aiResponse: any): Interaction {
+export function setAIResponse(interaction: Interaction, aiResponse: unknown): Interaction {
   return { ...interaction, aiResponse, updatedAt: new Date() };
 }
 

@@ -6,6 +6,7 @@
  */
 
 import { z } from 'zod';
+
 import { AppError, ErrorCodes } from '@/domain/errors/app-error.js';
 
 // ==================== Common Validation Schemas ====================

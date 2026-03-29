@@ -25,7 +25,7 @@ export interface TTSResponse {
 
 export interface TTSService {
   speak(text: string, options?: TTSOptions): Promise<TTSResponse>;
-  createStream(text: string, options?: any): Readable; // El método que faltaba
+  createStream(text: string, options?: TTSOptions): Readable;
   listVoices(languageCode?: string): Promise<Voice[]>;
   isAvailable(): Promise<boolean>;
 }

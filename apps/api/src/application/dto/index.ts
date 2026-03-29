@@ -265,12 +265,14 @@ const StepScriptSchemaQuestion = z.object({
   hint: z.string().optional(),
 });
 
-// Union of all valid script formats
-export const StepScriptSchema = z.union([
-  StepScriptSchemaContent,
+// Discriminated union for activity and question scripts (they have a 'kind' field)
+const ActivityOrQuestionSchema = z.discriminatedUnion('kind', [
   StepScriptSchemaActivity,
   StepScriptSchemaQuestion,
 ]);
+
+// Union of all valid script formats (content + activity/question discriminated union)
+export const StepScriptSchema = z.union([StepScriptSchemaContent, ActivityOrQuestionSchema]);
 
 export type StepScript = z.infer<typeof StepScriptSchema>;
 
@@ -348,8 +350,7 @@ export const RecipeStepInputSchema = z
       }
       // If stepType is 'activity', must have activity OR script with kind='activity'
       if (data.stepType === 'activity') {
-        const hasActivity =
-          data.activity && hasValidInstruction(data.activity.instruction);
+        const hasActivity = data.activity && hasValidInstruction(data.activity.instruction);
         const hasScriptActivity =
           data.script &&
           typeof data.script === 'object' &&
@@ -396,7 +397,7 @@ export const RecipeStepOutputSchema = z.object({
   recipeId: z.string().uuid(),
   atomId: z.string().uuid().nullable(),
   order: z.number().int(),
-  condition: z.any().nullable(),
+  condition: z.unknown().nullable(),
   onCondition: z.string().nullable(),
   createdAt: z.string().datetime(),
   conceptId: z.string().uuid().nullable(),

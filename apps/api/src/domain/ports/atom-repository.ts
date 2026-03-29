@@ -1,4 +1,4 @@
-import type { Atom } from '../entities/atom';
+import type { Atom, AtomOption, AtomCompetency } from '../entities/atom';
 
 export interface AtomRepository {
   findById(id: string): Promise<Atom | null>;
@@ -12,9 +12,9 @@ export interface AtomRepository {
   ): Promise<Atom>;
   update(id: string, data: Partial<Atom>): Promise<Atom>;
   delete(id: string): Promise<void>;
-  findOptionsByAtomId(atomId: string): Promise<any[]>;
-  createOption(option: any): Promise<any>;
-  findCompetenciesByAtomId(atomId: string): Promise<any[]>;
+  findOptionsByAtomId(atomId: string): Promise<AtomOption[]>;
+  createOption(option: AtomOption): Promise<AtomOption>;
+  findCompetenciesByAtomId(atomId: string): Promise<AtomCompetency[]>;
   linkCompetency(atomId: string, competencyId: string, weight?: number): Promise<void>;
 }
 

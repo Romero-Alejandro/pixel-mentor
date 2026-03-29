@@ -14,7 +14,7 @@ import type { PedagogicalState } from './pedagogical-state.js';
 export function determineMicroInteraction(
   state: PedagogicalState,
   _segmentIndex: number,
-  _segment?: any,
+  _segment?: unknown,
 ): MicroInteraction {
   switch (state) {
     case 'ACTIVE_CLASS':

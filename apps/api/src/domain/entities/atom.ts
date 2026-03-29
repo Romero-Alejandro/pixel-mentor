@@ -29,8 +29,8 @@ export interface Atom {
   readonly title: string;
   readonly description?: string;
   readonly type: AtomType;
-  readonly ssmlChunks?: any;
-  readonly content?: any;
+  readonly ssmlChunks?: unknown;
+  readonly content?: unknown;
   readonly locale: string;
   readonly durationSeconds?: number;
   readonly difficulty: number;

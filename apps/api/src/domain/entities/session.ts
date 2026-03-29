@@ -1,4 +1,5 @@
 import type { PedagogicalState } from './pedagogical-state';
+
 import {
   validateSessionTransition,
   type ValidatedSessionStatus,
@@ -51,7 +52,7 @@ export interface Session {
   readonly lastActivityAt: Date;
   readonly completedAt: Date | null;
   readonly escalatedAt: Date | null;
-  readonly meta?: any;
+  readonly meta?: unknown;
 }
 
 export function createSession(parameters: {
@@ -59,7 +60,7 @@ export function createSession(parameters: {
   studentId: string;
   recipeId: string;
   stateCheckpoint?: SessionCheckpoint;
-  meta?: any;
+  meta?: unknown;
 }): Session {
   const now = new Date();
   return {

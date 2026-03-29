@@ -12,7 +12,7 @@ export class AttemptActivityUseCase {
   async execute(
     userId: string,
     atomId: string,
-    response: any,
+    response: unknown,
     hintUsed?: number,
   ): Promise<{ attemptId: string; correct?: boolean }> {
     const atom = await this.atomRepo.findById(atomId);
@@ -24,8 +24,10 @@ export class AttemptActivityUseCase {
       if (correctOption) {
         correct = response === correctOption.text;
       }
-    } else if (atom.content) {
-      correct = response.trim().toLowerCase() === atom.content.trim().toLowerCase();
+    } else if (atom.content != null && typeof atom.content === 'string') {
+      correct =
+        typeof response === 'string' &&
+        response.trim().toLowerCase() === atom.content.trim().toLowerCase();
     }
 
     const attemptId = randomUUID();

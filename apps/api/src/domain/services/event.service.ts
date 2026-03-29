@@ -6,7 +6,7 @@ import type { EventLog, EventType } from '../entities/event-log.js';
 export class EventService {
   constructor(private eventLogRepo: EventLogRepository) {}
 
-  async log(sessionId: string, eventType: EventType, data?: any): Promise<void> {
+  async log(sessionId: string, eventType: EventType, data?: unknown): Promise<void> {
     const eventId = randomUUID();
 
     const event = {

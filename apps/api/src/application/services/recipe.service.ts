@@ -7,7 +7,7 @@
 
 import type { RecipeRepository } from '@/domain/ports/recipe-repository.js';
 import type { AtomRepository } from '@/domain/ports/atom-repository.js';
-import type { Recipe, RecipeStep, StepType, StepScript } from '@/domain/entities/recipe.js';
+import type { Recipe, RecipeStep, StepType } from '@/domain/entities/recipe.js';
 import { AtomType } from '@/domain/entities/atom.js';
 
 // Import errors from centralized module
@@ -27,6 +27,12 @@ export {
   StepNotFoundError,
 } from '@/domain/errors/index.js';
 
+// Content data interfaces for typed step content
+export interface ScriptData extends Record<string, unknown> {}
+export interface ActivityData extends Record<string, unknown> {}
+export interface QuestionData extends Record<string, unknown> {}
+export type RecipeCondition = unknown;
+
 // ==================== DTOs ====================
 
 export interface CreateRecipeInput {
@@ -44,10 +50,10 @@ export interface CreateRecipeStepInput {
   conceptId?: string;
   activityId?: string;
   stepType?: StepType;
-  script?: Record<string, unknown>;
-  activity?: Record<string, unknown>;
-  question?: Record<string, unknown>;
-  condition?: any;
+  script?: ScriptData;
+  activity?: ActivityData;
+  question?: QuestionData;
+  condition?: RecipeCondition;
   onCondition?: string;
 }
 
@@ -65,10 +71,10 @@ export interface UpdateRecipeStepInput {
   conceptId?: string;
   activityId?: string;
   stepType?: StepType;
-  script?: Record<string, unknown> | null;
-  activity?: Record<string, unknown> | null;
-  question?: Record<string, unknown> | null;
-  condition?: any;
+  script?: ScriptData | null;
+  activity?: ActivityData | null;
+  question?: QuestionData | null;
+  condition?: RecipeCondition;
   onCondition?: string;
 }
 
@@ -120,9 +126,9 @@ export class RecipeService {
    */
   private async createAtomForStep(
     stepType: StepType,
-    script?: Record<string, unknown>,
-    activity?: Record<string, unknown>,
-    question?: Record<string, unknown>,
+    script?: ScriptData,
+    activity?: ActivityData,
+    question?: QuestionData,
   ): Promise<string> {
     // Determine content based on stepType
     let content: Record<string, unknown> | undefined;
@@ -186,9 +192,9 @@ export class RecipeService {
    */
   private async ensureAtomForStep(
     stepType: StepType,
-    script?: Record<string, unknown>,
-    activity?: Record<string, unknown>,
-    question?: Record<string, unknown>,
+    script?: ScriptData,
+    activity?: ActivityData,
+    question?: QuestionData,
     currentAtomId?: string, // If updating an existing step
   ): Promise<string> {
     if (currentAtomId) {
@@ -228,7 +234,7 @@ export class RecipeService {
       version,
       published: data.published || false,
       moduleId: data.moduleId || undefined,
-    } as any);
+    });
 
     // Add steps if provided, using addStep to ensure Atom generation
     if (data.steps && data.steps.length > 0) {
@@ -269,55 +275,30 @@ export class RecipeService {
     }
 
     // Increment version on any change
-    const currentVersion = recipe.version;
-    const newVersion = (this.incrementVersion as any)(currentVersion);
+    const newVersion = this.incrementVersion(recipe.version);
 
-    // Build update data - need to handle readonly fields
-    const updateData: {
-      version: string;
-      title?: string;
-      canonicalId?: string;
-      description?: string | null;
-      expectedDurationMinutes?: number | null;
-      moduleId?: string | null;
-      published?: boolean;
-    } = {
+    // Build update data as a single object using spreads to avoid mutating readonly properties
+    const updateData: Partial<Recipe> = {
       version: newVersion,
+      ...(data.title !== undefined && {
+        title: data.title.trim(),
+        canonicalId: this.generateCanonicalId(data.title.trim()),
+      }),
+      ...(data.description !== undefined && {
+        description: data.description.trim(),
+      }),
+      ...(data.expectedDurationMinutes !== undefined && {
+        expectedDurationMinutes: data.expectedDurationMinutes,
+      }),
+      ...(data.moduleId !== undefined && {
+        moduleId: data.moduleId,
+      }),
+      ...(data.published !== undefined && {
+        published: data.published,
+      }),
     };
 
-    if (data.title !== undefined) {
-      updateData.title = data.title.trim();
-      // Also update canonicalId if title changed
-      updateData.canonicalId = this.generateCanonicalId(data.title);
-    }
-    if (data.description !== undefined) {
-      updateData.description = data.description?.trim() || null;
-    }
-    if (data.expectedDurationMinutes !== undefined) {
-      updateData.expectedDurationMinutes = data.expectedDurationMinutes;
-    }
-    if (data.moduleId !== undefined) {
-      updateData.moduleId = data.moduleId || null;
-    }
-    if (data.published !== undefined) {
-      updateData.published = data.published;
-    }
-
-    // Remove undefined values from updateData
-    const cleanedUpdateData: Partial<Recipe> = {};
-    if (updateData.version) (cleanedUpdateData as any).version = updateData.version;
-    if (updateData.title) (cleanedUpdateData as any).title = updateData.title;
-    if (updateData.canonicalId) (cleanedUpdateData as any).canonicalId = updateData.canonicalId;
-    if (updateData.description !== undefined)
-      (cleanedUpdateData as any).description = updateData.description;
-    if (updateData.expectedDurationMinutes !== undefined)
-      (cleanedUpdateData as any).expectedDurationMinutes = updateData.expectedDurationMinutes;
-    if (updateData.moduleId !== undefined)
-      (cleanedUpdateData as any).moduleId = updateData.moduleId;
-    if (updateData.published !== undefined)
-      (cleanedUpdateData as any).published = updateData.published;
-
-    await this.recipeRepository.update(id, cleanedUpdateData);
+    await this.recipeRepository.update(id, updateData);
 
     return this.getRecipeById(id);
   }
@@ -332,7 +313,7 @@ export class RecipeService {
     }
 
     // Soft delete: unpublish the recipe
-    await this.recipeRepository.update(id, { published: false } as any);
+    await this.recipeRepository.update(id, { published: false });
   }
 
   /**
@@ -359,9 +340,9 @@ export class RecipeService {
     // Ensure atomId is present, creating a new Atom if needed
     const atomId = await this.ensureAtomForStep(
       stepData.stepType || 'content',
-      stepData.script as any,
-      stepData.activity as any,
-      stepData.question as any,
+      stepData.script,
+      stepData.activity,
+      stepData.question,
     );
 
     const step = await this.recipeRepository.createStep({
@@ -373,7 +354,7 @@ export class RecipeService {
       onCondition: undefined,
       conceptId: stepData.conceptId || undefined,
       activityId: stepData.activityId || undefined,
-      script: stepData.script as any, // Store the script directly for easy retrieval
+      script: stepData.script, // Store the script directly for easy retrieval
       stepType: stepData.stepType || 'content',
     });
 
@@ -415,7 +396,7 @@ export class RecipeService {
       newScriptContent = stepData.question || undefined;
     } else {
       // If no content provided in stepData, retain existing content from script if present
-      newScriptContent = (existingStep.script || undefined) as Record<string, unknown> | undefined;
+      newScriptContent = existingStep.script;
     }
 
     // Ensure Atom is updated or created if content changes
@@ -433,24 +414,17 @@ export class RecipeService {
       existingStep.atomId, // Pass existing atomId to update it
     );
 
-    // Build update data for the RecipeStep
+    // Build update data for the RecipeStep using conditional spreads to omit undefined
     const updateData: Partial<RecipeStep> = {
-      atomId: effectiveAtomId, // Always use the effective atomId
-      order: stepData.order,
-      condition: stepData.condition,
-      onCondition: stepData.onCondition,
-      conceptId: stepData.conceptId,
-      activityId: stepData.activityId,
-      script: newScriptContent as StepScript | undefined, // Store the consolidated content directly in RecipeStep.script
+      atomId: effectiveAtomId,
       stepType: effectiveStepType,
+      ...(stepData.order !== undefined && { order: stepData.order }),
+      ...(stepData.condition !== undefined && { condition: stepData.condition }),
+      ...(stepData.onCondition !== undefined && { onCondition: stepData.onCondition }),
+      ...(stepData.conceptId !== undefined && { conceptId: stepData.conceptId }),
+      ...(stepData.activityId !== undefined && { activityId: stepData.activityId }),
+      ...(newScriptContent !== undefined && { script: newScriptContent }),
     };
-
-    // Remove undefined values from updateData (except for those explicitly set to null)
-    Object.keys(updateData).forEach((key) => {
-      if ((updateData as any)[key] === undefined) {
-        delete (updateData as any)[key];
-      }
-    });
 
     const updated = await this.recipeRepository.updateStep(stepId, updateData);
     return updated;
@@ -514,13 +488,13 @@ export class RecipeService {
       if (step) {
         originalOrders.set(stepIds[i], step.order);
         // Temporarily set to negative value
-        await this.recipeRepository.updateStep(stepIds[i], { order: -(i + 1) } as any);
+        await this.recipeRepository.updateStep(stepIds[i], { order: -(i + 1) });
       }
     }
 
     // Then set the final order values
     for (let i = 0; i < stepIds.length; i++) {
-      await this.recipeRepository.updateStep(stepIds[i], { order: i } as any);
+      await this.recipeRepository.updateStep(stepIds[i], { order: i });
     }
   }
 
