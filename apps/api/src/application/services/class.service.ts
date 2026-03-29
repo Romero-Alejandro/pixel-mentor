@@ -16,42 +16,23 @@ import type {
   ClassLessonEntity,
 } from '@/domain/entities/class.entity.js';
 
-// ==================== Error Classes ====================
+// Import errors from centralized module
+import {
+  ClassNotFoundError,
+  ClassOwnershipError,
+  ClassStateError,
+  ClassValidationError,
+  LessonNotFoundError,
+} from '@/domain/errors/index.js';
 
-export class ClassNotFoundError extends Error {
-  constructor(classId: string) {
-    super(`Class not found: ${classId}`);
-    this.name = 'ClassNotFoundError';
-  }
-}
-
-export class ClassOwnershipError extends Error {
-  constructor(classId: string, tutorId: string) {
-    super(`User ${tutorId} does not have permission to modify class ${classId}`);
-    this.name = 'ClassOwnershipError';
-  }
-}
-
-export class ClassStateError extends Error {
-  constructor(classId: string, message: string) {
-    super(`Class ${classId} state error: ${message}`);
-    this.name = 'ClassStateError';
-  }
-}
-
-export class ClassValidationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'ClassValidationError';
-  }
-}
-
-export class LessonNotFoundError extends Error {
-  constructor(lessonId: string) {
-    super(`Lesson not found: ${lessonId}`);
-    this.name = 'LessonNotFoundError';
-  }
-}
+// Re-export errors for backward compatibility
+export {
+  ClassNotFoundError,
+  ClassOwnershipError,
+  ClassStateError,
+  ClassValidationError,
+  LessonNotFoundError,
+} from '@/domain/errors/index.js';
 
 // ==================== DTOs ====================
 
