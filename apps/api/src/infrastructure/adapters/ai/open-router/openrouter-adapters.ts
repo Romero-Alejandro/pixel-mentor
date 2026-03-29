@@ -1,8 +1,7 @@
 import OpenAI from 'openai';
 import type pino from 'pino';
-import type { z } from 'zod';
 
-import type { AIService, AIResponse } from '@/domain/ports/ai-service.js';
+import type { AIService, AIResponse, GenerateResponseParams } from '@/domain/ports/ai-service.js';
 import type { PromptRepository } from '@/domain/ports/prompt-repository.js';
 import type {
   QuestionClassifier,
@@ -13,7 +12,6 @@ import type {
 } from '@/domain/ports/question-classifier.js';
 import type { QuestionClassification } from '@/domain/entities/question-classification.js';
 import type { KnowledgeChunkRepository } from '@/domain/ports/knowledge-chunk-repository.js';
-import type { GenerateResponseParams } from '@/infrastructure/adapters/ai/base-llm-adapter.js';
 import { BaseGenerativeAdapter } from '@/infrastructure/adapters/ai/base-llm-adapter.js';
 import { BaseRAGAdapter } from '@/infrastructure/adapters/ai/base-rag-adapter.js';
 import { OpenAIBaseClientAdapter } from '@/infrastructure/adapters/ai/open-ai-base-adapter.js';
@@ -87,8 +85,12 @@ export class OpenRouterAdapter extends BaseGenerativeAdapter implements AIServic
   async generateExplanation(params: any) {
     return { voiceText: params.segment.chunkText };
   }
-  async evaluateResponse(params: any) {
-    return { result: 'correct' as const, confidence: 1 };
+  async evaluateResponse(_params: {
+    studentAnswer: string;
+    expectedAnswer: string;
+    microQuestion: string;
+  }): Promise<{ result: 'correct' | 'partial' | 'incorrect'; confidence: number; hint?: string }> {
+    return { result: 'incorrect', confidence: 0 };
   }
 
   async generateAnswer(params: any): Promise<{ answer: string }> {

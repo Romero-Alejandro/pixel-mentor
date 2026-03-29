@@ -1,4 +1,4 @@
-import { Router, type Request, type Response, type NextFunction } from 'express';
+import { Router, type Response, type NextFunction } from 'express';
 import { z } from 'zod';
 
 import type { GetRecipeUseCase } from '@/application/use-cases/recipe/get-recipe.use-case';
@@ -34,9 +34,10 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
   // GET /:id - Get recipe by ID
   router.get(
     '/:id',
-    async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+    // @ts-expect-error - Express 5 compatibility
+    async (request: AppRequest, response: Response, next: NextFunction): Promise<void> => {
       try {
-        const validated = GetRecipeInputSchema.parse({ recipeId: request.params.id });
+        const validated = GetRecipeInputSchema.parse({ recipeId: request.params.id as string });
 
         const recipe = await getRecipeUseCase.execute(validated.recipeId);
 
@@ -59,7 +60,8 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
   // GET / - List all recipes
   router.get(
     '/',
-    async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+    // @ts-expect-error - Express 5 compatibility
+    async (request: AppRequest, response: Response, next: NextFunction): Promise<void> => {
       try {
         const query: { activeOnly?: boolean } = {};
         const rawActiveOnly = request.query.activeOnly;
@@ -87,6 +89,7 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
   // POST / - Create a new recipe
   router.post(
     '/',
+    // @ts-expect-error - Express 5 compatibility
     async (request: AppRequest, response: Response, next: NextFunction): Promise<void> => {
       try {
         const userId = request.user?.id;
@@ -127,6 +130,7 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
   // PATCH /:id - Update a recipe
   router.patch(
     '/:id',
+    // @ts-expect-error - Express 5 compatibility
     async (request: AppRequest, response: Response, next: NextFunction): Promise<void> => {
       try {
         const userId = request.user?.id;
@@ -135,7 +139,7 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
           return;
         }
 
-        const recipeId = request.params.id;
+        const recipeId = request.params.id as string;
         const validated = UpdateRecipeInputSchema.parse(request.body);
 
         const isAdmin = request.user?.role === 'ADMIN';
@@ -179,6 +183,7 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
   // DELETE /:id - Delete a recipe
   router.delete(
     '/:id',
+    // @ts-expect-error - Express 5 compatibility
     async (request: AppRequest, response: Response, next: NextFunction): Promise<void> => {
       try {
         const userId = request.user?.id;
@@ -187,7 +192,7 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
           return;
         }
 
-        const recipeId = request.params.id;
+        const recipeId = request.params.id as string;
         const isAdmin = request.user?.role === 'ADMIN';
 
         await recipeService.deleteRecipe(recipeId, userId, isAdmin);
@@ -214,6 +219,7 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
   // POST /:id/steps - Add a step to a recipe
   router.post(
     '/:id/steps',
+    // @ts-expect-error - Express 5 compatibility
     async (request: AppRequest, response: Response, next: NextFunction): Promise<void> => {
       try {
         const userId = request.user?.id;
@@ -222,7 +228,7 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
           return;
         }
 
-        const recipeId = request.params.id;
+        const recipeId = request.params.id as string;
         const validated = RecipeStepInputSchema.parse(request.body);
 
         const step = await recipeService.addStep(
@@ -274,6 +280,7 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
   // PATCH /:id/steps/reorder - Reorder steps (MUST be BEFORE /:id/steps/:stepId)
   router.patch(
     '/:id/steps/reorder',
+    // @ts-expect-error - Express 5 compatibility
     async (request: AppRequest, response: Response, next: NextFunction): Promise<void> => {
       try {
         const userId = request.user?.id;
@@ -282,7 +289,7 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
           return;
         }
 
-        const recipeId = request.params.id;
+        const recipeId = request.params.id as string;
         const validated = ReorderStepsInputSchema.parse(request.body);
 
         console.log('[reorderSteps] recipeId:', recipeId, 'stepIds:', validated.stepIds);
@@ -320,6 +327,7 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
   // PATCH /:id/steps/:stepId - Update a step
   router.patch(
     '/:id/steps/:stepId',
+    // @ts-expect-error - Express 5 compatibility
     async (request: AppRequest, response: Response, next: NextFunction): Promise<void> => {
       try {
         const userId = request.user?.id;
@@ -328,7 +336,7 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
           return;
         }
 
-        const stepId = request.params.stepId;
+        const stepId = request.params.stepId as string;
         const validated = RecipeStepInputSchema.parse(request.body);
 
         const step = await recipeService.updateStep(
@@ -384,6 +392,7 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
   // DELETE /:id/steps/:stepId - Delete a step
   router.delete(
     '/:id/steps/:stepId',
+    // @ts-expect-error - Express 5 compatibility
     async (request: AppRequest, response: Response, next: NextFunction): Promise<void> => {
       try {
         const userId = request.user?.id;
@@ -392,7 +401,7 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
           return;
         }
 
-        const stepId = request.params.stepId;
+        const stepId = request.params.stepId as string;
 
         await recipeService.deleteStep(stepId, userId);
 
@@ -418,6 +427,7 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
   // PATCH /:id/steps/reorder - Reorder steps
   router.patch(
     '/:id/steps/reorder',
+    // @ts-expect-error - Express 5 compatibility
     async (request: AppRequest, response: Response, next: NextFunction): Promise<void> => {
       try {
         const userId = request.user?.id;
@@ -426,7 +436,7 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
           return;
         }
 
-        const recipeId = request.params.id;
+        const recipeId = request.params.id as string;
         const validated = ReorderStepsInputSchema.parse(request.body);
 
         await recipeService.reorderSteps(recipeId, validated.stepIds, userId);

@@ -20,8 +20,6 @@ import {
   createClassEntity,
   createClassLessonEntity,
   createClassVersionEntity,
-  type ClassStatus,
-  type UserRole,
 } from '@/domain/entities/class.entity';
 
 describe('Class Entity - State Machine', () => {
@@ -337,7 +335,7 @@ describe('Class Entity - Factory Functions', () => {
             id: 'lesson-1',
             classId: 'class-1',
             order: 0,
-            title: 'Lesson 1',
+            recipeId: 'recipe-1',
           }),
         ],
       });
@@ -367,24 +365,20 @@ describe('Class Entity - Factory Functions', () => {
         classId: 'class-1',
         recipeId: 'recipe-1',
         order: 0,
-        title: 'Introduction',
-        duration: 30,
       });
 
       expect(lesson.id).toBe('lesson-1');
       expect(lesson.classId).toBe('class-1');
       expect(lesson.recipeId).toBe('recipe-1');
       expect(lesson.order).toBe(0);
-      expect(lesson.title).toBe('Introduction');
-      expect(lesson.duration).toBe(30);
     });
 
     it('should freeze the lesson entity', () => {
       const lesson = createClassLessonEntity({
         id: 'lesson-1',
         classId: 'class-1',
+        recipeId: 'recipe-1',
         order: 0,
-        title: 'Test Lesson',
       });
 
       expect(Object.isFrozen(lesson)).toBe(true);

@@ -82,6 +82,7 @@ export function createClassRouter(deps: ClassRouterDependencies): Router {
    * POST /api/classes - Create a new draft class
    * Auth: TEACHER role required
    */
+  // @ts-expect-error - Express 5 compatibility
   router.post('/', async (req: AppRequest, res: Response): Promise<void> => {
     try {
       const tutorId = req.user?.id;
@@ -118,6 +119,7 @@ export function createClassRouter(deps: ClassRouterDependencies): Router {
    * GET /api/classes - List tutor's classes
    * Auth: TEACHER role required
    */
+  // @ts-expect-error - Express 5 compatibility
   router.get('/', async (req: AppRequest, res: Response): Promise<void> => {
     try {
       const tutorId = req.user?.id;
@@ -155,9 +157,10 @@ export function createClassRouter(deps: ClassRouterDependencies): Router {
    * GET /api/classes/:id - Get class details
    * Auth: TEACHER role required
    */
+  // @ts-expect-error - Express 5 compatibility
   router.get('/:id', async (req: AppRequest, res: Response): Promise<void> => {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
       const tutorId = req.user?.id;
 
       if (!tutorId) {
@@ -187,9 +190,10 @@ export function createClassRouter(deps: ClassRouterDependencies): Router {
    * PATCH /api/classes/:id - Update class
    * Auth: TEACHER role required
    */
+  // @ts-expect-error - Express 5 compatibility
   router.patch('/:id', async (req: AppRequest, res: Response): Promise<void> => {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
       const tutorId = req.user?.id;
 
       if (!tutorId) {
@@ -233,9 +237,10 @@ export function createClassRouter(deps: ClassRouterDependencies): Router {
    * DELETE /api/classes/:id - Delete class
    * Auth: TEACHER role required
    */
+  // @ts-expect-error - Express 5 compatibility
   router.delete('/:id', async (req: AppRequest, res: Response): Promise<void> => {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
       const tutorId = req.user?.id;
 
       if (!tutorId) {
@@ -267,9 +272,10 @@ export function createClassRouter(deps: ClassRouterDependencies): Router {
    * POST /api/classes/:id/publish - Publish class
    * Auth: TEACHER role required
    */
+  // @ts-expect-error - Express 5 compatibility
   router.post('/:id/publish', async (req: AppRequest, res: Response): Promise<void> => {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
       const tutorId = req.user?.id;
 
       if (!tutorId) {
@@ -305,9 +311,10 @@ export function createClassRouter(deps: ClassRouterDependencies): Router {
    * POST /api/classes/:id/unpublish - Unpublish class (PUBLISHED -> DRAFT)
    * Auth: TEACHER role required
    */
+  // @ts-expect-error - Express 5 compatibility
   router.post('/:id/unpublish', async (req: AppRequest, res: Response): Promise<void> => {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
       const tutorId = req.user?.id;
 
       if (!tutorId) {
@@ -339,9 +346,10 @@ export function createClassRouter(deps: ClassRouterDependencies): Router {
    * POST /api/classes/:id/lessons - Add lesson to class
    * Auth: TEACHER role required
    */
+  // @ts-expect-error - Express 5 compatibility
   router.post('/:id/lessons', async (req: AppRequest, res: Response): Promise<void> => {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
       const tutorId = req.user?.id;
 
       if (!tutorId) {
@@ -386,9 +394,10 @@ export function createClassRouter(deps: ClassRouterDependencies): Router {
    * NOTE: This route must be BEFORE /:lessonId routes to avoid "reorder" being parsed as lessonId
    * Auth: TEACHER role required
    */
+  // @ts-expect-error - Express 5 compatibility
   router.patch('/:id/lessons/reorder', async (req: AppRequest, res: Response): Promise<void> => {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
       const tutorId = req.user?.id;
 
       if (!tutorId) {
@@ -431,9 +440,11 @@ export function createClassRouter(deps: ClassRouterDependencies): Router {
    * DELETE /api/classes/:id/lessons/:lessonId - Remove lesson from class
    * Auth: TEACHER role required
    */
+  // @ts-expect-error - Express 5 compatibility
   router.delete('/:id/lessons/:lessonId', async (req: AppRequest, res: Response): Promise<void> => {
     try {
-      const { id, lessonId } = req.params;
+      const id = req.params.id as string;
+      const lessonId = req.params.lessonId as string;
       const tutorId = req.user?.id;
 
       if (!tutorId) {
@@ -469,9 +480,11 @@ export function createClassRouter(deps: ClassRouterDependencies): Router {
    * PATCH /api/classes/:id/lessons/:lessonId - Update a lesson
    * Auth: TEACHER role required
    */
+  // @ts-expect-error - Express 5 compatibility
   router.patch('/:id/lessons/:lessonId', async (req: AppRequest, res: Response): Promise<void> => {
     try {
-      const { id, lessonId } = req.params;
+      const id = req.params.id as string;
+      const lessonId = req.params.lessonId as string;
       const tutorId = req.user?.id;
 
       if (!tutorId) {
@@ -522,6 +535,7 @@ export function createClassRouter(deps: ClassRouterDependencies): Router {
    */
   router.post(
     '/:id/demo',
+    // @ts-expect-error - Express 5 compatibility
     async (req: AppRequest, res: Response, next: NextFunction): Promise<void> => {
       const { classLessonRepository, startRecipeUseCase } = deps;
       try {

@@ -2,14 +2,12 @@ import type pino from 'pino';
 import type { z } from 'zod';
 
 import type { PedagogicalState } from '@/domain/entities/pedagogical-state.js';
-import type { PromptRepository } from '@/domain/ports/prompt-repository.js';
+import type { PromptRepository, PromptParams } from '@/domain/ports/prompt-repository.js';
+import type { GenerateResponseParams as DomainGenerateResponseParams } from '@/domain/ports/ai-service.js';
 import { cleanJsonResponse } from '@/utils/ai-utils';
 
-export interface GenerateResponseParams {
-  currentState: PedagogicalState;
-  nextState?: PedagogicalState;
-  [key: string]: unknown;
-}
+// Re-export the domain type for adapters
+export type GenerateResponseParams = DomainGenerateResponseParams;
 
 export abstract class BaseLLMAdapter {
   protected logger?: pino.Logger;
@@ -55,7 +53,18 @@ export abstract class BaseGenerativeAdapter extends BaseLLMAdapter {
   }
 
   protected buildPrompt(state: PedagogicalState, params: Record<string, unknown>): string {
-    const basePrompt = this.promptRepo.getPrompt(state, params);
+    const promptParams: PromptParams = {
+      lesson: (params as DomainGenerateResponseParams).recipe,
+      currentState: state,
+      conversationHistory: params.conversationHistory as PromptParams['conversationHistory'],
+      currentQuestion: params.currentQuestion as PromptParams['currentQuestion'],
+      ragContext: params.ragContext,
+      currentSegment: params.currentSegment as PromptParams['currentSegment'],
+      totalSegments: params.totalSegments as number | undefined,
+      persona: params.persona as string | undefined,
+      historySummary: params.historySummary as string | undefined,
+    };
+    const basePrompt = this.promptRepo.getPrompt(state, promptParams);
     const hidden = this.getHiddenInstructions(
       state,
       params.nextState as PedagogicalState | undefined,
@@ -92,7 +101,7 @@ export abstract class BaseGenerativeAdapter extends BaseLLMAdapter {
       const parsed = JSON.parse(cleanedText);
       const validation = schema.safeParse(parsed);
       if (!validation.success) {
-        this.logger?.error({ msg: 'Validation error', state, errors: validation.error.errors });
+        this.logger?.error({ msg: 'Validation error', state, errors: validation.error.issues });
         return null;
       }
       return validation.data;

@@ -76,6 +76,7 @@ export interface CreateRecipeInput {
 }
 
 export interface CreateRecipeStepInput {
+  atomId?: string;
   order?: number;
   conceptId?: string;
   activityId?: string;
@@ -96,6 +97,7 @@ export interface UpdateRecipeInput {
 }
 
 export interface UpdateRecipeStepInput {
+  atomId?: string;
   order?: number;
   conceptId?: string;
   activityId?: string;

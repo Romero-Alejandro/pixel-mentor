@@ -45,7 +45,7 @@ function toClassVersionEntity(prismaVersion: any): ClassVersionEntity {
           }): ClassVersionLessonEntity => ({
             id: l.id,
             classVersionId: l.classVersionId,
-            recipeId: l.recipeId ?? undefined,
+            recipeId: l.recipeId!,
             order: l.order,
             title: l.title,
             duration: l.duration ?? undefined,

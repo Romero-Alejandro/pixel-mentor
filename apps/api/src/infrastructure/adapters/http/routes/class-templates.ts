@@ -48,7 +48,9 @@ export function createClassTemplateRouter(deps: ClassTemplateRouterDependencies)
    * GET /api/class-templates - List tutor's templates
    * Auth: TEACHER role required
    */
-  router.get('/', async (req: AppRequest, res: Response, next: NextFunction): Promise<void> => {
+  router.get('/',
+    // @ts-expect-error - Express 5 compatibility
+    async (req: AppRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const tutorId = req.user?.id;
       if (!tutorId) {
@@ -74,7 +76,9 @@ export function createClassTemplateRouter(deps: ClassTemplateRouterDependencies)
    * POST /api/class-templates - Create a new template
    * Auth: TEACHER role required
    */
-  router.post('/', async (req: AppRequest, res: Response, next: NextFunction): Promise<void> => {
+  router.post('/',
+    // @ts-expect-error - Express 5 compatibility
+    async (req: AppRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const tutorId = req.user?.id;
       if (!tutorId) {
@@ -112,7 +116,9 @@ export function createClassTemplateRouter(deps: ClassTemplateRouterDependencies)
    * GET /api/class-templates/:id - Get template details
    * Auth: TEACHER role required
    */
-  router.get('/:id', async (req: AppRequest, res: Response, next: NextFunction): Promise<void> => {
+  router.get('/:id',
+    // @ts-expect-error - Express 5 compatibility
+    async (req: AppRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const id = req.params.id as string;
       const tutorId = req.user?.id;
@@ -152,6 +158,7 @@ export function createClassTemplateRouter(deps: ClassTemplateRouterDependencies)
    */
   router.patch(
     '/:id',
+    // @ts-expect-error - Express 5 compatibility
     async (req: AppRequest, res: Response, next: NextFunction): Promise<void> => {
       try {
         const id = req.params.id as string;
@@ -203,6 +210,7 @@ export function createClassTemplateRouter(deps: ClassTemplateRouterDependencies)
    */
   router.delete(
     '/:id',
+    // @ts-expect-error - Express 5 compatibility
     async (req: AppRequest, res: Response, next: NextFunction): Promise<void> => {
       try {
         const id = req.params.id as string;
@@ -246,6 +254,7 @@ export function createClassTemplateRouter(deps: ClassTemplateRouterDependencies)
    */
   router.post(
     '/:id/create-class',
+    // @ts-expect-error - Express 5 compatibility
     async (req: AppRequest, res: Response, next: NextFunction): Promise<void> => {
       try {
         const id = req.params.id as string;

@@ -387,7 +387,7 @@ export function createGamificationRouter(
         // TODO: Store accuracy in session and retrieve it here for accurate reporting.
         const accuracyPercent = 100;
         const xpEarned = calculateXPFromAccuracy(accuracyPercent);
-        const performanceTier = getPerformanceTier(accuracyPercent);
+        void getPerformanceTier(accuracyPercent);
 
         // 4. Find new badges earned after session completion
         const newBadges = await prisma.userBadge.findMany({

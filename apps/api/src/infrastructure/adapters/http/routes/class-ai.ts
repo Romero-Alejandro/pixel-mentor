@@ -50,6 +50,7 @@ export function createClassAIRouter(deps: ClassAIRouterDependencies): Router {
    */
   router.post(
     '/generate',
+    // @ts-expect-error - Express 5 compatibility
     async (req: AppRequest, res: Response, next: NextFunction): Promise<void> => {
       try {
         // Check TEACHER role
@@ -98,6 +99,7 @@ export function createClassAISuggestionsRouter(deps: ClassAIRouterDependencies):
    */
   router.get(
     '/suggestions',
+    // @ts-expect-error - Express 5 compatibility
     async (req: AppRequest, res: Response, next: NextFunction): Promise<void> => {
       try {
         const classId = req.params.id as string;

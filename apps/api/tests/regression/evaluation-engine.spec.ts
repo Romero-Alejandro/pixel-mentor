@@ -20,7 +20,7 @@
 
 import { z } from 'zod';
 
-import { EvaluationResponseSchema, type EvaluationResponse } from '@/evaluator/lesson.evaluator';
+import { EvaluationResponseSchema, type EvaluationResponse } from '@/evaluator/schemas';
 
 // ============================================================
 // Test Fixtures - Sample Data

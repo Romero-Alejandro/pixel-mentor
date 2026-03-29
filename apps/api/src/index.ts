@@ -1,3 +1,4 @@
+import type { Server } from 'http';
 import pino from 'pino';
 
 import { buildContainer } from './dependency-container';
@@ -23,11 +24,11 @@ async function verifyDatabaseConnection(): Promise<void> {
   }
 }
 
-function setupGracefulShutdown(server: ReturnType<typeof createApp>, shutdownSignal: string): void {
+function setupGracefulShutdown(server: Server, shutdownSignal: string): void {
   logger.info({ signal: shutdownSignal }, 'Received shutdown signal');
   let isClosed = false;
 
-  server.close((error) => {
+  server.close((error?: Error) => {
     if (error) {
       logger.error(error, 'Error closing server');
     }
@@ -62,7 +63,7 @@ async function bootstrap(): Promise<void> {
   const featureFlagService = getFeatureFlagService();
   runStagingValidation(featureFlagService);
 
-  const server = createApp({
+  const app = createApp({
     config,
     logger,
     prisma,
@@ -84,7 +85,10 @@ async function bootstrap(): Promise<void> {
     recipeAIService: container.recipeAIService,
     // Admin services
     adminUserService: container.adminUserService,
-  }).listen(config.PORT, () => {
+  });
+
+  // Express app.listen() returns http.Server in Express 5
+  const server: Server = app.listen(config.PORT, () => {
     logger.info(`API running on port ${config.PORT}`);
   });
 

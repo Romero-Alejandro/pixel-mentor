@@ -8,28 +8,6 @@ export const TTS_EVENT_TYPES = {
   ERROR: 'error',
 } as const;
 
-interface TTSMessage<T extends string, D = unknown> {
-  type: T;
-  data: D;
-}
-
-interface TTSAudioMessageData {
-  audioBase64: string;
-}
-
-interface TTSEndMessageData {
-  reason: string;
-}
-
-interface TTSErrorMessageData {
-  message: string;
-  code: string;
-}
-
-type TTSAudioMessage = TTSMessage<typeof TTS_EVENT_TYPES.AUDIO, TTSAudioMessageData>;
-type TTSEndMessage = TTSMessage<typeof TTS_EVENT_TYPES.END, TTSEndMessageData>;
-type TTSErrorMessage = TTSMessage<typeof TTS_EVENT_TYPES.ERROR, TTSErrorMessageData>;
-
 export interface TTSStreamOptions {
   lang?: string;
   slow?: boolean;

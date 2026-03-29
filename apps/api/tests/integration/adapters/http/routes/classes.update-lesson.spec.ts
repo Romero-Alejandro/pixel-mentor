@@ -14,31 +14,6 @@ import {
   ClassStateError,
   LessonNotFoundError,
 } from '@/application/services/class.service.js';
-import type { ClassEntity, ClassLessonEntity } from '@/domain/entities/class.entity.js';
-
-// Mock factories for entities
-const createMockClass = (overrides: Partial<ClassEntity> = {}): ClassEntity => ({
-  id: 'class-1',
-  title: 'Test Class',
-  description: 'Test Description',
-  tutorId: 'tutor-1',
-  status: 'DRAFT',
-  version: 0,
-  createdAt: new Date('2024-01-01'),
-  updatedAt: new Date('2024-01-01'),
-  lessons: [],
-  ...overrides,
-});
-
-const createMockLesson = (overrides: Partial<ClassLessonEntity> = {}): ClassLessonEntity => ({
-  id: 'lesson-1',
-  classId: 'class-1',
-  order: 0,
-  title: 'Test Lesson',
-  createdAt: new Date('2024-01-01'),
-  updatedAt: new Date('2024-01-01'),
-  ...overrides,
-});
 
 // Mock ClassService with updateLesson
 const createMockClassService = (): jest.Mocked<ClassService> => {

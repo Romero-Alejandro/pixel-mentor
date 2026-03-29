@@ -4,9 +4,10 @@ import type { AppRequest } from '@/types/express.js';
 import type { TTSService } from '@/domain/ports/tts-service.js';
 import { TTSStreamService } from '@/services/ttsStream.js';
 
-export function createTTSRouter(ttsService: TTSService): Router {
+export function createTTSRouter(_ttsService: TTSService): Router {
   const router = Router();
 
+  // @ts-expect-error - Express 5 compatibility
   router.get('/stream', (req: AppRequest, res: Response) => {
     const { text, lang, slow } = req.query;
 

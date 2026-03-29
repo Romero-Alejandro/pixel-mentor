@@ -11,7 +11,6 @@ import type {
   ClassificationPayload,
   ComprehensionEvaluator,
   ComprehensionPayload,
-  ComprehensionEvaluation,
 } from '@/domain/ports/question-classifier.js';
 import type { KnowledgeChunkRepository } from '@/domain/ports/knowledge-chunk-repository.js';
 import type { PromptRepository } from '@/domain/ports/prompt-repository.js';
@@ -68,10 +67,14 @@ export class GroqAdapter extends BaseGenerativeAdapter implements AIService {
   async generateExplanation(params: any) {
     return { voiceText: params.segment.chunkText };
   }
-  async evaluateResponse(params: any) {
-    return { result: 'correct', confidence: 1 };
+  async evaluateResponse(_params: {
+    studentAnswer: string;
+    expectedAnswer: string;
+    microQuestion: string;
+  }): Promise<{ result: 'correct' | 'partial' | 'incorrect'; confidence: number; hint?: string }> {
+    return { result: 'incorrect', confidence: 0 };
   }
-  async generateAnswer(params: any) {
+  async generateAnswer(_params: any) {
     return { answer: 'Respuesta' };
   }
 }

@@ -28,10 +28,14 @@ const createMockLesson = (overrides: Partial<ClassLessonEntity> = {}): ClassLess
   id: 'lesson-1',
   classId: 'class-1',
   order: 0,
-  title: 'Test Lesson',
   recipeId: 'recipe-1',
   createdAt: new Date('2024-01-01'),
   updatedAt: new Date('2024-01-01'),
+  recipe: {
+    id: 'recipe-1',
+    title: 'Test Lesson',
+    expectedDurationMinutes: 30,
+  },
   ...overrides,
 });
 
@@ -87,8 +91,16 @@ describe('POST /api/classes/:id/demo', () => {
         id: 'class-1',
         tutorId: 'tutor-1',
         lessons: [
-          createMockLesson({ id: 'lesson-1', recipeId: 'recipe-1', title: 'Lesson 1' }),
-          createMockLesson({ id: 'lesson-2', recipeId: 'recipe-2', title: 'Lesson 2' }),
+          createMockLesson({
+            id: 'lesson-1',
+            recipeId: 'recipe-1',
+            recipe: { id: 'recipe-1', title: 'Lesson 1', expectedDurationMinutes: 30 },
+          }),
+          createMockLesson({
+            id: 'lesson-2',
+            recipeId: 'recipe-2',
+            recipe: { id: 'recipe-2', title: 'Lesson 2', expectedDurationMinutes: 30 },
+          }),
         ],
       });
       classService.getClass.mockResolvedValue(mockClass);
@@ -241,9 +253,17 @@ describe('POST /api/classes/:id/demo', () => {
         id: 'class-1',
         tutorId: 'tutor-1',
         lessons: [
-          createMockLesson({ id: 'lesson-1', recipeId: undefined, title: 'No Recipe' }),
-          createMockLesson({ id: 'lesson-2', recipeId: 'recipe-2', title: 'Lesson 2' }),
-          createMockLesson({ id: 'lesson-3', recipeId: 'recipe-3', title: 'Lesson 3' }),
+          createMockLesson({ id: 'lesson-1', recipeId: undefined, recipe: undefined }),
+          createMockLesson({
+            id: 'lesson-2',
+            recipeId: 'recipe-2',
+            recipe: { id: 'recipe-2', title: 'Lesson 2', expectedDurationMinutes: 30 },
+          }),
+          createMockLesson({
+            id: 'lesson-3',
+            recipeId: 'recipe-3',
+            recipe: { id: 'recipe-3', title: 'Lesson 3', expectedDurationMinutes: 30 },
+          }),
         ],
       });
       classService.getClass.mockResolvedValue(mockClass);

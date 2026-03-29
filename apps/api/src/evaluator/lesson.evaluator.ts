@@ -144,7 +144,7 @@ export class LessonEvaluatorUseCase {
    */
   constructor(
     private readonly llmClient: ILLMClient,
-    private readonly promptBuilder: ISafePromptBuilder, // Used for prompt building flexibility
+    promptBuilder: ISafePromptBuilder,
     private readonly schemaValidator: ISchemaValidator<unknown>,
   ) {
     if (!llmClient) {

@@ -23,6 +23,8 @@ export interface ClassVersionLessonEntity {
   readonly classVersionId: string;
   readonly recipeId: string;
   readonly order: number;
+  readonly title?: string;
+  readonly duration?: number;
   readonly recipeSnapshot?: Record<string, unknown>;
   readonly createdAt: Date;
 }

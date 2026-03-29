@@ -23,7 +23,6 @@ import {
   type UpdateClassInput,
   type AddLessonInput,
   type UpdateLessonInput,
-  type ClassWithLessons,
 } from '@/application/services/class.service.js';
 import type {
   IClassRepository,
@@ -52,8 +51,8 @@ const createMockClassEntity = (overrides: Partial<ClassEntity> = {}): ClassEntit
 const createMockLessonEntity = (overrides: Partial<ClassLessonEntity> = {}): ClassLessonEntity => ({
   id: 'lesson-1',
   classId: 'class-1',
+  recipeId: 'recipe-1',
   order: 0,
-  title: 'Test Lesson',
   createdAt: new Date(),
   updatedAt: new Date(),
   ...overrides,
@@ -130,8 +129,8 @@ describe('ClassService', () => {
       const input: CreateClassInput = {
         title: 'New Class',
         lessons: [
-          { title: 'Lesson 1', order: 0 },
-          { title: 'Lesson 2', order: 1 },
+          { recipeId: 'recipe-1', order: 0 },
+          { recipeId: 'recipe-2', order: 1 },
         ],
       };
 
@@ -330,7 +329,7 @@ describe('ClassService', () => {
       );
 
       const input: AddLessonInput = {
-        title: 'New Lesson',
+        recipeId: 'recipe-new',
       };
 
       // When
@@ -339,9 +338,7 @@ describe('ClassService', () => {
       // Then
       expect(lessonRepo.create).toHaveBeenCalledWith({
         classId: 'class-1',
-        title: 'New Lesson',
-        recipeId: undefined,
-        duration: undefined,
+        recipeId: 'recipe-new',
         order: 1, // Next order after existing lesson
       });
       expect(result.order).toBe(1);
@@ -354,7 +351,7 @@ describe('ClassService', () => {
 
       // When/Then
       await expect(
-        service.addLesson('class-1', 'tutor-1', { title: 'New Lesson' }),
+        service.addLesson('class-1', 'tutor-1', { recipeId: 'recipe-1' }),
       ).rejects.toThrow(ClassStateError);
     });
   });
@@ -454,15 +451,14 @@ describe('ClassService', () => {
   });
 
   describe('updateLesson', () => {
-    it('should update lesson title, recipeId, and duration for DRAFT class', async () => {
+    it('should update lesson recipeId and order for DRAFT class', async () => {
       // Given
       const mockClass = createMockClassEntity({ id: 'class-1', status: 'DRAFT' });
       const mockLesson = createMockLessonEntity({
         id: 'lesson-1',
         classId: 'class-1',
-        title: 'Original Title',
-        recipeId: undefined,
-        duration: undefined,
+        recipeId: 'recipe-original',
+        order: 0,
       });
       const mockLessons = [mockLesson];
 
@@ -470,15 +466,13 @@ describe('ClassService', () => {
       lessonRepo.findByClassId.mockResolvedValue(mockLessons);
       lessonRepo.update.mockResolvedValue({
         ...mockLesson,
-        title: 'Updated Title',
         recipeId: 'recipe-123',
-        duration: 30,
+        order: 5,
       });
 
       const updateData: UpdateLessonInput = {
-        title: 'Updated Title',
         recipeId: 'recipe-123',
-        duration: 30,
+        order: 5,
       };
 
       // When
@@ -486,13 +480,11 @@ describe('ClassService', () => {
 
       // Then
       expect(lessonRepo.update).toHaveBeenCalledWith('lesson-1', {
-        title: 'Updated Title',
         recipeId: 'recipe-123',
-        duration: 30,
+        order: 5,
       });
-      expect(result.title).toBe('Updated Title');
       expect(result.recipeId).toBe('recipe-123');
-      expect(result.duration).toBe(30);
+      expect(result.order).toBe(5);
     });
 
     it('should update only provided fields', async () => {
@@ -501,9 +493,8 @@ describe('ClassService', () => {
       const mockLesson = createMockLessonEntity({
         id: 'lesson-1',
         classId: 'class-1',
-        title: 'Original Title',
-        recipeId: 'original-recipe',
-        duration: 10,
+        recipeId: 'recipe-original',
+        order: 0,
       });
       const mockLessons = [mockLesson];
 
@@ -511,11 +502,11 @@ describe('ClassService', () => {
       lessonRepo.findByClassId.mockResolvedValue(mockLessons);
       lessonRepo.update.mockResolvedValue({
         ...mockLesson,
-        title: 'New Title',
+        recipeId: 'recipe-new',
       });
 
       const updateData: UpdateLessonInput = {
-        title: 'New Title',
+        recipeId: 'recipe-new',
       };
 
       // When
@@ -523,7 +514,7 @@ describe('ClassService', () => {
 
       // Then
       expect(lessonRepo.update).toHaveBeenCalledWith('lesson-1', {
-        title: 'New Title',
+        recipeId: 'recipe-new',
       });
     });
 
@@ -533,7 +524,7 @@ describe('ClassService', () => {
 
       // When/Then
       await expect(
-        service.updateLesson('non-existent', 'lesson-1', 'tutor-1', { title: 'Test' }),
+        service.updateLesson('non-existent', 'lesson-1', 'tutor-1', { recipeId: 'recipe-1' }),
       ).rejects.toThrow(ClassNotFoundError);
     });
 
@@ -544,7 +535,7 @@ describe('ClassService', () => {
 
       // When/Then
       await expect(
-        service.updateLesson('class-1', 'lesson-1', 'tutor-1', { title: 'Test' }),
+        service.updateLesson('class-1', 'lesson-1', 'tutor-1', { recipeId: 'recipe-1' }),
       ).rejects.toThrow(ClassOwnershipError);
     });
 
@@ -555,7 +546,7 @@ describe('ClassService', () => {
 
       // When/Then
       await expect(
-        service.updateLesson('class-1', 'lesson-1', 'tutor-1', { title: 'Test' }),
+        service.updateLesson('class-1', 'lesson-1', 'tutor-1', { recipeId: 'recipe-1' }),
       ).rejects.toThrow(ClassStateError);
     });
 
@@ -567,7 +558,7 @@ describe('ClassService', () => {
 
       // When/Then
       await expect(
-        service.updateLesson('class-1', 'non-existent-lesson', 'tutor-1', { title: 'Test' }),
+        service.updateLesson('class-1', 'non-existent-lesson', 'tutor-1', { recipeId: 'recipe-1' }),
       ).rejects.toThrow(LessonNotFoundError);
     });
   });

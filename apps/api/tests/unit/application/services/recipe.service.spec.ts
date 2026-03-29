@@ -1,7 +1,6 @@
 import {
   RecipeService,
   RecipeNotFoundError,
-  RecipeOwnershipError,
   RecipeValidationError,
   StepNotFoundError,
 } from '@/application/services/recipe.service.js';
@@ -366,10 +365,10 @@ describe('RecipeService', () => {
       recipeRepository.findById.mockResolvedValue(createMockRecipe());
       recipeRepository.findStepsByRecipeId.mockResolvedValue([]);
       recipeRepository.createStep.mockImplementation((data) =>
-        Promise.resolve({ id: crypto.randomUUID(), ...data }),
+        Promise.resolve({ ...data, createdAt: new Date() }),
       );
       atomRepository.create.mockImplementation((data) =>
-        Promise.resolve({ id: crypto.randomUUID(), ...data }),
+        Promise.resolve({ ...data, createdAt: new Date(), updatedAt: new Date() }),
       );
 
       const result = await service.addStep('recipe-123', stepInput, 'user-123');
@@ -411,7 +410,18 @@ describe('RecipeService', () => {
       recipeRepository.findStepById.mockResolvedValue(mockStep);
       recipeRepository.findById.mockResolvedValue(createMockRecipe());
       recipeRepository.updateStep.mockResolvedValue({ ...mockStep, order: 5 });
-      atomRepository.update.mockResolvedValue({ ...mockStep, order: 5 });
+      atomRepository.update.mockResolvedValue({
+        id: 'atom-123',
+        canonicalId: 'test-atom',
+        title: 'Test Atom',
+        type: 'MICROLECTURE' as any,
+        locale: 'en',
+        difficulty: 1,
+        version: '1.0.0',
+        published: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
 
       const stepInput = {
         order: 5,

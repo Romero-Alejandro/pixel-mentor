@@ -25,7 +25,7 @@ import {
   createClassAISuggestionsRouter,
   type ClassAIRouterDependencies,
 } from './routes/class-ai.js';
-import { createRecipeAIRouter, type RecipeAIRouterDependencies } from './routes/recipe-ai.js';
+import { createRecipeAIRouter } from './routes/recipe-ai.js';
 import {
   createClassTemplateRouter,
   type ClassTemplateRouterDependencies,
@@ -222,6 +222,7 @@ export function createApp(deps: ServerDependencies): Express {
 
   app.use(requestLoggerMiddleware(logger));
 
+  // @ts-expect-error - Express 5 compatibility
   app.get('/health', async (req: AppRequest, res: Response) => {
     const requestLogger = req.logger ?? logger;
     const health: Record<string, unknown> = { status: 'ok', timestamp: new Date().toISOString() };
@@ -239,6 +240,7 @@ export function createApp(deps: ServerDependencies): Express {
     res.status(statusCode).json(health);
   });
 
+  // @ts-expect-error - Express 5 compatibility
   app.get('/api', (_req: AppRequest, res: Response) => {
     res.json({
       name: 'Pixel Mentor API',
@@ -322,13 +324,15 @@ export function createApp(deps: ServerDependencies): Express {
   // Metrics endpoint for evaluation monitoring (public, no auth required)
   app.use('/api/metrics/evaluation', createMetricsRouter());
 
+  // @ts-expect-error - Express 5 compatibility
   app.use((_req: AppRequest, res: Response) => {
     res.status(404).json({ error: 'Not found' });
   });
 
+  // @ts-expect-error - Express 5 compatibility
   app.use((err: unknown, req: AppRequest, res: Response, _next: NextFunction) => {
     const requestLogger = req.logger ?? logger;
-    requestLogger.error(err, { url: req.url, method: req.method });
+    requestLogger.error({ url: req.url, method: req.method, err: String(err) });
 
     // Handle typed AuthError
     if (err instanceof Error && 'httpStatus' in err && 'code' in err) {

@@ -44,9 +44,14 @@ const createMockLesson = (overrides: Partial<ClassLessonEntity> = {}): ClassLess
   id: 'lesson-1',
   classId: 'class-1',
   order: 0,
-  title: 'Test Lesson',
+  recipeId: 'recipe-1',
   createdAt: new Date('2024-01-01'),
   updatedAt: new Date('2024-01-01'),
+  recipe: {
+    id: 'recipe-1',
+    title: 'Test Lesson',
+    expectedDurationMinutes: 30,
+  },
   ...overrides,
 });
 
@@ -363,7 +368,10 @@ describe('Classes API Routes', () => {
   describe('POST /api/classes/:id/lessons', () => {
     it('should add lesson and return lesson entity', async () => {
       // Given
-      const newLesson = createMockLesson({ id: 'lesson-new', title: 'New Lesson' });
+      const newLesson = createMockLesson({
+        id: 'lesson-new',
+        recipe: { id: 'recipe-1', title: 'New Lesson', expectedDurationMinutes: 30 },
+      });
       classService.addLesson.mockResolvedValue(newLesson);
 
       const app = createApp(classService);

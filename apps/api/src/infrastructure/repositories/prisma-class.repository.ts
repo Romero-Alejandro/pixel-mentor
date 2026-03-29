@@ -28,10 +28,13 @@ function mapPrismaToClassEntity(prismaClass: {
     classId: string;
     recipeId: string | null;
     order: number;
-    title: string;
-    duration: number | null;
     createdAt: Date;
     updatedAt: Date;
+    recipe?: {
+      id: string;
+      title: string;
+      expectedDurationMinutes: number | null;
+    };
   }>;
   versions?: Array<{
     id: string;
