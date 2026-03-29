@@ -75,47 +75,54 @@ export class PrismaBadgeRepository implements IBadgeRepository {
       return false;
     }
 
-    // Check if user already has this badge
-    const existingBadge = await prisma.userBadge.findUnique({
-      where: {
-        userId_badgeId: {
-          userId,
-          badgeId: badge.id,
-        },
-      },
-    });
-
-    if (existingBadge) {
-      return false; // Already awarded
-    }
-
-    // Get or create user gamification record
-    let userGamification = await prisma.userGamification.findUnique({
-      where: { userId },
-    });
-
-    if (!userGamification) {
-      userGamification = await prisma.userGamification.create({
-        data: {
-          userId,
-          totalXP: 0,
-          currentStreak: 0,
-          longestStreak: 0,
-          level: 1,
+    // Use transaction to atomically check, ensure user gamification exists, and award badge
+    let awarded = false;
+    await prisma.$transaction(async (tx) => {
+      // Check if user already has this badge
+      const existingBadge = await tx.userBadge.findUnique({
+        where: {
+          userId_badgeId: {
+            userId,
+            badgeId: badge.id,
+          },
         },
       });
-    }
 
-    // Award the badge
-    await prisma.userBadge.create({
-      data: {
-        userId,
-        badgeId: badge.id,
-        userGamificationId: userGamification.id,
-      },
+      if (existingBadge) {
+        awarded = false;
+        return;
+      }
+
+      // Get or create user gamification record within transaction
+      let userGamification = await tx.userGamification.findUnique({
+        where: { userId },
+      });
+
+      if (!userGamification) {
+        userGamification = await tx.userGamification.create({
+          data: {
+            userId,
+            totalXP: 0,
+            currentStreak: 0,
+            longestStreak: 0,
+            level: 1,
+          },
+        });
+      }
+
+      // Award the badge
+      await tx.userBadge.create({
+        data: {
+          userId,
+          badgeId: badge.id,
+          userGamificationId: userGamification.id,
+        },
+      });
+
+      awarded = true;
     });
 
-    return true;
+    return awarded;
   }
 
   /**

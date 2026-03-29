@@ -65,7 +65,11 @@ export class PrismaClassVersionRepository implements IClassVersionRepository {
     const version = await prisma.classVersion.findUnique({
       where: { id },
       include: {
-        lessons: true,
+        lessons: {
+          include: {
+            recipe: true,
+          },
+        },
       },
     });
 
@@ -83,7 +87,11 @@ export class PrismaClassVersionRepository implements IClassVersionRepository {
     const versions = await prisma.classVersion.findMany({
       where: { classId },
       include: {
-        lessons: true,
+        lessons: {
+          include: {
+            recipe: true,
+          },
+        },
       },
     });
 
@@ -97,7 +105,11 @@ export class PrismaClassVersionRepository implements IClassVersionRepository {
     const version = await prisma.classVersion.findFirst({
       where: { slug, isPublished: true },
       include: {
-        lessons: true,
+        lessons: {
+          include: {
+            recipe: true,
+          },
+        },
       },
     });
 

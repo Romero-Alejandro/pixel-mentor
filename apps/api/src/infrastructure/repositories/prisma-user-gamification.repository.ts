@@ -38,7 +38,13 @@ export class PrismaUserGamificationRepository implements IUserGamificationReposi
       return null;
     }
 
-    return this.mapToProfile(userGamification);
+    // Fetch level configs in a single batch query to avoid N+1
+    const levelsNeeded = [userGamification.level, userGamification.level + 1];
+    const levelConfigs = await prisma.levelConfig.findMany({
+      where: { level: { in: levelsNeeded } },
+    });
+
+    return this.mapToProfile(userGamification, levelConfigs);
   }
 
   /**
@@ -177,6 +183,7 @@ export class PrismaUserGamificationRepository implements IUserGamificationReposi
    * Returns true if the badge was newly awarded, false if already owned.
    */
   async awardBadge(userId: string, badgeCode: string): Promise<boolean> {
+    // Fetch badge and user gamification in parallel
     const badge = await prisma.badge.findUnique({
       where: { code: badgeCode },
     });
@@ -185,44 +192,61 @@ export class PrismaUserGamificationRepository implements IUserGamificationReposi
       throw new Error(`Badge not found: ${badgeCode}`);
     }
 
-    // Get user's gamification record
-    const userGamificationRecord = await prisma.userGamification.findUnique({
+    const userGamification = await prisma.userGamification.findUnique({
       where: { userId },
     });
 
-    if (!userGamificationRecord) {
+    if (!userGamification) {
       throw new Error(`User gamification record not found for user ${userId}`);
     }
 
-    // Check if user already has this badge
-    const existingBadge = await prisma.userBadge.findUnique({
-      where: {
-        userId_badgeId: {
+    // Use transaction to atomically check, create badge, and update XP
+    let awarded = false;
+    await prisma.$transaction(async (tx) => {
+      // Check if user already has this badge
+      const existingBadge = await tx.userBadge.findUnique({
+        where: {
+          userId_badgeId: {
+            userId,
+            badgeId: badge.id,
+          },
+        },
+      });
+
+      if (existingBadge) {
+        awarded = false;
+        return; // Already awarded, exit transaction early
+      }
+
+      // Award the badge
+      await tx.userBadge.create({
+        data: {
           userId,
           badgeId: badge.id,
+          userGamificationId: userGamification.id,
         },
-      },
+      });
+
+      // Award XP bonus for the badge atomically with level calculation
+      if (badge.xpReward > 0) {
+        const previousLevel = userGamification.level;
+        const newTotalXP = userGamification.totalXP + badge.xpReward;
+        const newLevel = await this.levelService.calculateLevel(newTotalXP);
+        const leveledUp = newLevel > previousLevel;
+
+        await tx.userGamification.update({
+          where: { userId },
+          data: {
+            totalXP: newTotalXP,
+            ...(leveledUp && { level: newLevel }),
+          },
+        });
+      }
+
+      awarded = true;
     });
 
-    if (existingBadge) {
-      return false; // Already awarded
-    }
-
-    // Award the badge
-    await prisma.userBadge.create({
-      data: {
-        userId,
-        badgeId: badge.id,
-        userGamificationId: userGamificationRecord.id,
-      },
-    });
-
-    // Award XP bonus for the badge
-    if (badge.xpReward > 0) {
-      await this.addXP(userId, badge.xpReward);
-    }
-
-    return true;
+    return awarded;
   }
 
   /**
@@ -258,6 +282,7 @@ export class PrismaUserGamificationRepository implements IUserGamificationReposi
 
   /**
    * Map database entity to GamificationProfile.
+   * Uses pre-fetched level configs to avoid N+1 queries.
    */
   private async mapToProfile(
     entity: Awaited<ReturnType<typeof prisma.userGamification.findUnique>> & {
@@ -271,9 +296,26 @@ export class PrismaUserGamificationRepository implements IUserGamificationReposi
         earnedAt: Date;
       }>;
     },
+    levelConfigs?: Awaited<ReturnType<typeof prisma.levelConfig.findMany>>,
   ): Promise<GamificationProfile> {
-    const currentLevelConfig = await this.getLevelConfig(entity.level);
-    const nextLevelConfig = await this.getNextLevelConfig(entity.level);
+    // Use pre-fetched configs if provided, otherwise fetch individually (legacy fallback)
+    let currentLevelConfig;
+    let nextLevelConfig;
+
+    if (levelConfigs && levelConfigs.length > 0) {
+      currentLevelConfig = levelConfigs.find((lc) => lc.level === entity.level);
+      nextLevelConfig = levelConfigs.find((lc) => lc.level === entity.level + 1);
+    } else {
+      // Fallback: fetch individually (for backward compatibility, e.g., getOrCreate)
+      const current = await this.getLevelConfig(entity.level);
+      const next = await this.getNextLevelConfig(entity.level);
+      currentLevelConfig = current
+        ? { level: current.level, title: current.title, minXP: current.minXP, icon: current.icon }
+        : undefined;
+      nextLevelConfig = next
+        ? { level: next.level, title: next.title, minXP: next.minXP, icon: next.icon }
+        : undefined;
+    }
 
     const currentMinXP = currentLevelConfig?.minXP ?? 0;
     const nextMinXP = nextLevelConfig?.minXP ?? currentMinXP;

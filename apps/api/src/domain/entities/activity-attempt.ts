@@ -10,6 +10,22 @@ export interface ActivityAttempt {
   readonly hintUsed: number;
   readonly meta?: any;
   readonly createdAt: Date;
+  // Optional relations for optimized queries (N+1 prevention)
+  readonly atom?: {
+    readonly id: string;
+    readonly type: string;
+    readonly content?: any;
+    readonly options?: readonly {
+      readonly id: string;
+      readonly text: string;
+      readonly isCorrect: boolean;
+    }[];
+  };
+  readonly atomOption?: {
+    readonly id: string;
+    readonly text: string;
+    readonly isCorrect: boolean;
+  };
 }
 
 export function createActivityAttempt(parameters: {

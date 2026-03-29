@@ -7,6 +7,7 @@ import { PrismaUserGamificationRepository } from '../prisma-user-gamification.re
 // Mock the prisma client
 jest.mock('@/infrastructure/adapters/database/client', () => ({
   prisma: {
+    $transaction: jest.fn(),
     userGamification: {
       findUnique: jest.fn(),
       create: jest.fn(),
@@ -36,6 +37,8 @@ describe('PrismaUserGamificationRepository', () => {
   beforeEach(() => {
     repository = new PrismaUserGamificationRepository();
     jest.clearAllMocks();
+    // Mock $transaction to execute callback with the prisma mock
+    (prisma.$transaction as jest.Mock).mockImplementation(async (fn) => await fn(prisma));
   });
 
   describe('findByUserId', () => {
@@ -93,6 +96,7 @@ describe('PrismaUserGamificationRepository', () => {
         xpProgressPercent: 33,
         streak: 5,
         longestStreak: 10,
+        lastActivityAt: expect.any(Date),
         totalBadges: 1,
         badges: [
           {

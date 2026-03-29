@@ -19,6 +19,29 @@ export class PrismaActivityAttemptRepository implements ActivityAttemptRepositor
     const raw = await prisma.activityAttempt.findFirst({
       where: { userId, atomId },
       orderBy: { createdAt: 'desc' },
+      include: {
+        atom: {
+          select: {
+            id: true,
+            type: true,
+            content: true,
+            options: {
+              select: {
+                id: true,
+                text: true,
+                isCorrect: true,
+              },
+            },
+          },
+        },
+        selectedOption: {
+          select: {
+            id: true,
+            text: true,
+            isCorrect: true,
+          },
+        },
+      },
     });
     return raw ? this.mapAttempt(raw) : null;
   }
@@ -57,7 +80,7 @@ export class PrismaActivityAttemptRepository implements ActivityAttemptRepositor
   }
 
   private mapAttempt(raw: any): ActivityAttempt {
-    return {
+    const base = {
       id: raw.id,
       userId: raw.userId,
       atomId: raw.atomId,
@@ -70,5 +93,30 @@ export class PrismaActivityAttemptRepository implements ActivityAttemptRepositor
       meta: raw.meta,
       createdAt: raw.createdAt,
     };
+
+    const attempt: ActivityAttempt = {
+      ...base,
+      ...(raw.atom && {
+        atom: {
+          id: raw.atom.id,
+          type: raw.atom.type,
+          content: raw.atom.content,
+          options: raw.atom.options?.map((opt: any) => ({
+            id: opt.id,
+            text: opt.text,
+            isCorrect: opt.isCorrect,
+          })),
+        },
+      }),
+      ...(raw.selectedOption && {
+        atomOption: {
+          id: raw.selectedOption.id,
+          text: raw.selectedOption.text,
+          isCorrect: raw.selectedOption.isCorrect,
+        },
+      }),
+    };
+
+    return attempt;
   }
 }
