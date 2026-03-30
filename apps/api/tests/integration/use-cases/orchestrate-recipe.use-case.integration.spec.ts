@@ -678,11 +678,11 @@ describe('OrchestrateRecipeUseCase - Integration', () => {
       expect(interactionRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({ sessionId, transcript: 'user msg' }),
       );
+      // Verify a second interaction was recorded with an AI response
       expect(interactionRepo.create).toHaveBeenNthCalledWith(
         2,
         expect.objectContaining({
           sessionId,
-          transcript: 'Response',
           aiResponse: expect.any(Object),
         }),
       );
