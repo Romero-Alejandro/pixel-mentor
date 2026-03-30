@@ -572,9 +572,9 @@ export function createClassRouter(deps: ClassRouterDependencies): Router {
           return;
         }
 
-        // Find first lesson (all lessons now have recipeId)
-        const firstLesson = lessons[0];
-        if (!firstLesson || !firstLesson.recipeId) {
+        // Find first lesson with recipeId (skip lessons without recipe)
+        const firstLesson = lessons.find((l) => l.recipeId);
+        if (!firstLesson) {
           res.status(400).json({
             error: 'No lesson with associated recipe found',
             details: {
@@ -591,6 +591,7 @@ export function createClassRouter(deps: ClassRouterDependencies): Router {
         res.status(200).json({
           sessionId,
           recipeId: firstLesson.recipeId,
+          title: firstLesson.recipe?.title ?? null,
         });
       } catch (error) {
         if (error instanceof ClassNotFoundError) {

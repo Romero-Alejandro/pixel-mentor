@@ -285,7 +285,7 @@ describe('ClassService', () => {
       const result = await service.publishClass('class-1', 'tutor-1');
 
       // Then
-      expect(classRepo.update).toHaveBeenCalledTimes(2); // First to UNDER_REVIEW, then to PUBLISHED
+      expect(classRepo.update).toHaveBeenCalledTimes(1); // Direct transition to PUBLISHED
       expect(versionRepo.create).toHaveBeenCalled();
       expect(result.status).toBe('PUBLISHED');
       expect(result.version).toBe(1);

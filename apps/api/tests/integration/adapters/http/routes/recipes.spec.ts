@@ -200,7 +200,7 @@ describe('Recipes API Routes', () => {
     });
 
     it('should return 404 when recipe not found', async () => {
-      recipeService.getRecipeById.mockRejectedValue(new RecipeNotFoundError(RECIPE_ID));
+      getRecipeUseCase.execute.mockRejectedValue(new RecipeNotFoundError(RECIPE_ID));
 
       const app = createApp(recipeService, getRecipeUseCase, listRecipesUseCase);
 
@@ -342,7 +342,16 @@ describe('Recipes API Routes', () => {
 
       const response = await request(app)
         .patch(`/api/recipes/${RECIPE_ID}/steps/${STEP_ID_1}`)
-        .send({ order: 5 });
+        .send({
+          order: 5,
+          stepType: 'content',
+          script: {
+            transition: { text: 't' },
+            content: { text: 'c', chunks: [{ text: 'chunk', pauseAfter: 0 }] },
+            examples: [{ text: 'e' }],
+            closure: { text: 'c' },
+          },
+        });
 
       expect(response.status).toBe(200);
     });
@@ -354,7 +363,16 @@ describe('Recipes API Routes', () => {
 
       const response = await request(app)
         .patch(`/api/recipes/${RECIPE_ID}/steps/${STEP_ID_1}`)
-        .send({ order: 5 });
+        .send({
+          order: 5,
+          stepType: 'content',
+          script: {
+            transition: { text: 't' },
+            content: { text: 'c', chunks: [{ text: 'chunk', pauseAfter: 0 }] },
+            examples: [{ text: 'e' }],
+            closure: { text: 'c' },
+          },
+        });
 
       expect(response.status).toBe(404);
     });

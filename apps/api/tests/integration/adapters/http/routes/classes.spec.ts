@@ -378,8 +378,7 @@ describe('Classes API Routes', () => {
 
       // When
       const response = await request(app).post('/api/classes/class-1/lessons').send({
-        title: 'New Lesson',
-        duration: 30,
+        recipeId: 'recipe-1',
       });
 
       // Then
@@ -398,7 +397,7 @@ describe('Classes API Routes', () => {
       // When
       const response = await request(app)
         .post('/api/classes/class-1/lessons')
-        .send({ title: 'New Lesson' });
+        .send({ recipeId: 'recipe-1' });
 
       // Then
       expect(response.status).toBe(409);

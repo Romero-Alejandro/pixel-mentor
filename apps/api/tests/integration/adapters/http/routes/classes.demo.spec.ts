@@ -203,7 +203,7 @@ describe('POST /api/classes/:id/demo', () => {
 
       // Then
       expect(response.status).toBe(404);
-      expect(response.body.error).toBe('Class not found: non-existent');
+      expect(response.body.error).toBe('Class with ID non-existent not found');
     });
 
     it('should return 400 when class has no lessons', async () => {

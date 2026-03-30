@@ -45,20 +45,20 @@ describe('Class Entity - State Machine', () => {
       it('should allow ARCHIVED -> PUBLISHED', () => {
         expect(isValidStatusTransition('ARCHIVED', 'PUBLISHED')).toBe(true);
       });
+
+      it('should allow DRAFT -> PUBLISHED', () => {
+        expect(isValidStatusTransition('DRAFT', 'PUBLISHED')).toBe(true);
+      });
+
+      it('should allow PUBLISHED -> DRAFT', () => {
+        expect(isValidStatusTransition('PUBLISHED', 'DRAFT')).toBe(true);
+      });
     });
 
     // Invalid transitions
     describe('invalid transitions', () => {
-      it('should NOT allow DRAFT -> PUBLISHED', () => {
-        expect(isValidStatusTransition('DRAFT', 'PUBLISHED')).toBe(false);
-      });
-
       it('should NOT allow DRAFT -> ARCHIVED', () => {
         expect(isValidStatusTransition('DRAFT', 'ARCHIVED')).toBe(false);
-      });
-
-      it('should NOT allow PUBLISHED -> DRAFT', () => {
-        expect(isValidStatusTransition('PUBLISHED', 'DRAFT')).toBe(false);
       });
 
       it('should NOT allow PUBLISHED -> UNDER_REVIEW', () => {
@@ -88,16 +88,16 @@ describe('Class Entity - State Machine', () => {
   });
 
   describe('getValidTransitions', () => {
-    it('should return [UNDER_REVIEW] for DRAFT', () => {
-      expect(getValidTransitions('DRAFT')).toEqual(['UNDER_REVIEW']);
+    it('should return [UNDER_REVIEW, PUBLISHED] for DRAFT', () => {
+      expect(getValidTransitions('DRAFT')).toEqual(['UNDER_REVIEW', 'PUBLISHED']);
     });
 
     it('should return [DRAFT, PUBLISHED] for UNDER_REVIEW', () => {
       expect(getValidTransitions('UNDER_REVIEW')).toEqual(['DRAFT', 'PUBLISHED']);
     });
 
-    it('should return [ARCHIVED] for PUBLISHED', () => {
-      expect(getValidTransitions('PUBLISHED')).toEqual(['ARCHIVED']);
+    it('should return [DRAFT, ARCHIVED] for PUBLISHED', () => {
+      expect(getValidTransitions('PUBLISHED')).toEqual(['DRAFT', 'ARCHIVED']);
     });
 
     it('should return [PUBLISHED] for ARCHIVED', () => {
@@ -110,20 +110,20 @@ describe('Class Entity - State Machine', () => {
       expect(transitionStatus('DRAFT', 'UNDER_REVIEW')).toBe('UNDER_REVIEW');
     });
 
-    it('should return null for invalid transition', () => {
-      expect(transitionStatus('DRAFT', 'PUBLISHED')).toBe(null);
+    it('should throw for invalid transition', () => {
+      expect(() => transitionStatus('PUBLISHED', 'UNDER_REVIEW')).toThrow();
     });
 
-    it('should return null for self-transition', () => {
-      expect(transitionStatus('DRAFT', 'DRAFT')).toBe(null);
+    it('should throw for self-transition', () => {
+      expect(() => transitionStatus('DRAFT', 'DRAFT')).toThrow();
     });
 
     it('should return new status for PUBLISHED -> ARCHIVED', () => {
       expect(transitionStatus('PUBLISHED', 'ARCHIVED')).toBe('ARCHIVED');
     });
 
-    it('should return null for ARCHIVED -> DRAFT', () => {
-      expect(transitionStatus('ARCHIVED', 'DRAFT')).toBe(null);
+    it('should throw for ARCHIVED -> DRAFT', () => {
+      expect(() => transitionStatus('ARCHIVED', 'DRAFT')).toThrow();
     });
   });
 });

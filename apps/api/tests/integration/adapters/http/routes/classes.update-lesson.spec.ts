@@ -93,7 +93,7 @@ describe('PATCH /api/classes/:id/lessons/:lessonId', () => {
     // When
     const response = await request(app)
       .patch('/api/classes/class-1/lessons/lesson-1')
-      .send({ duration: 'invalid' }); // Not a number
+      .send({ order: -1 });
 
     // Then
     expect(response.status).toBe(400);
