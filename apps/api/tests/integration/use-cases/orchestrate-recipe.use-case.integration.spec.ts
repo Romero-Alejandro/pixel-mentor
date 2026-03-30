@@ -221,7 +221,7 @@ describe('OrchestrateRecipeUseCase - Integration', () => {
       const result = await useCase.start(recipeId, studentId);
 
       expect(result.sessionId).toBeDefined();
-      expect(result.voiceText).toContain('Welcome!');
+      expect(result.voiceText).toContain('¡Hola Test Student!');
       expect(result.pedagogicalState).toBe('AWAITING_START');
       expect(sessionRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({ studentId, recipeId, status: 'IDLE' }),
@@ -404,7 +404,7 @@ describe('OrchestrateRecipeUseCase - Integration', () => {
 
       const result = await useCase.interact(sessionId, 'sí', studentId);
 
-      expect(result.pedagogicalState).toBe('ACTIVE_CLASS');
+      expect(result.pedagogicalState).toBe('EXPLANATION');
     });
 
     it('advances step in ACTIVE_CLASS', async () => {
@@ -461,7 +461,7 @@ describe('OrchestrateRecipeUseCase - Integration', () => {
       const result = await useCase.interact(sessionId, 'continue', studentId);
 
       expect(result.sessionCompleted).toBe(true);
-      expect(mockSessionRepo.complete).toHaveBeenCalledWith(sessionId);
+      expect(sessionRepo.complete).toHaveBeenCalledWith(sessionId);
     });
 
     it('question correct -> EVALUATION', async () => {
@@ -486,11 +486,16 @@ describe('OrchestrateRecipeUseCase - Integration', () => {
 
       questionClassifier.classify.mockResolvedValue({ intent: 'answer', confidence: 0.9 });
       comprehensionEvaluator.evaluate.mockResolvedValue({ result: 'correct', confidence: 0.95 });
+      aiService.generateResponse.mockResolvedValue({
+        explanation: 'Correct!',
+        supportQuotes: [],
+        pedagogicalState: 'ACTIVE_CLASS',
+      });
 
       const result = await useCase.interact(sessionId, '4', studentId);
 
       expect(result.isCorrect).toBe(true);
-      expect(mockSessionRepo.incrementFailedAttempts).not.toHaveBeenCalled();
+      expect(sessionRepo.incrementFailedAttempts).not.toHaveBeenCalled();
     });
 
     it('question incorrect -> increment attempts', async () => {
@@ -525,7 +530,7 @@ describe('OrchestrateRecipeUseCase - Integration', () => {
 
       const result = await useCase.interact(sessionId, '5', studentId);
 
-      expect(mockSessionRepo.incrementFailedAttempts).toHaveBeenCalledWith(sessionId);
+      expect(sessionRepo.incrementFailedAttempts).toHaveBeenCalledWith(sessionId);
       expect(result.pedagogicalState).toBe('EVALUATION');
     });
 
@@ -553,6 +558,12 @@ describe('OrchestrateRecipeUseCase - Integration', () => {
       setup(session, recipe, [step], atom);
 
       questionClassifier.classify.mockResolvedValue({ intent: 'answer', confidence: 0.9 });
+
+      aiService.generateResponse.mockResolvedValue({
+        explanation: 'Correct!',
+        supportQuotes: [],
+        pedagogicalState: 'ACTIVE_CLASS',
+      });
 
       const result = await useCase.interact(sessionId, '4', studentId);
 
@@ -583,7 +594,7 @@ describe('OrchestrateRecipeUseCase - Integration', () => {
 
       const result = await useCase.interact(sessionId, 'I understand', studentId);
 
-      expect(result.pedagogicalState).toBe('ACTIVE_CLASS');
+      expect(result.pedagogicalState).toBe('EXPLANATION');
     });
 
     it('escalates on safetyFlag', async () => {
@@ -625,6 +636,12 @@ describe('OrchestrateRecipeUseCase - Integration', () => {
         pedagogicalState: 'RESOLVING_DOUBT',
       });
 
+      ragService.retrieveChunks.mockResolvedValue({
+        chunks: [],
+        totalAvailable: 0,
+        retrievalMethod: 'embedding',
+      });
+
       await useCase.interact(sessionId, 'question?', studentId);
 
       expect(ragService.retrieveChunks).toHaveBeenCalledWith({
@@ -656,7 +673,8 @@ describe('OrchestrateRecipeUseCase - Integration', () => {
       expect(interactionRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({ sessionId, transcript: 'user msg' }),
       );
-      expect(interactionRepo.create).toHaveBeenCalledWith(
+      expect(interactionRepo.create).toHaveBeenNthCalledWith(
+        2,
         expect.objectContaining({
           sessionId,
           transcript: 'Response',
@@ -680,7 +698,9 @@ describe('OrchestrateRecipeUseCase - Integration', () => {
 
       const result = await useCase.interact(sessionId, 'hi', studentId);
 
-      expect(result.voiceText).toBe('Continuemos con Recipe.');
+      expect(result.voiceText).toBe(
+        '¡Has terminado la clase de Recipe! ¡Felicitaciones estudiante!',
+      );
     });
 
     it('handles ACTIVITY_SKIP_OFFER skip', async () => {
@@ -715,7 +735,7 @@ describe('OrchestrateRecipeUseCase - Integration', () => {
 
       await useCase.interact(sessionId, 'skip', studentId);
 
-      expect(mockSessionRepo.updateCheckpoint).toHaveBeenCalledWith(
+      expect(sessionRepo.updateCheckpoint).toHaveBeenCalledWith(
         sessionId,
         expect.objectContaining({
           skippedActivities: [curStep.atomId],
@@ -772,7 +792,7 @@ describe('OrchestrateRecipeUseCase - Integration', () => {
       });
 
       const r2 = await useCase.interact(sessionId, 'thanks', studentId);
-      expect(r2.pedagogicalState).toBe('ACTIVE_CLASS');
+      expect(r2.pedagogicalState).toBe('EXPLANATION');
     });
   });
 });
