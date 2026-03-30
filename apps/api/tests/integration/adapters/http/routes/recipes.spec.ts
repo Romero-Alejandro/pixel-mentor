@@ -141,16 +141,12 @@ describe('Recipes API Routes', () => {
     });
 
     it('should return 400 for validation error', async () => {
-      recipeService.createRecipe.mockRejectedValue(
-        new RecipeValidationError('Recipe title is required'),
-      );
-
       const app = createApp(recipeService, getRecipeUseCase, listRecipesUseCase);
 
       const response = await request(app).post('/api/recipes').send({});
 
       expect(response.status).toBe(400);
-      expect(response.body.code).toBe('RECIPE_VALIDATION_ERROR');
+      expect(response.body.error).toBe('Validation error');
     });
 
     it('should return 401 when user not authenticated', async () => {
@@ -188,7 +184,7 @@ describe('Recipes API Routes', () => {
         id: RECIPE_ID,
         steps: [createMockStep({ id: STEP_ID_1 })],
       });
-      recipeService.getRecipeById.mockResolvedValue(mockRecipe as any);
+      getRecipeUseCase.execute.mockResolvedValue(mockRecipe as any);
 
       const app = createApp(recipeService, getRecipeUseCase, listRecipesUseCase);
 
