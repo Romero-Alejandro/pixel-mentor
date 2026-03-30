@@ -83,6 +83,20 @@ export type {
   EvaluationResult,
 } from './types';
 
+// Re-export schemas for external use (e.g., tests)
+export {
+  ExtractConceptsResponseSchema,
+  ClassificationResponseSchema,
+  FeedbackResponseSchema,
+  EvaluationResponseSchema,
+} from './schemas';
+export type {
+  ExtractConceptsResponse,
+  ClassificationResponse,
+  FeedbackResponse,
+  EvaluationResponse,
+} from './schemas';
+
 // ============================================================
 // Fallback Response
 // ============================================================
@@ -308,9 +322,10 @@ export class LessonEvaluatorUseCase {
 
   /**
    * Builds the exemplars section for the classification prompt.
+   * Returns formatted markdown with proper headings.
    *
    * @param exemplars - The exemplars from teacher config
-   * @returns Formatted markdown section
+   * @returns Formatted markdown section or empty string if no exemplars
    */
   private buildExemplarsSection(
     exemplars?: Readonly<{
@@ -320,22 +335,26 @@ export class LessonEvaluatorUseCase {
     }>,
   ): string {
     if (!exemplars) {
-      return 'Sin ejemplos disponibles';
+      return '';
     }
 
     const sections: string[] = [];
+    const wrapperHeader = '### Ejemplos de Respuestas';
 
     if (exemplars.correct && exemplars.correct.length > 0) {
-      sections.push(`Correctas:\n${exemplars.correct.map((i) => `- ${i}`).join('\n')}`);
+      sections.push('#### Respuestas Correctas');
+      sections.push(...exemplars.correct.map((i) => `- ${i}`));
     }
     if (exemplars.partial && exemplars.partial.length > 0) {
-      sections.push(`Parciales:\n${exemplars.partial.map((i) => `- ${i}`).join('\n')}`);
+      sections.push('#### Respuestas Parciales');
+      sections.push(...exemplars.partial.map((i) => `- ${i}`));
     }
     if (exemplars.incorrect && exemplars.incorrect.length > 0) {
-      sections.push(`Incorrectas:\n${exemplars.incorrect.map((i) => `- ${i}`).join('\n')}`);
+      sections.push('#### Respuestas Incorrectas');
+      sections.push(...exemplars.incorrect.map((i) => `- ${i}`));
     }
 
-    return sections.length > 0 ? sections.join('\n\n') : 'Sin ejemplos disponibles';
+    return sections.length > 0 ? `${wrapperHeader}\n\n${sections.join('\n\n')}` : '';
   }
 
   /**

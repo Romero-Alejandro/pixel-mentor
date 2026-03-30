@@ -1,20 +1,24 @@
 import request from 'supertest';
-import type { Express } from 'express';
-
-import { createApp } from '@/infrastructure/adapters/http/server';
-import type { RegisterUseCase } from '@/application/use-cases/auth/register.use-case';
-import type { LoginUseCase } from '@/application/use-cases/auth/login.use-case';
-import type { VerifyTokenUseCase } from '@/application/use-cases/auth/verify-token.use-case';
+import express from 'express';
+import { createAuthRouter } from '@/infrastructure/adapters/http/routes/auth';
+import { authMiddleware } from '@/infrastructure/adapters/http/middleware/auth';
+import type { UserRepository } from '@/domain/ports/user-repository.js';
+import type {
+  RegisterUseCase,
+  LoginUseCase,
+  VerifyTokenUseCase,
+} from '@/application/use-cases/auth/index.js';
 
 jest.mock('@/application/use-cases/auth/register.use-case');
 jest.mock('@/application/use-cases/auth/login.use-case');
 jest.mock('@/application/use-cases/auth/verify-token.use-case');
 
 describe('Auth API Endpoints', () => {
-  let app: Express;
   let mockRegisterUseCase: jest.Mocked<RegisterUseCase>;
   let mockLoginUseCase: jest.Mocked<LoginUseCase>;
   let mockVerifyTokenUseCase: jest.Mocked<VerifyTokenUseCase>;
+  let mockUserRepo: jest.Mocked<UserRepository>;
+  let app: express.Express;
 
   beforeEach(() => {
     mockRegisterUseCase = {
@@ -29,12 +33,7 @@ describe('Auth API Endpoints', () => {
       execute: jest.fn(),
     } as unknown as jest.Mocked<VerifyTokenUseCase>;
 
-    const mockLogger = {
-      ...console,
-      child: jest.fn().mockReturnThis(),
-    };
-
-    const mockUserRepo = {
+    mockUserRepo = {
       findById: jest.fn().mockResolvedValue({
         id: '123e4567-e89b-12d3-a456-426614174001',
         email: 'test@test.com',
@@ -49,35 +48,50 @@ describe('Auth API Endpoints', () => {
       create: jest.fn(),
       updateRole: jest.fn(),
       delete: jest.fn(),
-    };
+      findByIdentifier: jest.fn(),
+      findByIdentifierWithPassword: jest.fn(),
+    } as unknown as jest.Mocked<UserRepository>;
 
-    const mockDeps = {
-      config: {
-        NODE_ENV: 'test' as const,
-        PORT: 3000,
-        CORS_ORIGIN: '*',
-        LOG_LEVEL: 'info' as const,
-        RATE_LIMIT_WINDOW_MS: 15 * 60 * 1000,
-        RATE_LIMIT_MAX: 100,
-        RATE_LIMIT_MAX_INTERACT: 10,
-        REQUEST_TIMEOUT_MS: 10000,
-        JWT_SECRET: 'test-secret-key',
+    const protectedMiddleware = authMiddleware(mockUserRepo, mockVerifyTokenUseCase);
+
+    const authRouter = createAuthRouter(
+      mockUserRepo,
+      mockRegisterUseCase,
+      mockLoginUseCase,
+      protectedMiddleware,
+    );
+
+    app = express();
+    app.use(express.json());
+    app.use('/api/auth', authRouter);
+
+    // Global error handler (mirrors server.ts)
+    app.use(
+      (err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+        console.error({ url: req.url, method: req.method, err: String(err) });
+
+        if (err instanceof Error && 'httpStatus' in err && 'code' in err) {
+          const authErr = err as {
+            httpStatus: number;
+            code: string;
+            message: string;
+            details?: unknown;
+          };
+          res.status(authErr.httpStatus).json({
+            error: authErr.message,
+            code: authErr.code,
+            ...(authErr.details ? { details: authErr.details } : {}),
+          });
+          return;
+        }
+
+        const statusCode =
+          err instanceof Error && 'statusCode' in err ? (err as any).statusCode : 500;
+        const message = err instanceof Error ? err.message : 'Error interno del servidor';
+
+        res.status(statusCode).json({ error: message });
       },
-      logger: mockLogger as any,
-      orchestrateUseCase: {} as any,
-      prisma: {} as any,
-      getRecipeUseCase: {} as any,
-      listRecipesUseCase: {} as any,
-      getSessionUseCase: {} as any,
-      listSessionsUseCase: {} as any,
-      resetSessionUseCase: { execute: jest.fn() } as any,
-      userRepo: mockUserRepo as any,
-      registerUseCase: mockRegisterUseCase,
-      loginUseCase: mockLoginUseCase,
-      verifyTokenUseCase: mockVerifyTokenUseCase,
-    };
-
-    app = createApp(mockDeps);
+    );
   });
 
   afterEach(() => {
@@ -103,7 +117,6 @@ describe('Auth API Endpoints', () => {
         email: 'new@example.com',
         password: 'password123',
         name: 'New User',
-        role: 'STUDENT',
       });
 
       expect(response.status).toBe(201);
@@ -113,16 +126,20 @@ describe('Auth API Endpoints', () => {
     });
 
     it('should reject duplicate email', async () => {
-      mockRegisterUseCase.execute.mockRejectedValueOnce(new Error('User already exists'));
+      const error = new Error('Ya existe un usuario con este email');
+      error.httpStatus = 409;
+      (error as any).code = 'USER_ALREADY_EXISTS';
+      mockRegisterUseCase.execute.mockRejectedValueOnce(error);
 
       const response = await request(app).post('/api/auth/register').send({
         email: 'existing@example.com',
         password: 'password123',
         name: 'Existing User',
-        role: 'STUDENT',
       });
 
-      expect(response.status).toBe(500);
+      expect(response.status).toBe(409);
+      expect(response.body).toHaveProperty('error', 'Ya existe un usuario con este email');
+      expect(response.body).toHaveProperty('code', 'USER_ALREADY_EXISTS');
     });
 
     it('should reject invalid email format', async () => {
@@ -130,11 +147,11 @@ describe('Auth API Endpoints', () => {
         email: 'not-an-email',
         password: 'password123',
         name: 'Test User',
-        role: 'STUDENT',
       });
 
       expect(response.status).toBe(400);
-      expect(response.body).toHaveProperty('error', 'Validation error');
+      expect(response.body).toHaveProperty('error', 'Error de validación');
+      expect(response.body).toHaveProperty('code', 'VALIDATION_ERROR');
     });
 
     it('should reject short password', async () => {
@@ -142,11 +159,11 @@ describe('Auth API Endpoints', () => {
         email: 'test@example.com',
         password: '12345',
         name: 'Test User',
-        role: 'STUDENT',
       });
 
       expect(response.status).toBe(400);
-      expect(response.body).toHaveProperty('error', 'Validation error');
+      expect(response.body).toHaveProperty('error', 'Error de validación');
+      expect(response.body).toHaveProperty('code', 'VALIDATION_ERROR');
     });
 
     it('should reject missing fields', async () => {
@@ -163,7 +180,7 @@ describe('Auth API Endpoints', () => {
       mockLoginUseCase.execute.mockResolvedValueOnce({
         user: {
           id: 'user-123',
-          email: 'test@example.com',
+          email: 'test@test.com',
           name: 'Test User',
           role: 'STUDENT',
           quota: 10,
@@ -174,7 +191,7 @@ describe('Auth API Endpoints', () => {
       });
 
       const response = await request(app).post('/api/auth/login').send({
-        email: 'test@example.com',
+        identifier: 'test@test.com',
         password: 'password123',
       });
 
@@ -184,15 +201,19 @@ describe('Auth API Endpoints', () => {
     });
 
     it('should reject invalid credentials', async () => {
-      mockLoginUseCase.execute.mockRejectedValueOnce(new Error('Invalid credentials'));
+      const error = new Error('Credenciales inválidas');
+      error.httpStatus = 401;
+      (error as any).code = 'INVALID_CREDENTIALS';
+      mockLoginUseCase.execute.mockRejectedValueOnce(error);
 
       const response = await request(app).post('/api/auth/login').send({
-        email: 'test@example.com',
+        identifier: 'test@test.com',
         password: 'wrongpassword',
       });
 
       expect(response.status).toBe(401);
-      expect(response.body.error).toBe('Invalid email or password');
+      expect(response.body).toHaveProperty('error', 'Credenciales inválidas');
+      expect(response.body).toHaveProperty('code', 'INVALID_CREDENTIALS');
     });
 
     it('should reject missing email', async () => {
@@ -208,7 +229,7 @@ describe('Auth API Endpoints', () => {
     it('should return current user with valid token', async () => {
       mockVerifyTokenUseCase.execute.mockResolvedValueOnce({
         userId: 'user-123',
-        email: 'test@example.com',
+        email: 'test@test.com',
         role: 'STUDENT',
       });
 
@@ -223,17 +244,23 @@ describe('Auth API Endpoints', () => {
       const response = await request(app).get('/api/auth/me');
 
       expect(response.status).toBe(401);
-      expect(response.body.error).toBe('No token provided');
+      expect(response.body).toHaveProperty('error', 'No se proporcionó token de autenticación');
+      expect(response.body).toHaveProperty('code', 'TOKEN_MISSING');
     });
 
     it('should reject request with invalid token', async () => {
-      mockVerifyTokenUseCase.execute.mockRejectedValueOnce(new Error('Invalid token'));
+      const error = new Error('Token inválido');
+      error.httpStatus = 401;
+      (error as any).code = 'TOKEN_INVALID';
+      mockVerifyTokenUseCase.execute.mockRejectedValueOnce(error);
 
       const response = await request(app)
         .get('/api/auth/me')
         .set('Authorization', 'Bearer invalid-token');
 
       expect(response.status).toBe(401);
+      expect(response.body).toHaveProperty('error', 'Token inválido');
+      expect(response.body).toHaveProperty('code', 'TOKEN_INVALID');
     });
   });
 });

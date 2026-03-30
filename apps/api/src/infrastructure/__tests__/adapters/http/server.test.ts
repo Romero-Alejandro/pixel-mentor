@@ -65,7 +65,7 @@ describe('HTTP Server', () => {
       getSessionUseCase: mockGetSessionUseCase,
       listSessionsUseCase: mockListSessionsUseCase,
       resetSessionUseCase: mockResetSessionUseCase,
-      userRepo: mockUserRepo,
+      userRepository: mockUserRepo,
       registerUseCase: mockRegisterUseCase,
       loginUseCase: mockLoginUseCase,
       verifyTokenUseCase: mockVerifyTokenUseCase,
@@ -83,8 +83,8 @@ describe('HTTP Server', () => {
       const response = await request(app).get('/health');
 
       expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty('status', 'ok');
-      expect(response.body).toHaveProperty('database', 'healthy');
+      expect(response.body).toHaveProperty('status', 'healthy');
+      expect(response.body.checks.database).toHaveProperty('status', 'up');
     });
 
     it('should return 503 when database is unhealthy', async () => {
@@ -93,8 +93,8 @@ describe('HTTP Server', () => {
       const response = await request(app).get('/health');
 
       expect(response.status).toBe(503);
-      expect(response.body).toHaveProperty('status', 'error');
-      expect(response.body).toHaveProperty('database', 'unhealthy');
+      expect(response.body).toHaveProperty('status', 'unhealthy');
+      expect(response.body.checks.database).toHaveProperty('status', 'down');
     });
   });
 

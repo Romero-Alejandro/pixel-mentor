@@ -1,9 +1,9 @@
-export { AppError, ErrorCodes } from './app-error.js';
+export { AppError, ErrorCodes } from '@/domain/errors/app-error.js';
 export type { ErrorJSON, ErrorCode } from './app-error.js';
 
 // ==================== Domain-Specific Error Classes ====================
 
-import { AppError, ErrorCodes } from './app-error.js';
+import { AppError, ErrorCodes } from '@/domain/errors/app-error.js';
 
 // ==================== Authentication & Authorization Errors ====================
 
