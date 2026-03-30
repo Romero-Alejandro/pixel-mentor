@@ -667,12 +667,11 @@ describe('OrchestrateRecipeUseCase - Integration', () => {
       setup(session, recipe, [step1, step2], atom);
 
       questionClassifier.classify.mockResolvedValue({ intent: 'answer', confidence: 0.9 });
-      // Mock generateResponseStream to yield a response
-      aiService.generateResponseStream = jest.fn().mockReturnValue(
-        (async function* () {
-          yield 'Response';
-        })(),
-      );
+      aiService.generateResponse.mockResolvedValue({
+        explanation: 'Response',
+        supportQuotes: [],
+        pedagogicalState: 'ACTIVE_CLASS',
+      });
 
       await useCase.interact(sessionId, 'user msg', studentId);
 
