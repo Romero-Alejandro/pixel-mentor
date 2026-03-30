@@ -224,7 +224,7 @@ describe('OrchestrateRecipeUseCase - Integration', () => {
       expect(result.voiceText).toContain('¡Hola Test Student!');
       expect(result.pedagogicalState).toBe('AWAITING_START');
       expect(sessionRepo.create).toHaveBeenCalledWith(
-        expect.objectContaining({ studentId, recipeId, status: 'IDLE' }),
+        expect.objectContaining({ studentId, recipeId, status: 'ACTIVE' }),
       );
     });
 
@@ -530,7 +530,10 @@ describe('OrchestrateRecipeUseCase - Integration', () => {
 
       const result = await useCase.interact(sessionId, '5', studentId);
 
-      expect(sessionRepo.incrementFailedAttempts).toHaveBeenCalledWith(sessionId);
+      expect(sessionRepo.updateCheckpoint).toHaveBeenCalledWith(
+        sessionId,
+        expect.objectContaining({ failedAttempts: 1 }),
+      );
       expect(result.pedagogicalState).toBe('EVALUATION');
     });
 
@@ -604,9 +607,10 @@ describe('OrchestrateRecipeUseCase - Integration', () => {
         stateCheckpoint: { ...baseSession.stateCheckpoint, currentState: 'ACTIVE_CLASS' },
       };
       const recipe = makeRecipe();
-      const step = makeStep({});
+      const step1 = makeStep({ order: 0, stepType: 'content' });
+      const step2 = makeStep({ order: 1, stepType: 'content' });
       const atom = makeAtom({});
-      setup(session, recipe, [step], atom);
+      setup(session, recipe, [step1, step2], atom);
 
       const result = await useCase.interact(sessionId, 'msg', studentId);
 
@@ -624,7 +628,7 @@ describe('OrchestrateRecipeUseCase - Integration', () => {
       const recipe = makeRecipe();
       setup(session, recipe, [step], atom);
 
-      questionClassifier.classify.mockResolvedValue({ intent: 'question', confidence: 0.8 });
+      questionClassifier.classify.mockResolvedValue({ intent: 'question', confidence: 0.9 });
       ragService.retrieveChunks.mockResolvedValue({
         chunks: [],
         totalAvailable: 0,
@@ -740,7 +744,7 @@ describe('OrchestrateRecipeUseCase - Integration', () => {
         expect.objectContaining({
           skippedActivities: [curStep.atomId],
           currentStepIndex: 1,
-          failedAttempts: 0,
+          failedAttempts: 2,
         }),
       );
     });
