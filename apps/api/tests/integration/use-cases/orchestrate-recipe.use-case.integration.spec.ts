@@ -661,9 +661,10 @@ describe('OrchestrateRecipeUseCase - Integration', () => {
         stateCheckpoint: { ...baseSession.stateCheckpoint, currentState: 'ACTIVE_CLASS' },
       };
       const recipe = makeRecipe();
-      const step = makeStep({ stepType: 'content' });
+      const step1 = makeStep({ order: 0, stepType: 'content' });
+      const step2 = makeStep({ order: 1, stepType: 'content' });
       const atom = makeAtom({});
-      setup(session, recipe, [step], atom);
+      setup(session, recipe, [step1, step2], atom);
 
       questionClassifier.classify.mockResolvedValue({ intent: 'answer', confidence: 0.9 });
       aiService.generateResponse.mockResolvedValue({
