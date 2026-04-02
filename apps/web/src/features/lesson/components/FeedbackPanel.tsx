@@ -1,18 +1,44 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { IconStarFilled, IconAlertTriangleFilled, IconBolt } from '@tabler/icons-react';
 
 import { useAudio } from '@/contexts/AudioContext';
 import { SpriteAudioEvent } from '@/audio/types/audio-events';
 import { Spinner } from '@/components/ui';
+import { useLessonStore } from '@/stores/lessonStore';
 
 export function FeedbackPanel({
   fb,
-  nextLessonText,
+  nextLessonText: propNextLessonText,
 }: {
   fb: { isCorrect: boolean; message: string; encouragement?: string; xpAwarded?: number };
   nextLessonText?: string;
 }) {
   const { playSprite } = useAudio();
+
+  // Subscribe directly to contentText from lesson store to get real-time updates
+  const storeContentText = useLessonStore((state) => state.contentText);
+  const [localNextLessonText, setLocalNextLessonText] = useState(
+    propNextLessonText || storeContentText,
+  );
+
+  useEffect(() => {
+    // Sync prop changes
+    setLocalNextLessonText(propNextLessonText || '');
+  }, [propNextLessonText]);
+
+  useEffect(() => {
+    // Update when store contentText changes (for real-time streaming)
+    setLocalNextLessonText(storeContentText);
+  }, [storeContentText]);
+
+  if (import.meta.env.DEV) {
+    console.log('[FeedbackPanel] Render:', {
+      localNextLessonTextLength: localNextLessonText.length,
+      storeContentTextLength: storeContentText.length,
+      propLength: propNextLessonText?.length ?? 0,
+      fbMessage: fb.message,
+    });
+  }
 
   // Sonido cuando aparece el modal (independiente de correcto/incorrecto)
   useEffect(() => {
@@ -71,13 +97,13 @@ export function FeedbackPanel({
       </div>
 
       {/* Show next lesson content if streaming */}
-      {nextLessonText && (
+      {localNextLessonText && (
         <div className="max-w-xl w-full bg-slate-50 border-4 border-slate-200 rounded-[2.5rem] p-6 shadow-[0_8px_0_0_#e2e8f0]">
           <h4 className="text-lg font-bold text-sky-600 mb-3 flex items-center justify-center gap-2">
             <span className="w-2 h-2 bg-sky-500 rounded-full animate-pulse" />
-            Preparando siguiente parte...
+            Continuando...
           </h4>
-          <p className="text-slate-700 leading-relaxed">{nextLessonText}</p>
+          <p className="text-slate-700 leading-relaxed">{localNextLessonText}</p>
         </div>
       )}
 

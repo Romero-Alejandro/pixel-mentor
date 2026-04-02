@@ -1446,8 +1446,20 @@ export class OrchestrateRecipeUseCase {
 
     let fullResponse = '';
     try {
+      let chunkCount = 0;
       for await (const chunk of this.aiService.generateResponseStream(params)) {
         fullResponse += chunk;
+        chunkCount++;
+        if (process.env.NODE_ENV === 'development') {
+          orchestrateLogger.debug(
+            {
+              chunkNumber: chunkCount,
+              chunkLength: chunk.length,
+              totalLength: fullResponse.length,
+            },
+            '[interactStream] Yielding chunk',
+          );
+        }
         yield { type: 'chunk', text: chunk };
       }
     } catch (e: unknown) {

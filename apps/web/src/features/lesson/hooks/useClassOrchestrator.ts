@@ -333,7 +333,19 @@ export function useClassOrchestrator() {
             fullText += text;
             streamingChunksRef.current = [...streamingChunksRef.current, text];
             setStreamingChunks(streamingChunksRef.current);
-            setContentText((prev) => prev + text);
+            // Force sync update to ensure progressive rendering
+            setContentText((prev) => {
+              const newText = prev + text;
+              return newText;
+            });
+            if (import.meta.env.DEV) {
+              console.log('[ClassOrchestrator] Chunk received:', {
+                textLength: text.length,
+                accumulatedLength: fullText.length,
+                chunkNumber: streamingChunksRef.current.length,
+                preview: text.slice(0, 30),
+              });
+            }
           } catch (e) {
             console.error('[ClassOrchestrator] Error in evaluation:', e);
           }
