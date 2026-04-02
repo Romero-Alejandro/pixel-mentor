@@ -1283,6 +1283,11 @@ export class OrchestrateRecipeUseCase {
     userId?: string,
   ): AsyncGenerator<InteractionChunk> {
     const requestId = Math.random().toString(36).substring(7);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(
+        `[interactStream ${requestId}] START: sessionId=${sessionId}, studentInput="${studentInput.slice(0, 50)}..."`,
+      );
+    }
     try {
       // ── Load session ──────────────────────────────────────────────────────────
       const session = await this.sessionRepo.findById(sessionId);
