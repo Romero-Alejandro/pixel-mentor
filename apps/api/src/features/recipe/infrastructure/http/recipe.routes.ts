@@ -103,14 +103,21 @@ export function createRecipeRouter(
       response.flushHeaders();
 
       let errorSent = false;
+      const reqId = Math.random().toString(36).substring(7);
 
       try {
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`[SSE ${reqId}] Starting stream for session ${sessionId}`);
+        }
         const stream = orchestrateUseCase.interactStream(sessionId, studentInput);
 
         for await (const chunk of stream) {
           if (chunk.type === 'chunk') {
             response.write(`event: chunk\ndata: ${JSON.stringify({ text: chunk.text })}\n\n`);
           } else if (chunk.type === 'end') {
+            if (process.env.NODE_ENV === 'development') {
+              console.log(`[SSE ${reqId}] Stream ended normally`);
+            }
             response.write(
               `event: end\ndata: ${JSON.stringify({
                 reason: chunk.reason,
@@ -123,14 +130,22 @@ export function createRecipeRouter(
           }
         }
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        if (process.env.NODE_ENV === 'development') {
+          console.error(`[SSE ${reqId}] Stream error:`, error);
+        }
         if (!errorSent) {
-          const message = error instanceof Error ? error.message : 'Unknown error';
           const code = (error as { code?: string }).code ?? 'INTERNAL_ERROR';
-          response.write(`event: error\ndata: ${JSON.stringify({ message, code })}\n\n`);
+          response.write(
+            `event: error\ndata: ${JSON.stringify({ message: errorMessage, code })}\n\n`,
+          );
           errorSent = true;
         }
       } finally {
         response.end();
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`[SSE ${reqId}] Connection closed`);
+        }
       }
     },
   );
