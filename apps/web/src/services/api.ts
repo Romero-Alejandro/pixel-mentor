@@ -95,8 +95,18 @@ export const streamInteractWithRecipe = (sessionId: string, studentInput: string
   if (import.meta.env.VITE_ENABLE_STREAMING !== 'true') {
     throw new Error('Streaming disabled');
   }
+  if (import.meta.env.DEV) {
+    console.log('[API] Creating EventSource for streaming:', {
+      sessionId,
+      studentInput: studentInput.slice(0, 50),
+    });
+  }
   const url = `/api/recipe/interact/stream?sessionId=${encodeURIComponent(sessionId)}&studentInput=${encodeURIComponent(studentInput)}`;
-  return new EventSource(url);
+  const es = new EventSource(url);
+  if (import.meta.env.DEV) {
+    console.log('[API] EventSource created, readyState:', es.readyState);
+  }
+  return es;
 };
 
 export const api = {

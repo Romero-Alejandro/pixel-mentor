@@ -72,6 +72,7 @@ export function useClassOrchestrator() {
     setIsRepeat,
     setXpEarned,
     setAccuracy,
+    isStreaming,
   } = useLessonStore(
     useShallow((state) => ({
       setSessionId: state.setSessionId,
@@ -85,6 +86,7 @@ export function useClassOrchestrator() {
       setIsRepeat: state.setIsRepeat,
       setXpEarned: state.setXpEarned,
       setAccuracy: state.setAccuracy,
+      isStreaming: state.isStreaming,
     })),
   );
 
@@ -314,6 +316,9 @@ export function useClassOrchestrator() {
     if (!sid) throw new Error('Sesión no activa');
 
     if (import.meta.env.VITE_ENABLE_STREAMING === 'true') {
+      if (import.meta.env.DEV) {
+        console.log('[useClassOrchestrator] doInteract: Streaming ENABLED, using EventSource');
+      }
       try {
         abortControllerRef.current = new AbortController();
         const eventSource = streamInteractWithRecipe(sid, input);
@@ -333,11 +338,10 @@ export function useClassOrchestrator() {
             fullText += text;
             streamingChunksRef.current = [...streamingChunksRef.current, text];
             setStreamingChunks(streamingChunksRef.current);
-            // Force sync update to ensure progressive rendering
-            setContentText((prev) => {
-              const newText = prev + text;
-              return newText;
-            });
+            // Desacoplar actualización de contentText para evitar batch de React
+            setTimeout(() => {
+              setContentText((prev) => prev + text);
+            }, 0);
             if (import.meta.env.DEV) {
               console.log('[ClassOrchestrator] Chunk received:', {
                 textLength: text.length,
@@ -347,7 +351,7 @@ export function useClassOrchestrator() {
               });
             }
           } catch (e) {
-            console.error('[ClassOrchestrator] Error in evaluation:', e);
+            console.error('[ClassOrchestrator] Error in chunk handler:', e);
           }
         };
 
@@ -358,13 +362,15 @@ export function useClassOrchestrator() {
           try {
             const parsed = JSON.parse(e.data);
             processResponse({ voiceText: fullText, ...parsed });
-          } catch {
+          } catch (e) {
+            console.error('[ClassOrchestrator] Error in end handler, falling back to POST:', e);
             api.interactWithRecipe(sid, input).then(processResponse);
           }
         };
 
         handlersRef.current.error = () => {
           if (!isMountedRef.current) return;
+          console.error('[ClassOrchestrator] SSE error event received, falling back to POST');
           setStoreStreaming(false);
           cleanup();
           api.interactWithRecipe(sid, input).then(processResponse);
@@ -375,13 +381,18 @@ export function useClassOrchestrator() {
         eventSource.addEventListener('error', handlersRef.current.error);
         eventSource.onerror = () => {
           if (!isMountedRef.current) return;
+          console.error('[ClassOrchestrator] EventSource onerror triggered, falling back to POST');
           setStoreStreaming(false);
           cleanup();
           api.interactWithRecipe(sid, input).then(processResponse);
         };
 
         return {} as LessonResponse;
-      } catch {
+      } catch (error) {
+        console.error(
+          '[ClassOrchestrator] Failed to setup streaming, falling back to POST:',
+          error,
+        );
         return (await api.interactWithRecipe(sid, input)) as LessonResponse;
       }
     }
@@ -573,6 +584,7 @@ export function useClassOrchestrator() {
     feedback: feedbackData,
     isProcessing,
     isSpeaking,
+    isStreaming, // Add streaming flag
     questionResults,
     startClass,
     submitAnswer,

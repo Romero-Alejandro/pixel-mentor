@@ -61,6 +61,9 @@ function setupGracefulShutdown(server: Server, shutdownSignal: string): void {
 async function bootstrap(): Promise<void> {
   await verifyDatabaseConnection();
 
+  // Log streaming configuration
+  logger.info({ ENABLE_STREAMING: config.ENABLE_STREAMING }, 'Configuration loaded');
+
   // Build the main container with all feature containers
   const container = buildContainer(config, logger);
 

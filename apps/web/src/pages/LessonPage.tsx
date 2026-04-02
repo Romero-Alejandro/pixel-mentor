@@ -135,7 +135,11 @@ export function LessonPage() {
         );
       case UI_STATES.FEEDBACK:
         return orchestrator.feedback ? (
-          <FeedbackPanel fb={orchestrator.feedback} nextLessonText={orchestrator.contentText} />
+          <FeedbackPanel
+            fb={orchestrator.feedback}
+            nextLessonText={orchestrator.contentText}
+            isStreaming={orchestrator.isStreaming}
+          />
         ) : null;
       case UI_STATES.COMPLETED:
         return (
