@@ -48,7 +48,10 @@ export function ClassCard({ classItem, onEdit, onDelete }: ClassCardProps) {
 
   const lessonCount = classItem.lessons?.length ?? 0;
   const totalDuration =
-    classItem.lessons?.reduce((acc, lesson) => acc + (lesson.duration ?? 0), 0) ?? 0;
+    classItem.lessons?.reduce(
+      (acc, lesson) => acc + (lesson.recipe?.expectedDurationMinutes ?? 0),
+      0,
+    ) ?? 0;
 
   return (
     <Card variant="mission" className="relative group">

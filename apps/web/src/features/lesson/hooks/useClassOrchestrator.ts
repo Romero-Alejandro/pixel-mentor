@@ -33,7 +33,10 @@ interface LessonResponse {
       question?: string | { text: string };
       expectedAnswer?: string;
     };
-    activity?: { instruction: string | { text: string }; options?: Array<{ text: string; isCorrect: boolean }> };
+    activity?: {
+      instruction: string | { text: string };
+      options?: Array<{ text: string; isCorrect: boolean }>;
+    };
   };
   // Gamification data
   xpEarned?: number;
@@ -186,7 +189,9 @@ export function useClassOrchestrator() {
         setAccuracy(accuracy);
       }
       setUIState('completed');
-      speak(voiceText || '¡Misión cumplida!', _voiceSettings).catch(() => {});
+      speak(voiceText || '¡Misión cumplida!', _voiceSettings).catch((e) =>
+        console.error('[ClassOrchestrator] Speak error:', e),
+      );
       return;
     }
 
@@ -228,7 +233,12 @@ export function useClassOrchestrator() {
     // Helper to extract text from string or {text: string} object
     const extractText = (val: unknown): string => {
       if (typeof val === 'string') return val;
-      if (val && typeof val === 'object' && 'text' in val && typeof (val as { text: unknown }).text === 'string') {
+      if (
+        val &&
+        typeof val === 'object' &&
+        'text' in val &&
+        typeof (val as { text: unknown }).text === 'string'
+      ) {
         return (val as { text: string }).text;
       }
       return '';
@@ -247,7 +257,9 @@ export function useClassOrchestrator() {
       );
       setFeedbackData(null);
       setUIState(hasOptions ? 'activity' : 'question');
-      speak(voiceText || extractText(activity?.instruction) || '', _voiceSettings).catch(() => {});
+      speak(voiceText || extractText(activity?.instruction) || '', _voiceSettings).catch((e) =>
+        console.error('[ClassOrchestrator] Speak error:', e),
+      );
       return;
     }
 
@@ -319,7 +331,9 @@ export function useClassOrchestrator() {
             streamingChunksRef.current = [...streamingChunksRef.current, text];
             setStreamingChunks(streamingChunksRef.current);
             setContentText((prev) => prev + text);
-          } catch {}
+          } catch (e) {
+            console.error('[ClassOrchestrator] Error in evaluation:', e);
+          }
         };
 
         handlersRef.current.end = (e: MessageEvent) => {
@@ -441,11 +455,15 @@ export function useClassOrchestrator() {
           // Fallback: just speak the welcome
           setContentText(startResult.voiceText || '¡Bienvenido!');
           setFullVoiceText(startResult.voiceText || '¡Bienvenido!');
-          speak(startResult.voiceText || '¡Bienvenido!', _voiceSettings).catch(() => {});
+          speak(startResult.voiceText || '¡Bienvenido!', _voiceSettings).catch((e) =>
+            console.error('[ClassOrchestrator] Speak error:', e),
+          );
         }
       } else {
         // Normal start or start that needs "comenzar" confirmation
-        speak(startResult.voiceText || '¡Bienvenido!', _voiceSettings).catch(() => {});
+        speak(startResult.voiceText || '¡Bienvenido!', _voiceSettings).catch((e) =>
+          console.error('[ClassOrchestrator] Speak error:', e),
+        );
 
         // Only send 'comenzar' if the lesson needs to be started (AWAITING_START state).
         // If resuming mid-lesson, process the start response directly.
@@ -508,7 +526,9 @@ export function useClassOrchestrator() {
 
       // Handle based on needsStart
       if (startResult.needsStart !== false) {
-        speak(startResult.voiceText || '¡Bienvenido!', _voiceSettings).catch(() => {});
+        speak(startResult.voiceText || '¡Bienvenido!', _voiceSettings).catch((e) =>
+          console.error('[ClassOrchestrator] Speak error:', e),
+        );
         const firstStep = await doInteract('comenzar');
         processResponse(firstStep);
       } else {

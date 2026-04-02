@@ -2,12 +2,8 @@ import {
   GamificationEndpoints,
   UserGamificationProfileSchema,
   EarnedBadgeSchema,
-  GamificationSummarySchema,
-  BadgeInfoSchema,
   type UserGamificationProfile,
   type EarnedBadge,
-  type GamificationSummary,
-  type BadgeInfo,
 } from '@pixel-mentor/shared/gamification';
 
 import { apiClient } from '../services/api';
@@ -21,11 +17,6 @@ interface RecordActivityResponse {
   profile: UserGamificationProfile;
   levelUp: boolean;
   newBadges: EarnedBadge[];
-}
-
-interface BadgesResponse {
-  allBadges: BadgeInfo[];
-  earnedBadges: EarnedBadge[];
 }
 
 export const gamificationApi = {

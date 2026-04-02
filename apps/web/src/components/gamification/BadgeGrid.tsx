@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { IconTrophy, IconLock, IconX, IconStar, IconTargetArrow } from '@tabler/icons-react';
 import { type EarnedBadge, type BadgeInfo } from '@pixel-mentor/shared/gamification';
 
-interface BadgeGridProps {
+export interface BadgeGridProps {
   allBadges: BadgeInfo[];
   earnedBadges: EarnedBadge[];
 }

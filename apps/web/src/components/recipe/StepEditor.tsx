@@ -10,7 +10,12 @@ type StepType = 'content' | 'activity' | 'question' | 'intro' | 'closure';
 // Helper to extract text from string or {text: string} object
 function extractText(val: unknown): string {
   if (typeof val === 'string') return val;
-  if (val && typeof val === 'object' && 'text' in val && typeof (val as { text: unknown }).text === 'string') {
+  if (
+    val &&
+    typeof val === 'object' &&
+    'text' in val &&
+    typeof (val as { text: unknown }).text === 'string'
+  ) {
     return (val as { text: string }).text;
   }
   return '';

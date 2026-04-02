@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 
-import { api, type Class, type Session } from '@/services/api';
+import { api, type Class, type Session, type User } from '@/services/api';
 import { gamificationApi } from '@/api/gamification.api';
-import type { User } from '@/stores/authStore';
 
 interface AchievementsData {
   badges: any[];

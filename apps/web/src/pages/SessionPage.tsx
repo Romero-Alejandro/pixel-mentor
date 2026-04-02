@@ -82,7 +82,7 @@ export function SessionPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-sky-50 p-6">
         <Card
-          variant="outlined"
+          variant="locked"
           className="text-center p-8 bg-white border-4 border-rose-200 shadow-[0_8px_0_0_#fecdd3] rounded-[2rem] max-w-sm w-full"
         >
           <p className="text-rose-800 font-black text-xl mb-6">

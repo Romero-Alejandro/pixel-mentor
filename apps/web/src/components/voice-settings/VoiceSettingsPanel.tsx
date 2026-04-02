@@ -17,13 +17,13 @@ import { MicroAudioEvent } from '../../audio/types/audio-events';
 import { cn } from '@/utils/cn';
 
 export interface VoiceSettings {
-  character: 'person' | 'robot' | 'animal' | 'cartoon';
-  speakingRate: number;
-  pitch: number;
-  languageCode: string;
+  character?: 'person' | 'robot' | 'animal' | 'cartoon';
+  speakingRate?: number;
+  pitch?: number;
+  languageCode?: string;
 }
 
-export const DEFAULT_VOICE_SETTINGS: VoiceSettings = {
+export const DEFAULT_VOICE_SETTINGS: Required<VoiceSettings> = {
   character: 'person',
   speakingRate: 1.0,
   pitch: 0,
@@ -234,7 +234,7 @@ export function VoiceSettingsPanel({
                   Velocidad
                 </label>
                 <span className="text-xs font-black text-white bg-sky-500 px-3 py-1 rounded-full">
-                  {settings.speakingRate.toFixed(1)}x
+                  {(settings.speakingRate ?? 1.0).toFixed(1)}x
                 </span>
               </div>
               <input
@@ -261,7 +261,7 @@ export function VoiceSettingsPanel({
                   Tono
                 </label>
                 <span className="text-xs font-black text-white bg-purple-500 px-3 py-1 rounded-full">
-                  {settings.pitch > 0 ? `+${settings.pitch}` : settings.pitch}
+                  {(settings.pitch ?? 0) > 0 ? `+${settings.pitch}` : settings.pitch}
                 </span>
               </div>
               <input

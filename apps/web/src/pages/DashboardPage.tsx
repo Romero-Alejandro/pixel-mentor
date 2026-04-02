@@ -5,7 +5,6 @@ import {
   IconMoodSmile,
   IconMap,
   IconSchool,
-  IconLayoutDashboard,
   IconUsers,
   IconListDetails,
 } from '@tabler/icons-react';

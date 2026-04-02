@@ -13,13 +13,6 @@ import { useAudio } from '@/contexts/AudioContext';
 import { Button, Input } from '@/components/ui';
 import { apiClient } from '@/services/api';
 
-interface GenerateRecipeDraftInput {
-  topic: string;
-  targetAgeMin: number;
-  targetAgeMax: number;
-  objectives: string[];
-}
-
 interface GeneratedStep {
   order: number;
   stepType: 'intro' | 'content' | 'activity' | 'closure';
@@ -290,7 +283,7 @@ export function AIRecipeGeneratorModal({
                   </div>
 
                   {/* Quality warnings */}
-                  {generatedDraft.qualityValidation && !generatedDraft.qualityValidation.passed && (
+                  {generatedDraft.qualityValidation && !generatedDraft.qualityValidation.passed ? (
                     <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4">
                       <h4 className="font-bold text-amber-700 mb-2 flex items-center gap-2">
                         <IconAlertCircle className="w-5 h-5" />
@@ -307,7 +300,7 @@ export function AIRecipeGeneratorModal({
                         ))}
                       </ul>
                     </div>
-                  )}
+                  ) : null}
                 </>
               ) : null}
             </div>

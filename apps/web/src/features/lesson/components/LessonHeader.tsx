@@ -89,7 +89,7 @@ export function LessonHeader({
         </div>
 
         <div className="flex flex-1 justify-end items-center gap-2">
-          {onReset && !isStart && (
+          {onReset && !isStart ? (
             <button
               onClick={onReset}
               className="group flex items-center gap-2 rounded-2xl px-4 py-2 border-4 border-transparent hover:border-rose-200 bg-transparent hover:bg-rose-50 text-slate-500 hover:text-rose-600 font-black transition-all cursor-pointer outline-none"
@@ -102,7 +102,7 @@ export function LessonHeader({
               />
               <span className="hidden sm:inline tracking-wider uppercase text-xs">Reiniciar</span>
             </button>
-          )}
+          ) : null}
           <VoiceSettingsPanel
             settings={voiceSettings}
             onSettingsChange={updateSettings}

@@ -253,7 +253,7 @@ export function VoiceInputWithConfirmation({ onConfirm }: VoiceInputWithConfirma
             >
               Enviar
             </Button>
-            <Button onClick={handleRetry} variant="outline">
+            <Button onClick={handleRetry} variant="secondary">
               <IconReload className="w-4 h-4" />
             </Button>
           </div>

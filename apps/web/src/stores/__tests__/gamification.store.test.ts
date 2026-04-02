@@ -40,7 +40,6 @@ describe('gamification store', () => {
     mockedApi.getProfile.mockClear();
     mockedApi.recordActivity.mockClear();
     mockedApi.getBadges.mockClear();
-    mockedApi.getProgress.mockClear();
     useGamificationStore.setState({
       profile: null,
       isLoading: false,

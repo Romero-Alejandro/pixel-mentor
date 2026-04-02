@@ -110,7 +110,7 @@ export function ErrorBanner({
       {canRetry ? (
         <div className="flex justify-end gap-2 ml-13">
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={handleRetry}
             disabled={isRetrying}
