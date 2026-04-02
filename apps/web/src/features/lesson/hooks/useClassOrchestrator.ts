@@ -131,6 +131,7 @@ export function useClassOrchestrator() {
   const isMountedRef = useRef(true);
   const streamingChunksRef = useRef<string[]>([]);
   const handlersRef = useRef({ chunk: null as any, end: null as any, error: null as any });
+  const wasStreamingRef = useRef(false);
 
   useEffect(() => {
     syncStore(isSpeaking);
@@ -319,9 +320,11 @@ export function useClassOrchestrator() {
         eventSourceRef.current = eventSource;
 
         let fullText = '';
+        wasStreamingRef.current = true;
         setStoreStreaming(true);
         setStreamError(null);
         clearStream();
+        setContentText('');
 
         handlersRef.current.chunk = (e: MessageEvent) => {
           if (!isMountedRef.current) return;

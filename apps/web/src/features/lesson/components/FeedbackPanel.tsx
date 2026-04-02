@@ -7,15 +7,17 @@ import { Spinner } from '@/components/ui';
 
 export function FeedbackPanel({
   fb,
+  nextLessonText,
 }: {
   fb: { isCorrect: boolean; message: string; encouragement?: string; xpAwarded?: number };
+  nextLessonText?: string;
 }) {
   const { playSprite } = useAudio();
 
   // Sonido cuando aparece el modal (independiente de correcto/incorrecto)
   useEffect(() => {
     const timer = setTimeout(() => {
-      playSprite(SpriteAudioEvent.ActivityStart); // o un sonido de "panel abierto"
+      playSprite(SpriteAudioEvent.ActivityStart);
     }, 100);
     return () => clearTimeout(timer);
   }, [playSprite]);
@@ -31,7 +33,7 @@ export function FeedbackPanel({
   }, [fb.isCorrect, playSprite]);
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-4 text-center gap-10 w-full h-full animate-bounce-in">
+    <div className="flex-1 flex flex-col items-center p-4 text-center gap-6 w-full h-full animate-bounce-in">
       <div
         className={`relative w-28 h-28 rounded-full flex items-center justify-center border-[9px] ${
           fb.isCorrect
@@ -67,6 +69,17 @@ export function FeedbackPanel({
           ) : null}
         </div>
       </div>
+
+      {/* Show next lesson content if streaming */}
+      {nextLessonText && (
+        <div className="max-w-xl w-full bg-slate-50 border-4 border-slate-200 rounded-[2.5rem] p-6 shadow-[0_8px_0_0_#e2e8f0]">
+          <h4 className="text-lg font-bold text-sky-600 mb-3 flex items-center justify-center gap-2">
+            <span className="w-2 h-2 bg-sky-500 rounded-full animate-pulse" />
+            Preparando siguiente parte...
+          </h4>
+          <p className="text-slate-700 leading-relaxed">{nextLessonText}</p>
+        </div>
+      )}
 
       <div className="mt-6 flex items-center gap-3 bg-slate-100 border-4 border-slate-200 px-6 py-4 rounded-2xl shadow-inner">
         <Spinner size="sm" className="text-slate-400" />
