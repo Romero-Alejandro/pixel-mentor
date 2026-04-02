@@ -71,13 +71,19 @@ export function ConcentrationPanel({
   const cLen = contentWords.length;
   const lLen = closureWords.length;
 
-  const visibleT = isSynced ? tLen : Math.min(currentWordIndex, tLen);
-  const visibleC = isSynced ? cLen : Math.max(0, Math.min(currentWordIndex - tLen, cLen));
-  const visibleL = isSynced ? lLen : Math.max(0, Math.min(currentWordIndex - tLen - cLen, lLen));
+  // When audio is playing, show text progressively based on currentWordIndex.
+  // When NOT playing (streaming or before playback), show all received text.
+  const showAllContent = !isSpeaking || isSynced;
 
-  const activeT = isSynced ? -1 : currentWordIndex - 1;
-  const activeC = isSynced ? -1 : currentWordIndex - 1 - tLen;
-  const activeL = isSynced ? -1 : currentWordIndex - 1 - tLen - cLen;
+  const visibleT = showAllContent ? tLen : Math.min(currentWordIndex, tLen);
+  const visibleC = showAllContent ? cLen : Math.max(0, Math.min(currentWordIndex - tLen, cLen));
+  const visibleL = showAllContent
+    ? lLen
+    : Math.max(0, Math.min(currentWordIndex - tLen - cLen, lLen));
+
+  const activeT = showAllContent ? -1 : currentWordIndex - 1;
+  const activeC = showAllContent ? -1 : currentWordIndex - 1 - tLen;
+  const activeL = showAllContent ? -1 : currentWordIndex - 1 - tLen - cLen;
 
   return (
     <div className="flex-1 flex flex-col items-center p-6 sm:p-8 gap-6 w-full h-full min-h-0 animate-bounce-in">
