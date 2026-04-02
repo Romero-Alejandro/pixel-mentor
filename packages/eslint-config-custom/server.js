@@ -51,7 +51,7 @@ export default tseslint.config(
       ],
 
       // Reglas de Robustez y Calidad Senior
-      'no-console': ['warn', { allow: ['warn', 'error'] }], // Solo permitir logs de nivel alto para evitar saturación en producción.
+      'no-console': 'error', // Prohíbe console.* en código de producción.
       '@typescript-eslint/explicit-function-return-type': 'error', // Obliga a documentar el contrato de salida de las funciones.
       '@typescript-eslint/no-explicit-any': 'error', // Prohíbe 'any' para mantener la integridad del sistema de tipos.
       '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports' }], // Optimiza el bundling eliminando tipos en tiempo de ejecución.
