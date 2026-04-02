@@ -13,7 +13,7 @@ export const envSchema = z.object({
   GEMINI_API_KEY: z.string().min(1).optional(),
   OPENROUTER_API_KEY: z.string().min(1).optional(),
   GROQ_API_KEY: z.string().min(1).optional(),
-  DEFAULT_MODEL_GEMINI: z.string().default('gemini-3.1-flash-lite'),
+  DEFAULT_MODEL_GEMINI: z.string().default('gemini-2.5-flash-lite'),
   DEFAULT_MODEL_OPENROUTER: z.string().default('stepfun/step-3.5-flash:free'),
   DEFAULT_MODEL_GROQ: z.string().default('moonshotai/kimi-k2-instruct-0905'),
   TTS_PROVIDER: z.enum(['google-free', 'mock']).default('google-free'),
@@ -24,8 +24,8 @@ export const envSchema = z.object({
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
   RATE_LIMIT_MAX_INTERACT: z.coerce.number().int().positive().default(5),
   REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
-  ENABLE_STREAMING: z.boolean().default(false),
-  USE_NEW_EVALUATOR_ENGINE: z.boolean().default(false),
+  ENABLE_STREAMING: z.coerce.boolean().default(false),
+  USE_NEW_EVALUATOR_ENGINE: z.coerce.boolean().default(false),
 });
 
 export type Config = z.infer<typeof envSchema>;
