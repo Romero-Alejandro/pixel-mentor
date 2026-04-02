@@ -24,13 +24,13 @@ export type PedagogicalState = z.infer<typeof PedagogicalStateSchema>;
 export const SessionCheckpointSchema = z.object({
   currentState: PedagogicalStateSchema,
   currentStepIndex: z.number(),
-  savedStepIndex: z.number().optional(),
+  savedStepIndex: z.number().nullish(),
   doubtContext: z
     .object({
       question: z.string(),
       stepIndex: z.number(),
     })
-    .optional(),
+    .nullish(),
   questionCount: z.number().optional(),
   lastQuestionTime: z.string().nullish(),
   skippedActivities: z.array(z.string()).optional(),
