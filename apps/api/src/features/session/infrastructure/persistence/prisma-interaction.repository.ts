@@ -44,15 +44,26 @@ export class PrismaInteractionRepository implements InteractionRepository {
       'createdAt' | 'updatedAt' | 'comprehensionConfirmed' | 'flaggedForReview' | 'questionAsked'
     >,
   ): Promise<Interaction> {
-    const created = await prisma.interaction.create({
-      data: {
+    const created = await prisma.interaction.upsert({
+      where: {
+        sessionId_turnNumber: {
+          sessionId: interaction.sessionId,
+          turnNumber: interaction.turnNumber,
+        },
+      },
+      update: {
+        transcript: interaction.transcript,
+        aiResponse: interaction.aiResponse as never,
+        pausedForQuestion: interaction.pausedForQuestion,
+      },
+      create: {
         sessionId: interaction.sessionId,
         turnNumber: interaction.turnNumber,
         transcript: interaction.transcript,
         aiResponse: interaction.aiResponse as never,
         comprehensionConfirmed: false,
         questionAsked: false,
-        pausedForQuestion: false,
+        pausedForQuestion: interaction.pausedForQuestion ?? false,
         flaggedForReview: false,
       },
     });

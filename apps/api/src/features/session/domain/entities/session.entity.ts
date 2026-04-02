@@ -26,11 +26,11 @@ export function isTerminalStatus(status: SessionStatus): boolean {
 export interface SessionCheckpoint {
   readonly currentState: PedagogicalState;
   readonly currentStepIndex: number;
-  readonly savedStepIndex?: number;
+  readonly savedStepIndex?: number | null;
   readonly doubtContext?: {
     readonly question: string;
     readonly stepIndex: number;
-  };
+  } | null;
   // Nuevos campos para el flujo mejorado
   readonly questionCount?: number;
   readonly lastQuestionTime?: string | null;

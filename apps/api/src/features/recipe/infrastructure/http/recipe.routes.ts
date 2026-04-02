@@ -103,12 +103,8 @@ export function createRecipeRouter(
       response.flushHeaders();
 
       let errorSent = false;
-      const reqId = Math.random().toString(36).substring(7);
 
       try {
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`[SSE ${reqId}] Starting stream for session ${sessionId}`);
-        }
         const stream = orchestrateUseCase.interactStream(sessionId, studentInput);
 
         for await (const chunk of stream) {
@@ -116,7 +112,6 @@ export function createRecipeRouter(
             response.write(`event: chunk\ndata: ${JSON.stringify({ text: chunk.text })}\n\n`);
           } else if (chunk.type === 'end') {
             if (process.env.NODE_ENV === 'development') {
-              console.log(`[SSE ${reqId}] Stream ended normally`);
             }
             response.write(
               `event: end\ndata: ${JSON.stringify({
@@ -132,7 +127,6 @@ export function createRecipeRouter(
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         if (process.env.NODE_ENV === 'development') {
-          console.error(`[SSE ${reqId}] Stream error:`, error);
         }
         if (!errorSent) {
           const code = (error as { code?: string }).code ?? 'INTERNAL_ERROR';
@@ -144,7 +138,6 @@ export function createRecipeRouter(
       } finally {
         response.end();
         if (process.env.NODE_ENV === 'development') {
-          console.log(`[SSE ${reqId}] Connection closed`);
         }
       }
     },

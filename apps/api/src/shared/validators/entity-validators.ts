@@ -83,8 +83,8 @@ export const DoubtContextSchema = z.object({
 export const SessionCheckpointSchema = z.object({
   currentState: PedagogicalStateSchema.default('ACTIVE_CLASS'),
   currentStepIndex: z.number().int().min(0).default(0),
-  savedStepIndex: z.number().int().min(0).optional(),
-  doubtContext: DoubtContextSchema.optional(),
+  savedStepIndex: z.number().int().min(0).nullish(),
+  doubtContext: DoubtContextSchema.nullish(),
   questionCount: z.number().int().min(0).default(0),
   lastQuestionTime: z.string().nullable().default(null),
   skippedActivities: z.array(z.string()).default([]),
