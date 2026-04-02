@@ -12,7 +12,11 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@/features/*": ["./src/features/*"],
+      "@/shared/*": ["./src/shared/*"],
+      "@/main/*": ["./src/main/*"],
+      "@/infra/*": ["./src/infrastructure/*"]
     }
   },
   "include": ["src/**/*", "tests/**/*", "tsup.config.ts", "prisma.config.ts"],

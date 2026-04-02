@@ -1,18 +1,20 @@
 import type { Server } from 'node:http';
 
-import pino from 'pino';
+import { createLogger } from '@/shared/logger/logger.js';
 
-import { buildContainer } from './dependency-container';
+import { buildContainer } from './main/container.js';
+import { createApp } from './main/app.js';
 
-import { config, getFeatureFlagService } from '@/config';
-import { prisma } from '@/infrastructure/adapters/database/client.js';
-import { createApp } from '@/infrastructure/adapters/http/server.js';
-import { runStagingValidation } from '@/monitoring/index.js';
+import { config, getFeatureFlagService } from '@/shared/config';
+import { prisma } from '@/database/client.js';
+import { runStagingValidation } from '@/shared/monitoring/staging-validation.js';
 
-const logger = pino({
-  level: config.LOG_LEVEL,
-  transport: config.NODE_ENV !== 'production' ? { target: 'pino-pretty' } : undefined,
-});
+// Import the orchestrate use case and others that are still in the old location
+// These will be migrated in future phases
+import { OrchestrateRecipeUseCase } from '@/features/recipe/application/use-cases/orchestrate-recipe.use-case.js';
+import { StartRecipeUseCase } from '@/features/recipe/application/use-cases/start-recipe.use-case.js';
+
+const logger = createLogger(config);
 
 async function verifyDatabaseConnection(): Promise<void> {
   try {
@@ -41,7 +43,7 @@ function setupGracefulShutdown(server: Server, shutdownSignal: string): void {
         isClosed = true;
         process.exit(0);
       })
-      .catch((disconnectError) => {
+      .catch((disconnectError: any) => {
         logger.error(disconnectError, 'Error disconnecting database');
         process.exit(1);
       });
@@ -58,34 +60,56 @@ function setupGracefulShutdown(server: Server, shutdownSignal: string): void {
 async function bootstrap(): Promise<void> {
   await verifyDatabaseConnection();
 
+  // Build the main container with all features
   const container = buildContainer(config, logger);
 
   // Run staging validation (logs banner if new engine is active)
   const featureFlagService = getFeatureFlagService();
   runStagingValidation(featureFlagService);
 
+  // Create orchestrate use case with dependencies from various containers
+  // This is needed because OrchestrateRecipeUseCase has complex dependencies
+  // that span multiple features
+  const orchestrateUseCase = new OrchestrateRecipeUseCase(
+    container.session.sessionRepository,
+    container.session.interactionRepository,
+    container.recipe.recipeRepository,
+    container.knowledge.conceptRepository,
+    container.activity.activityRepository,
+    container.knowledge.atomRepository,
+    container.auth.userRepository,
+    null as any, // aiModel - will be passed via global for now
+    null as any, // questionClassifier
+    null as any, // ragService
+    null as any, // comprehensionEvaluator
+    container.evaluation.lessonEvaluator,
+    container.session.advisoryLock,
+    undefined, // contextWindowService
+    getFeatureFlagService(),
+    container.activity.activityAttemptRepository,
+  );
+
+  // Create start recipe use case
+  const startRecipeUseCase = new StartRecipeUseCase(
+    container.recipe.recipeRepository,
+    container.session.sessionRepository,
+  );
+
+  // Expose these globally for the app to use (temporary solution)
+  // Using 'any' type to bypass TypeScript issues with duplicate class declarations
+  (globalThis as any).__orchestrateUseCase = orchestrateUseCase;
+  (globalThis as any).__startRecipeUseCase = startRecipeUseCase;
+
+  // Create and configure Express app
   const app = createApp({
     config,
     logger,
-    prisma,
-    ...container.useCases,
-    ...container.repositories,
-    ...container.services,
-    ttsService: container.providers.tts,
-    // Gamification
-    gameEngine: container.gameEngine,
-    userGamificationRepository: container.gamificationRepositories.userGamificationRepository,
-    badgeRepository: container.gamificationRepositories.badgeRepository,
-    levelService: container.gamificationRepositories.levelService,
-    // Class services
-    classService: container.classService,
-    classAIService: container.classAIService,
-    classTemplateService: container.classTemplateService,
-    // Recipe services
-    recipeService: container.recipeService,
-    recipeAIService: container.recipeAIService,
-    // Admin services
-    adminUserService: container.adminUserService,
+    auth: container.auth,
+    recipe: container.recipe,
+    session: container.session,
+    gamification: container.gamification,
+    class: container.class,
+    tts: container.tts,
   });
 
   // Express app.listen() returns http.Server in Express 5
