@@ -15,16 +15,16 @@
 
 import request from 'supertest';
 
-import { createClassRouter } from '@/infrastructure/adapters/http/routes/classes.js';
-import type { ClassService } from '@/application/services/class.service.js';
+import { createClassRouter } from '@/features/class/infrastructure/http/classes.routes.js';
+import type { ClassService } from '@/features/class/application/services/class.service.js';
 import {
   ClassNotFoundError,
   ClassOwnershipError,
   ClassStateError,
   ClassValidationError,
   LessonNotFoundError,
-} from '@/application/services/class.service.js';
-import type { ClassEntity, ClassLessonEntity } from '@/domain/entities/class.entity.js';
+} from '@/features/class/application/services/class.service.js';
+import type { ClassEntity, ClassLessonEntity } from '@/features/class/domain/entities/class.entity.js';
 
 // Mock factories for entities
 const createMockClass = (overrides: Partial<ClassEntity> = {}): ClassEntity => ({

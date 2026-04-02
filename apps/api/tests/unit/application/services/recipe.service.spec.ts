@@ -3,11 +3,11 @@ import {
   RecipeNotFoundError,
   RecipeValidationError,
   StepNotFoundError,
-} from '@/application/services/recipe.service.js';
-import type { RecipeRepository } from '@/domain/ports/recipe-repository.js';
-import type { AtomRepository } from '@/domain/ports/atom-repository.js';
-import type { Recipe, RecipeStep, StepScript } from '@/domain/entities/recipe.js'; // Import StepScript
-import type { CreateRecipeStepInput } from '@/application/services/recipe.service.js'; // Import DTO for testing
+} from '@/features/recipe/application/services/recipe.service.js';
+import type { RecipeRepository } from '@/features/recipe/domain/ports/recipe.repository.port.js';
+import type { AtomRepository } from '@/features/knowledge/domain/ports/atom.repository.port.js';
+import type { Recipe, RecipeStep, StepScript } from '@/features/recipe/domain/entities/recipe.entity.js'; // Import StepScript
+import type { CreateRecipeStepInput } from '@/features/recipe/application/services/recipe.service.js'; // Import DTO for testing
 
 // Jest globals are available automatically - no need to import
 

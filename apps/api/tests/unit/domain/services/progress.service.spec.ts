@@ -7,9 +7,9 @@
  * - Edge cases: invalid inputs, repository errors, different progress configurations
  */
 
-import { ProgressService } from '@/domain/services/progress.service';
-import type { ProgressRepository } from '@/domain/ports/progress-repository';
-import type { UserProgress, ProgressStatus } from '@/domain/entities/user-progress';
+import { ProgressService } from '@/features/progress/domain/services/progress.service';
+import type { ProgressRepository } from '@/features/progress/domain/ports/progress.repository.port';
+import type { UserProgress, ProgressStatus } from '@/features/progress/domain/entities/user-progress.entity';
 
 // Mock factories
 const createMockUserProgress = (overrides: Partial<UserProgress> = {}): UserProgress => ({
@@ -36,6 +36,9 @@ const createMockProgressRepo = (): jest.Mocked<ProgressRepository> => ({
   findByScore: jest.fn(),
   findByAttempts: jest.fn(),
   findByLastAttemptAt: jest.fn(),
+  countByUserIdAndStatus: jest.fn(),
+  findMasteredByUser: jest.fn(),
+  findOrCreateByUserAndRecipe: jest.fn(),
 });
 
 describe('ProgressService', () => {

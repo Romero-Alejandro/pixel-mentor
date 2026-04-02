@@ -7,9 +7,9 @@
  * - Edge cases: invalid IDs, duplicate linking, weight boundaries
  */
 
-import { CompetencyService } from '@/domain/services/competency.service';
-import type { AtomRepository } from '@/domain/ports/atom-repository';
-import type { AtomCompetency } from '@/domain/entities/atom-competency';
+import { CompetencyService } from '@/features/progress/domain/services/competency.service';
+import type { AtomRepository } from '@/features/knowledge/domain/ports/atom.repository.port';
+import type { AtomCompetency } from '@/features/knowledge/domain/entities/atom-competency.entity';
 
 // Mock factory for AtomCompetency
 const createMockAtomCompetency = (overrides: Partial<AtomCompetency> = {}): AtomCompetency => ({

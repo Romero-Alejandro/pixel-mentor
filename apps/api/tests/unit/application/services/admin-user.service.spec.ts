@@ -1,11 +1,10 @@
-import argon2 from 'argon2';
-
-import type { CreateUserInput } from '@/application/services/admin-user.service.js';
-import { AdminUserService } from '@/application/services/admin-user.service.js';
-import type { User, UserRole } from '@/domain/entities/user.js';
-import type { UserRepository } from '@/domain/ports/user-repository.js';
-import { UserAlreadyExistsError, UserNotFoundError } from '@/domain/ports/user-repository.js';
-import { ForbiddenError } from '@/domain/ports/auth-errors.js';
+import type { CreateUserInput } from '@/features/auth/application/services/admin-user.service.js';
+import { AdminUserService } from '@/features/auth/application/services/admin-user.service.js';
+import type { User, UserRole } from '@/features/auth/domain/entities/user.entity.js';
+import type { IUserRepository as UserRepository } from '@/features/auth/domain/ports/user.repository.port.js';
+import { UserAlreadyExistsError, UserNotFoundError } from '@/features/auth/domain/ports/user.repository.port.js';
+import { ForbiddenError } from '@/features/auth/domain/auth.errors.js';
+import type { IHashingService } from '@/features/auth/domain/ports/hashing.service.port.js';
 
 // Jest globals are available automatically
 
@@ -40,17 +39,17 @@ const createMockUserRepository = (): jest.Mocked<UserRepository> => {
   mockRepo.findByEmail.mockResolvedValue(null);
   mockRepo.findById.mockResolvedValue(null);
   mockRepo.findByIdentifier.mockResolvedValue(null);
-  mockRepo.create.mockImplementation((data: any) =>
+  mockRepo.create.mockImplementation((data: unknown) =>
     Promise.resolve(
       createMockUser({
         id: crypto.randomUUID(),
-        email: data.email,
-        username: data.username,
-        name: data.name,
-        role: data.role,
-        age: data.age,
-        quota: data.quota ?? 0,
-        cohort: data.cohort ?? 'default',
+        email: (data as { email: string }).email,
+        username: (data as { username?: string }).username,
+        name: (data as { name: string }).name,
+        role: (data as { role: UserRole }).role,
+        age: (data as { age?: number }).age,
+        quota: (data as { quota?: number }).quota ?? 0,
+        cohort: (data as { cohort?: string }).cohort ?? 'default',
       }),
     ),
   );
@@ -69,13 +68,23 @@ const createMockUserRepository = (): jest.Mocked<UserRepository> => {
   return mockRepo;
 };
 
+// Mock hashing service
+const createMockHashingService = (): jest.Mocked<IHashingService> => ({
+  hash: jest.fn().mockImplementation((_password: string) => Promise.resolve(`hashed_${_password}`)),
+  compare: jest
+    .fn()
+    .mockImplementation((_password: string, _hash: string) => Promise.resolve(true)),
+});
+
 describe('AdminUserService', () => {
   let userRepository: jest.Mocked<UserRepository>;
+  let hashingService: jest.Mocked<IHashingService>;
   let service: AdminUserService;
 
   beforeEach(() => {
     userRepository = createMockUserRepository();
-    service = new AdminUserService(userRepository);
+    hashingService = createMockHashingService();
+    service = new AdminUserService(userRepository, hashingService);
   });
 
   describe('createUser', () => {
@@ -247,18 +256,18 @@ describe('AdminUserService', () => {
       expect(result.role).toBe('ADMIN');
     });
 
-    it('should hash password using argon2', async () => {
+    it('should hash password using hashing service', async () => {
       userRepository.findByEmail.mockResolvedValue(null);
       userRepository.findByIdentifier.mockResolvedValue(null);
 
-      const argon2HashSpy = jest.spyOn(argon2, 'hash');
+      const hashSpy = jest.spyOn(hashingService, 'hash');
 
       userRepository.create.mockResolvedValue(createMockUser({ email: validInput.email }));
 
       await service.createUser(validInput);
 
-      expect(argon2HashSpy).toHaveBeenCalledWith(validInput.password);
-      argon2HashSpy.mockRestore();
+      expect(hashSpy).toHaveBeenCalledWith(validInput.password);
+      hashSpy.mockRestore();
     });
   });
 

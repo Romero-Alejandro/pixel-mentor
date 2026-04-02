@@ -19,9 +19,9 @@ import {
   isTerminalStatus,
   type Session,
   type SessionCheckpoint,
-} from '@/domain/entities/session.js';
-import { validateSessionTransition, SESSION_TRANSITIONS } from '@/domain/validators/index.js';
-import { AppError, ErrorCodes } from '@/domain/errors/index.js';
+} from '@/features/session/domain/entities/session.entity.js';
+import { validateSessionTransition, SESSION_TRANSITIONS } from '@/shared/validators/index.js';
+import { AppError, ErrorCodes } from '@/shared/errors/index.js';
 
 // ==================== Helpers ====================
 

@@ -6,15 +6,14 @@
 
 import request from 'supertest';
 
-import { createRecipesRouter } from '@/infrastructure/adapters/http/routes/recipes.js';
-import type { RecipeService } from '@/application/services/recipe.service.js';
+import { createRecipesRouter } from '@/features/recipe/infrastructure/http/recipes.routes.js';
+import type { RecipeService } from '@/features/recipe/application/services/recipe.service.js';
 import {
   RecipeNotFoundError,
   RecipeOwnershipError,
-  RecipeValidationError,
   StepNotFoundError,
-} from '@/application/services/recipe.service.js';
-import type { Recipe, RecipeStep } from '@/domain/entities/recipe.js';
+} from '@/features/recipe/application/services/recipe.service.js';
+import type { Recipe, RecipeStep } from '@/features/recipe/domain/entities/recipe.entity.js';
 
 // Valid UUIDs for tests
 const RECIPE_ID = '123e4567-e89b-12d3-a456-426614174000';

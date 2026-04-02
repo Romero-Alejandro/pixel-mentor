@@ -1,6 +1,6 @@
-import type { ContextWindowConfig } from '@/application/services/context-window.service.js';
-import { ContextWindowService } from '@/application/services/context-window.service.js';
-import type { Interaction } from '@/domain/entities/interaction.js';
+import type { ContextWindowConfig } from '@/features/recipe/application/services/context-window.service.js';
+import { ContextWindowService } from '@/features/recipe/application/services/context-window.service.js';
+import type { Interaction } from '@/features/session/domain/entities/interaction.entity.js';
 
 // Helper to create mock interactions
 const createMockInteraction = (overrides: Partial<Interaction> = {}): Interaction => ({

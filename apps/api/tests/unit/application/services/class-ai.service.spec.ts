@@ -1,10 +1,10 @@
-import { ClassAIService } from '@/application/services/class-ai.service.js';
-import type { AIService } from '@/domain/ports/ai-service.js';
+import { ClassAIService } from '@/features/class/application/services/class-ai.service.js';
+import type { AIService } from '@/features/recipe/domain/ports/ai-service.port.js';
 import type {
   IClassRepository,
   IClassLessonRepository,
-} from '@/domain/repositories/class.repository.js';
-import type { ClassEntity } from '@/domain/entities/class.entity.js';
+} from '@/features/class/domain/ports/class.repository.js';
+import type { ClassEntity } from '@/features/class/domain/entities/class.entity.js';
 
 // ==================== Mock Factories ====================
 

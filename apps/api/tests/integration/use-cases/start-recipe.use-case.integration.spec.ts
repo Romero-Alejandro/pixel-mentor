@@ -10,12 +10,9 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { StartRecipeUseCase } from '@/application/use-cases/recipe/start-recipe.use-case';
-import type { SessionRepository } from '@/domain/ports/session-repository';
-import type { RecipeRepository } from '@/domain/ports/recipe-repository';
-import { RecipeNotFoundError } from '@/domain/ports/recipe-repository';
-import type { Session } from '@/domain/entities/session';
-import { startSession, isTerminalStatus } from '@/domain/entities/session.js';
+import { StartRecipeUseCase } from '@/features/recipe/application/use-cases/start-recipe.use-case';
+import { RecipeNotFoundError } from '@/features/recipe/domain/ports/recipe.repository.port';
+import type { Session } from '@/features/session/domain/entities/session.entity';
 
 // =============== Helpers ===============
 

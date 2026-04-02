@@ -20,7 +20,7 @@ import {
   createClassEntity,
   createClassLessonEntity,
   createClassVersionEntity,
-} from '@/domain/entities/class.entity';
+} from '@/features/class/domain/entities/class.entity';
 
 describe('Class Entity - State Machine', () => {
   describe('isValidStatusTransition', () => {

@@ -23,17 +23,17 @@ import {
   type UpdateClassInput,
   type AddLessonInput,
   type UpdateLessonInput,
-} from '@/application/services/class.service.js';
+} from '@/features/class/application/services/class.service.js';
 import type {
   IClassRepository,
   IClassLessonRepository,
   IClassVersionRepository,
-} from '@/domain/repositories/class.repository.js';
+} from '@/features/class/domain/ports/class.repository.js';
 import type {
   ClassEntity,
   ClassLessonEntity,
   ClassStatus,
-} from '@/domain/entities/class.entity.js';
+} from '@/features/class/domain/entities/class.entity.js';
 
 // Mock factories
 const createMockClassEntity = (overrides: Partial<ClassEntity> = {}): ClassEntity => ({

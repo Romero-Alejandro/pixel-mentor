@@ -1,6 +1,6 @@
-import { RecipeAIService } from '@/application/services/recipe-ai.service.js';
-import type { AIService } from '@/domain/ports/ai-service.js';
-import type { GenerateRecipeDraftInput } from '@/application/services/recipe-ai.service.js';
+import { RecipeAIService } from '@/features/recipe/application/services/recipe-ai.service.js';
+import type { AIService } from '@/features/recipe/domain/ports/ai-service.port.js';
+import type { GenerateRecipeDraftInput } from '@/features/recipe/application/services/recipe-ai.service.js';
 
 // Mock AIService
 const createMockAIService = (): jest.Mocked<AIService> => {

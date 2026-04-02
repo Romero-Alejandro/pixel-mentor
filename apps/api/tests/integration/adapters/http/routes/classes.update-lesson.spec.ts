@@ -6,14 +6,14 @@
 
 import request from 'supertest';
 
-import { createClassRouter } from '@/infrastructure/adapters/http/routes/classes.js';
-import type { ClassService } from '@/application/services/class.service.js';
+import { createClassRouter } from '@/features/class/infrastructure/http/classes.routes.js';
+import type { ClassService } from '@/features/class/application/services/class.service.js';
 import {
   ClassNotFoundError,
   ClassOwnershipError,
   ClassStateError,
   LessonNotFoundError,
-} from '@/application/services/class.service.js';
+} from '@/features/class/application/services/class.service.js';
 
 // Mock ClassService with updateLesson
 const createMockClassService = (): jest.Mocked<ClassService> => {

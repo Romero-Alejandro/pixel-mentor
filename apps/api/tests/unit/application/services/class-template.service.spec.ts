@@ -17,16 +17,16 @@ import {
   type CreateTemplateInput,
   type UpdateTemplateInput,
   type CreateClassFromTemplateInput,
-} from '@/application/services/class-template.service.js';
+} from '@/features/class/application/services/class-template.service.js';
 import type {
   IClassTemplateRepository,
   IClassRepository,
-} from '@/domain/repositories/class.repository.js';
+} from '@/features/class/domain/ports/class.repository.js';
 import type {
   ClassTemplateEntity,
   ClassEntity,
   ClassStatus,
-} from '@/domain/entities/class.entity.js';
+} from '@/features/class/domain/entities/class.entity.js';
 
 // ==================== Mock Factory Functions ====================
 

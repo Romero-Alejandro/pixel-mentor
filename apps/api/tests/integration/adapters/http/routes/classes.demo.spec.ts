@@ -6,9 +6,12 @@
 
 import request from 'supertest';
 
-import { createClassRouter } from '@/infrastructure/adapters/http/routes/classes.js';
-import type { ClassEntity, ClassLessonEntity } from '@/domain/entities/class.entity.js';
-import { ClassNotFoundError } from '@/application/services/class.service.js';
+import { createClassRouter } from '@/features/class/infrastructure/http/classes.routes.js';
+import type {
+  ClassEntity,
+  ClassLessonEntity,
+} from '@/features/class/domain/entities/class.entity.js';
+import { ClassNotFoundError } from '@/features/class/application/services/class.service.js';
 
 // Mock class entity factory
 const createMockClass = (overrides: Partial<ClassEntity> = {}): ClassEntity => ({
@@ -187,7 +190,7 @@ describe('POST /api/classes/:id/demo', () => {
 
       // Then
       expect(response.status).toBe(403);
-      expect(response.body.error).toContain('does not have permission');
+      expect(response.body.error).toContain('does not belong to user');
     });
   });
 

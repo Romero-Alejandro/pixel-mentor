@@ -8,10 +8,10 @@
  * - Edge cases: UUID generation, session handling
  */
 
-import { EventService } from '@/domain/services/event.service';
-import type { EventLogRepository } from '@/domain/ports/event-log-repository';
-import type { EventLog } from '@/domain/entities/event-log';
-import { EventType } from '@/domain/entities/event-log';
+import { EventService } from '@/features/session/application/services/event.service';
+import type { EventLogRepository } from '@/features/session/domain/ports/event-log.repository.port';
+import type { EventLog } from '@/features/session/domain/entities/event-log.entity';
+import { EventType } from '@/features/session/domain/entities/event-log.entity';
 
 // Mock repository factory
 const createMockEventLogRepo = (): jest.Mocked<EventLogRepository> => ({
