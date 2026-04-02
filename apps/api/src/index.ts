@@ -8,6 +8,7 @@ import { createApp } from './main/app.js';
 import { config, getFeatureFlagService } from '@/shared/config';
 import { prisma } from '@/database/client.js';
 import { runStagingValidation } from '@/shared/monitoring/staging-validation.js';
+import { AIAdapterFactory, type AIAdapterInstances } from '@/shared/ai/ai-adapter-factory.js';
 
 // Import the orchestrate use case and others that are still in the old location
 // These will be migrated in future phases
@@ -60,8 +61,23 @@ function setupGracefulShutdown(server: Server, shutdownSignal: string): void {
 async function bootstrap(): Promise<void> {
   await verifyDatabaseConnection();
 
-  // Build the main container with all features
+  // Build the main container with all feature containers
   const container = buildContainer(config, logger);
+
+  // Create AI adapter factory with full configuration
+  // This provides questionClassifier, ragService, comprehensionEvaluator, and aiModel
+  const aiProvider = AIAdapterFactory.createResilient({
+    provider: config.LLM_PROVIDER,
+    geminiApiKey: config.GEMINI_API_KEY,
+    openRouterApiKey: config.OPENROUTER_API_KEY,
+    groqApiKey: config.GROQ_API_KEY,
+    defaultModelOpenRouter: config.DEFAULT_MODEL_OPENROUTER,
+    defaultModelGemini: config.DEFAULT_MODEL_GEMINI,
+    defaultModelGroq: config.DEFAULT_MODEL_GROQ,
+    promptRepo: container.recipe.promptRepository,
+    knowledgeChunkRepository: null as any, // Will be injected from knowledge container
+    logger,
+  }) as AIAdapterInstances;
 
   // Run staging validation (logs banner if new engine is active)
   const featureFlagService = getFeatureFlagService();
@@ -78,14 +94,14 @@ async function bootstrap(): Promise<void> {
     container.activity.activityRepository,
     container.knowledge.atomRepository,
     container.auth.userRepository,
-    null as any, // aiModel - will be passed via global for now
-    null as any, // questionClassifier
-    null as any, // ragService
-    null as any, // comprehensionEvaluator
+    aiProvider.aiModel, // aiModel
+    aiProvider.questionClassifier, // questionClassifier
+    aiProvider.ragService, // ragService
+    aiProvider.comprehensionEvaluator, // comprehensionEvaluator
     container.evaluation.lessonEvaluator,
     container.session.advisoryLock,
     undefined, // contextWindowService
-    getFeatureFlagService(),
+    featureFlagService,
     container.activity.activityAttemptRepository,
   );
 
