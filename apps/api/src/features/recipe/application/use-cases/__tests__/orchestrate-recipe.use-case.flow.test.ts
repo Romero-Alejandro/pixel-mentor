@@ -967,5 +967,82 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
         }),
       );
     });
+
+    it('should NOT skip question/activity steps even when script format is non-standard', async () => {
+      // This test verifies that extractStaticContent respects stepType
+      // regardless of whether the script passes the type guards
+      const testSessionId = randomUUID();
+
+      // Override recipe steps with non-standard script format
+      const nonStandardSteps = [
+        {
+          atomId: 'atom-1',
+          stepType: 'intro',
+          order: 0,
+          script: { content: 'Welcome!', transition: 'Start.' },
+        },
+        // Question step with non-standard script (no 'question' field, but stepType is 'question')
+        {
+          atomId: 'atom-2',
+          stepType: 'question',
+          order: 1,
+          script: { content: 'What is 2+2?', transition: 'Now answer this:' },
+        },
+        {
+          atomId: 'atom-3',
+          stepType: 'closure',
+          order: 2,
+          script: { content: 'Done!' },
+        },
+      ];
+      mockRecipeRepo.findStepsByRecipeId.mockResolvedValue(nonStandardSteps);
+
+      let sessionState: Session = {
+        id: testSessionId,
+        studentId,
+        recipeId,
+        status: 'ACTIVE',
+        stateCheckpoint: {
+          currentState: 'AWAITING_START',
+          currentStepIndex: 0,
+          questionCount: 0,
+          lastQuestionTime: null,
+          skippedActivities: [],
+          failedAttempts: 0,
+          totalWrongAnswers: 0,
+        },
+      };
+      mockSessionRepo.findById.mockImplementation((id: string) => {
+        if (id === testSessionId) return Promise.resolve(sessionState);
+        return Promise.resolve(null);
+      });
+      mockSessionRepo.create.mockResolvedValue(sessionState);
+      mockSessionRepo.updateCheckpoint.mockImplementation((id: string, cp: any) => {
+        if (id === testSessionId)
+          sessionState.stateCheckpoint = { ...sessionState.stateCheckpoint, ...cp };
+        return Promise.resolve({ id, stateCheckpoint: sessionState.stateCheckpoint });
+      });
+      mockSessionRepo.findByStudentAndRecipe.mockResolvedValue(null);
+
+      const result = await orchestrator.start(recipeId, studentId);
+
+      // contentSteps should NOT include the question step
+      expect(result.contentSteps).toHaveLength(2); // intro + closure only
+      expect(result.contentSteps[0].stepType).toBe('intro');
+      expect(result.contentSteps[1].stepType).toBe('closure');
+
+      // Start the lesson (AWAITING_START -> EXPLANATION for intro)
+      await orchestrator.interact(testSessionId, 'ok', studentId);
+
+      // Now use 'continuar' to advance from intro to the question step
+      // This goes through the Navigation Fast Path
+      const interactResult = await orchestrator.interact(testSessionId, 'continuar', studentId);
+
+      // The question step MUST be treated as ACTIVITY_WAIT, NOT as content
+      // This is the critical assertion — before the fix, it would return EXPLANATION
+      expect(interactResult.pedagogicalState).toBe('ACTIVITY_WAIT');
+      expect(interactResult.staticContent.stepType).toBe('activity');
+      expect(interactResult.staticContent.activity).toBeDefined();
+    });
   });
 });

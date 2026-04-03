@@ -307,12 +307,21 @@ export class OrchestrateRecipeUseCase {
     }
 
     // ── Pregunta de comprensión (respuesta libre) ─────────────────────────
-    if (stepType === 'question' && isQuestionScript(script)) {
-      const questionText = extractText(script.question);
+    // Always respect stepType — type guard is only for extracting data
+    if (stepType === 'question') {
+      const questionText = isQuestionScript(script)
+        ? extractText((script as QuestionScript).question)
+        : '';
+      const fb = isQuestionScript(script)
+        ? (script as QuestionScript).feedback
+        : { correct: '', incorrect: '' };
+      const hint = isQuestionScript(script) ? (script as QuestionScript).hint : undefined;
       return {
         stepType: 'activity', // La UI lo trata como panel interactivo
         script: {
-          transition: extractText(script.transition),
+          transition: extractText(
+            isQuestionScript(script) ? (script as QuestionScript).transition : '',
+          ),
           content: questionText,
           examples: [],
           closure: '',
@@ -321,34 +330,46 @@ export class OrchestrateRecipeUseCase {
           instruction: questionText,
           options: [], // Sin opciones = input libre en el frontend
           feedback: {
-            correct: script.feedback.correct,
-            incorrect: script.feedback.incorrect,
-            partial: script.hint,
+            correct: fb.correct,
+            incorrect: fb.incorrect,
+            partial: hint,
           },
         },
       };
     }
 
     // ── Actividad / examen (opción múltiple) ──────────────────────────────
-    if ((stepType === 'activity' || stepType === 'exam') && isActivityScript(script)) {
-      const instructionText = extractText(script.instruction);
-      const safeOptions = Array.isArray(script.options)
-        ? script.options.map((o) => ({ text: o.text, isCorrect: o.isCorrect }))
-        : [];
+    // Always respect stepType — type guard is only for extracting data
+    if (stepType === 'activity' || stepType === 'exam') {
+      const instructionText = isActivityScript(script)
+        ? extractText((script as ActivityScript).instruction)
+        : '';
+      const safeOptions =
+        isActivityScript(script) && Array.isArray((script as ActivityScript).options)
+          ? (script as ActivityScript).options.map((o) => ({
+              text: o.text,
+              isCorrect: o.isCorrect,
+            }))
+          : [];
+      const fb = isActivityScript(script)
+        ? (script as ActivityScript).feedback
+        : { correct: '', incorrect: '' };
       return {
         stepType: 'activity',
         script: {
-          transition: extractText(script.transition),
+          transition: extractText(
+            isActivityScript(script) ? (script as ActivityScript).transition : '',
+          ),
           content: instructionText,
           examples: [],
-          closure: extractText(script.closure),
+          closure: extractText(isActivityScript(script) ? (script as ActivityScript).closure : ''),
         },
         activity: {
           instruction: instructionText,
           options: safeOptions,
           feedback: {
-            correct: script.feedback?.correct ?? '',
-            incorrect: script.feedback?.incorrect ?? '',
+            correct: fb.correct ?? '',
+            incorrect: fb.incorrect ?? '',
           },
         },
       };
