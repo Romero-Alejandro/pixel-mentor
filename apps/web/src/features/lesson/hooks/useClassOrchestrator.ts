@@ -496,7 +496,7 @@ export function useClassOrchestrator() {
 
       if (!isMountedRef.current) return Ok(undefined);
 
-      // Store content steps for auto-advance (steps that don't require student interaction)
+      // Store content steps for reference (progress bar, etc.)
       const contentSteps = (startResult as any).contentSteps ?? [];
       contentStepsRef.current = contentSteps;
       contentStepIndexRef.current = 0;
@@ -506,13 +506,10 @@ export function useClassOrchestrator() {
         console.error('[ClassOrchestrator] Speak error:', e),
       );
 
-      // If there are content steps, start auto-advancing through them
-      if (contentSteps.length > 0) {
-        await presentContentStep(0);
-      } else {
-        // Fallback: process the start result normally (legacy flow)
-        processResponse(startResult as LessonResponse);
-      }
+      // Process the start result through the normal flow.
+      // The backend's Navigation Fast Path handles content steps efficiently
+      // without LLM calls, so we don't need local auto-advance.
+      processResponse(startResult as LessonResponse);
 
       return Ok(undefined);
     } catch (e) {
@@ -523,70 +520,14 @@ export function useClassOrchestrator() {
 
   /**
    * Present a content step from the contentSteps array without calling the backend.
-   * After speaking, auto-advances to the next content step.
+   * DEPRECATED: This function is no longer used because local auto-advance caused
+   * state desync with the backend. All step transitions now go through the backend.
    */
-  async function presentContentStep(index: number): Promise<void> {
+  async function presentContentStep(_index: number): Promise<void> {
+    // No longer used — kept for backward compatibility
     if (!isMountedRef.current) return;
-    if (index >= contentStepsRef.current.length) {
-      // No more content steps — the next step must be a question/activity
-      // Call the backend to get the interactive step
-      const res = await doInteract('continuar');
-      processResponse(res);
-      return;
-    }
-
-    const step = contentStepsRef.current[index];
-    contentStepIndexRef.current = index;
-
-    const sc = step.staticContent;
-    const extractText = (val: unknown): string => {
-      if (typeof val === 'string') return val;
-      if (val && typeof val === 'object' && 'text' in val) {
-        return (val as { text: string }).text;
-      }
-      return '';
-    };
-
-    const transition = extractText(sc?.script?.transition);
-    const content = extractText(sc?.script?.content);
-    const closure = extractText(sc?.script?.closure);
-    const lessonContent = [transition, content, closure].filter(Boolean).join(' ');
-    const voiceText = lessonContent || 'Continuemos.';
-
-    // Update UI
-    setTransitionText(transition);
-    setContentText(content);
-    setClosureText(closure);
-    setFullVoiceText(voiceText);
-    contentRef.current = voiceText;
-    setFeedbackData(null);
-    setUIState('concentration');
-    setCurrentStep(step.stepIndex);
-    setTotalSteps(contentStepsRef.current.length + getInteractiveStepCount());
-
-    // Speak and then auto-advance
-    const startTime = Date.now();
-    await speak(voiceText, _voiceSettings);
-    const elapsed = Date.now() - startTime;
-    const totalDuration = estimateReadTime(voiceText);
-
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(
-      () => {
-        if (!isMountedRef.current) return;
-        presentContentStep(index + 1);
-      },
-      Math.max(500, totalDuration - elapsed),
-    );
-  }
-
-  /**
-   * Count how many interactive steps (questions/activities) exist after the content steps.
-   * Used for progress bar calculation.
-   */
-  function getInteractiveStepCount(): number {
-    // We don't know the exact count until we hit them, so estimate 1
-    return 1;
+    const res = await doInteract('continuar');
+    processResponse(res);
   }
 
   async function submitAnswer(answer: string) {
