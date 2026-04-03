@@ -1056,8 +1056,18 @@ export class OrchestrateRecipeUseCase {
       if (navNextIdx === null) {
         // No more steps — complete the lesson
         await this.sessionRepo.complete(sessionId);
+        await this.emitLessonCompleted(
+          session.studentId,
+          session.recipeId,
+          recipe.title,
+          steps,
+          skippedActivities,
+        );
         return {
-          voiceText: this.config.greetings.completionMessage ?? '¡Felicitaciones!',
+          voiceText: fillTemplate(this.config.greetings.completionMessage ?? '¡Felicitaciones!', {
+            name: 'estudiante',
+            title: recipe.title,
+          }),
           pedagogicalState: 'COMPLETED' as PedagogicalState,
           sessionCompleted: true,
           lessonProgress: { currentStep: currentIdx, totalSteps: steps.length },
@@ -1288,7 +1298,15 @@ export class OrchestrateRecipeUseCase {
         nextState = this.stateForStep(steps[ci]);
         voiceText = this.buildVoiceText(steps[ci]);
         failedAttempts = 0;
-      } else {
+      } else if (
+        lower.includes('continuar') ||
+        lower.includes('siguiente') ||
+        lower.includes('ok') ||
+        lower.includes('dale') ||
+        lower.includes('vamos') ||
+        lower.includes('adelante')
+      ) {
+        // Navigation input from EVALUATION — advance to next step
         const adv = this.advanceStep(steps, currentIdx);
         if (adv === null) {
           willComplete = true;
@@ -1298,6 +1316,74 @@ export class OrchestrateRecipeUseCase {
           nextState = this.stateForStep(steps[nextIdx]);
           voiceText = this.buildVoiceText(steps[nextIdx]);
           failedAttempts = 0;
+        }
+      } else {
+        // Non-navigation input from EVALUATION — re-evaluate as a retry attempt
+        const script = currentStep.script;
+        if (isQuestionScript(script)) {
+          const evaluation = await this.evaluateAnswer({
+            script: script as QuestionScript,
+            studentInput,
+            attemptNumber: failedAttempts + 1,
+            recipeTitle: recipe.title,
+            stepIndex: currentIdx,
+            studentId: userId,
+          });
+          const qs = script as QuestionScript;
+          if (evaluation.result === 'correct') {
+            voiceText = qs.feedback.correct;
+            responseFeedback = qs.feedback.correct;
+            isCorrectValue = true;
+            nextState = 'EVALUATION';
+            failedAttempts = 0;
+          } else if (evaluation.result === 'partial') {
+            voiceText = qs.hint ?? evaluation.hint ?? qs.feedback.incorrect;
+            isCorrectValue = false;
+            nextState = 'ACTIVITY_WAIT';
+          } else {
+            failedAttempts++;
+            totalWrongAnswers++;
+            voiceText = qs.feedback.incorrect;
+            responseFeedback = qs.feedback.incorrect;
+            isCorrectValue = false;
+            nextState =
+              failedAttempts >= this.config.skipAfterFailedAttempts &&
+              this.config.enableActivitySkip
+                ? 'ACTIVITY_SKIP_OFFER'
+                : 'EVALUATION';
+          }
+        } else if (isActivityScript(script)) {
+          const as = script as ActivityScript;
+          const norm = studentInput.trim().toLowerCase();
+          const correct = as.options.find((o) => o.isCorrect);
+          const isCorrect = !!correct && norm === correct.text.trim().toLowerCase();
+          voiceText = isCorrect ? as.feedback.correct : as.feedback.incorrect;
+          responseFeedback = voiceText;
+          isCorrectValue = isCorrect;
+          if (isCorrect) {
+            nextState = 'EVALUATION';
+            failedAttempts = 0;
+          } else {
+            failedAttempts++;
+            totalWrongAnswers++;
+            nextState =
+              failedAttempts >= this.config.skipAfterFailedAttempts &&
+              this.config.enableActivitySkip
+                ? 'ACTIVITY_SKIP_OFFER'
+                : 'EVALUATION';
+          }
+        } else {
+          // Not a question/activity step — just advance
+          const adv = this.advanceStep(steps, currentIdx);
+          if (adv === null) {
+            willComplete = true;
+            nextState = 'COMPLETED';
+          } else {
+            nextIdx = adv;
+            nextState = this.stateForStep(steps[nextIdx]);
+            voiceText = this.buildVoiceText(steps[nextIdx]);
+            failedAttempts = 0;
+          }
         }
       }
     } else if (currentState === 'ACTIVITY_SKIP_OFFER') {
@@ -1410,6 +1496,7 @@ export class OrchestrateRecipeUseCase {
       feedback: responseFeedback,
       isCorrect: isCorrectValue ?? aiResponse.isCorrect,
       staticContent,
+      lessonProgress: { currentStep: nextIdx, totalSteps: steps.length },
       xpEarned,
       accuracy: accuracyData,
     };
@@ -1831,7 +1918,15 @@ export class OrchestrateRecipeUseCase {
         nextState = this.stateForStep(steps[ci]);
         voiceText = this.buildVoiceText(steps[ci]);
         failedAttempts = 0;
-      } else {
+      } else if (
+        lower.includes('continuar') ||
+        lower.includes('siguiente') ||
+        lower.includes('ok') ||
+        lower.includes('dale') ||
+        lower.includes('vamos') ||
+        lower.includes('adelante')
+      ) {
+        // Navigation input from EVALUATION — advance to next step
         const adv = this.advanceStep(steps, currentIdx);
         if (adv === null) {
           willComplete = true;
@@ -1841,6 +1936,71 @@ export class OrchestrateRecipeUseCase {
           nextState = this.stateForStep(steps[nextIdx]);
           voiceText = this.buildVoiceText(steps[nextIdx]);
           failedAttempts = 0;
+        }
+      } else {
+        // Non-navigation input from EVALUATION — re-evaluate as a retry attempt
+        const script = currentStep.script;
+        if (isQuestionScript(script)) {
+          const evaluation = await this.evaluateAnswer({
+            script: script as QuestionScript,
+            studentInput,
+            attemptNumber: failedAttempts + 1,
+            recipeTitle: recipe.title,
+            stepIndex: currentIdx,
+            studentId: userId,
+          });
+          const qs = script as QuestionScript;
+          if (evaluation.result === 'correct') {
+            voiceText = qs.feedback.correct;
+
+            nextState = 'EVALUATION';
+            failedAttempts = 0;
+          } else if (evaluation.result === 'partial') {
+            voiceText = qs.hint ?? evaluation.hint ?? qs.feedback.incorrect;
+
+            nextState = 'ACTIVITY_WAIT';
+          } else {
+            failedAttempts++;
+            totalWrongAnswers++;
+            voiceText = qs.feedback.incorrect;
+
+            nextState =
+              failedAttempts >= this.config.skipAfterFailedAttempts &&
+              this.config.enableActivitySkip
+                ? 'ACTIVITY_SKIP_OFFER'
+                : 'EVALUATION';
+          }
+        } else if (isActivityScript(script)) {
+          const as = script as ActivityScript;
+          const norm = studentInput.trim().toLowerCase();
+          const correct = as.options.find((o) => o.isCorrect);
+          const isCorrect = !!correct && norm === correct.text.trim().toLowerCase();
+          voiceText = isCorrect ? as.feedback.correct : as.feedback.incorrect;
+
+          if (isCorrect) {
+            nextState = 'EVALUATION';
+            failedAttempts = 0;
+          } else {
+            failedAttempts++;
+            totalWrongAnswers++;
+            nextState =
+              failedAttempts >= this.config.skipAfterFailedAttempts &&
+              this.config.enableActivitySkip
+                ? 'ACTIVITY_SKIP_OFFER'
+                : 'EVALUATION';
+          }
+        } else {
+          // Not a question/activity step — just advance
+          const adv = this.advanceStep(steps, currentIdx);
+          if (adv === null) {
+            willComplete = true;
+            nextState = 'COMPLETED';
+          } else {
+            nextIdx = adv;
+            nextState = this.stateForStep(steps[nextIdx]);
+            voiceText = this.buildVoiceText(steps[nextIdx]);
+            failedAttempts = 0;
+          }
         }
       }
     } else if (currentState === 'ACTIVITY_SKIP_OFFER') {

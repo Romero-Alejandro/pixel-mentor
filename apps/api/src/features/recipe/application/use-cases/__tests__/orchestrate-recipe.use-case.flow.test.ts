@@ -459,7 +459,7 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
       expect(result.sessionCompleted).toBe(true);
       expect(result.voiceText).toContain('Lesson Test Recipe completed!');
       expect(mockSessionRepo.complete).toHaveBeenCalledWith(testSessionId);
-      expect(mockEventBus.emit).toHaveBeenCalledWith('LESSON_COMPLETED', expect.any(Object));
+      expect(mockEventBus.emit).toHaveBeenCalledWith('game:LESSON_COMPLETED', expect.any(Object));
     });
 
     it('should handle question intent during content steps', async () => {
