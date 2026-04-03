@@ -152,6 +152,7 @@ export function useClassOrchestrator() {
       eventSourceRef.current = null;
       handlersRef.current = { chunk: null, end: null, error: null };
     }
+    isInteractingRef.current = false; // Reset guard so new interactions can start
     stopStream();
   }
 
@@ -165,6 +166,9 @@ export function useClassOrchestrator() {
 
   async function processResponse(raw: LessonResponse): Promise<void> {
     if (!isMountedRef.current) return;
+
+    // Skip blocked calls from the concurrency guard
+    if ((raw as unknown as { _blocked?: boolean })?._blocked) return;
 
     const {
       voiceText = '',
@@ -315,6 +319,12 @@ export function useClassOrchestrator() {
         setIsProcessing(true);
         doInteract('continuar')
           .then(processResponse)
+          .catch((err) => {
+            // Silently ignore guard rejections — they mean a request is already in progress
+            if (err?.message !== 'Interaction already in progress') {
+              console.error('[ClassOrchestrator] Auto-advance error:', err);
+            }
+          })
           .finally(() => setIsProcessing(false));
       },
       Math.max(0, totalDuration - elapsed),
@@ -324,8 +334,8 @@ export function useClassOrchestrator() {
   async function doInteract(input: string): Promise<LessonResponse> {
     // Guard against concurrent calls (SSE error + onerror both firing)
     if (isInteractingRef.current) {
-      console.warn('[ClassOrchestrator] doInteract: already in progress, skipping duplicate call');
-      throw new Error('Interaction already in progress');
+      // Return a sentinel that processResponse recognizes to skip timer setup
+      return { _blocked: true } as unknown as LessonResponse;
     }
     isInteractingRef.current = true;
 
@@ -385,7 +395,8 @@ export function useClassOrchestrator() {
           } catch (e) {
             console.error('[ClassOrchestrator] Error in end handler, falling back to POST:', e);
             // Fallback to POST
-            api.interactWithRecipe(sid, input)
+            api
+              .interactWithRecipe(sid, input)
               .then((res) => {
                 isInteractingRef.current = false;
                 resolveStream(res as LessonResponse);
@@ -401,7 +412,8 @@ export function useClassOrchestrator() {
           console.error('[ClassOrchestrator] SSE error event received, falling back to POST');
           setStoreStreaming(false);
           cleanup();
-          api.interactWithRecipe(sid, input)
+          api
+            .interactWithRecipe(sid, input)
             .then((res) => {
               isInteractingRef.current = false;
               resolveStream(res as LessonResponse);
@@ -419,7 +431,8 @@ export function useClassOrchestrator() {
           console.error('[ClassOrchestrator] EventSource onerror triggered, falling back to POST');
           setStoreStreaming(false);
           cleanup();
-          api.interactWithRecipe(sid, input)
+          api
+            .interactWithRecipe(sid, input)
             .then((res) => {
               isInteractingRef.current = false;
               resolveStream(res as LessonResponse);
