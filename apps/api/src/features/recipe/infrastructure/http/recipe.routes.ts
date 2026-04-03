@@ -120,6 +120,8 @@ export function createRecipeRouter(
                 sessionCompleted: chunk.sessionCompleted,
                 staticContent: chunk.staticContent,
                 lessonProgress: chunk.lessonProgress,
+                feedback: chunk.feedback,
+                isCorrect: chunk.isCorrect,
               })}\n\n`,
             );
             break;
