@@ -118,6 +118,7 @@ export function createRecipeRouter(
                 reason: chunk.reason,
                 pedagogicalState: chunk.pedagogicalState,
                 sessionCompleted: chunk.sessionCompleted,
+                staticContent: chunk.staticContent,
                 lessonProgress: chunk.lessonProgress,
               })}\n\n`,
             );

@@ -1752,6 +1752,7 @@ export class OrchestrateRecipeUseCase {
           reason: 'completed',
           pedagogicalState: 'ACTIVITY_WAIT',
           sessionCompleted: false,
+          staticContent: this.extractStaticContent(nextStep),
           lessonProgress: { currentStep: navNextIdx, totalSteps: steps.length },
         };
         return;
@@ -1781,6 +1782,7 @@ export class OrchestrateRecipeUseCase {
           reason: 'completed',
           pedagogicalState: 'ACTIVITY_WAIT',
           sessionCompleted: false,
+          staticContent: this.extractStaticContent(nextStep),
           lessonProgress: { currentStep: navNextIdx, totalSteps: steps.length },
         };
         return;

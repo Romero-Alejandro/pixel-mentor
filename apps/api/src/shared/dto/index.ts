@@ -177,6 +177,7 @@ export const InteractionChunkSchema = z.discriminatedUnion('type', [
       'COMPLETED',
     ]),
     sessionCompleted: z.boolean(),
+    staticContent: StaticContentSchema.optional(),
     lessonProgress: z.object({ currentStep: z.number(), totalSteps: z.number() }),
   }),
 ]);
