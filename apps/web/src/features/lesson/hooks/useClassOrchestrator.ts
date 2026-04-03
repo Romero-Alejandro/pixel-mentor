@@ -134,6 +134,7 @@ export function useClassOrchestrator() {
   const streamingChunksRef = useRef<string[]>([]);
   const handlersRef = useRef({ chunk: null as any, end: null as any, error: null as any });
   const wasStreamingRef = useRef(false);
+  const isInteractingRef = useRef(false); // Guard against concurrent doInteract calls
 
   useEffect(() => {
     syncStore(isSpeaking);
@@ -217,6 +218,7 @@ export function useClassOrchestrator() {
       const elapsed = Date.now() - startTime;
       const totalDuration = FEEDBACK_DISPLAY_MS + estimateReadTime(msg);
 
+      if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(
         () => {
           if (!isMountedRef.current) return;
@@ -306,6 +308,7 @@ export function useClassOrchestrator() {
 
     const totalDuration = estimateReadTime(voiceText);
 
+    if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(
       () => {
         if (!sessionIdRef.current || !isMountedRef.current) return;
@@ -319,8 +322,18 @@ export function useClassOrchestrator() {
   }
 
   async function doInteract(input: string): Promise<LessonResponse> {
+    // Guard against concurrent calls (SSE error + onerror both firing)
+    if (isInteractingRef.current) {
+      console.warn('[ClassOrchestrator] doInteract: already in progress, skipping duplicate call');
+      return {} as LessonResponse;
+    }
+    isInteractingRef.current = true;
+
     const sid = sessionIdRef.current;
-    if (!sid) throw new Error('Sesión no activa');
+    if (!sid) {
+      isInteractingRef.current = false;
+      throw new Error('Sesión no activa');
+    }
 
     if (import.meta.env.VITE_ENABLE_STREAMING === 'true') {
       if (import.meta.env.DEV) {
@@ -377,10 +390,18 @@ export function useClassOrchestrator() {
 
         handlersRef.current.error = () => {
           if (!isMountedRef.current) return;
+          // Only fallback once — onerror may fire redundantly
+          if (!isInteractingRef.current) return;
+          isInteractingRef.current = false;
           console.error('[ClassOrchestrator] SSE error event received, falling back to POST');
           setStoreStreaming(false);
           cleanup();
-          api.interactWithRecipe(sid, input).then(processResponse);
+          api
+            .interactWithRecipe(sid, input)
+            .then(processResponse)
+            .finally(() => {
+              isInteractingRef.current = false;
+            });
         };
 
         eventSource.addEventListener('chunk', handlersRef.current.chunk);
@@ -388,10 +409,37 @@ export function useClassOrchestrator() {
         eventSource.addEventListener('error', handlersRef.current.error);
         eventSource.onerror = () => {
           if (!isMountedRef.current) return;
+          // Prevent duplicate fallback — error handler already handles it
+          if (!isInteractingRef.current) return;
+          isInteractingRef.current = false;
           console.error('[ClassOrchestrator] EventSource onerror triggered, falling back to POST');
           setStoreStreaming(false);
           cleanup();
-          api.interactWithRecipe(sid, input).then(processResponse);
+          api
+            .interactWithRecipe(sid, input)
+            .then(processResponse)
+            .finally(() => {
+              isInteractingRef.current = false;
+            });
+        };
+
+        eventSource.addEventListener('chunk', handlersRef.current.chunk);
+        eventSource.addEventListener('end', handlersRef.current.end);
+        eventSource.addEventListener('error', handlersRef.current.error);
+        eventSource.onerror = () => {
+          if (!isMountedRef.current) return;
+          // Prevent duplicate fallback — error handler already handles it
+          if (!isInteractingRef.current) return;
+          isInteractingRef.current = false;
+          console.error('[ClassOrchestrator] EventSource onerror triggered, falling back to POST');
+          setStoreStreaming(false);
+          cleanup();
+          api
+            .interactWithRecipe(sid, input)
+            .finally(() => {
+              isInteractingRef.current = false;
+            })
+            .then(processResponse);
         };
 
         return {} as LessonResponse;
@@ -400,10 +448,18 @@ export function useClassOrchestrator() {
           '[ClassOrchestrator] Failed to setup streaming, falling back to POST:',
           error,
         );
-        return (await api.interactWithRecipe(sid, input)) as LessonResponse;
+        try {
+          return (await api.interactWithRecipe(sid, input)) as LessonResponse;
+        } finally {
+          isInteractingRef.current = false;
+        }
       }
     }
-    return (await api.interactWithRecipe(sid, input)) as LessonResponse;
+    try {
+      return (await api.interactWithRecipe(sid, input)) as LessonResponse;
+    } finally {
+      isInteractingRef.current = false;
+    }
   }
 
   async function startClass(lessonId: string): Promise<Result<void, Error>> {
