@@ -135,6 +135,22 @@ export function useClassOrchestrator() {
   const handlersRef = useRef({ chunk: null as any, end: null as any, error: null as any });
   const wasStreamingRef = useRef(false);
   const isInteractingRef = useRef(false); // Guard against concurrent doInteract calls
+  const contentStepsRef = useRef<
+    Array<{
+      stepIndex: number;
+      stepType: string;
+      staticContent: {
+        stepType: string;
+        script?: { transition: string; content: string; examples: string[]; closure: string };
+        activity?: {
+          instruction: string;
+          options?: Array<{ text: string; isCorrect: boolean }>;
+          feedback: { correct: string; incorrect: string };
+        };
+      };
+    }>
+  >([]);
+  const contentStepIndexRef = useRef(0); // Current index in contentStepsRef
 
   useEffect(() => {
     syncStore(isSpeaking);
@@ -480,80 +496,21 @@ export function useClassOrchestrator() {
 
       if (!isMountedRef.current) return Ok(undefined);
 
-      // For resumed sessions (resumed=true and needsStart !== true), we need to:
-      // 1. Speak the welcome message
-      // 2. Also speak the current lesson content (from staticContent)
-      // The welcome message should NOT overwrite the lesson content
-      const isResumedSession = startResult.resumed === true && startResult.needsStart === false;
+      // Store content steps for auto-advance (steps that don't require student interaction)
+      const contentSteps = (startResult as any).contentSteps ?? [];
+      contentStepsRef.current = contentSteps;
+      contentStepIndexRef.current = 0;
 
-      if (isResumedSession) {
-        // Extract the lesson content from staticContent
-        const staticContent = startResult.staticContent;
-        if (staticContent?.script) {
-          const extractText = (val: unknown): string => {
-            if (typeof val === 'string') return val;
-            if (
-              val &&
-              typeof val === 'object' &&
-              'text' in val &&
-              typeof (val as { text: unknown }).text === 'string'
-            ) {
-              return (val as { text: string }).text;
-            }
-            return '';
-          };
+      // Speak the welcome message
+      speak(startResult.voiceText || '¡Bienvenido!', _voiceSettings).catch((e) =>
+        console.error('[ClassOrchestrator] Speak error:', e),
+      );
 
-          const transition = extractText(staticContent.script.transition);
-          const content = extractText(staticContent.script.content);
-          const closure = extractText(staticContent.script.closure);
-          const lessonContent = [transition, content, closure].filter(Boolean).join(' ');
-
-          // Store the lesson content for later (not for display yet)
-          contentRef.current = lessonContent;
-
-          // FIRST: Show and speak just the welcome message
-          const welcomeText = startResult.voiceText || '¡Bienvenido de vuelta!';
-          setTransitionText('');
-          setContentText(welcomeText);
-          setClosureText('');
-          setFullVoiceText(welcomeText);
-          setFeedbackData(null);
-          setUIState('concentration');
-
-          // Speak just the welcome first
-          await speak(welcomeText, _voiceSettings);
-
-          // THEN: Update to show and speak the lesson content
-          setTransitionText(transition);
-          setContentText(content);
-          setClosureText(closure);
-          setFullVoiceText(lessonContent);
-          contentRef.current = lessonContent;
-
-          // Speak the lesson content
-          await speak(lessonContent, _voiceSettings);
-
-          // IMPORTANT: For resumed sessions, we need to call processResponse with the start result!
-          processResponse(startResult as LessonResponse);
-        } else {
-          // Fallback: just speak the welcome
-          setContentText(startResult.voiceText || '¡Bienvenido!');
-          setFullVoiceText(startResult.voiceText || '¡Bienvenido!');
-          speak(startResult.voiceText || '¡Bienvenido!', _voiceSettings).catch((e) =>
-            console.error('[ClassOrchestrator] Speak error:', e),
-          );
-        }
+      // If there are content steps, start auto-advancing through them
+      if (contentSteps.length > 0) {
+        await presentContentStep(0);
       } else {
-        // Normal start or start that needs "comenzar" confirmation
-        speak(startResult.voiceText || '¡Bienvenido!', _voiceSettings).catch((e) =>
-          console.error('[ClassOrchestrator] Speak error:', e),
-        );
-
-        // The startResult already contains the first step's content (staticContent).
-        // We process it directly instead of making a redundant doInteract('comenzar')
-        // call that would re-send the same step and cause a visible repetition.
-        // The auto-advance in processResponse will then correctly trigger
-        // doInteract('continuar') to move to the second step.
+        // Fallback: process the start result normally (legacy flow)
         processResponse(startResult as LessonResponse);
       }
 
@@ -562,6 +519,74 @@ export function useClassOrchestrator() {
       if (isMountedRef.current) setIsProcessing(false);
       return Err(e instanceof Error ? e : new Error('Failed to start lesson'));
     }
+  }
+
+  /**
+   * Present a content step from the contentSteps array without calling the backend.
+   * After speaking, auto-advances to the next content step.
+   */
+  async function presentContentStep(index: number): Promise<void> {
+    if (!isMountedRef.current) return;
+    if (index >= contentStepsRef.current.length) {
+      // No more content steps — the next step must be a question/activity
+      // Call the backend to get the interactive step
+      const res = await doInteract('continuar');
+      processResponse(res);
+      return;
+    }
+
+    const step = contentStepsRef.current[index];
+    contentStepIndexRef.current = index;
+
+    const sc = step.staticContent;
+    const extractText = (val: unknown): string => {
+      if (typeof val === 'string') return val;
+      if (val && typeof val === 'object' && 'text' in val) {
+        return (val as { text: string }).text;
+      }
+      return '';
+    };
+
+    const transition = extractText(sc?.script?.transition);
+    const content = extractText(sc?.script?.content);
+    const closure = extractText(sc?.script?.closure);
+    const lessonContent = [transition, content, closure].filter(Boolean).join(' ');
+    const voiceText = lessonContent || 'Continuemos.';
+
+    // Update UI
+    setTransitionText(transition);
+    setContentText(content);
+    setClosureText(closure);
+    setFullVoiceText(voiceText);
+    contentRef.current = voiceText;
+    setFeedbackData(null);
+    setUIState('concentration');
+    setCurrentStep(step.stepIndex);
+    setTotalSteps(contentStepsRef.current.length + getInteractiveStepCount());
+
+    // Speak and then auto-advance
+    const startTime = Date.now();
+    await speak(voiceText, _voiceSettings);
+    const elapsed = Date.now() - startTime;
+    const totalDuration = estimateReadTime(voiceText);
+
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(
+      () => {
+        if (!isMountedRef.current) return;
+        presentContentStep(index + 1);
+      },
+      Math.max(500, totalDuration - elapsed),
+    );
+  }
+
+  /**
+   * Count how many interactive steps (questions/activities) exist after the content steps.
+   * Used for progress bar calculation.
+   */
+  function getInteractiveStepCount(): number {
+    // We don't know the exact count until we hit them, so estimate 1
+    return 1;
   }
 
   async function submitAnswer(answer: string) {

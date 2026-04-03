@@ -411,6 +411,36 @@ export class OrchestrateRecipeUseCase {
     return next < steps.length ? next : null;
   }
 
+  /**
+   * Build an array of content-only steps for the frontend to auto-advance through.
+   * Excludes question and activity steps which require student interaction.
+   */
+  private buildContentSteps(steps: readonly RecipeStep[]): Array<{
+    stepIndex: number;
+    stepType: 'content' | 'intro' | 'closure';
+    staticContent: StaticContent;
+  }> {
+    const result: Array<{
+      stepIndex: number;
+      stepType: 'content' | 'intro' | 'closure';
+      staticContent: StaticContent;
+    }> = [];
+    for (let idx = 0; idx < steps.length; idx++) {
+      const step = steps[idx];
+      if (!this.requiresStudentInput(step.stepType)) {
+        const sc = this.extractStaticContent(step);
+        if (sc) {
+          result.push({
+            stepIndex: idx,
+            stepType: (step.stepType ?? 'content') as 'content' | 'intro' | 'closure',
+            staticContent: sc,
+          });
+        }
+      }
+    }
+    return result;
+  }
+
   private findPreviousContentStep(steps: readonly RecipeStep[], from: number): number | null {
     for (let i = from - 1; i >= 0; i--) {
       if (!this.requiresStudentInput(steps[i].stepType)) return i;
@@ -788,6 +818,7 @@ export class OrchestrateRecipeUseCase {
         resumed: true,
         needsStart: needsToStart,
         lessonProgress: { currentStep: idx, totalSteps: steps.length },
+        contentSteps: this.buildContentSteps(steps),
       };
     }
 
@@ -825,6 +856,7 @@ export class OrchestrateRecipeUseCase {
         needsStart: true,
         isRepeat: true,
         lessonProgress: { currentStep: 0, totalSteps: steps.length },
+        contentSteps: this.buildContentSteps(steps),
       };
     }
 
@@ -869,6 +901,7 @@ export class OrchestrateRecipeUseCase {
       resumed: false,
       needsStart: true,
       lessonProgress: { currentStep: 0, totalSteps: steps.length },
+      contentSteps: this.buildContentSteps(steps),
     };
   }
 

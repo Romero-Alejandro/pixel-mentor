@@ -105,6 +105,17 @@ export const StartRecipeOutputSchema = z.object({
   needsStart: z.boolean().optional(),
   isRepeat: z.boolean().optional(),
   staticContent: StaticContentSchema.optional(),
+  // Content steps for auto-advance: allows frontend to present content sequentially
+  // without calling the backend for each step
+  contentSteps: z
+    .array(
+      z.object({
+        stepIndex: z.number(),
+        stepType: z.enum(['content', 'intro', 'closure']),
+        staticContent: StaticContentSchema,
+      }),
+    )
+    .optional(),
   meta: z
     .object({
       config: z

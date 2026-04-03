@@ -233,7 +233,7 @@ export function LessonPage() {
         </section>
 
         <section
-          className={`flex flex-col transition-all duration-700 ease-out ${isIdle ? 'w-full max-w-lg' : 'w-full lg:w-7/12 bg-white/95 backdrop-blur-md rounded-[3rem] border-4 border-white shadow-[0_8px_32px_rgba(56,189,248,0.15)] min-h-[550px] overflow-hidden relative'}`}
+          className={`flex flex-col transition-all duration-700 ease-out ${isIdle ? 'w-full max-w-lg' : 'w-full lg:w-7/12 bg-white/95 backdrop-blur-md rounded-[3rem] border-4 border-white shadow-[0_8px_32px_rgba(56,189,248,0.15)] min-h-[550px] overflow-y-auto relative'}`}
         >
           <div className="flex-1 flex flex-col w-full h-full animate-in fade-in slide-in-from-bottom-8 duration-500">
             {renderPanel()}
