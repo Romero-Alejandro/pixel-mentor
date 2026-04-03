@@ -266,27 +266,34 @@ export function useClassOrchestrator() {
       return;
     }
 
-    if (staticContent?.script) {
-      const extractText = (val: unknown): string => {
-        if (typeof val === 'string') return val;
-        if (
-          val &&
-          typeof val === 'object' &&
-          'text' in val &&
-          typeof (val as { text: unknown }).text === 'string'
-        ) {
-          return (val as { text: string }).text;
-        }
-        return '';
-      };
-      setTransitionText(extractText(staticContent.script.transition));
-      setContentText(extractText(staticContent.script.content));
-      setClosureText(extractText(staticContent.script.closure));
-    } else {
-      setTransitionText('');
-      setContentText(voiceText);
-      setClosureText('');
+    // If we were streaming, don't overwrite the progressively built text.
+    // The `voiceText` is already set to the full accumulated text from the stream.
+    if (!wasStreamingRef.current) {
+      if (staticContent?.script) {
+        const extractText = (val: unknown): string => {
+          if (typeof val === 'string') return val;
+          if (
+            val &&
+            typeof val === 'object' &&
+            'text' in val &&
+            typeof (val as { text: unknown }).text === 'string'
+          ) {
+            return (val as { text: string }).text;
+          }
+          return '';
+        };
+        setTransitionText(extractText(staticContent.script.transition));
+        setContentText(extractText(staticContent.script.content));
+        setClosureText(extractText(staticContent.script.closure));
+      } else {
+        setTransitionText('');
+        setContentText(voiceText);
+        setClosureText('');
+      }
     }
+
+    // Reset the flag after use, so subsequent non-streaming interactions behave normally.
+    wasStreamingRef.current = false;
 
     setFullVoiceText(voiceText);
     contentRef.current = voiceText;
@@ -491,15 +498,12 @@ export function useClassOrchestrator() {
           console.error('[ClassOrchestrator] Speak error:', e),
         );
 
-        // Only send 'comenzar' if the lesson needs to be started (AWAITING_START state).
-        // If resuming mid-lesson, process the start response directly.
-        if (startResult.needsStart !== false) {
-          const firstStep = await doInteract('comenzar');
-          processResponse(firstStep);
-        } else {
-          // Process the start response directly for resumed sessions
-          processResponse(startResult as LessonResponse);
-        }
+        // The startResult already contains the first step's content (staticContent).
+        // We process it directly instead of making a redundant doInteract('comenzar')
+        // call that would re-send the same step and cause a visible repetition.
+        // The auto-advance in processResponse will then correctly trigger
+        // doInteract('continuar') to move to the second step.
+        processResponse(startResult as LessonResponse);
       }
 
       return Ok(undefined);
