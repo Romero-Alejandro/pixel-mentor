@@ -994,7 +994,6 @@ export class OrchestrateRecipeUseCase {
     // ── Loop detection: track recent step transitions ──────────────────────
     // If the same step index is returned too many times, force-advance
 
-
     if (session.safetyFlag || session.outOfScope) {
       await this.sessionRepo.escalate(sessionId);
       return {
@@ -1118,6 +1117,7 @@ export class OrchestrateRecipeUseCase {
       }
 
       const nextStep = steps[navNextIdx];
+      const nextStepType = nextStep?.stepType as string | undefined;
       const nextScript = nextStep?.script;
 
       // For question steps, transition to ACTIVITY_WAIT
@@ -1147,7 +1147,6 @@ export class OrchestrateRecipeUseCase {
       }
 
       // For activity steps, transition to ACTIVITY_WAIT
-      const nextStepType = nextStep?.stepType as string | undefined;
       if (nextStepType === 'activity' || nextStepType === 'exam') {
         await this.sessionRepo.updateCheckpoint(sessionId, {
           ...cp,
@@ -1600,7 +1599,6 @@ export class OrchestrateRecipeUseCase {
 
     // ── Loop detection: track recent step transitions ──────────────────────
     // If the same step index is returned too many times, force-advance
-
 
     if (session.safetyFlag || session.outOfScope) {
       yield {
