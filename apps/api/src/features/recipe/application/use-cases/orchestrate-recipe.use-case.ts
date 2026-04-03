@@ -1710,7 +1710,9 @@ export class OrchestrateRecipeUseCase {
           stepIndex: currentIdx,
           stepType,
           studentInput,
+          scriptKeys: script ? Object.keys(script) : [],
           hasOptions: Array.isArray(script?.options) && script.options.length > 0,
+          options: script?.options,
         },
         '[interactStream] ACTIVITY_WAIT - processing answer',
       );
@@ -1719,7 +1721,18 @@ export class OrchestrateRecipeUseCase {
         // MCQ: deterministic comparison (NO LLM)
         const as = script as ActivityScript;
         const norm = studentInput.trim().toLowerCase();
-        const correct = as.options.find((o) => o.isCorrect);
+
+        // Debug: log all options
+        orchestrateLogger.info(
+          {
+            allOptions: as.options?.map((o) => ({ text: o.text, isCorrect: o.isCorrect })),
+            studentInput,
+            norm,
+          },
+          '[interactStream] MCQ options before finding correct',
+        );
+
+        const correct = as.options?.find((o) => o.isCorrect);
         const isCorrect = !!correct && norm === correct.text.trim().toLowerCase();
 
         orchestrateLogger.info(
@@ -1727,9 +1740,10 @@ export class OrchestrateRecipeUseCase {
             studentInput,
             norm,
             correctOption: correct?.text,
+            correctOptionNormalized: correct?.text.trim().toLowerCase(),
             isCorrect,
           },
-          '[interactStream] MCQ deterministic comparison',
+          '[interactStream] MCQ deterministic comparison result',
         );
 
         const feedback = isCorrect ? as.feedback.correct : as.feedback.incorrect;
