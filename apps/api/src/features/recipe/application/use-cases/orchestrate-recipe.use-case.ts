@@ -113,6 +113,19 @@ interface ActivityScript extends ContentScript {
 
 function isQuestionScript(s: unknown): s is QuestionScript {
   const q = (s as QuestionScript)?.question;
+  const opts = (s as ActivityScript)?.options;
+  const inst = (s as ActivityScript)?.instruction;
+
+  // If it has options, it's a multiple choice activity - use deterministic comparison
+  if (Array.isArray(opts) && opts.length > 0) {
+    return false;
+  }
+
+  // If it has instruction but no question, it's an activity without options
+  if (inst && !q) {
+    return false;
+  }
+
   // Accept both string and {text: string} object
   return typeof q === 'string' || (typeof q === 'object' && q !== null && 'text' in q);
 }
