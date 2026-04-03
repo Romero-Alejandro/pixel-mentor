@@ -179,6 +179,8 @@ export const InteractionChunkSchema = z.discriminatedUnion('type', [
     sessionCompleted: z.boolean(),
     staticContent: StaticContentSchema.optional(),
     lessonProgress: z.object({ currentStep: z.number(), totalSteps: z.number() }),
+    feedback: z.string().optional(),
+    isCorrect: z.boolean().optional(),
   }),
 ]);
 export type InteractionChunk = z.infer<typeof InteractionChunkSchema>;

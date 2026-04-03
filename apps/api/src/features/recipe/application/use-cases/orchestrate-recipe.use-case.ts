@@ -1699,6 +1699,77 @@ export class OrchestrateRecipeUseCase {
     const currentAtom = await this.atomRepo.findById(currentStep.atomId);
     if (!currentAtom) throw new Error(`Atom ${currentStep.atomId} not found`);
 
+    // ── ACTIVITY_WAIT fast path (no streaming needed) ────────────────────────
+    // Skip LLM calls and use deterministic MCQ evaluation for activity steps
+    if (currentState === 'ACTIVITY_WAIT') {
+      const script = currentStep.script as any;
+      const stepType = currentStep.stepType as string;
+
+      orchestrateLogger.info(
+        {
+          stepIndex: currentIdx,
+          stepType,
+          studentInput,
+          hasOptions: Array.isArray(script?.options) && script.options.length > 0,
+        },
+        '[interactStream] ACTIVITY_WAIT - processing answer',
+      );
+
+      if (stepType === 'activity') {
+        // MCQ: deterministic comparison (NO LLM)
+        const as = script as ActivityScript;
+        const norm = studentInput.trim().toLowerCase();
+        const correct = as.options.find((o) => o.isCorrect);
+        const isCorrect = !!correct && norm === correct.text.trim().toLowerCase();
+
+        orchestrateLogger.info(
+          {
+            studentInput,
+            norm,
+            correctOption: correct?.text,
+            isCorrect,
+          },
+          '[interactStream] MCQ deterministic comparison',
+        );
+
+        const feedback = isCorrect ? as.feedback.correct : as.feedback.incorrect;
+
+        await this.record(sessionId, history.length, studentInput, null, currentIdx);
+        await this.record(sessionId, history.length + 1, feedback, 'answer', currentIdx);
+
+        const nextState = isCorrect ? 'EVALUATION' : 'EVALUATION';
+
+        await this.sessionRepo.updateCheckpoint(sessionId, {
+          ...cp,
+          currentState: nextState,
+          currentStepIndex: currentIdx,
+          savedStepIndex,
+          doubtContext,
+          questionCount,
+          lastQuestionTime,
+          skippedActivities,
+          failedAttempts: isCorrect ? 0 : failedAttempts + 1,
+          totalWrongAnswers: isCorrect ? totalWrongAnswers : totalWrongAnswers + 1,
+        });
+
+        yield { type: 'chunk', text: feedback };
+        yield {
+          type: 'end',
+          reason: 'completed',
+          pedagogicalState: nextState,
+          sessionCompleted: false,
+          feedback,
+          isCorrect,
+          staticContent: this.extractStaticContent(currentStep),
+          lessonProgress: { currentStep: currentIdx, totalSteps: steps.length },
+        };
+        return;
+      } else if (stepType === 'question') {
+        // Question: use LLM evaluation (will be handled below)
+        orchestrateLogger.info('[interactStream] ACTIVITY_WAIT - using LLM for question step');
+      }
+    }
+
     // ── AWAITING_START fast path (no streaming needed) ──────────────────────
     if (currentState === 'AWAITING_START') {
       const lower = studentInput.toLowerCase();
