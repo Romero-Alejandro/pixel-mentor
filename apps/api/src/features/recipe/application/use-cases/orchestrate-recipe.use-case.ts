@@ -562,8 +562,29 @@ export class OrchestrateRecipeUseCase {
       lessonContext,
     };
 
+    // DEBUG: Log the evaluation request
+    orchestrateLogger.debug(
+      {
+        studentAnswer: studentInput,
+        questionText: script.question,
+        expectedAnswer: script.expectedAnswer,
+      },
+      '[DEBUG] evaluateWithLessonEngine - calling LLM',
+    );
+
     try {
       const result: EvaluationResult = await this.lessonEvaluator.evaluate(request);
+
+      // DEBUG: Log the LLM result
+      orchestrateLogger.debug(
+        {
+          outcome: result.outcome,
+          score: result.score,
+          feedback: result.feedback,
+          confidence: result.confidence,
+        },
+        '[DEBUG] evaluateWithLessonEngine - LLM result',
+      );
 
       // Map 6-category EvaluationOutcome to 3-category ComprehensionEvaluation
       // This mapping ensures backward compatibility with the frontend
@@ -1291,9 +1312,27 @@ export class OrchestrateRecipeUseCase {
         }
       }
     } else if (currentState === 'ACTIVITY_WAIT') {
-      const script = currentStep.script;
+      const script = currentStep.script as any;
+      // Use string type assertion to avoid strict type issues
+      const stepType = currentStep.stepType as string;
 
-      if (isQuestionScript(script)) {
+      // DEBUG: Log the script structure for debugging
+      const debugScriptInfo = {
+        stepIndex: currentIdx,
+        stepType: currentStep.stepType,
+        hasOptions: Array.isArray(script?.options) && script.options.length > 0,
+        hasQuestion: !!script?.question,
+        isQuestionScript: isQuestionScript(script),
+        isActivityScript: isActivityScript(script),
+        options: script?.options,
+      };
+      orchestrateLogger.debug(debugScriptInfo, '[DEBUG] ACTIVITY_WAIT evaluation path');
+
+      // PRIORITY: Use stepType to determine evaluation method
+      // - 'question' steps use LLM (free response)
+      // - 'activity'/'exam' steps use deterministic comparison (MCQ)
+      if (stepType === 'question') {
+        // Always use LLM for question steps (free response)
         // ── Pregunta de comprensión: evaluar con LLM ─────────────────────
         const evaluation = await this.evaluateAnswer({
           script: script as QuestionScript,
@@ -1325,11 +1364,26 @@ export class OrchestrateRecipeUseCase {
               ? 'ACTIVITY_SKIP_OFFER'
               : 'EVALUATION';
         }
-      } else if (isActivityScript(script)) {
+      } else if (stepType === 'activity') {
+        // Use deterministic comparison for activity steps (MCQ)
         // ── Actividad MCQ: comparación directa (sin LLM) ─────────────────
         const as = script as ActivityScript;
         const norm = studentInput.trim().toLowerCase();
         const correct = as.options.find((o) => o.isCorrect);
+
+        // DEBUG: Log MCQ comparison
+        orchestrateLogger.debug(
+          {
+            studentInput,
+            norm,
+            correctOption: correct?.text,
+            correctTextNormalized: correct?.text.trim().toLowerCase(),
+            isCorrect: !!correct && norm === correct.text.trim().toLowerCase(),
+            options: as.options.map((o) => ({ text: o.text, isCorrect: o.isCorrect })),
+          },
+          '[DEBUG] MCQ deterministic comparison',
+        );
+
         const isCorrect = !!correct && norm === correct.text.trim().toLowerCase();
 
         voiceText = isCorrect ? as.feedback.correct : as.feedback.incorrect;
