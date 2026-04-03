@@ -997,6 +997,112 @@ export class OrchestrateRecipeUseCase {
       };
     }
 
+    // ── Navigation Fast Path ─────────────────────────────────────────────
+    // Skip LLM calls for simple navigation inputs like "continuar", "siguiente", etc.
+    // These inputs should just advance to the next step using static content.
+    const navWords = [
+      'continuar',
+      'siguiente',
+      'next',
+      'ok',
+      'dale',
+      'vamos',
+      'adelante',
+      'seguir',
+      'avanzar',
+      'proseguir',
+      'forward',
+    ];
+    const lowerInput = studentInput.toLowerCase().trim();
+    const isNavInput = navWords.some((w) => lowerInput === w || lowerInput.includes(w));
+
+    // Navigation fast path: only for states where advancing is the expected action
+    // Skip for ACTIVITY_WAIT (needs answer evaluation) and RESOLVING_DOUBT (needs doubt resolution)
+    if (isNavInput && !['ACTIVITY_WAIT', 'RESOLVING_DOUBT', 'CLARIFYING'].includes(currentState)) {
+      const navNextIdx = this.advanceStep(steps, currentIdx);
+      if (navNextIdx === null) {
+        // No more steps — complete the lesson
+        await this.sessionRepo.complete(sessionId);
+        return {
+          voiceText: this.config.greetings.completionMessage ?? '¡Felicitaciones!',
+          pedagogicalState: 'COMPLETED' as PedagogicalState,
+          sessionCompleted: true,
+          lessonProgress: { currentStep: currentIdx, totalSteps: steps.length },
+        };
+      }
+
+      const nextStep = steps[navNextIdx];
+      const nextScript = nextStep?.script;
+
+      // For question steps with no options, transition to ACTIVITY_WAIT
+      if (nextStep?.stepType === 'question' && isQuestionScript(nextScript)) {
+        const qs = nextScript as QuestionScript;
+        const questionText = extractText(qs.question);
+        await this.sessionRepo.updateCheckpoint(sessionId, {
+          ...cp,
+          currentState: 'ACTIVITY_WAIT',
+          currentStepIndex: navNextIdx,
+          savedStepIndex,
+          doubtContext,
+          questionCount,
+          lastQuestionTime,
+          skippedActivities,
+          failedAttempts,
+          totalWrongAnswers,
+        });
+        return {
+          voiceText: questionText || '¿Puedes responder esta pregunta?',
+          pedagogicalState: 'ACTIVITY_WAIT' as PedagogicalState,
+          staticContent: this.extractStaticContent(nextStep),
+          lessonProgress: { currentStep: navNextIdx, totalSteps: steps.length },
+        };
+      }
+
+      // For activity steps with MCQ, transition to ACTIVITY_WAIT
+      if (nextStep?.stepType === 'activity' && isActivityScript(nextScript)) {
+        await this.sessionRepo.updateCheckpoint(sessionId, {
+          ...cp,
+          currentState: 'ACTIVITY_WAIT',
+          currentStepIndex: navNextIdx,
+          savedStepIndex,
+          doubtContext,
+          questionCount,
+          lastQuestionTime,
+          skippedActivities,
+          failedAttempts,
+          totalWrongAnswers,
+        });
+        return {
+          voiceText: this.buildVoiceText(nextStep),
+          pedagogicalState: 'ACTIVITY_WAIT' as PedagogicalState,
+          staticContent: this.extractStaticContent(nextStep),
+          lessonProgress: { currentStep: navNextIdx, totalSteps: steps.length },
+        };
+      }
+
+      // For content/intro/closure steps, advance normally with static content
+      const navVoiceText = this.buildVoiceText(nextStep);
+      const navNextState = this.stateForStep(nextStep);
+      await this.sessionRepo.updateCheckpoint(sessionId, {
+        ...cp,
+        currentState: navNextState,
+        currentStepIndex: navNextIdx,
+        savedStepIndex,
+        doubtContext,
+        questionCount,
+        lastQuestionTime,
+        skippedActivities,
+        failedAttempts,
+        totalWrongAnswers,
+      });
+      return {
+        voiceText: navVoiceText,
+        pedagogicalState: navNextState as PedagogicalState,
+        staticContent: this.extractStaticContent(nextStep),
+        lessonProgress: { currentStep: navNextIdx, totalSteps: steps.length },
+      };
+    }
+
     // ── Clasificar input ──────────────────────────────────────────────────
     const classification = await this.questionClassifier.classify({
       transcript: studentInput,
@@ -1405,6 +1511,134 @@ export class OrchestrateRecipeUseCase {
         pedagogicalState: 'AWAITING_START',
         sessionCompleted: false,
         lessonProgress: { currentStep: currentIdx, totalSteps: steps.length },
+      };
+      return;
+    }
+
+    // ── Navigation Fast Path (streaming) ─────────────────────────────────
+    // Skip LLM calls for simple navigation inputs. Use static content only.
+    const navWords = [
+      'continuar',
+      'siguiente',
+      'next',
+      'ok',
+      'dale',
+      'vamos',
+      'adelante',
+      'seguir',
+      'avanzar',
+      'proseguir',
+      'forward',
+    ];
+    const lowerInput = studentInput.toLowerCase().trim();
+    const isNavInput = navWords.some((w) => lowerInput === w || lowerInput.includes(w));
+
+    if (isNavInput && !['ACTIVITY_WAIT', 'RESOLVING_DOUBT', 'CLARIFYING'].includes(currentState)) {
+      const navNextIdx = this.advanceStep(steps, currentIdx);
+      if (navNextIdx === null) {
+        await this.sessionRepo.complete(sessionId);
+        await this.emitLessonCompleted(
+          session.studentId,
+          session.recipeId,
+          recipe.title,
+          steps,
+          skippedActivities,
+        );
+        yield {
+          type: 'end',
+          reason: 'completed',
+          pedagogicalState: 'COMPLETED',
+          sessionCompleted: true,
+          lessonProgress: { currentStep: currentIdx, totalSteps: steps.length },
+        };
+        return;
+      }
+
+      const nextStep = steps[navNextIdx];
+      const nextScript = nextStep?.script;
+
+      // For question steps, transition to ACTIVITY_WAIT
+      if (nextStep?.stepType === 'question' && isQuestionScript(nextScript)) {
+        const qs = nextScript as QuestionScript;
+        const questionText = extractText(qs.question);
+        const navVoiceText = questionText || '¿Puedes responder esta pregunta?';
+        await this.record(sessionId, history.length, studentInput, null);
+        await this.record(sessionId, history.length + 1, navVoiceText, 'answer');
+        await this.sessionRepo.updateCheckpoint(sessionId, {
+          ...cp,
+          currentState: 'ACTIVITY_WAIT',
+          currentStepIndex: navNextIdx,
+          savedStepIndex,
+          doubtContext,
+          questionCount,
+          lastQuestionTime,
+          skippedActivities,
+          failedAttempts,
+          totalWrongAnswers,
+        });
+        yield { type: 'chunk', text: navVoiceText };
+        yield {
+          type: 'end',
+          reason: 'completed',
+          pedagogicalState: 'ACTIVITY_WAIT',
+          sessionCompleted: false,
+          lessonProgress: { currentStep: navNextIdx, totalSteps: steps.length },
+        };
+        return;
+      }
+
+      // For activity steps with MCQ, transition to ACTIVITY_WAIT
+      if (nextStep?.stepType === 'activity' && isActivityScript(nextScript)) {
+        const navVoiceText = this.buildVoiceText(nextStep);
+        await this.record(sessionId, history.length, studentInput, null);
+        await this.record(sessionId, history.length + 1, navVoiceText, 'answer');
+        await this.sessionRepo.updateCheckpoint(sessionId, {
+          ...cp,
+          currentState: 'ACTIVITY_WAIT',
+          currentStepIndex: navNextIdx,
+          savedStepIndex,
+          doubtContext,
+          questionCount,
+          lastQuestionTime,
+          skippedActivities,
+          failedAttempts,
+          totalWrongAnswers,
+        });
+        yield { type: 'chunk', text: navVoiceText };
+        yield {
+          type: 'end',
+          reason: 'completed',
+          pedagogicalState: 'ACTIVITY_WAIT',
+          sessionCompleted: false,
+          lessonProgress: { currentStep: navNextIdx, totalSteps: steps.length },
+        };
+        return;
+      }
+
+      // For content/intro/closure steps, stream static content
+      const navVoiceText = this.buildVoiceText(nextStep);
+      const navNextState = this.stateForStep(nextStep);
+      await this.record(sessionId, history.length, studentInput, null);
+      await this.record(sessionId, history.length + 1, navVoiceText, 'answer');
+      await this.sessionRepo.updateCheckpoint(sessionId, {
+        ...cp,
+        currentState: navNextState,
+        currentStepIndex: navNextIdx,
+        savedStepIndex,
+        doubtContext,
+        questionCount,
+        lastQuestionTime,
+        skippedActivities,
+        failedAttempts,
+        totalWrongAnswers,
+      });
+      yield { type: 'chunk', text: navVoiceText };
+      yield {
+        type: 'end',
+        reason: 'completed',
+        pedagogicalState: navNextState,
+        sessionCompleted: false,
+        lessonProgress: { currentStep: navNextIdx, totalSteps: steps.length },
       };
       return;
     }
