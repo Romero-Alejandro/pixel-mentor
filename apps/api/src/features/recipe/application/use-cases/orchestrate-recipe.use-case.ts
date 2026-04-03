@@ -1077,10 +1077,12 @@ export class OrchestrateRecipeUseCase {
       const nextStep = steps[navNextIdx];
       const nextScript = nextStep?.script;
 
-      // For question steps with no options, transition to ACTIVITY_WAIT
-      if (nextStep?.stepType === 'question' && isQuestionScript(nextScript)) {
-        const qs = nextScript as QuestionScript;
-        const questionText = extractText(qs.question);
+      // For question steps, transition to ACTIVITY_WAIT
+      // Always respect stepType — the type guard is only for extracting data
+      if (nextStep?.stepType === 'question') {
+        const questionText = isQuestionScript(nextScript)
+          ? extractText((nextScript as QuestionScript).question)
+          : this.buildVoiceText(nextStep);
         await this.sessionRepo.updateCheckpoint(sessionId, {
           ...cp,
           currentState: 'ACTIVITY_WAIT',
@@ -1101,8 +1103,9 @@ export class OrchestrateRecipeUseCase {
         };
       }
 
-      // For activity steps with MCQ, transition to ACTIVITY_WAIT
-      if (nextStep?.stepType === 'activity' && isActivityScript(nextScript)) {
+      // For activity steps, transition to ACTIVITY_WAIT
+      const nextStepType = nextStep?.stepType as string | undefined;
+      if (nextStepType === 'activity' || nextStepType === 'exam') {
         await this.sessionRepo.updateCheckpoint(sessionId, {
           ...cp,
           currentState: 'ACTIVITY_WAIT',
@@ -1678,9 +1681,11 @@ export class OrchestrateRecipeUseCase {
       const nextScript = nextStep?.script;
 
       // For question steps, transition to ACTIVITY_WAIT
-      if (nextStep?.stepType === 'question' && isQuestionScript(nextScript)) {
-        const qs = nextScript as QuestionScript;
-        const questionText = extractText(qs.question);
+      // Always respect stepType — the type guard is only for extracting data
+      if (nextStep?.stepType === 'question') {
+        const questionText = isQuestionScript(nextScript)
+          ? extractText((nextScript as QuestionScript).question)
+          : this.buildVoiceText(nextStep);
         const navVoiceText = questionText || '¿Puedes responder esta pregunta?';
         await this.record(sessionId, history.length, studentInput, null);
         await this.record(sessionId, history.length + 1, navVoiceText, 'answer');
@@ -1707,8 +1712,9 @@ export class OrchestrateRecipeUseCase {
         return;
       }
 
-      // For activity steps with MCQ, transition to ACTIVITY_WAIT
-      if (nextStep?.stepType === 'activity' && isActivityScript(nextScript)) {
+      // For activity steps, transition to ACTIVITY_WAIT
+      const nextStepType = nextStep?.stepType as string | undefined;
+      if (nextStepType === 'activity' || nextStepType === 'exam') {
         const navVoiceText = this.buildVoiceText(nextStep);
         await this.record(sessionId, history.length, studentInput, null);
         await this.record(sessionId, history.length + 1, navVoiceText, 'answer');
