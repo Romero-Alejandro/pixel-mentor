@@ -1660,11 +1660,13 @@ export class OrchestrateRecipeUseCase {
           currentState: this.stateForStep(currentStep),
           currentStepIndex: currentIdx,
         });
+        yield { type: 'chunk', text: vt };
         yield {
           type: 'end',
           reason: 'completed',
           pedagogicalState: this.stateForStep(currentStep),
           sessionCompleted: false,
+          staticContent: this.extractStaticContent(currentStep),
           lessonProgress: { currentStep: currentIdx, totalSteps: steps.length },
         };
         return;
@@ -1811,6 +1813,7 @@ export class OrchestrateRecipeUseCase {
         reason: 'completed',
         pedagogicalState: navNextState,
         sessionCompleted: false,
+        staticContent: this.extractStaticContent(nextStep),
         lessonProgress: { currentStep: navNextIdx, totalSteps: steps.length },
       };
       return;

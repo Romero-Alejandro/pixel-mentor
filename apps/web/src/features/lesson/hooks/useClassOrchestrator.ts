@@ -314,36 +314,29 @@ export function useClassOrchestrator() {
       );
       setFeedbackData(null);
       setUIState(hasOptions ? 'activity' : 'question');
+
+      // Update text fields for activity steps too
+      if (staticContent?.script) {
+        setTransitionText(extractText(staticContent.script.transition));
+        setContentText(extractText(staticContent.script.content));
+        setClosureText(extractText(staticContent.script.closure));
+      }
+
       speak(voiceText || extractText(activity?.instruction) || '', _voiceSettings).catch((e) =>
         console.error('[ClassOrchestrator] Speak error:', e),
       );
       return;
     }
 
-    // If we were streaming, don't overwrite the progressively built text.
-    // The `voiceText` is already set to the full accumulated text from the stream.
-    if (!wasStreamingRef.current) {
-      if (staticContent?.script) {
-        const extractText = (val: unknown): string => {
-          if (typeof val === 'string') return val;
-          if (
-            val &&
-            typeof val === 'object' &&
-            'text' in val &&
-            typeof (val as { text: unknown }).text === 'string'
-          ) {
-            return (val as { text: string }).text;
-          }
-          return '';
-        };
-        setTransitionText(extractText(staticContent.script.transition));
-        setContentText(extractText(staticContent.script.content));
-        setClosureText(extractText(staticContent.script.closure));
-      } else {
-        setTransitionText('');
-        setContentText(voiceText);
-        setClosureText('');
-      }
+    // Update text fields from staticContent when available
+    if (staticContent?.script) {
+      setTransitionText(extractText(staticContent.script.transition));
+      setContentText(extractText(staticContent.script.content));
+      setClosureText(extractText(staticContent.script.closure));
+    } else if (!wasStreamingRef.current) {
+      setTransitionText('');
+      setContentText(voiceText);
+      setClosureText('');
     }
 
     // Reset the flag after use, so subsequent non-streaming interactions behave normally.
