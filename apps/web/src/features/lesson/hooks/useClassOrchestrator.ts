@@ -538,10 +538,12 @@ export function useClassOrchestrator() {
         console.error('[ClassOrchestrator] Speak error:', e),
       );
 
-      // Process the start result through the normal flow.
-      // The backend's Navigation Fast Path handles content steps efficiently
-      // without LLM calls, so we don't need local auto-advance.
-      processResponse(startResult as LessonResponse);
+      // Don't call processResponse(startResult) — it has pedagogicalState: 'AWAITING_START'
+      // which would show the same step 0 content again and create a duplicate timer.
+      // Instead, directly advance to the first content step via the backend.
+      // The AWAITING_START fast path will transition to EXPLANATION for step 0.
+      const firstStep = await doInteract('continuar');
+      processResponse(firstStep);
 
       return Ok(undefined);
     } catch (e) {
