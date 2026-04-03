@@ -135,6 +135,9 @@ export function useClassOrchestrator() {
   const handlersRef = useRef({ chunk: null as any, end: null as any, error: null as any });
   const wasStreamingRef = useRef(false);
   const isInteractingRef = useRef(false); // Guard against concurrent doInteract calls
+  const lastStepIndexRef = useRef<number | null>(null); // Track last step index to detect loops
+  const sameStepCountRef = useRef(0); // Count consecutive same step occurrences
+  const MAX_SAME_STEP_COUNT = 3; // Break loop after this many repetitions
   const contentStepsRef = useRef<
     Array<{
       stepIndex: number;
@@ -197,6 +200,38 @@ export function useClassOrchestrator() {
       xpEarned,
       accuracy,
     } = raw;
+
+    // ── Loop detection: track step index changes ──────────────────────────
+    const currentStepIdx = lessonProgress?.currentStep ?? null;
+    if (currentStepIdx !== null) {
+      if (currentStepIdx === lastStepIndexRef.current) {
+        sameStepCountRef.current++;
+        if (sameStepCountRef.current >= MAX_SAME_STEP_COUNT) {
+          console.error(
+            `[ClassOrchestrator] LOOP DETECTED: Step ${currentStepIdx} repeated ${sameStepCountRef.current} times. Breaking loop by advancing.`,
+          );
+          // Force advance by calling doInteract directly (bypassing the timer)
+          sameStepCountRef.current = 0;
+          lastStepIndexRef.current = null; // Reset tracking
+          setIsProcessing(true);
+          doInteract('continuar')
+            .then((res) => {
+              // After forced advance, process the result normally
+              processResponse(res);
+            })
+            .catch((err) => {
+              if (err?.message !== 'Interaction already in progress') {
+                console.error('[ClassOrchestrator] Forced advance error:', err);
+              }
+            })
+            .finally(() => setIsProcessing(false));
+          return; // Skip normal processing to break the loop
+        }
+      } else {
+        sameStepCountRef.current = 0;
+        lastStepIndexRef.current = currentStepIdx;
+      }
+    }
 
     if (lessonProgress) {
       setCurrentStep(lessonProgress.currentStep);

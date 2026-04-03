@@ -469,6 +469,25 @@ export class OrchestrateRecipeUseCase {
     return null;
   }
 
+  /**
+   * Count how many consecutive recent interactions returned the same step index.
+   * Used for loop detection — if the same step is returned too many times,
+   * the orchestrator is stuck and needs to force-advance.
+   */
+  private _countConsecutiveSameStep(history: unknown[], currentIdx: number): number {
+    let count = 0;
+    for (let i = history.length - 1; i >= 0; i--) {
+      const h = history[i] as { aiResponse?: { metadata?: { stepIndex?: number } } };
+      const stepIdx = h.aiResponse?.metadata?.stepIndex;
+      if (stepIdx === currentIdx) {
+        count++;
+      } else {
+        break;
+      }
+    }
+    return count;
+  }
+
   private getFallbackResponse(state: PedagogicalState, title: string): AIResponse {
     return {
       explanation: `Continuemos con ${title}.`,
@@ -477,13 +496,25 @@ export class OrchestrateRecipeUseCase {
     };
   }
 
-  private async record(sessionId: string, turnBase: number, text: string, type: string | null) {
+  private async record(
+    sessionId: string,
+    turnBase: number,
+    text: string,
+    type: string | null,
+    stepIndex?: number,
+  ) {
     await this.interactionRepo.create({
       id: randomUUID(),
       sessionId,
       turnNumber: turnBase + 1,
       transcript: text,
-      aiResponse: type ? { text, responseType: type } : null,
+      aiResponse: type
+        ? {
+            text,
+            responseType: type,
+            metadata: stepIndex !== undefined ? { stepIndex } : undefined,
+          }
+        : null,
       pausedForQuestion: false,
     });
   }
@@ -973,6 +1004,41 @@ export class OrchestrateRecipeUseCase {
     let savedStepIndex: number | undefined = cp.savedStepIndex ?? undefined;
     let doubtContext = cp.doubtContext ?? undefined;
 
+    // ── Loop detection: track recent step transitions ──────────────────────
+    // If the same step index is returned too many times, force-advance
+    const consecutiveSameStep = this._countConsecutiveSameStep(history, currentIdx);
+    if (consecutiveSameStep >= 3) {
+      orchestrateLogger.warn(
+        { currentIdx, consecutiveSameStep, totalSteps: steps.length },
+        '[LOOP DETECTION] Same step returned too many times — force-advancing',
+      );
+      // Force advance to break the loop
+      const forcedIdx = this.advanceStep(steps, currentIdx);
+      if (forcedIdx !== null && forcedIdx < steps.length) {
+        const forcedStep = steps[forcedIdx];
+        const forcedState = this.stateForStep(forcedStep);
+        const forcedVoiceText = this.buildVoiceText(forcedStep);
+        await this.sessionRepo.updateCheckpoint(sessionId, {
+          ...cp,
+          currentState: forcedState,
+          currentStepIndex: forcedIdx,
+          savedStepIndex,
+          doubtContext,
+          questionCount,
+          lastQuestionTime,
+          skippedActivities,
+          failedAttempts,
+          totalWrongAnswers,
+        });
+        return {
+          voiceText: forcedVoiceText,
+          pedagogicalState: forcedState as PedagogicalState,
+          staticContent: this.extractStaticContent(forcedStep),
+          lessonProgress: { currentStep: forcedIdx, totalSteps: steps.length },
+        };
+      }
+    }
+
     if (session.safetyFlag || session.outOfScope) {
       await this.sessionRepo.escalate(sessionId);
       return {
@@ -1025,8 +1091,8 @@ export class OrchestrateRecipeUseCase {
 
       if (ready) {
         const vt = this.buildVoiceText(currentStep);
-        await this.record(sessionId, history.length, studentInput, null);
-        await this.record(sessionId, history.length + 1, vt, 'answer');
+        await this.record(sessionId, history.length, studentInput, null, currentIdx);
+        await this.record(sessionId, history.length + 1, vt, 'answer', currentIdx);
         await this.sessionRepo.updateCheckpoint(sessionId, {
           ...cp,
           currentState: this.stateForStep(currentStep),
@@ -1041,8 +1107,8 @@ export class OrchestrateRecipeUseCase {
       }
 
       const prompt = this.config.greetings.readyPrompt ?? '¿Estás listo?';
-      await this.record(sessionId, history.length, studentInput, null);
-      await this.record(sessionId, history.length + 1, prompt, 'answer');
+      await this.record(sessionId, history.length, studentInput, null, currentIdx);
+      await this.record(sessionId, history.length + 1, prompt, 'answer', currentIdx);
       return {
         voiceText: prompt,
         pedagogicalState: 'AWAITING_START',
@@ -1446,8 +1512,8 @@ export class OrchestrateRecipeUseCase {
       );
     }
 
-    await this.record(sessionId, history.length, studentInput, null);
-    await this.record(sessionId, history.length + 1, voiceText, 'answer');
+    await this.record(sessionId, history.length, studentInput, null, currentIdx);
+    await this.record(sessionId, history.length + 1, voiceText, 'answer', currentIdx);
 
     const newCp: SessionCheckpoint = {
       currentState: nextState,
@@ -1576,6 +1642,41 @@ export class OrchestrateRecipeUseCase {
     let savedStepIndex: number | undefined = cp.savedStepIndex ?? undefined;
     let doubtContext = cp.doubtContext ?? undefined;
 
+    // ── Loop detection: track recent step transitions ──────────────────────
+    // If the same step index is returned too many times, force-advance
+    const consecutiveSameStep = this._countConsecutiveSameStep(history, currentIdx);
+    if (consecutiveSameStep >= 3) {
+      orchestrateLogger.warn(
+        { currentIdx, consecutiveSameStep, totalSteps: steps.length },
+        '[LOOP DETECTION] Same step returned too many times — force-advancing',
+      );
+      // Force advance to break the loop
+      const forcedIdx = this.advanceStep(steps, currentIdx);
+      if (forcedIdx !== null && forcedIdx < steps.length) {
+        const forcedStep = steps[forcedIdx];
+        const forcedState = this.stateForStep(forcedStep);
+        const forcedVoiceText = this.buildVoiceText(forcedStep);
+        await this.sessionRepo.updateCheckpoint(sessionId, {
+          ...cp,
+          currentState: forcedState,
+          currentStepIndex: forcedIdx,
+          savedStepIndex,
+          doubtContext,
+          questionCount,
+          lastQuestionTime,
+          skippedActivities,
+          failedAttempts,
+          totalWrongAnswers,
+        });
+        return {
+          voiceText: forcedVoiceText,
+          pedagogicalState: forcedState as PedagogicalState,
+          staticContent: this.extractStaticContent(forcedStep),
+          lessonProgress: { currentStep: forcedIdx, totalSteps: steps.length },
+        };
+      }
+    }
+
     if (session.safetyFlag || session.outOfScope) {
       yield {
         type: 'end',
@@ -1629,8 +1730,8 @@ export class OrchestrateRecipeUseCase {
 
       if (ready) {
         const vt = this.buildVoiceText(currentStep);
-        await this.record(sessionId, history.length, studentInput, null);
-        await this.record(sessionId, history.length + 1, vt, 'answer');
+        await this.record(sessionId, history.length, studentInput, null, currentIdx);
+        await this.record(sessionId, history.length + 1, vt, 'answer', currentIdx);
         await this.sessionRepo.updateCheckpoint(sessionId, {
           ...cp,
           currentState: this.stateForStep(currentStep),
@@ -1647,8 +1748,8 @@ export class OrchestrateRecipeUseCase {
       }
 
       const prompt = this.config.greetings.readyPrompt ?? '¿Estás listo?';
-      await this.record(sessionId, history.length, studentInput, null);
-      await this.record(sessionId, history.length + 1, prompt, 'answer');
+      await this.record(sessionId, history.length, studentInput, null, currentIdx);
+      await this.record(sessionId, history.length + 1, prompt, 'answer', currentIdx);
       yield {
         type: 'end',
         reason: 'completed',
@@ -1708,8 +1809,8 @@ export class OrchestrateRecipeUseCase {
           ? extractText((nextScript as QuestionScript).question)
           : this.buildVoiceText(nextStep);
         const navVoiceText = questionText || '¿Puedes responder esta pregunta?';
-        await this.record(sessionId, history.length, studentInput, null);
-        await this.record(sessionId, history.length + 1, navVoiceText, 'answer');
+        await this.record(sessionId, history.length, studentInput, null, currentIdx);
+        await this.record(sessionId, history.length + 1, navVoiceText, 'answer', currentIdx);
         await this.sessionRepo.updateCheckpoint(sessionId, {
           ...cp,
           currentState: 'ACTIVITY_WAIT',
@@ -1737,8 +1838,8 @@ export class OrchestrateRecipeUseCase {
       const nextStepType = nextStep?.stepType as string | undefined;
       if (nextStepType === 'activity' || nextStepType === 'exam') {
         const navVoiceText = this.buildVoiceText(nextStep);
-        await this.record(sessionId, history.length, studentInput, null);
-        await this.record(sessionId, history.length + 1, navVoiceText, 'answer');
+        await this.record(sessionId, history.length, studentInput, null, currentIdx);
+        await this.record(sessionId, history.length + 1, navVoiceText, 'answer', currentIdx);
         await this.sessionRepo.updateCheckpoint(sessionId, {
           ...cp,
           currentState: 'ACTIVITY_WAIT',
@@ -1765,8 +1866,8 @@ export class OrchestrateRecipeUseCase {
       // For content/intro/closure steps, stream static content
       const navVoiceText = this.buildVoiceText(nextStep);
       const navNextState = this.stateForStep(nextStep);
-      await this.record(sessionId, history.length, studentInput, null);
-      await this.record(sessionId, history.length + 1, navVoiceText, 'answer');
+      await this.record(sessionId, history.length, studentInput, null, currentIdx);
+      await this.record(sessionId, history.length + 1, navVoiceText, 'answer', currentIdx);
       await this.sessionRepo.updateCheckpoint(sessionId, {
         ...cp,
         currentState: navNextState,
@@ -2067,8 +2168,8 @@ export class OrchestrateRecipeUseCase {
     }
 
     // ── Persist interactions ────────────────────────────────────────────────
-    await this.record(sessionId, history.length, studentInput, null);
-    await this.record(sessionId, history.length + 1, voiceText, 'answer');
+    await this.record(sessionId, history.length, studentInput, null, currentIdx);
+    await this.record(sessionId, history.length + 1, voiceText, 'answer', currentIdx);
 
     // ── Persist checkpoint ───────────────────────────────────────────────────
     const newCp: SessionCheckpoint = {
