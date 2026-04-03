@@ -474,19 +474,6 @@ export class OrchestrateRecipeUseCase {
    * Used for loop detection — if the same step is returned too many times,
    * the orchestrator is stuck and needs to force-advance.
    */
-  private _countConsecutiveSameStep(history: unknown[], currentIdx: number): number {
-    let count = 0;
-    for (let i = history.length - 1; i >= 0; i--) {
-      const h = history[i] as { aiResponse?: { metadata?: { stepIndex?: number } } };
-      const stepIdx = h.aiResponse?.metadata?.stepIndex;
-      if (stepIdx === currentIdx) {
-        count++;
-      } else {
-        break;
-      }
-    }
-    return count;
-  }
 
   private getFallbackResponse(state: PedagogicalState, title: string): AIResponse {
     return {
@@ -1006,38 +993,7 @@ export class OrchestrateRecipeUseCase {
 
     // ── Loop detection: track recent step transitions ──────────────────────
     // If the same step index is returned too many times, force-advance
-    const consecutiveSameStep = this._countConsecutiveSameStep(history, currentIdx);
-    if (consecutiveSameStep >= 3) {
-      orchestrateLogger.warn(
-        { currentIdx, consecutiveSameStep, totalSteps: steps.length },
-        '[LOOP DETECTION] Same step returned too many times — force-advancing',
-      );
-      // Force advance to break the loop
-      const forcedIdx = this.advanceStep(steps, currentIdx);
-      if (forcedIdx !== null && forcedIdx < steps.length) {
-        const forcedStep = steps[forcedIdx];
-        const forcedState = this.stateForStep(forcedStep);
-        const forcedVoiceText = this.buildVoiceText(forcedStep);
-        await this.sessionRepo.updateCheckpoint(sessionId, {
-          ...cp,
-          currentState: forcedState,
-          currentStepIndex: forcedIdx,
-          savedStepIndex,
-          doubtContext,
-          questionCount,
-          lastQuestionTime,
-          skippedActivities,
-          failedAttempts,
-          totalWrongAnswers,
-        });
-        return {
-          voiceText: forcedVoiceText,
-          pedagogicalState: forcedState as PedagogicalState,
-          staticContent: this.extractStaticContent(forcedStep),
-          lessonProgress: { currentStep: forcedIdx, totalSteps: steps.length },
-        };
-      }
-    }
+
 
     if (session.safetyFlag || session.outOfScope) {
       await this.sessionRepo.escalate(sessionId);
@@ -1644,38 +1600,7 @@ export class OrchestrateRecipeUseCase {
 
     // ── Loop detection: track recent step transitions ──────────────────────
     // If the same step index is returned too many times, force-advance
-    const consecutiveSameStep = this._countConsecutiveSameStep(history, currentIdx);
-    if (consecutiveSameStep >= 3) {
-      orchestrateLogger.warn(
-        { currentIdx, consecutiveSameStep, totalSteps: steps.length },
-        '[LOOP DETECTION] Same step returned too many times — force-advancing',
-      );
-      // Force advance to break the loop
-      const forcedIdx = this.advanceStep(steps, currentIdx);
-      if (forcedIdx !== null && forcedIdx < steps.length) {
-        const forcedStep = steps[forcedIdx];
-        const forcedState = this.stateForStep(forcedStep);
-        const forcedVoiceText = this.buildVoiceText(forcedStep);
-        await this.sessionRepo.updateCheckpoint(sessionId, {
-          ...cp,
-          currentState: forcedState,
-          currentStepIndex: forcedIdx,
-          savedStepIndex,
-          doubtContext,
-          questionCount,
-          lastQuestionTime,
-          skippedActivities,
-          failedAttempts,
-          totalWrongAnswers,
-        });
-        return {
-          voiceText: forcedVoiceText,
-          pedagogicalState: forcedState as PedagogicalState,
-          staticContent: this.extractStaticContent(forcedStep),
-          lessonProgress: { currentStep: forcedIdx, totalSteps: steps.length },
-        };
-      }
-    }
+
 
     if (session.safetyFlag || session.outOfScope) {
       yield {

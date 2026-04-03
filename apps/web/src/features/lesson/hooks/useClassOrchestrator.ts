@@ -201,7 +201,8 @@ export function useClassOrchestrator() {
       accuracy,
     } = raw;
 
-    // ── Loop detection: track step index changes ──────────────────────────
+    // ── Loop detection: track step index from lessonProgress ──────────────
+    // If the same step index is received too many times, force-advance
     const currentStepIdx = lessonProgress?.currentStep ?? null;
     if (currentStepIdx !== null) {
       if (currentStepIdx === lastStepIndexRef.current) {
@@ -210,22 +211,18 @@ export function useClassOrchestrator() {
           console.error(
             `[ClassOrchestrator] LOOP DETECTED: Step ${currentStepIdx} repeated ${sameStepCountRef.current} times. Breaking loop by advancing.`,
           );
-          // Force advance by calling doInteract directly (bypassing the timer)
           sameStepCountRef.current = 0;
-          lastStepIndexRef.current = null; // Reset tracking
+          lastStepIndexRef.current = null;
           setIsProcessing(true);
           doInteract('continuar')
-            .then((res) => {
-              // After forced advance, process the result normally
-              processResponse(res);
-            })
+            .then(processResponse)
             .catch((err) => {
               if (err?.message !== 'Interaction already in progress') {
                 console.error('[ClassOrchestrator] Forced advance error:', err);
               }
             })
             .finally(() => setIsProcessing(false));
-          return; // Skip normal processing to break the loop
+          return;
         }
       } else {
         sameStepCountRef.current = 0;

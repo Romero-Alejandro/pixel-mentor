@@ -90,6 +90,10 @@ export const SessionCheckpointSchema = z.object({
   skippedActivities: z.array(z.string()).default([]),
   failedAttempts: z.number().int().min(0).default(0),
   totalWrongAnswers: z.number().int().min(0).default(0),
+  // Loop detection: tracks how many consecutive times the same step was returned
+  _loopCounter: z.number().int().min(0).default(0),
+  // Loop detection: tracks the last step index that was returned to the client
+  _lastReturnedStepIndex: z.number().int().min(0).nullish(),
 });
 
 export type ValidatedSessionCheckpoint = z.infer<typeof SessionCheckpointSchema>;
