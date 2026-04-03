@@ -14,7 +14,7 @@ function extractText(val: TextOrTextObject | undefined | null): string {
 import { createLogger } from '@/shared/logger/logger.js';
 
 // Create a logger for orchestrate recipe use case
-const orchestrateLogger = createLogger(undefined, { name: 'orchestrate-recipe', level: 'debug' });
+const orchestrateLogger = createLogger(undefined, { name: 'orchestrate-recipe', level: 'info' });
 
 import type { SessionRepository } from '@/features/session/domain/ports/session.repository.port.js';
 import { SessionNotFoundError } from '@/features/session/domain/ports/session.repository.port.js';
@@ -1316,22 +1316,22 @@ export class OrchestrateRecipeUseCase {
       // Use string type assertion to avoid strict type issues
       const stepType = currentStep.stepType as string;
 
-      // DEBUG: Log the script structure for debugging
-      const debugScriptInfo = {
-        stepIndex: currentIdx,
-        stepType: currentStep.stepType,
-        hasOptions: Array.isArray(script?.options) && script.options.length > 0,
-        hasQuestion: !!script?.question,
-        isQuestionScript: isQuestionScript(script),
-        isActivityScript: isActivityScript(script),
-        options: script?.options,
-      };
-      orchestrateLogger.debug(debugScriptInfo, '[DEBUG] ACTIVITY_WAIT evaluation path');
+      orchestrateLogger.info(
+        {
+          stepIndex: currentIdx,
+          stepType,
+          studentInput,
+          scriptHasOptions: !!(script as any)?.options,
+          scriptOptionsLength: (script as any)?.options?.length,
+        },
+        '[ACTIVITY_WAIT] Processing student input',
+      );
 
       // PRIORITY: Use stepType to determine evaluation method
       // - 'question' steps use LLM (free response)
       // - 'activity'/'exam' steps use deterministic comparison (MCQ)
       if (stepType === 'question') {
+        orchestrateLogger.info('[ACTIVITY_WAIT] Using LLM for question step');
         // Always use LLM for question steps (free response)
         // ── Pregunta de comprensión: evaluar con LLM ─────────────────────
         const evaluation = await this.evaluateAnswer({
@@ -1370,21 +1370,19 @@ export class OrchestrateRecipeUseCase {
         const as = script as ActivityScript;
         const norm = studentInput.trim().toLowerCase();
         const correct = as.options.find((o) => o.isCorrect);
+        const isCorrect = !!correct && norm === correct.text.trim().toLowerCase();
 
-        // DEBUG: Log MCQ comparison
-        orchestrateLogger.debug(
+        orchestrateLogger.info(
           {
             studentInput,
             norm,
             correctOption: correct?.text,
             correctTextNormalized: correct?.text.trim().toLowerCase(),
-            isCorrect: !!correct && norm === correct.text.trim().toLowerCase(),
+            isCorrect,
             options: as.options.map((o) => ({ text: o.text, isCorrect: o.isCorrect })),
           },
-          '[DEBUG] MCQ deterministic comparison',
+          '[ACTIVITY_WAIT] MCQ deterministic comparison - isCorrect: ' + isCorrect,
         );
-
-        const isCorrect = !!correct && norm === correct.text.trim().toLowerCase();
 
         voiceText = isCorrect ? as.feedback.correct : as.feedback.incorrect;
         responseFeedback = voiceText;
