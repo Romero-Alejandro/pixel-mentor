@@ -605,17 +605,12 @@ export function useClassOrchestrator() {
 
       if (!isMountedRef.current) return;
 
-      // Handle based on needsStart
-      if (startResult.needsStart !== false) {
-        speak(startResult.voiceText || '¡Bienvenido!', _voiceSettings).catch((e) =>
-          console.error('[ClassOrchestrator] Speak error:', e),
-        );
-        const firstStep = await doInteract('comenzar');
-        processResponse(firstStep);
-      } else {
-        // Process the start response directly for resumed sessions
-        processResponse(startResult as LessonResponse);
-      }
+      // Same logic as startClass: process startResult directly without
+      // redundant doInteract('comenzar') call that causes step repetition
+      speak(startResult.voiceText || '¡Bienvenido!', _voiceSettings).catch((e) =>
+        console.error('[ClassOrchestrator] Speak error:', e),
+      );
+      processResponse(startResult as LessonResponse);
     } catch (e) {
       console.error('[resetSession] Failed:', e);
       if (isMountedRef.current) setIsProcessing(false);
