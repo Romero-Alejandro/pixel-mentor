@@ -1983,9 +1983,11 @@ export class OrchestrateRecipeUseCase {
         }
       }
     } else if (currentState === 'ACTIVITY_WAIT') {
-      const script = currentStep.script;
+      const script = currentStep.script as any;
+      const stepType = currentStep.stepType as string;
 
-      if (isQuestionScript(script)) {
+      // Use stepType to determine evaluation method (same as interact() method)
+      if (stepType === 'question') {
         const evaluation = await this.evaluateAnswer({
           script: script as QuestionScript,
           studentInput,
@@ -2011,11 +2013,23 @@ export class OrchestrateRecipeUseCase {
               ? 'ACTIVITY_SKIP_OFFER'
               : 'EVALUATION';
         }
-      } else if (isActivityScript(script)) {
+      } else if (stepType === 'activity') {
         const as = script as ActivityScript;
         const norm = studentInput.trim().toLowerCase();
         const correct = as.options.find((o) => o.isCorrect);
         const isCorrect = !!correct && norm === correct.text.trim().toLowerCase();
+
+        orchestrateLogger.info(
+          {
+            stepIndex: currentIdx,
+            stepType,
+            studentInput,
+            norm,
+            correctOption: correct?.text,
+            isCorrect,
+          },
+          '[interactStream ACTIVITY_WAIT] MCQ deterministic comparison',
+        );
 
         voiceText = isCorrect ? as.feedback.correct : as.feedback.incorrect;
 
