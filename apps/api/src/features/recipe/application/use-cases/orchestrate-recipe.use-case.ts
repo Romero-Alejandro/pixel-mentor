@@ -332,6 +332,9 @@ export class OrchestrateRecipeUseCase {
     // ── Actividad / examen (opción múltiple) ──────────────────────────────
     if ((stepType === 'activity' || stepType === 'exam') && isActivityScript(script)) {
       const instructionText = extractText(script.instruction);
+      const safeOptions = Array.isArray(script.options)
+        ? script.options.map((o) => ({ text: o.text, isCorrect: o.isCorrect }))
+        : [];
       return {
         stepType: 'activity',
         script: {
@@ -342,10 +345,10 @@ export class OrchestrateRecipeUseCase {
         },
         activity: {
           instruction: instructionText,
-          options: script.options.map((o) => ({ text: o.text, isCorrect: o.isCorrect })),
+          options: safeOptions,
           feedback: {
-            correct: script.feedback.correct,
-            incorrect: script.feedback.incorrect,
+            correct: script.feedback?.correct ?? '',
+            incorrect: script.feedback?.incorrect ?? '',
           },
         },
       };
