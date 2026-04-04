@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 
 import { streamInteractWithRecipe } from '@/services/api';
+import { logger } from '@/utils/logger';
 
 export interface UseChatStreamReturn {
   chunks: string[];
@@ -13,9 +14,7 @@ export interface UseChatStreamReturn {
 
 // Debug logging
 const debugLog = (...args: unknown[]) => {
-  if (import.meta.env.DEV) {
-    console.log('[useChatStream]', ...args);
-  }
+  logger.log('[useChatStream]', ...args);
 };
 
 const debugError = (...args: unknown[]) => {

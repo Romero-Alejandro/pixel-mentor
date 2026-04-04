@@ -4,6 +4,7 @@ import { IconStarFilled, IconAlertTriangleFilled, IconBolt } from '@tabler/icons
 import { useAudio } from '@/contexts/AudioContext';
 import { SpriteAudioEvent } from '@/audio/types/audio-events';
 import { Spinner } from '@/components/ui';
+import { logger } from '@/utils/logger';
 
 interface FeedbackPanelProps {
   fb: { isCorrect: boolean; message: string; encouragement?: string; xpAwarded?: number };
@@ -14,13 +15,11 @@ interface FeedbackPanelProps {
 export function FeedbackPanel({ fb, nextLessonText, isStreaming }: FeedbackPanelProps) {
   const { playSprite } = useAudio();
 
-  if (import.meta.env.DEV) {
-    console.log('[FeedbackPanel] Render:', {
-      nextLessonTextLength: nextLessonText?.length ?? 0,
-      fbMessage: fb.message,
-      isStreaming,
-    });
-  }
+  logger.log('[FeedbackPanel] Render:', {
+    nextLessonTextLength: nextLessonText?.length ?? 0,
+    fbMessage: fb.message,
+    isStreaming,
+  });
 
   useEffect(() => {
     const timer = setTimeout(() => {

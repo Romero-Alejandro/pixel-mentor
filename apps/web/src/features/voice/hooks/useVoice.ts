@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import type { TTSAudioMessageData, TTSErrorMessageData } from '@pixel-mentor/shared';
 
 import { apiClient, getToken } from '@/services/api-client';
+import { logger } from '@/utils/logger';
 
 // Voice settings for backend TTS
 export interface VoiceSettings {
@@ -46,9 +47,7 @@ export interface UseVoiceReturn {
 
 // Debug logging
 const debugLog = (...args: unknown[]) => {
-  if (import.meta.env.DEV) {
-    console.log('[Voice]', ...args);
-  }
+  logger.log('[Voice]', ...args);
 };
 
 const debugError = (...args: unknown[]) => {

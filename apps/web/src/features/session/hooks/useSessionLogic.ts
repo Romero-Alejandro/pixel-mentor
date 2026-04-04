@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { api, type Session, type PedagogicalState } from '@/services/api';
 import { useVoice, type VoiceSettings } from '@/features/voice/hooks/useVoice';
 import { useConfirm } from '@/hooks/useConfirmationDialogs';
+import { logger } from '@/utils/logger';
 
 export interface Message {
   id: string;
@@ -94,7 +95,7 @@ export function useSessionLogic(sessionId: string | undefined, voiceSettings: Vo
           const report = await api.getMissionReport(sessionId);
           if (isMounted.current) setMissionReport(report);
         } catch (e) {
-          console.warn('Could not fetch mission report:', e);
+          logger.warn('Could not fetch mission report:', e);
         }
       }
 

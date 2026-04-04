@@ -21,6 +21,7 @@ import { useAlert, useConfirm } from '@/hooks/useConfirmationDialogs';
 import { Button, Card, Spinner, Input, Textarea, Badge } from '@/components/ui';
 import { StepEditor } from '@/features/recipe-management/components/StepEditor';
 import { AIRecipeGeneratorModal } from '@/features/recipe-management/components/AIRecipeGeneratorModal';
+import { logger } from '@/utils/logger';
 
 type StepType = 'content' | 'activity' | 'question' | 'intro' | 'closure';
 
@@ -454,7 +455,7 @@ export function RecipeEditorPage() {
     [newSteps[index - 1], newSteps[index]] = [newSteps[index], newSteps[index - 1]];
     setLocalSteps(newSteps);
     const stepIds = newSteps.map((s) => s.id);
-    console.log('[handleMoveStepUp] stepIds:', stepIds);
+    logger.debug('[RecipeEditor] handleMoveStepUp stepIds:', stepIds);
     reorderSteps(recipeId, stepIds).catch(async (err) => {
       console.error('[handleMoveStepUp] Error:', err);
       // Revert on error
@@ -474,7 +475,7 @@ export function RecipeEditorPage() {
     [newSteps[index], newSteps[index + 1]] = [newSteps[index + 1], newSteps[index]];
     setLocalSteps(newSteps);
     const stepIds = newSteps.map((s) => s.id);
-    console.log('[handleMoveStepDown] stepIds:', stepIds);
+    logger.debug('[RecipeEditor] handleMoveStepDown stepIds:', stepIds);
     reorderSteps(recipeId, stepIds).catch(async (err) => {
       console.error('[handleMoveStepDown] Error:', err);
       // Revert on error

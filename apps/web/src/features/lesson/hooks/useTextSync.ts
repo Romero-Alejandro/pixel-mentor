@@ -1,5 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 
+import { logger } from '@/utils/logger';
+
 export interface UseTextSyncOptions {
   fullText: string;
   audioElementGetter?: () => HTMLAudioElement | null;
@@ -118,7 +120,7 @@ export function useTextSync({
         if (wps >= 0.5 && wps <= 10) {
           calibratedWPSRef.current = wps;
           if (!calibrationLoggedRef.current) {
-            console.debug(
+            logger.debug(
               '[useTextSync] Calibrated wordsPerSecond:',
               wps.toFixed(2),
               `(words: ${words.length}, duration: ${duration.toFixed(2)}s)`,

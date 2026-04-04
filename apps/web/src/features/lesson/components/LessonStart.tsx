@@ -4,6 +4,7 @@ import { useLessonStore } from '@/features/lesson/stores/lesson.store';
 import { useRecipeInteraction } from '@/features/lesson/hooks/useLessonQueries';
 import { useAudio } from '@/contexts/AudioContext';
 import { useAlert } from '@/hooks/useConfirmationDialogs';
+import { logger } from '@/utils/logger';
 import { SpriteAudioEvent, MicroAudioEvent } from '@/audio/types/audio-events';
 
 export function LessonStart() {
@@ -20,8 +21,8 @@ export function LessonStart() {
 
   const handleStartLesson = async () => {
     playMicro(MicroAudioEvent.Click);
-    console.log('LessonStart button clicked');
-    console.log('sessionId:', sessionId);
+    logger.log('LessonStart button clicked');
+    logger.log('sessionId:', sessionId);
 
     if (!sessionId) {
       console.error('No sessionId available');
@@ -30,14 +31,14 @@ export function LessonStart() {
     }
 
     try {
-      console.log('Sending interaction with input: sí');
+      logger.log('Sending interaction with input: sí');
       const result = await interactWithRecipe({ sessionId, input: 'sí' });
-      console.log('Interaction successful:', result);
+      logger.log('Interaction successful:', result);
 
       // Update the lesson store with the response
       setCurrentState(result.pedagogicalState);
 
-      console.log('State updated to:', result.pedagogicalState);
+      logger.log('State updated to:', result.pedagogicalState);
     } catch (error: unknown) {
       console.error('Failed to start lesson:', error);
       const message = error instanceof Error ? error.message : 'Unknown error';

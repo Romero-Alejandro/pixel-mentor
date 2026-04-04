@@ -3,6 +3,8 @@ import useSound from 'use-sound';
 import { SpriteAudioEvent } from '../types/audio-events';
 import { useAudioStore } from '../../features/audio/stores/audio.store';
 
+import { logger } from '@/utils/logger';
+
 // Sprite map: event -> [startMs, durationMs] in milliseconds
 const spriteMap: Record<SpriteAudioEvent, [number, number]> = {
   [SpriteAudioEvent.BadgeEarned]: [0, 956],
@@ -45,14 +47,13 @@ export const useSpriteAudioEvents = () => {
     sprite: spriteMapSeconds,
     volume: isMuted ? 0 : volume,
     preload: true,
-    // Debug callbacks
-    onload: () => console.log('[Audio] ✅ Sprite file loaded successfully'),
+    onload: () => logger.log('[Audio] Sprite file loaded successfully'),
     onerror: (err: unknown) =>
       console.error('[Audio] ❌ Sprite file failed to load:', (err as Error)?.message ?? err),
   });
 
   // Log initial state
-  console.log(
+  logger.log(
     '[Audio] useSpriteAudioEvents initialized. muted:',
     isMuted,
     'volume:',
@@ -63,14 +64,14 @@ export const useSpriteAudioEvents = () => {
 
   const playSprite = (event: SpriteAudioEvent) => {
     if (isMuted) {
-      console.log('[Audio] 🔇 Muted, skipping:', event);
+      logger.log('[Audio] Muted, skipping:', event);
       return;
     }
     if (!sound) {
-      console.warn('[Audio] ⚠️ Sound not loaded yet, cannot play:', event);
+      logger.warn('[Audio] Sound not loaded yet, cannot play:', event);
       return;
     }
-    console.log('[Audio] ▶️ Playing sprite:', event, '(vol:', volume, ')');
+    logger.log('[Audio] Playing sprite:', event, '(vol:', volume, ')');
     try {
       play({ id: event });
     } catch (e: unknown) {

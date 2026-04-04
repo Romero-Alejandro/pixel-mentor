@@ -32,6 +32,8 @@ import {
 
 import { apiClient, getToken } from './api-client';
 
+import { logger } from '@/utils/logger';
+
 export {
   type User,
   type Role,
@@ -75,12 +77,10 @@ export const streamInteractWithRecipe = (
     console.error('[API] Authentication token required for streaming');
     throw new Error('Authentication token required for streaming');
   }
-  if (import.meta.env.DEV) {
-    console.log('[API] Starting fetchEventSource for streaming:', {
-      sessionId,
-      studentInput: studentInput.slice(0, 50),
-    });
-  }
+  logger.log('[API] Starting fetchEventSource for streaming:', {
+    sessionId,
+    studentInput: studentInput.slice(0, 50),
+  });
 
   const controller = new AbortController();
 
@@ -104,9 +104,7 @@ export const streamInteractWithRecipe = (
     }
   });
 
-  if (import.meta.env.DEV) {
-    console.log('[API] fetchEventSource started for streaming');
-  }
+  logger.log('[API] fetchEventSource started for streaming');
 
   return controller;
 };

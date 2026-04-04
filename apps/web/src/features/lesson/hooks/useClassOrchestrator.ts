@@ -9,6 +9,7 @@ import { useLessonState } from './useLessonState';
 import { useChatStream } from './useChatStream';
 
 import { api, streamInteractWithRecipe, type PedagogicalState } from '@/services/api';
+import { logger } from '@/utils/logger';
 import { useVoice, type VoiceSettings } from '@/features/voice/hooks/useVoice';
 import { useLessonStore } from '@/features/lesson/stores/lesson.store';
 
@@ -382,9 +383,7 @@ export function useClassOrchestrator() {
     }
 
     if (import.meta.env.VITE_ENABLE_STREAMING === 'true') {
-      if (import.meta.env.DEV) {
-        console.log('[useClassOrchestrator] doInteract: Streaming ENABLED, using fetchEventSource');
-      }
+      logger.log('[useClassOrchestrator] doInteract: Streaming ENABLED, using fetchEventSource');
       try {
         let fullText = '';
         wasStreamingRef.current = true;
@@ -472,14 +471,8 @@ export function useClassOrchestrator() {
   }
 
   async function startClass(lessonId: string): Promise<Result<void, Error>> {
-    console.log(
-      '%c[DEBUG] startClass called',
-      'color: cyan; font-weight: bold;',
-      'lessonId:',
-      lessonId,
-    );
-    console.log('%c[DEBUG] Stack trace:', 'color: cyan;');
-    console.trace();
+    logger.log('[useClassOrchestrator] startClass called', { lessonId });
+    logger.debug('[useClassOrchestrator] Stack trace');
     cleanup();
     abortControllerRef.current = new AbortController();
     setIsProcessing(true);

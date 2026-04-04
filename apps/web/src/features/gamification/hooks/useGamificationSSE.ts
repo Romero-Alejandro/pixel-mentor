@@ -5,6 +5,7 @@ import type { EarnedBadge } from '@pixel-mentor/shared/gamification';
 import { useGamificationStore } from '../stores/gamification.store';
 
 import { getToken } from '@/services/api-client';
+import { logger } from '@/utils/logger';
 
 interface XPEarnedEvent {
   type: 'xp_earned';
@@ -106,7 +107,7 @@ export function useGamificationSSE(enabled = true) {
                 );
                 break;
               default:
-                console.warn('[GamificationSSE] Unknown event type:', (data as SSEEvent).type);
+                logger.warn('[GamificationSSE] Unknown event type:', (data as SSEEvent).type);
             }
           } catch (e) {
             console.error('[GamificationSSE] Failed to parse event:', e);
@@ -123,7 +124,7 @@ export function useGamificationSSE(enabled = true) {
           );
           reconnectAttemptRef.current += 1;
 
-          console.warn(
+          logger.warn(
             `[GamificationSSE] Connection lost, retrying in ${delay}ms (attempt ${reconnectAttemptRef.current})`,
           );
 
