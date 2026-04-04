@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 
 import { api, type Class, type Session, type User } from '@/services/api';
-import { gamificationApi } from '@/api/gamification.api';
+import { gamificationApi } from '@/features/gamification/services/gamification.api';
 
 interface AchievementsData {
   badges: any[];

@@ -4,8 +4,22 @@ import { MemoryRouter } from 'react-router-dom';
 
 import { LoginPage } from '../../pages/LoginPage';
 
+// Mock AudioContext
+const mockAudio = {
+  playFocus: vi.fn(),
+  playClick: vi.fn(),
+  playClickSecondary: vi.fn(),
+  playSprite: vi.fn(),
+  playMicro: vi.fn(),
+  playRive: vi.fn(),
+};
+vi.mock('@/contexts/AudioContext', () => ({
+  useAudio: () => mockAudio,
+  AudioProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
 // Mock the entire authStore module
-vi.mock('../../stores/authStore', () => ({
+vi.mock('../../features/auth/stores/auth.store', () => ({
   useAuthStore: vi.fn(),
 }));
 
@@ -19,7 +33,7 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-import { useAuthStore } from '../../stores/authStore';
+import { useAuthStore } from '../../features/auth/stores/auth.store';
 
 describe('LoginPage', () => {
   const mockLogin = vi.fn();
@@ -47,11 +61,11 @@ describe('LoginPage', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByLabelText(/Tu correo/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Tu contraseña secreta/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /¡A jugar!/i })).toBeInTheDocument();
-    expect(screen.getByText(/¿Eres nuevo\?/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Crea tu personaje/i })).toHaveAttribute(
+    expect(screen.getByLabelText(/Correo electrónico o nombre de usuario/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Contraseña secreta/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Entrar a la Academia!/i })).toBeInTheDocument();
+    expect(screen.getByText(/¿Aún no tienes tu pase?/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Crear cuenta/i })).toHaveAttribute(
       'href',
       '/register',
     );
@@ -81,8 +95,8 @@ describe('LoginPage', () => {
       </MemoryRouter>,
     );
 
-    const emailInput = screen.getByLabelText(/Tu correo/i);
-    const passwordInput = screen.getByLabelText(/Tu contraseña secreta/i);
+    const emailInput = screen.getByLabelText(/Correo electrónico o nombre de usuario/i);
+    const passwordInput = screen.getByLabelText(/Contraseña secreta/i);
 
     fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
     fireEvent.change(passwordInput, { target: { value: 'password123' } });
@@ -100,9 +114,9 @@ describe('LoginPage', () => {
       </MemoryRouter>,
     );
 
-    const emailInput = screen.getByLabelText(/Tu correo/i);
-    const passwordInput = screen.getByLabelText(/Tu contraseña secreta/i);
-    const submitButton = screen.getByRole('button', { name: /¡A jugar!/i });
+    const emailInput = screen.getByLabelText(/Correo electrónico o nombre de usuario/i);
+    const passwordInput = screen.getByLabelText(/Contraseña secreta/i);
+    const submitButton = screen.getByRole('button', { name: /Entrar a la Academia!/i });
 
     fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
     fireEvent.change(passwordInput, { target: { value: 'password123' } });

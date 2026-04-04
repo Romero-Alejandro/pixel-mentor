@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { IconPlus, IconFilter, IconSearch, IconBook, IconArrowLeft } from '@tabler/icons-react';
 
-import { useRecipeStore } from '@/stores/recipeStore';
-import { useAuthStore } from '@/stores/authStore';
+import { useRecipeStore } from '@/features/recipe-management/stores/recipe.store';
+import { useAuthStore } from '@/features/auth/stores/auth.store';
 import { useAudio } from '@/contexts/AudioContext';
-import { RecipeCard } from '@/components/recipe/RecipeCard';
+import { RecipeCard } from '@/features/recipe-management/components/RecipeCard';
 import { Button, Card, Spinner, Input } from '@/components/ui';
 
 type FilterStatus = 'all' | 'my-drafts' | 'my-published';

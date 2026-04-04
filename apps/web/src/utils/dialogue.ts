@@ -3,7 +3,7 @@
  * Provides personalized, context-aware dialogue for the AI tutor
  */
 
-import { type LessonConfig } from '@/stores/lessonStore';
+import { type LessonConfig } from '@/features/lesson/stores/lesson.store';
 import { type PedagogicalState } from '@/services/api';
 
 /**

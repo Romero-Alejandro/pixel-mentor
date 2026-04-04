@@ -12,7 +12,7 @@ import {
   IconSparkles,
 } from '@tabler/icons-react';
 
-import { useLessonStore } from '@/stores/lessonStore';
+import { useLessonStore } from '@/features/lesson/stores/lesson.store';
 import { cn } from '@/utils/cn';
 
 type AvatarState =

@@ -3,8 +3,8 @@ import { IconArrowLeft, IconRefresh } from '@tabler/icons-react';
 
 import { UIState } from '../hooks/useLessonState';
 
-import { VoiceSettingsPanel } from '@/components/voice-settings/VoiceSettingsPanel';
-import type { VoiceSettings } from '@/hooks/useVoice';
+import { VoiceSettingsPanel } from '@/features/voice/components/VoiceSettingsPanel';
+import type { VoiceSettings } from '@/features/voice/hooks/useVoice';
 
 interface HeaderProps {
   isStart: boolean;

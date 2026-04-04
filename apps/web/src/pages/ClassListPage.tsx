@@ -4,10 +4,10 @@ import { useShallow } from 'zustand/react/shallow';
 import { IconPlus, IconFilter, IconBook, IconArrowLeft } from '@tabler/icons-react';
 import type { ClassStatus } from '@pixel-mentor/shared';
 
-import { useClassStore } from '@/stores/classStore';
-import { useAuthStore } from '@/stores/authStore';
+import { useClassStore } from '@/features/class-management/stores/class.store';
+import { useAuthStore } from '@/features/auth/stores/auth.store';
 import { useAudio } from '@/contexts/AudioContext';
-import { ClassCard } from '@/components/class/ClassCard';
+import { ClassCard } from '@/features/class-management/components/ClassCard';
 import { Button, Card, Spinner, Input } from '@/components/ui';
 
 const STATUS_LABELS: Record<ClassStatus, string> = {

@@ -3,10 +3,24 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import { RegisterPage } from '../../pages/RegisterPage';
-import { useAuthStore } from '../../stores/authStore';
+import { useAuthStore } from '../../features/auth/stores/auth.store';
+
+// Mock AudioContext
+const mockAudio = {
+  playFocus: vi.fn(),
+  playClick: vi.fn(),
+  playClickSecondary: vi.fn(),
+  playSprite: vi.fn(),
+  playMicro: vi.fn(),
+  playRive: vi.fn(),
+};
+vi.mock('@/contexts/AudioContext', () => ({
+  useAudio: () => mockAudio,
+  AudioProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
 
 // Mock the entire authStore module
-vi.mock('../../stores/authStore', () => ({
+vi.mock('../../features/auth/stores/auth.store', () => ({
   useAuthStore: vi.fn(),
 }));
 
@@ -41,13 +55,14 @@ describe('RegisterPage', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByLabelText('Designación (Nombre)')).toBeInTheDocument();
-    expect(screen.getByLabelText('Identificador (Email)')).toBeInTheDocument();
-    expect(screen.getByLabelText('Clave de acceso')).toBeInTheDocument();
-    expect(screen.getByLabelText('Confirmar clave')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Registrar/i })).toBeInTheDocument();
-    expect(screen.getByText(/¿Registro existente\?/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Autenticarse/i })).toHaveAttribute('href', '/login');
+    expect(screen.getByLabelText('Nombre completo')).toBeInTheDocument();
+    expect(screen.getByLabelText('Nombre de usuario (opcional)')).toBeInTheDocument();
+    expect(screen.getByLabelText('Correo electrónico')).toBeInTheDocument();
+    expect(screen.getByLabelText('Contraseña')).toBeInTheDocument();
+    expect(screen.getByLabelText('Confirmar contraseña')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Crear Cuenta/i })).toBeInTheDocument();
+    expect(screen.getByText(/¿Ya tienes cuenta?/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Iniciar sesión/i })).toHaveAttribute('href', '/login');
   });
 
   it('should show error message when store has error', () => {
@@ -74,11 +89,11 @@ describe('RegisterPage', () => {
       </MemoryRouter>,
     );
 
-    const nameInput = screen.getByLabelText('Designación (Nombre)');
-    const emailInput = screen.getByLabelText('Identificador (Email)');
-    const passwordInput = screen.getByLabelText('Clave de acceso');
-    const confirmPasswordInput = screen.getByLabelText('Confirmar clave');
-    const submitButton = screen.getByRole('button', { name: /Registrar/i });
+    const nameInput = screen.getByLabelText('Nombre completo');
+    const emailInput = screen.getByLabelText('Correo electrónico');
+    const passwordInput = screen.getByLabelText('Contraseña');
+    const confirmPasswordInput = screen.getByLabelText('Confirmar contraseña');
+    const submitButton = screen.getByRole('button', { name: /Crear Cuenta/i });
 
     fireEvent.change(nameInput, { target: { value: 'Test User' } });
     fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
@@ -86,7 +101,7 @@ describe('RegisterPage', () => {
     fireEvent.change(confirmPasswordInput, { target: { value: 'different' } });
     fireEvent.click(submitButton);
 
-    expect(screen.getByText('Las claves de acceso no coinciden.')).toBeInTheDocument();
+    expect(screen.getByText('Las contraseñas no coinciden.')).toBeInTheDocument();
     expect(mockRegister).not.toHaveBeenCalled();
   });
 
@@ -97,11 +112,11 @@ describe('RegisterPage', () => {
       </MemoryRouter>,
     );
 
-    const nameInput = screen.getByLabelText('Designación (Nombre)');
-    const emailInput = screen.getByLabelText('Identificador (Email)');
-    const passwordInput = screen.getByLabelText('Clave de acceso');
-    const confirmPasswordInput = screen.getByLabelText('Confirmar clave');
-    const submitButton = screen.getByRole('button', { name: /Registrar/i });
+    const nameInput = screen.getByLabelText('Nombre completo');
+    const emailInput = screen.getByLabelText('Correo electrónico');
+    const passwordInput = screen.getByLabelText('Contraseña');
+    const confirmPasswordInput = screen.getByLabelText('Confirmar contraseña');
+    const submitButton = screen.getByRole('button', { name: /Crear Cuenta/i });
 
     fireEvent.change(nameInput, { target: { value: 'Test User' } });
     fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
@@ -109,7 +124,7 @@ describe('RegisterPage', () => {
     fireEvent.change(confirmPasswordInput, { target: { value: '12345' } });
     fireEvent.click(submitButton);
 
-    expect(screen.getByText('La clave requiere un mínimo de 6 caracteres.')).toBeInTheDocument();
+    expect(screen.getByText('La contraseña debe tener al menos 6 caracteres.')).toBeInTheDocument();
     expect(mockRegister).not.toHaveBeenCalled();
   });
 
@@ -122,11 +137,11 @@ describe('RegisterPage', () => {
       </MemoryRouter>,
     );
 
-    const nameInput = screen.getByLabelText('Designación (Nombre)');
-    const emailInput = screen.getByLabelText('Identificador (Email)');
-    const passwordInput = screen.getByLabelText('Clave de acceso');
-    const confirmPasswordInput = screen.getByLabelText('Confirmar clave');
-    const submitButton = screen.getByRole('button', { name: /Registrar/i });
+    const nameInput = screen.getByLabelText('Nombre completo');
+    const emailInput = screen.getByLabelText('Correo electrónico');
+    const passwordInput = screen.getByLabelText('Contraseña');
+    const confirmPasswordInput = screen.getByLabelText('Confirmar contraseña');
+    const submitButton = screen.getByRole('button', { name: /Crear Cuenta/i });
 
     fireEvent.change(nameInput, { target: { value: 'Test User' } });
     fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
@@ -140,6 +155,7 @@ describe('RegisterPage', () => {
       'password123',
       'Test User',
       'STUDENT',
+      '', // username is empty string since field was not filled
     );
 
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -160,8 +176,8 @@ describe('RegisterPage', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText('Procesando...')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Procesando\.\.\./i })).toBeDisabled();
+    expect(screen.getByText('Creando cuenta...')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Creando cuenta/i })).toBeDisabled();
   });
 
   it('should clear validation errors on new input after error', () => {
@@ -171,11 +187,11 @@ describe('RegisterPage', () => {
       </MemoryRouter>,
     );
 
-    const nameInput = screen.getByLabelText('Designación (Nombre)');
-    const emailInput = screen.getByLabelText('Identificador (Email)');
-    const passwordInput = screen.getByLabelText('Clave de acceso');
-    const confirmPasswordInput = screen.getByLabelText('Confirmar clave');
-    const submitButton = screen.getByRole('button', { name: /Registrar/i });
+    const nameInput = screen.getByLabelText('Nombre completo');
+    const emailInput = screen.getByLabelText('Correo electrónico');
+    const passwordInput = screen.getByLabelText('Contraseña');
+    const confirmPasswordInput = screen.getByLabelText('Confirmar contraseña');
+    const submitButton = screen.getByRole('button', { name: /Crear Cuenta/i });
 
     // First trigger validation error
     fireEvent.change(nameInput, { target: { value: 'Test' } });
@@ -184,7 +200,7 @@ describe('RegisterPage', () => {
     fireEvent.change(confirmPasswordInput, { target: { value: '123' } });
     fireEvent.click(submitButton);
 
-    expect(screen.getByText('La clave requiere un mínimo de 6 caracteres.')).toBeInTheDocument();
+    expect(screen.getByText('La contraseña debe tener al menos 6 caracteres.')).toBeInTheDocument();
 
     // Fix the password and submit again
     fireEvent.change(passwordInput, { target: { value: 'password123' } });

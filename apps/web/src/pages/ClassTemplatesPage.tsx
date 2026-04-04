@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { IconPlus, IconTemplate, IconBook, IconArrowRight } from '@tabler/icons-react';
 
-import { useClassStore } from '@/stores/classStore';
-import { useAuthStore } from '@/stores/authStore';
+import { useClassStore } from '@/features/class-management/stores/class.store';
+import { useAuthStore } from '@/features/auth/stores/auth.store';
 import { useAudio } from '@/contexts/AudioContext';
 import { Button, Card, Spinner, Input } from '@/components/ui';
 

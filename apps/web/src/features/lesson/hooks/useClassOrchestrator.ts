@@ -4,10 +4,10 @@ import { useShallow } from 'zustand/react/shallow';
 import { useLessonState } from './useLessonState';
 import { useChatStream } from './useChatStream';
 
-import { FEEDBACK_DISPLAY_MS, estimateReadTime } from '@/config/lessonTiming';
+import { FEEDBACK_DISPLAY_MS, estimateReadTime } from '../constants/lesson.constants';
 import { api, streamInteractWithRecipe, type PedagogicalState } from '@/services/api';
-import { useVoice, type VoiceSettings } from '@/hooks/useVoice';
-import { useLessonStore } from '@/stores/lessonStore';
+import { useVoice, type VoiceSettings } from '@/features/voice/hooks/useVoice';
+import { useLessonStore } from '@/features/lesson/stores/lesson.store';
 
 export type Result<T, E = Error> = { ok: true; value: T } | { ok: false; error: E };
 
@@ -543,18 +543,6 @@ export function useClassOrchestrator() {
       if (isMountedRef.current) setIsProcessing(false);
       return Err(e instanceof Error ? e : new Error('Failed to start lesson'));
     }
-  }
-
-  /**
-   * Present a content step from the contentSteps array without calling the backend.
-   * DEPRECATED: This function is no longer used because local auto-advance caused
-   * state desync with the backend. All step transitions now go through the backend.
-   */
-  async function presentContentStep(_index: number): Promise<void> {
-    // No longer used — kept for backward compatibility
-    if (!isMountedRef.current) return;
-    const res = await doInteract('continuar');
-    processResponse(res);
   }
 
   async function submitAnswer(answer: string) {

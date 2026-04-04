@@ -12,9 +12,9 @@ import {
   IconSearch,
 } from '@tabler/icons-react';
 
-import { useAuthStore } from '../stores/authStore';
-import { api } from '../services/api';
-import { Button, Spinner, Input } from '../components/ui';
+import { useAuthStore } from '@/features/auth/stores/auth.store';
+import { api } from '@/services/api';
+import { Button, Spinner, Input } from '@/components/ui';
 
 interface UserItem {
   id: string;

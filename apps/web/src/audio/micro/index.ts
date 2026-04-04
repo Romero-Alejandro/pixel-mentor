@@ -1,5 +1,5 @@
 import { MicroAudioEvent } from '../types/audio-events';
-import { useAudioStore } from '../../stores/audio.store';
+import { useAudioStore } from '../../features/audio/stores/audio.store';
 
 import { playMicroSound } from './zzfx';
 

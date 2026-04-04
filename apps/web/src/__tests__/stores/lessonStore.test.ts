@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 
-import { useLessonStore } from '../../stores/lessonStore';
+import { useLessonStore } from '@/features/lesson/stores/lesson.store';
 
 describe('lessonStore', () => {
   beforeEach(() => {
@@ -11,7 +11,7 @@ describe('lessonStore', () => {
     it('should have correct default values', () => {
       const state = useLessonStore.getState();
       expect(state.lessonId).toBeNull();
-      expect(state.currentState).toBe('ACTIVE_CLASS');
+      expect(state.currentState).toBe('AWAITING_START');
       expect(state.isListening).toBe(false);
       expect(state.isSpeaking).toBe(false);
     });
@@ -68,7 +68,7 @@ describe('lessonStore', () => {
 
       const state = useLessonStore.getState();
       expect(state.lessonId).toBeNull();
-      expect(state.currentState).toBe('ACTIVE_CLASS');
+      expect(state.currentState).toBe('AWAITING_START');
       expect(state.isListening).toBe(false);
       expect(state.isSpeaking).toBe(false);
     });

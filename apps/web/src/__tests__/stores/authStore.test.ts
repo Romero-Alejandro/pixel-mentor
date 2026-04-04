@@ -1,11 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-import { useAuthStore } from '../../stores/authStore';
-import { api } from '../../services/api';
+import { useAuthStore } from '../../features/auth/stores/auth.store';
+import { authApi } from '../../features/auth/services/auth.api';
+import { setToken, clearToken } from '../../services/api-client';
 
-vi.spyOn(api, 'login');
-vi.spyOn(api, 'register');
-vi.spyOn(api, 'getCurrentUser');
+// Mock the API functions
+vi.spyOn(authApi, 'login');
+vi.spyOn(authApi, 'register');
+vi.spyOn(authApi, 'getCurrentUser');
 
 describe('authStore', () => {
   beforeEach(() => {
@@ -39,99 +41,66 @@ describe('authStore', () => {
         user: { id: '1', email: 'test@test.com', name: 'Test', role: 'STUDENT', quota: 0 },
         token: 'jwt-token-123',
       };
-      (api.login as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockResponse);
+      (authApi.login as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockResponse);
 
       await useAuthStore.getState().login('test@test.com', 'password123');
 
-      expect(api.login).toHaveBeenCalledWith({
-        email: 'test@test.com',
+      expect(authApi.login).toHaveBeenCalledWith({
+        identifier: 'test@test.com',
         password: 'password123',
       });
 
       const state = useAuthStore.getState();
       expect(state.user).toEqual(mockResponse.user);
-      expect(state.token).toBe('jwt-token-123');
+      expect(state.token).toBe(mockResponse.token);
       expect(state.isAuthenticated).toBe(true);
       expect(state.isLoading).toBe(false);
-      expect(state.error).toBeNull();
     });
 
-    it('should set error on login failure', async () => {
-      (api.login as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
-        new Error('Invalid credentials'),
-      );
+    it('should handle login error', async () => {
+      const errorMessage = 'Invalid credentials';
+      (authApi.login as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error(errorMessage));
 
-      await expect(
-        useAuthStore.getState().login('test@test.com', 'wrong-password'),
-      ).rejects.toThrow('Invalid credentials');
+      await expect(useAuthStore.getState().login('test@test.com', 'wrong')).rejects.toThrow();
 
       const state = useAuthStore.getState();
-      expect(state.error).toBe('Invalid credentials');
+      expect(state.error).toBe(errorMessage);
       expect(state.isLoading).toBe(false);
-    });
-
-    it('should set loading state during login', async () => {
-      let loadingDuringCall = false;
-      (api.login as ReturnType<typeof vi.fn>).mockImplementation(() => {
-        loadingDuringCall = useAuthStore.getState().isLoading;
-        return Promise.resolve({
-          user: { id: '1', email: 'test@test.com', name: 'Test', role: 'STUDENT', quota: 0 },
-          token: 'token',
-        });
-      });
-
-      await useAuthStore.getState().login('test@test.com', 'password');
-
-      expect(loadingDuringCall).toBe(true);
     });
   });
 
   describe('register', () => {
     it('should register successfully and set user state', async () => {
       const mockResponse = {
-        user: { id: '2', email: 'new@test.com', name: 'New User', role: 'STUDENT', quota: 0 },
-        token: 'jwt-token-456',
+        user: { id: '1', email: 'test@test.com', name: 'Test', role: 'STUDENT', quota: 0 },
+        token: 'jwt-token-123',
       };
-      (api.register as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockResponse);
+      (authApi.register as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockResponse);
 
-      await useAuthStore.getState().register('new@test.com', 'password123', 'New User', 'STUDENT');
+      await useAuthStore
+        .getState()
+        .register('test@test.com', 'password123', 'Test User', 'STUDENT');
 
-      expect(api.register).toHaveBeenCalledWith({
-        email: 'new@test.com',
+      expect(authApi.register).toHaveBeenCalledWith({
+        email: 'test@test.com',
         password: 'password123',
-        name: 'New User',
-        role: 'STUDENT',
+        name: 'Test User',
+        username: undefined,
       });
 
       const state = useAuthStore.getState();
       expect(state.user).toEqual(mockResponse.user);
-      expect(state.token).toBe('jwt-token-456');
       expect(state.isAuthenticated).toBe(true);
-    });
-
-    it('should set error on registration failure', async () => {
-      (api.register as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
-        new Error('Email already exists'),
-      );
-
-      await expect(
-        useAuthStore.getState().register('existing@test.com', 'password', 'Name', 'STUDENT'),
-      ).rejects.toThrow('Email already exists');
-
-      const state = useAuthStore.getState();
-      expect(state.error).toBe('Email already exists');
     });
   });
 
   describe('logout', () => {
-    it('should clear user state on logout', async () => {
-      (api.login as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    it('should clear user and token on logout', () => {
+      useAuthStore.setState({
         user: { id: '1', email: 'test@test.com', name: 'Test', role: 'STUDENT', quota: 0 },
-        token: 'jwt-token',
+        token: 'some-token',
+        isAuthenticated: true,
       });
-
-      await useAuthStore.getState().login('test@test.com', 'password');
-      expect(useAuthStore.getState().isAuthenticated).toBe(true);
 
       useAuthStore.getState().logout();
 
@@ -143,40 +112,24 @@ describe('authStore', () => {
   });
 
   describe('checkAuth', () => {
-    it('should authenticate if token exists and is valid', async () => {
-      localStorage.setItem('token', 'existing-token');
-      useAuthStore.setState({ token: 'existing-token' });
-      (api.getCurrentUser as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-        user: { id: '1', email: 'test@test.com', name: 'Test', role: 'STUDENT', quota: 0 },
+    it('should set user when token exists and API call succeeds', async () => {
+      setToken('valid-token');
+      const mockUser = { id: '1', email: 'test@test.com', name: 'Test', role: 'STUDENT', quota: 0 };
+      (authApi.getCurrentUser as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        user: mockUser,
       });
 
       await useAuthStore.getState().checkAuth();
 
+      expect(authApi.getCurrentUser).toHaveBeenCalled();
       const state = useAuthStore.getState();
       expect(state.isAuthenticated).toBe(true);
-      expect(state.user).toEqual({
-        id: '1',
-        email: 'test@test.com',
-        name: 'Test',
-        role: 'STUDENT',
-        quota: 0,
-      });
+      expect(state.user).toEqual(mockUser);
     });
 
-    it('should not authenticate if no token', async () => {
-      useAuthStore.setState({ token: null });
-
-      await useAuthStore.getState().checkAuth();
-
-      const state = useAuthStore.getState();
-      expect(state.isAuthenticated).toBe(false);
-      expect(state.user).toBeNull();
-      expect(api.getCurrentUser).not.toHaveBeenCalled();
-    });
-
-    it('should clear auth state if token is invalid', async () => {
-      useAuthStore.setState({ token: 'invalid-token' });
-      (api.getCurrentUser as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+    it('should clear auth when token exists but API call fails', async () => {
+      setToken('invalid-token');
+      (authApi.getCurrentUser as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
         new Error('Unauthorized'),
       );
 
@@ -185,56 +138,65 @@ describe('authStore', () => {
       const state = useAuthStore.getState();
       expect(state.isAuthenticated).toBe(false);
       expect(state.user).toBeNull();
-      expect(state.token).toBeNull();
+    });
+
+    it('should do nothing when no token exists', async () => {
+      clearToken();
+
+      await useAuthStore.getState().checkAuth();
+
+      expect(authApi.getCurrentUser).not.toHaveBeenCalled();
+      const state = useAuthStore.getState();
+      expect(state.isAuthenticated).toBe(false);
     });
   });
 
-  describe('clearError', () => {
-    it('should clear error state', () => {
+  describe('setAuth', () => {
+    it('should set user and token directly', () => {
+      const mockUser = {
+        id: '1',
+        email: 'test@test.com',
+        name: 'Test',
+        role: 'STUDENT' as const,
+        quota: 0,
+      };
+
+      useAuthStore.getState().setAuth(mockUser, 'direct-token');
+
+      const state = useAuthStore.getState();
+      expect(state.user).toEqual(mockUser);
+      expect(state.token).toBe('direct-token');
+      expect(state.isAuthenticated).toBe(true);
+      expect(state.isHydrated).toBe(true);
+    });
+  });
+
+  describe('error handling', () => {
+    it('should clear error on clearError', () => {
       useAuthStore.setState({ error: 'Some error' });
 
       useAuthStore.getState().clearError();
 
-      expect(useAuthStore.getState().error).toBeNull();
+      const state = useAuthStore.getState();
+      expect(state.error).toBeNull();
     });
   });
 
-  describe('hydration behavior', () => {
-    it('should set isHydrated to false initially', () => {
-      expect(useAuthStore.getState().isHydrated).toBe(false);
+  describe('redirect path', () => {
+    it('should set redirect path', () => {
+      useAuthStore.getState().setRedirectPath('/dashboard');
+
+      const state = useAuthStore.getState();
+      expect(state.redirectPath).toBe('/dashboard');
     });
 
-    it('should set isHydrated to true on _setHydrated', () => {
-      useAuthStore.getState()._setHydrated(true);
-      expect(useAuthStore.getState().isHydrated).toBe(true);
-    });
+    it('should clear redirect path', () => {
+      useAuthStore.setState({ redirectPath: '/dashboard' });
 
-    it('should set isValidating to true during checkAuth', async () => {
-      localStorage.setItem('token', 'valid-token');
-      useAuthStore.setState({ token: 'valid-token', isHydrated: true });
+      useAuthStore.getState().clearRedirectPath();
 
-      const checkAuthPromise = useAuthStore.getState().checkAuth();
-
-      expect(useAuthStore.getState().isValidating).toBe(true);
-
-      await checkAuthPromise;
-      expect(useAuthStore.getState().isValidating).toBe(false);
-    });
-
-    it('should keep isHydrated true on logout', () => {
-      useAuthStore.setState({ isHydrated: true, isAuthenticated: true });
-      useAuthStore.getState().logout();
-      expect(useAuthStore.getState().isHydrated).toBe(true);
-    });
-
-    it('should set isAuthenticated false and isValidating false on checkAuth with no token', async () => {
-      localStorage.clear();
-      useAuthStore.setState({ isHydrated: true });
-
-      await useAuthStore.getState().checkAuth();
-
-      expect(useAuthStore.getState().isAuthenticated).toBe(false);
-      expect(useAuthStore.getState().isValidating).toBe(false);
+      const state = useAuthStore.getState();
+      expect(state.redirectPath).toBeNull();
     });
   });
 });

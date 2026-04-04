@@ -5,7 +5,7 @@ import { type ActivityOption } from '../activity-card/ActivityCard';
 import { useAudio } from '@/contexts/AudioContext';
 import { SpriteAudioEvent } from '@/audio/types/audio-events';
 import { getEncouragementPhrase, getJoke } from '@/utils/dialogue';
-import { type LessonConfig } from '@/stores/lessonStore';
+import { type LessonConfig } from '@/features/lesson/stores/lesson.store';
 
 export type ContentType = 'explanation' | 'question' | 'activity' | 'listening' | 'completed';
 

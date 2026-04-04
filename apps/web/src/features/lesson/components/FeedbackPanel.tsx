@@ -78,15 +78,17 @@ export function FeedbackPanel({ fb, nextLessonText, isStreaming }: FeedbackPanel
       </div>
 
       {/* Show next lesson content if streaming */}
-      {nextLessonText && (
+      {nextLessonText ? (
         <div className="max-w-xl w-full bg-slate-50 border-4 border-slate-200 rounded-[2.5rem] p-6 shadow-[0_8px_0_0_#e2e8f0]">
           <h4 className="text-lg font-bold text-sky-600 mb-3 flex items-center justify-center gap-2">
-            {isStreaming && <span className="w-2 h-2 bg-sky-500 rounded-full animate-pulse" />}
+            {isStreaming ? (
+              <span className="w-2 h-2 bg-sky-500 rounded-full animate-pulse" />
+            ) : null}
             Continuando...
           </h4>
           <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">{nextLessonText}</p>
         </div>
-      )}
+      ) : null}
 
       <div className="mt-6 flex items-center gap-3 bg-slate-100 border-4 border-slate-200 px-6 py-4 rounded-2xl shadow-inner">
         <Spinner size="sm" className="text-slate-400" />

@@ -1,6 +1,6 @@
 // ZzFX - Zuper Zmall Zound Zynth
 import { MicroAudioEvent } from '../types/audio-events';
-import { useAudioStore } from '../../stores/audio.store';
+import { useAudioStore } from '../../features/audio/stores/audio.store';
 
 let audioCtx: AudioContext | null = null;
 

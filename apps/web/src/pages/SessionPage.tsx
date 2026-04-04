@@ -3,13 +3,13 @@ import { useParams, Link } from 'react-router-dom';
 import { IconArrowLeft, IconRefresh, IconCheck, IconRobotFace } from '@tabler/icons-react';
 
 import { Button, Card, Badge, Spinner } from '@/components/ui';
-import { VoiceSettingsPanel } from '@/components/voice-settings/VoiceSettingsPanel';
-import { SessionGamificationBar } from '@/components/gamification/SessionGamificationBar';
+import { VoiceSettingsPanel } from '@/features/voice/components/VoiceSettingsPanel';
+import { SessionGamificationBar } from '@/features/gamification/components/SessionGamificationBar';
 import { ChatMessage } from '@/features/session/components/ChatMessage';
 import { ChatInput } from '@/features/session/components/ChatInput';
-import { useGamificationStore } from '@/stores/gamification.store';
-import { useSessionLogic } from '@/hooks/useSessionLogic';
-import { useVoiceSettings } from '@/components/voice-settings/useVoiceSettings';
+import { useGamificationStore } from '@/features/gamification/stores/gamification.store';
+import { useSessionLogic } from '@/features/session/hooks/useSessionLogic';
+import { useVoiceSettings } from '@/features/voice/hooks/useVoiceSettings';
 
 const STATE_LABELS: Record<string, string> = {
   IDLE: 'Inactivo',
