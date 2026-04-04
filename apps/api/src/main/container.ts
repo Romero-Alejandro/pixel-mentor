@@ -13,17 +13,21 @@ import { buildTTSContainer } from '@/features/tts/infrastructure/di/tts.containe
 import { buildPromptContainer } from '@/features/prompt/infrastructure/di/prompt.container.js';
 
 import type { Config } from '@/shared/config/index.js';
+import type { AIService } from '@/features/recipe/domain/ports/ai-service.port.js';
 
 /**
  * Main application container that composes all feature containers.
  *
  * This is the main entry point for dependency injection. Each feature
  * has its own container that is built and composed here.
+ *
+ * AI services are injected from the centralized provider (ai-service.provider.ts)
+ * instead of each container creating its own instances.
  */
-export function buildContainer(config: Config, logger: pino.Logger) {
+export function buildContainer(config: Config, logger: pino.Logger, aiModel: AIService) {
   // Build all feature containers
   const auth = buildAuthContainer(logger);
-  const recipe = buildRecipeContainer(config, logger);
+  const recipe = buildRecipeContainer(aiModel);
   const session = buildSessionContainer(logger);
   const activity = buildActivityContainer(logger);
   const progress = buildProgressContainer(logger);
@@ -33,8 +37,8 @@ export function buildContainer(config: Config, logger: pino.Logger) {
     progress.progressRepository,
     activity.activityAttemptRepository,
   );
-  const classContainer = buildClassContainer(config, logger);
-  const evaluation = buildEvaluationContainer(config, logger);
+  const classContainer = buildClassContainer(aiModel);
+  const evaluation = buildEvaluationContainer(aiModel);
   const tts = buildTTSContainer(config, logger);
   const prompt = buildPromptContainer(logger);
 

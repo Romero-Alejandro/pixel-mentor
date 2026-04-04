@@ -1,5 +1,4 @@
-import type pino from 'pino';
-import type { Config } from '@/shared/config/index.js';
+import type { AIService } from '@/features/recipe/domain/ports/ai-service.port.js';
 
 import { PrismaClassRepository } from '@/features/class/infrastructure/persistence/prisma-class.repository.js';
 import { PrismaClassLessonRepository } from '@/features/class/infrastructure/persistence/prisma-class-lesson.repository.js';
@@ -8,7 +7,6 @@ import { PrismaClassTemplateRepository } from '@/features/class/infrastructure/p
 import { ClassService } from '@/features/class/application/services/class.service.js';
 import { ClassAIService } from '@/features/class/application/services/class-ai.service.js';
 import { ClassTemplateService } from '@/features/class/application/services/class-template.service.js';
-import { AIAdapterFactory } from '@/shared/ai/ai-adapter-factory.js';
 
 export interface ClassContainer {
   classRepository: PrismaClassRepository;
@@ -20,24 +18,11 @@ export interface ClassContainer {
   classTemplateService: ClassTemplateService;
 }
 
-export function buildClassContainer(config: Config, logger: pino.Logger): ClassContainer {
+export function buildClassContainer(aiModel: AIService): ClassContainer {
   const classRepository = new PrismaClassRepository();
   const classLessonRepository = new PrismaClassLessonRepository();
   const classVersionRepository = new PrismaClassVersionRepository();
   const classTemplateRepository = new PrismaClassTemplateRepository();
-
-  const aiProvider = AIAdapterFactory.createResilient({
-    provider: config.LLM_PROVIDER,
-    geminiApiKey: config.GEMINI_API_KEY,
-    openRouterApiKey: config.OPENROUTER_API_KEY,
-    groqApiKey: config.GROQ_API_KEY,
-    defaultModelOpenRouter: config.DEFAULT_MODEL_OPENROUTER,
-    defaultModelGemini: config.DEFAULT_MODEL_GEMINI,
-    defaultModelGroq: config.DEFAULT_MODEL_GROQ,
-    promptRepo: null as any,
-    knowledgeChunkRepository: null as any,
-    logger,
-  });
 
   const classService = new ClassService(
     classRepository,
@@ -45,16 +30,9 @@ export function buildClassContainer(config: Config, logger: pino.Logger): ClassC
     classVersionRepository,
   );
 
-  const classAIService = new ClassAIService(
-    classRepository,
-    classLessonRepository,
-    aiProvider.aiModel,
-  );
+  const classAIService = new ClassAIService(classRepository, classLessonRepository, aiModel);
 
-  const classTemplateService = new ClassTemplateService(
-    classTemplateRepository,
-    classRepository,
-  );
+  const classTemplateService = new ClassTemplateService(classTemplateRepository, classRepository);
 
   return {
     classRepository,

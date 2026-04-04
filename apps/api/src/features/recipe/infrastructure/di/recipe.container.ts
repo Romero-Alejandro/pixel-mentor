@@ -1,6 +1,3 @@
-import type pino from 'pino';
-import type { Config } from '@/shared/config/index.js';
-
 import { PrismaRecipeRepository } from '@/features/recipe/infrastructure/persistence/prisma-recipe.repository.js';
 import { PrismaConceptRepository } from '@/features/recipe/infrastructure/persistence/prisma-concept.repository.js';
 import { PrismaTagRepository } from '@/features/recipe/infrastructure/persistence/prisma-tag.repository.js';
@@ -12,7 +9,8 @@ import { GetRecipeUseCase } from '@/features/recipe/application/use-cases/get-re
 import { ListRecipesUseCase } from '@/features/recipe/application/use-cases/list-recipes.use-case.js';
 import { StartRecipeUseCase } from '@/features/recipe/application/use-cases/start-recipe.use-case.js';
 import { QuestionAnsweringUseCase } from '@/features/recipe/application/use-cases/question-answering.use-case.js';
-import { AIAdapterFactory } from '@/shared/ai/ai-adapter-factory.js';
+
+import type { AIService } from '@/features/recipe/domain/ports/ai-service.port.js';
 
 export interface RecipeContainer {
   recipeRepository: PrismaRecipeRepository;
@@ -28,28 +26,15 @@ export interface RecipeContainer {
   questionAnsweringUseCase: QuestionAnsweringUseCase;
 }
 
-export function buildRecipeContainer(config: Config, logger: pino.Logger): RecipeContainer {
+export function buildRecipeContainer(aiModel: AIService): RecipeContainer {
   const recipeRepository = new PrismaRecipeRepository();
   const conceptRepository = new PrismaConceptRepository();
   const tagRepository = new PrismaTagRepository();
   const recipeTagRepository = new PrismaRecipeTagRepository();
   const promptRepository = new FileSystemPromptRepository();
 
-  const aiProvider = AIAdapterFactory.createResilient({
-    provider: config.LLM_PROVIDER,
-    geminiApiKey: config.GEMINI_API_KEY,
-    openRouterApiKey: config.OPENROUTER_API_KEY,
-    groqApiKey: config.GROQ_API_KEY,
-    defaultModelOpenRouter: config.DEFAULT_MODEL_OPENROUTER,
-    defaultModelGemini: config.DEFAULT_MODEL_GEMINI,
-    defaultModelGroq: config.DEFAULT_MODEL_GROQ,
-    promptRepo: promptRepository,
-    knowledgeChunkRepository: null as any, // Will be injected from knowledge container
-    logger,
-  });
-
   const recipeService = new RecipeService(recipeRepository, null as any);
-  const recipeAIService = new RecipeAIService(aiProvider.aiModel);
+  const recipeAIService = new RecipeAIService(aiModel);
 
   return {
     recipeRepository,
@@ -65,7 +50,7 @@ export function buildRecipeContainer(config: Config, logger: pino.Logger): Recip
     questionAnsweringUseCase: new QuestionAnsweringUseCase(
       recipeRepository,
       null as any,
-      aiProvider.aiModel as any,
+      aiModel as any,
     ),
   };
 }

@@ -8,7 +8,7 @@ import { createApp } from './main/app.js';
 import { config, getFeatureFlagService } from '@/shared/config';
 import { prisma } from '@/database/client.js';
 import { runStagingValidation } from '@/shared/monitoring/staging-validation.js';
-import { AIAdapterFactory, type AIAdapterInstances } from '@/shared/ai/ai-adapter-factory.js';
+import { initializeAIServices } from '@/shared/ai/ai-service.provider.js';
 
 // Import the orchestrate use case and others that are still in the old location
 // These will be migrated in future phases
@@ -64,23 +64,18 @@ async function bootstrap(): Promise<void> {
   // Log streaming configuration
   logger.info({ ENABLE_STREAMING: config.ENABLE_STREAMING }, 'Configuration loaded');
 
-  // Build the main container with all feature containers
-  const container = buildContainer(config, logger);
-
-  // Create AI adapter factory with full configuration
-  // This provides questionClassifier, ragService, comprehensionEvaluator, and aiModel
-  const aiProvider = AIAdapterFactory.createResilient({
-    provider: config.LLM_PROVIDER,
-    geminiApiKey: config.GEMINI_API_KEY,
-    openRouterApiKey: config.OPENROUTER_API_KEY,
-    groqApiKey: config.GROQ_API_KEY,
-    defaultModelOpenRouter: config.DEFAULT_MODEL_OPENROUTER,
-    defaultModelGemini: config.DEFAULT_MODEL_GEMINI,
-    defaultModelGroq: config.DEFAULT_MODEL_GROQ,
-    promptRepo: container.recipe.promptRepository,
-    knowledgeChunkRepository: null as any, // Will be injected from knowledge container
+  // Initialize the centralized AI service provider
+  // This validates the provider config and creates all AI adapters once
+  const aiServices = initializeAIServices(
+    config,
+    null as any, // promptRepo - will be available after container build
+    null as any, // knowledgeChunkRepository - will be available after container build
     logger,
-  }) as AIAdapterInstances;
+  );
+
+  // Build the main container with all feature containers
+  // AI model is injected from the centralized provider
+  const container = buildContainer(config, logger, aiServices.aiModel);
 
   // Run staging validation (logs banner if new engine is active)
   const featureFlagService = getFeatureFlagService();
@@ -97,10 +92,10 @@ async function bootstrap(): Promise<void> {
     container.activity.activityRepository,
     container.knowledge.atomRepository,
     container.auth.userRepository,
-    aiProvider.aiModel, // aiModel
-    aiProvider.questionClassifier, // questionClassifier
-    aiProvider.ragService, // ragService
-    aiProvider.comprehensionEvaluator, // comprehensionEvaluator
+    aiServices.aiModel, // aiModel
+    aiServices.questionClassifier, // questionClassifier
+    aiServices.ragService, // ragService
+    aiServices.comprehensionEvaluator, // comprehensionEvaluator
     container.evaluation.lessonEvaluator,
     container.session.advisoryLock,
     undefined, // contextWindowService
