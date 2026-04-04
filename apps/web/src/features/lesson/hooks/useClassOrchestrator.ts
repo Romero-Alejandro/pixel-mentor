@@ -6,8 +6,8 @@ import { useChatStream } from './useChatStream';
 
 import { FEEDBACK_DISPLAY_MS, estimateReadTime } from '@/config/lessonTiming';
 import { api, streamInteractWithRecipe, type PedagogicalState } from '@/services/api';
-import { useVoice, type VoiceSettings } from '@/hooks/useVoice';
-import { useLessonStore } from '@/stores/lessonStore';
+import { useVoice, type VoiceSettings } from '@/features/voice/hooks/useVoice';
+import { useLessonStore } from '@/features/lesson/stores/lesson.store';
 
 export type Result<T, E = Error> = { ok: true; value: T } | { ok: false; error: E };
 
