@@ -325,7 +325,7 @@ export function ClassLessonList({
 
       {/* Edit Modal */}
       <Modal
-        isOpen={isEditModalOpen ? !!editingLesson : null}
+        isOpen={isEditModalOpen ? !!editingLesson : false}
         onClose={handleCloseEditModal}
         title="Editar lección"
         size="md"
@@ -408,7 +408,7 @@ export function ClassLessonList({
 
       {/* Delete Confirmation Modal */}
       <Modal
-        isOpen={isDeleteModalOpen ? !!lessonToDelete : null}
+        isOpen={isDeleteModalOpen ? !!lessonToDelete : false}
         onClose={handleCloseDeleteModal}
         title="Confirmar eliminación"
         size="sm"

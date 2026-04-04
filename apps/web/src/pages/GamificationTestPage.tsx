@@ -149,19 +149,25 @@ export function GamificationTestPage() {
       {/* Section: Badge Grid — earned badges */}
       <section data-testid="section-badges-earned">
         <h2 className="text-lg font-semibold text-slate-600 mb-4">Earned Badges</h2>
-        <BadgeGrid badges={testProfile.badges} showProgress={false} />
+        <BadgeGrid
+          allBadges={testBadgeProgress.map((p) => p.badge)}
+          earnedBadges={testProfile.badges}
+        />
       </section>
 
       {/* Section: Badge Grid — with progress (earned + unearned) */}
       <section data-testid="section-badges-progress">
         <h2 className="text-lg font-semibold text-slate-600 mb-4">Badge Progress</h2>
-        <BadgeGrid badges={[...testProfile.badges, ...testBadgeProgress]} showProgress={true} />
+        <BadgeGrid
+          allBadges={[...testBadgeProgress.map((p) => p.badge)]}
+          earnedBadges={testProfile.badges}
+        />
       </section>
 
       {/* Section: Badge Grid — empty state */}
       <section data-testid="section-badges-empty">
         <h2 className="text-lg font-semibold text-slate-600 mb-4">Empty Badges</h2>
-        <BadgeGrid badges={[]} showProgress={false} />
+        <BadgeGrid allBadges={[]} earnedBadges={[]} />
       </section>
 
       {/* Section: Modal triggers */}

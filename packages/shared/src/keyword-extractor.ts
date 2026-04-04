@@ -369,13 +369,11 @@ export class KeywordExtractor {
   private readonly maxKeywords: number;
   private readonly language: 'es' | 'en';
   private readonly minWordLength: number;
-  private readonly stopwords: Set<string>;
 
   constructor(options: KeywordExtractorOptions = {}) {
     this.maxKeywords = options.maxKeywords ?? 10;
     this.language = options.language ?? 'es';
     this.minWordLength = options.minWordLength ?? 3;
-    this.stopwords = this.language === 'es' ? SPANISH_STOPWORDS : ENGLISH_STOPWORDS;
   }
 
   /**

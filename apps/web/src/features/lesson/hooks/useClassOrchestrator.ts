@@ -545,18 +545,6 @@ export function useClassOrchestrator() {
     }
   }
 
-  /**
-   * Present a content step from the contentSteps array without calling the backend.
-   * DEPRECATED: This function is no longer used because local auto-advance caused
-   * state desync with the backend. All step transitions now go through the backend.
-   */
-  async function presentContentStep(_index: number): Promise<void> {
-    // No longer used — kept for backward compatibility
-    if (!isMountedRef.current) return;
-    const res = await doInteract('continuar');
-    processResponse(res);
-  }
-
   async function submitAnswer(answer: string) {
     if (!sessionIdRef.current || isProcessing) return;
     setIsProcessing(true);
