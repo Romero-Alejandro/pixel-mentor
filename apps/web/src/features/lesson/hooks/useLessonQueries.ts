@@ -10,7 +10,7 @@ import {
   type InteractRecipeOutput,
 } from '@pixel-mentor/shared';
 
-import { api } from '../services/api';
+import { api } from '../../../services/api';
 
 export const lessonKeys = {
   all: ['recipes'] as const,
