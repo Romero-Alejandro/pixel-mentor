@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { useLessonStore } from '@/features/lesson/stores/lesson.store';
 import { useRecipeInteraction } from '@/features/lesson/hooks/useLessonQueries';
 import { useAudio } from '@/contexts/AudioContext';
+import { useAlert } from '@/hooks/useConfirmationDialogs';
 import { SpriteAudioEvent, MicroAudioEvent } from '@/audio/types/audio-events';
 
 export function LessonStart() {
@@ -10,6 +11,7 @@ export function LessonStart() {
   const { mutateAsync: interactWithRecipe } = useRecipeInteraction();
   const setCurrentState = useLessonStore((state) => state.setCurrentState);
   const { playMicro, playSprite } = useAudio();
+  const alert = useAlert();
 
   // Sonido al aparecer el panel de inicio de lección
   useEffect(() => {
@@ -23,7 +25,7 @@ export function LessonStart() {
 
     if (!sessionId) {
       console.error('No sessionId available');
-      alert('Error: No session ID available');
+      await alert({ title: 'Error', message: 'No session ID available', variant: 'error' });
       return;
     }
 
@@ -36,9 +38,14 @@ export function LessonStart() {
       setCurrentState(result.pedagogicalState);
 
       console.log('State updated to:', result.pedagogicalState);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to start lesson:', error);
-      alert('Error starting lesson: ' + (error.message || 'Unknown error'));
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      await alert({
+        title: 'Error',
+        message: 'Error starting lesson: ' + message,
+        variant: 'error',
+      });
     }
   };
 

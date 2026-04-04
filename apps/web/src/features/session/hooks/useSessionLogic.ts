@@ -2,8 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 
 import { api, type Session, type PedagogicalState } from '@/services/api';
 import { useVoice, type VoiceSettings } from '@/features/voice/hooks/useVoice';
+import { useConfirm } from '@/hooks/useConfirmationDialogs';
 
 export interface Message {
+  id: string;
   role: 'tutor' | 'student';
   text: string;
 }
@@ -30,6 +32,7 @@ export function useSessionLogic(sessionId: string | undefined, voiceSettings: Vo
   const [missionReport, setMissionReport] = useState<MissionReport | null>(null);
 
   const { isSpeaking, speak, stopSpeaking } = useVoice();
+  const confirm = useConfirm();
   const isMounted = useRef(true);
 
   async function fetchSession() {
@@ -65,7 +68,10 @@ export function useSessionLogic(sessionId: string | undefined, voiceSettings: Vo
 
     const userText = inputText.trim();
     setInputText('');
-    setConversation((prev) => [...prev, { role: 'student', text: userText }]);
+    setConversation((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), role: 'student', text: userText },
+    ]);
     stopSpeaking();
     setIsProcessing(true);
     setError(null);
@@ -74,7 +80,10 @@ export function useSessionLogic(sessionId: string | undefined, voiceSettings: Vo
       const response = await api.interactWithRecipe(sessionId, userText);
       if (!isMounted.current) return;
 
-      setConversation((prev) => [...prev, { role: 'tutor', text: response.voiceText }]);
+      setConversation((prev) => [
+        ...prev,
+        { id: crypto.randomUUID(), role: 'tutor', text: response.voiceText },
+      ]);
 
       if (response.sessionCompleted) {
         setSessionCompleted(true);
@@ -106,7 +115,14 @@ export function useSessionLogic(sessionId: string | undefined, voiceSettings: Vo
 
   async function handleReset() {
     if (!sessionId || isProcessing) return;
-    if (!window.confirm('¿Confirmar reinicio de sesión? Los datos se perderán.')) return;
+    if (
+      !(await confirm({
+        title: 'Confirmar reinicio',
+        message: '¿Confirmar reinicio de sesión? Los datos se perderán.',
+        variant: 'danger',
+      }))
+    )
+      return;
 
     setIsProcessing(true);
     stopSpeaking();

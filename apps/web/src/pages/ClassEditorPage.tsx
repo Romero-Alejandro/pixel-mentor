@@ -14,6 +14,7 @@ import type { ClassStatus } from '@pixel-mentor/shared';
 import { useClassStore } from '@/features/class-management/stores/class.store';
 import { useAuthStore } from '@/features/auth/stores/auth.store';
 import { useAudio } from '@/contexts/AudioContext';
+import { useAlert } from '@/hooks/useConfirmationDialogs';
 import { ClassLessonList } from '@/features/class-management/components/ClassLessonList';
 import { Button, Card, Spinner, Input, Textarea } from '@/components/ui';
 
@@ -35,6 +36,7 @@ export function ClassEditorPage() {
   const { classId } = useParams<{ classId: string }>();
   const navigate = useNavigate();
   const { playClick, playSelect, playToastSuccess } = useAudio();
+  const alert = useAlert();
   const { user } = useAuthStore(useShallow((state) => ({ user: state.user })));
 
   const {
@@ -110,11 +112,19 @@ export function ClassEditorPage() {
     if (!currentClass || !classId) return;
     playClick();
     if (currentClass.status !== 'DRAFT') {
-      alert('Solo se pueden publicar clases en estado Borrador');
+      await alert({
+        title: 'No se puede publicar',
+        message: 'Solo se pueden publicar clases en estado Borrador',
+        variant: 'warning',
+      });
       return;
     }
     if (!currentClass.lessons || currentClass.lessons.length < 1) {
-      alert('La clase debe tener al menos una lección para poder publicarse');
+      await alert({
+        title: 'No se puede publicar',
+        message: 'La clase debe tener al menos una lección para poder publicarse',
+        variant: 'warning',
+      });
       return;
     }
     try {
@@ -122,7 +132,7 @@ export function ClassEditorPage() {
       playToastSuccess();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error al publicar la clase';
-      alert(message);
+      await alert({ title: 'Error', message, variant: 'error' });
     }
   };
 
@@ -130,7 +140,11 @@ export function ClassEditorPage() {
     if (!currentClass || !classId) return;
     playClick();
     if (currentClass.status === 'DRAFT') {
-      alert('La clase ya está en estado Borrador');
+      await alert({
+        title: 'No se puede despublicar',
+        message: 'La clase ya está en estado Borrador',
+        variant: 'warning',
+      });
       return;
     }
     try {
@@ -138,7 +152,7 @@ export function ClassEditorPage() {
       playToastSuccess();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error al despublicar la clase';
-      alert(message);
+      await alert({ title: 'Error', message, variant: 'error' });
     }
   };
 
@@ -159,9 +173,12 @@ export function ClassEditorPage() {
   const handleAddLesson = async (recipeId: string) => {
     if (!currentClass || !classId || !recipeId.trim()) return;
     if (currentClass.status !== 'DRAFT') {
-      alert(
-        'Solo puedes agregar lecciones a clases en estado Borrador. Cambia el estado a Borrador primero.',
-      );
+      await alert({
+        title: 'No se puede agregar',
+        message:
+          'Solo puedes agregar lecciones a clases en estado Borrador. Cambia el estado a Borrador primero.',
+        variant: 'warning',
+      });
       return;
     }
     playClick();
@@ -171,16 +188,19 @@ export function ClassEditorPage() {
       playToastSuccess();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error al agregar la lección';
-      alert(message);
+      await alert({ title: 'Error', message, variant: 'error' });
     }
   };
 
   const handleRemoveLesson = async (lessonId: string) => {
     if (!currentClass || !classId) return;
     if (currentClass.status !== 'DRAFT') {
-      alert(
-        'Solo puedes eliminar lecciones de clases en estado Borrador. Cambia el estado a Borrador primero.',
-      );
+      await alert({
+        title: 'No se puede eliminar',
+        message:
+          'Solo puedes eliminar lecciones de clases en estado Borrador. Cambia el estado a Borrador primero.',
+        variant: 'warning',
+      });
       return;
     }
     playClick();
@@ -188,7 +208,7 @@ export function ClassEditorPage() {
       await removeLesson(classId, lessonId);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error al eliminar la lección';
-      alert(message);
+      await alert({ title: 'Error', message, variant: 'error' });
     }
   };
 
@@ -199,7 +219,7 @@ export function ClassEditorPage() {
       await reorderLessons(classId, lessonIds);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error al reordenar las lecciones';
-      alert(message);
+      await alert({ title: 'Error', message, variant: 'error' });
     }
   };
 

@@ -7,6 +7,7 @@ import type { ClassStatus } from '@pixel-mentor/shared';
 import { useClassStore } from '@/features/class-management/stores/class.store';
 import { useAuthStore } from '@/features/auth/stores/auth.store';
 import { useAudio } from '@/contexts/AudioContext';
+import { useAlert, useConfirm } from '@/hooks/useConfirmationDialogs';
 import { ClassCard } from '@/features/class-management/components/ClassCard';
 import { Button, Card, Spinner, Input } from '@/components/ui';
 
@@ -27,6 +28,8 @@ const STATUS_COLORS: Record<ClassStatus, string> = {
 export function ClassListPage() {
   const navigate = useNavigate();
   const { playClick, playSelect } = useAudio();
+  const alert = useAlert();
+  const confirm = useConfirm();
   const { user } = useAuthStore(useShallow((state) => ({ user: state.user })));
   const { classes, isLoading, error, fetchClasses, createClass, deleteClass } = useClassStore(
     useShallow((state) => ({
@@ -83,31 +86,51 @@ export function ClassListPage() {
     playClick();
 
     if (classStatus !== 'DRAFT') {
-      alert(
-        'Solo se pueden eliminar clases en estado borrador. Las clases publicadas deben ser archivadas.',
-      );
+      await alert({
+        title: 'No se puede eliminar',
+        message:
+          'Solo se pueden eliminar clases en estado borrador. Las clases publicadas deben ser archivadas.',
+        variant: 'warning',
+      });
       return;
     }
 
     if (
-      !window.confirm(
-        '¿Estás seguro de que quieres eliminar esta clase? Esta acción no se puede deshacer.',
-      )
+      !(await confirm({
+        title: 'Confirmar eliminación',
+        message:
+          '¿Estás seguro de que quieres eliminar esta clase? Esta acción no se puede deshacer.',
+        variant: 'danger',
+      }))
     ) {
       return;
     }
 
     try {
       await deleteClass(classId);
-    } catch (error: any) {
-      const status = error?.response?.status;
+    } catch (error: unknown) {
+      const status = (error as { response?: { status?: number } })?.response?.status;
       if (status === 401) {
-        alert('Sesión expirada. Inicia sesión de nuevo.');
-        window.location.href = '/login';
+        await alert({
+          title: 'Sesión expirada',
+          message: 'Sesión expirada. Inicia sesión de nuevo.',
+          variant: 'error',
+        });
+        navigate('/login', { replace: true });
       } else if (status === 409) {
-        alert('No se puede eliminar una clase que no está en estado borrador.');
+        await alert({
+          title: 'No se puede eliminar',
+          message: 'No se puede eliminar una clase que no está en estado borrador.',
+          variant: 'warning',
+        });
       } else {
-        alert(error?.response?.data?.error || 'Error al eliminar la clase');
+        await alert({
+          title: 'Error',
+          message:
+            (error as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+            'Error al eliminar la clase',
+          variant: 'error',
+        });
       }
     }
   };

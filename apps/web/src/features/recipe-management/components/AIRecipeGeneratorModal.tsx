@@ -10,6 +10,7 @@ import {
 } from '@tabler/icons-react';
 
 import { useAudio } from '@/contexts/AudioContext';
+import { useAlert } from '@/hooks/useConfirmationDialogs';
 import { Button, Input } from '@/components/ui';
 import { apiClient } from '@/services/api';
 
@@ -50,11 +51,16 @@ export function AIRecipeGeneratorModal({
   onGenerated,
 }: AIRecipeGeneratorModalProps) {
   const { playModalOpen, playModalClose, playErrorSubtle, playClick } = useAudio();
+  const alert = useAlert();
 
   const [topic, setTopic] = useState('');
   const [targetAgeMin, setTargetAgeMin] = useState(6);
   const [targetAgeMax, setTargetAgeMax] = useState(8);
-  const [objectives, setObjectives] = useState<string[]>(['', '', '']);
+  const [objectives, setObjectives] = useState<Array<{ id: string; text: string }>>([
+    { id: crypto.randomUUID(), text: '' },
+    { id: crypto.randomUUID(), text: '' },
+    { id: crypto.randomUUID(), text: '' },
+  ]);
   const [generatedDraft, setGeneratedDraft] = useState<GeneratedRecipeDraft | null>(null);
   const [step, setStep] = useState<'form' | 'preview'>('form');
   const [hasOpened, setHasOpened] = useState(false);
@@ -72,15 +78,18 @@ export function AIRecipeGeneratorModal({
     setTopic('');
     setTargetAgeMin(6);
     setTargetAgeMax(8);
-    setObjectives(['', '', '']);
+    setObjectives([
+      { id: crypto.randomUUID(), text: '' },
+      { id: crypto.randomUUID(), text: '' },
+      { id: crypto.randomUUID(), text: '' },
+    ]);
     setGeneratedDraft(null);
     setStep('form');
     onClose();
   };
 
-  const updateObjective = (index: number, value: string) => {
-    const newObjectives = [...objectives];
-    newObjectives[index] = value;
+  const updateObjective = (id: string, value: string) => {
+    const newObjectives = objectives.map((o) => (o.id === id ? { ...o, text: value } : o));
     setObjectives(newObjectives);
   };
 
@@ -89,7 +98,7 @@ export function AIRecipeGeneratorModal({
       playErrorSubtle();
       return;
     }
-    const validObjectives = objectives.filter((o) => o.trim());
+    const validObjectives = objectives.filter((o) => o.text.trim());
     if (validObjectives.length < 3) {
       playErrorSubtle();
       return;
@@ -109,7 +118,11 @@ export function AIRecipeGeneratorModal({
       setStep('preview');
     } catch (err) {
       console.error('Error generating recipe:', err);
-      alert('Error al generar la unidad. Intenta de nuevo.');
+      await alert({
+        title: 'Error',
+        message: 'Error al generar la unidad. Intenta de nuevo.',
+        variant: 'error',
+      });
     } finally {
       setIsGenerating(false);
     }
@@ -206,15 +219,15 @@ export function AIRecipeGeneratorModal({
                 <div className="space-y-2">
                   {objectives.map((obj, index) => (
                     <Input
-                      key={index}
-                      value={obj}
-                      onChange={(e) => updateObjective(index, e.target.value)}
+                      key={obj.id}
+                      value={obj.text}
+                      onChange={(e) => updateObjective(obj.id, e.target.value)}
                       placeholder={`Objetivo ${index + 1}`}
                       className="w-full"
                     />
                   ))}
                 </div>
-                {objectives.filter((o) => o.trim()).length < 3 ? (
+                {objectives.filter((o) => o.text.trim()).length < 3 ? (
                   <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
                     <IconAlertCircle className="w-3 h-3" />
                     Añade al menos 3 objetivos de aprendizaje
@@ -247,7 +260,7 @@ export function AIRecipeGeneratorModal({
                     <div className="space-y-2">
                       {generatedDraft.steps.map((stepItem, index) => (
                         <div
-                          key={index}
+                          key={stepItem.order}
                           className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl"
                         >
                           <div className="w-8 h-8 flex items-center justify-center bg-sky-100 rounded-full text-sm font-bold text-sky-600">
@@ -318,7 +331,7 @@ export function AIRecipeGeneratorModal({
                 onClick={handleGenerate}
                 variant="primary"
                 isLoading={isGenerating}
-                disabled={!topic.trim() || objectives.filter((o) => o.trim()).length < 3}
+                disabled={!topic.trim() || objectives.filter((o) => o.text.trim()).length < 3}
                 className="flex-1"
               >
                 <IconSparkles className="w-5 h-5 mr-2" />

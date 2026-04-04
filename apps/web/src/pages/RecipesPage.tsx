@@ -6,6 +6,7 @@ import { IconPlus, IconFilter, IconSearch, IconBook, IconArrowLeft } from '@tabl
 import { useRecipeStore } from '@/features/recipe-management/stores/recipe.store';
 import { useAuthStore } from '@/features/auth/stores/auth.store';
 import { useAudio } from '@/contexts/AudioContext';
+import { useConfirm } from '@/hooks/useConfirmationDialogs';
 import { RecipeCard } from '@/features/recipe-management/components/RecipeCard';
 import { Button, Card, Spinner, Input } from '@/components/ui';
 
@@ -14,6 +15,7 @@ type FilterStatus = 'all' | 'my-drafts' | 'my-published';
 export function RecipesPage() {
   const navigate = useNavigate();
   const { playClick } = useAudio();
+  const confirm = useConfirm();
   const { user } = useAuthStore(useShallow((state) => ({ user: state.user })));
 
   const { recipes, isLoading, error, fetchRecipes, deleteRecipe, clearError } = useRecipeStore(
@@ -77,7 +79,13 @@ export function RecipesPage() {
   const handleDeleteRecipe = async (recipeId: string) => {
     playClick();
     const recipe = recipes.find((r) => r.id === recipeId);
-    if (window.confirm(`¿Estás seguro de que quieres eliminar la unidad "${recipe?.title}"?`)) {
+    if (
+      await confirm({
+        title: 'Confirmar eliminación',
+        message: `¿Estás seguro de que quieres eliminar la unidad "${recipe?.title}"?`,
+        variant: 'danger',
+      })
+    ) {
       try {
         await deleteRecipe(recipeId);
       } catch {

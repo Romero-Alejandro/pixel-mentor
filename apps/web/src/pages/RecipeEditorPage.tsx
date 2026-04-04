@@ -17,6 +17,7 @@ import type { RecipeStep } from '@pixel-mentor/shared';
 import { useRecipeStore } from '@/features/recipe-management/stores/recipe.store';
 import { useAuthStore } from '@/features/auth/stores/auth.store';
 import { useAudio } from '@/contexts/AudioContext';
+import { useAlert, useConfirm } from '@/hooks/useConfirmationDialogs';
 import { Button, Card, Spinner, Input, Textarea, Badge } from '@/components/ui';
 import { StepEditor } from '@/features/recipe-management/components/StepEditor';
 import { AIRecipeGeneratorModal } from '@/features/recipe-management/components/AIRecipeGeneratorModal';
@@ -81,6 +82,8 @@ export function RecipeEditorPage() {
   const { recipeId } = useParams<{ recipeId: string }>();
   const navigate = useNavigate();
   const { playClick, playToastSuccess } = useAudio();
+  const alert = useAlert();
+  const confirm = useConfirm();
   const { user } = useAuthStore(useShallow((state) => ({ user: state.user })));
 
   const {
@@ -302,7 +305,11 @@ export function RecipeEditorPage() {
 
   const handleSave = async () => {
     if (!title.trim()) {
-      alert('El título es requerido');
+      await alert({
+        title: 'Campo requerido',
+        message: 'El título es requerido',
+        variant: 'warning',
+      });
       return;
     }
 
@@ -328,7 +335,7 @@ export function RecipeEditorPage() {
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error al guardar la unidad';
-      alert(message);
+      await alert({ title: 'Error', message, variant: 'error' });
     } finally {
       setIsSaving(false);
     }
@@ -357,12 +364,20 @@ export function RecipeEditorPage() {
 
   const handleSaveStep = async (stepData: StepFormData) => {
     if (!recipeId || recipeId === 'new') {
-      alert('Primero debes guardar la unidad antes de agregar pasos.');
+      await alert({
+        title: 'Guarda primero',
+        message: 'Primero debes guardar la unidad antes de agregar pasos.',
+        variant: 'warning',
+      });
       return;
     }
 
     if (!currentRecipe) {
-      alert('La unidad no está cargada. Intenta recargar la página.');
+      await alert({
+        title: 'Error',
+        message: 'La unidad no está cargada. Intenta recargar la página.',
+        variant: 'error',
+      });
       return;
     }
 
@@ -410,13 +425,19 @@ export function RecipeEditorPage() {
         message = err.message;
       }
 
-      alert(message);
+      await alert({ title: 'Error', message, variant: 'error' });
     }
   };
 
   const handleDeleteStep = async (stepId: string) => {
     if (!recipeId) return;
-    if (window.confirm('¿Estás seguro de que quieres eliminar este paso?')) {
+    if (
+      await confirm({
+        title: 'Confirmar eliminación',
+        message: '¿Estás seguro de que quieres eliminar este paso?',
+        variant: 'danger',
+      })
+    ) {
       try {
         await deleteStep(recipeId, stepId);
         playToastSuccess();
@@ -434,11 +455,15 @@ export function RecipeEditorPage() {
     setLocalSteps(newSteps);
     const stepIds = newSteps.map((s) => s.id);
     console.log('[handleMoveStepUp] stepIds:', stepIds);
-    reorderSteps(recipeId, stepIds).catch((err) => {
+    reorderSteps(recipeId, stepIds).catch(async (err) => {
       console.error('[handleMoveStepUp] Error:', err);
       // Revert on error
       setLocalSteps(localSteps);
-      alert('Error al reordernar: ' + (err?.response?.data?.message || err.message));
+      await alert({
+        title: 'Error al reordenar',
+        message: 'Error al reordernar: ' + (err?.response?.data?.message || err.message),
+        variant: 'error',
+      });
     });
   };
 
@@ -450,11 +475,15 @@ export function RecipeEditorPage() {
     setLocalSteps(newSteps);
     const stepIds = newSteps.map((s) => s.id);
     console.log('[handleMoveStepDown] stepIds:', stepIds);
-    reorderSteps(recipeId, stepIds).catch((err) => {
+    reorderSteps(recipeId, stepIds).catch(async (err) => {
       console.error('[handleMoveStepDown] Error:', err);
       // Revert on error
       setLocalSteps(localSteps);
-      alert('Error al reordernar: ' + (err?.response?.data?.message || err.message));
+      await alert({
+        title: 'Error al reordenar',
+        message: 'Error al reordernar: ' + (err?.response?.data?.message || err.message),
+        variant: 'error',
+      });
     });
   };
 

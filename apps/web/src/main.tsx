@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import App from './App';
 import { AudioProvider } from './contexts/AudioContext';
+import { DialogProvider } from './hooks/useConfirmationDialogs';
 import './index.css';
 
 const queryClient = new QueryClient({
@@ -21,7 +22,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
         <AudioProvider>
-          <App />
+          <DialogProvider>
+            <App />
+          </DialogProvider>
         </AudioProvider>
       </QueryClientProvider>
     </BrowserRouter>

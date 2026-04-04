@@ -6,11 +6,13 @@ import { IconPlus, IconTemplate, IconBook, IconArrowRight } from '@tabler/icons-
 import { useClassStore } from '@/features/class-management/stores/class.store';
 import { useAuthStore } from '@/features/auth/stores/auth.store';
 import { useAudio } from '@/contexts/AudioContext';
+import { usePrompt } from '@/hooks/useConfirmationDialogs';
 import { Button, Card, Spinner, Input } from '@/components/ui';
 
 export function ClassTemplatesPage() {
   const navigate = useNavigate();
   const { playClick, playSelect } = useAudio();
+  const prompt = usePrompt();
   const { user } = useAuthStore(useShallow((state) => ({ user: state.user })));
 
   const { templates, isLoading, error, fetchTemplates, createTemplate, createClassFromTemplate } =
@@ -53,7 +55,11 @@ export function ClassTemplatesPage() {
 
   const handleCreateClassFromTemplate = async (templateId: string) => {
     playSelect();
-    const title = prompt('¿Qué título quieres para esta clase?');
+    const title = await prompt({
+      title: 'Nueva clase',
+      message: '¿Qué título quieres para esta clase?',
+      defaultValue: '',
+    });
     if (!title?.trim()) return;
     try {
       const newClass = await createClassFromTemplate(templateId, title.trim());
