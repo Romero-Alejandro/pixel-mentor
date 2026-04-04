@@ -6,7 +6,7 @@ import 'dotenv/config';
 const startupLogger = createLogger(undefined, { name: 'startup', level: 'error' });
 
 export const envSchema = z.object({
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('production'),
+  NODE_ENV: z.enum(['development', 'production', 'test', 'staging']).default('production'),
   PORT: z.coerce.number().int().positive().default(3001),
   DATABASE_URL: z.string().url().min(1),
   LLM_PROVIDER: z.enum(['gemini', 'openrouter', 'groq']).default('groq'),
@@ -33,6 +33,10 @@ export const envSchema = z.object({
   LLM_DEFAULT_USER_QUOTA: z.coerce.number().int().nonnegative().default(100),
   LLM_DAILY_BUDGET_USD: z.coerce.number().positive().default(10),
   LLM_MAX_REQUESTS_PER_USER_PER_HOUR: z.coerce.number().int().positive().default(60),
+
+  // OpenRouter metadata
+  OPENROUTER_APP_URL: z.string().url().default('http://localhost:3001'),
+  OPENROUTER_APP_NAME: z.string().default('Pixel Mentor'),
 });
 
 export type Config = z.infer<typeof envSchema>;

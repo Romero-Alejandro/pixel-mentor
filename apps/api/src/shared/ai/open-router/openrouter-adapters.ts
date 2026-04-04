@@ -1,7 +1,12 @@
 import OpenAI from 'openai';
 import type pino from 'pino';
+import { config } from '@/shared/config/index.js';
 
-import type { AIService, AIResponse, GenerateResponseParams } from '@/features/recipe/domain/ports/ai-service.port.js';
+import type {
+  AIService,
+  AIResponse,
+  GenerateResponseParams,
+} from '@/features/recipe/domain/ports/ai-service.port.js';
 import type { PromptRepository } from '@/features/recipe/domain/ports/prompt.repository.port.js';
 import type {
   QuestionClassifier,
@@ -38,8 +43,8 @@ export class OpenRouterAdapter extends BaseGenerativeAdapter implements AIServic
       apiKey,
       baseURL: 'https://openrouter.ai/api/v1',
       defaultHeaders: {
-        'HTTP-Referer': process.env.OPENROUTER_APP_URL || 'http://localhost:3001',
-        'X-Title': process.env.OPENROUTER_APP_NAME || 'Pixel Mentor',
+        'HTTP-Referer': config.OPENROUTER_APP_URL,
+        'X-Title': config.OPENROUTER_APP_NAME,
       },
     });
   }

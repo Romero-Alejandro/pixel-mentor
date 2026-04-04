@@ -18,6 +18,7 @@
 
 import { createLogger } from '@/shared/logger/logger.js';
 import { readFileSync, existsSync } from 'node:fs';
+import { config } from './env.js';
 import { resolve } from 'node:path';
 
 import { z } from 'zod';
@@ -262,7 +263,7 @@ function mergeWithDefaults(
     ...DEFAULT_EVALUATION_FLAGS,
     // In staging, default to new engine enabled
     useNewEvaluatorEngine:
-      process.env.NODE_ENV === 'staging' ? true : DEFAULT_EVALUATION_FLAGS.useNewEvaluatorEngine,
+      config.NODE_ENV === 'staging' ? true : DEFAULT_EVALUATION_FLAGS.useNewEvaluatorEngine,
   };
 
   // Start with defaults

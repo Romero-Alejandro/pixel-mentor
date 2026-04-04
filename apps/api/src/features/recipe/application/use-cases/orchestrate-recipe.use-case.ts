@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { config } from '@/shared/config/index.js';
 
 // Helper to extract text from string | {text: string} object
 type TextOrTextObject = string | { text: string };
@@ -2012,7 +2013,7 @@ export class OrchestrateRecipeUseCase {
       for await (const chunk of this.aiService.generateResponseStream(params)) {
         fullResponse += chunk;
         chunkCount++;
-        if (process.env.NODE_ENV === 'development') {
+        if (config.NODE_ENV === 'development') {
           orchestrateLogger.debug(
             {
               chunkNumber: chunkCount,

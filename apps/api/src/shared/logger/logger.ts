@@ -3,6 +3,10 @@ import { type Config } from '@/shared/config/index.js';
 
 export type LogLevel = pino.Level;
 
+// Read env values once at module load to avoid repeated process.env access
+const NODE_ENV = process.env.NODE_ENV ?? 'production';
+const IS_DEVELOPMENT = NODE_ENV === 'development';
+
 export interface LoggerOptions {
   level?: LogLevel;
   pretty?: boolean;
@@ -11,7 +15,7 @@ export interface LoggerOptions {
 
 const DEFAULT_OPTIONS: LoggerOptions = {
   level: 'info',
-  pretty: process.env['NODE_ENV'] !== 'production',
+  pretty: !IS_DEVELOPMENT === false, // pretty in dev, not in prod
   name: 'pixel-mentor',
 };
 
@@ -19,11 +23,11 @@ const DEFAULT_OPTIONS: LoggerOptions = {
  * Determine if we're in development mode
  */
 function isDevelopment(): boolean {
-  return process.env['NODE_ENV'] === 'development';
+  return IS_DEVELOPMENT;
 }
 
 /**
- * Get log level from Config or environment variable
+ * Get log level from Config or cached environment variable
  * Config takes precedence over NODE_ENV-based defaults
  */
 function getLogLevel(config?: Config): pino.Level {
@@ -32,13 +36,13 @@ function getLogLevel(config?: Config): pino.Level {
   if (configLevel && ['trace', 'debug', 'info', 'warn', 'error', 'fatal'].includes(configLevel)) {
     return configLevel as pino.Level;
   }
-  // Fall back to environment variable
+  // Fall back to cached environment variable (read once at module load)
   const envLevel = process.env.LOG_LEVEL;
   if (envLevel && ['trace', 'debug', 'info', 'warn', 'error', 'fatal'].includes(envLevel)) {
     return envLevel as pino.Level;
   }
   // Default based on environment
-  return isDevelopment() ? 'debug' : 'info';
+  return IS_DEVELOPMENT ? 'debug' : 'info';
 }
 
 /**

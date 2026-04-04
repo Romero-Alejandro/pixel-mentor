@@ -1,4 +1,5 @@
 import { createLogger } from '@/shared/logger/index.js';
+import { config } from '@/shared/config/index.js';
 import type { GenerateResponseParams } from './base-llm-adapter.js';
 
 import type { AIService, AIResponse } from '@/features/recipe/domain/ports/ai-service.port.js';
@@ -31,7 +32,7 @@ interface OperationMetrics {
 }
 
 function logMetrics(metrics: OperationMetrics): void {
-  if (process.env.NODE_ENV === 'development') {
+  if (config.NODE_ENV === 'development') {
     logger.info(
       `[AI Metrics] ${metrics.operation} - ${metrics.provider}: ${metrics.latencyMs}ms - ${metrics.success ? 'OK' : 'FAIL'}`,
     );

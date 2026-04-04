@@ -10,6 +10,7 @@
  */
 
 import { createLogger } from '@/shared/logger/logger.js';
+import { config } from '@/shared/config/index.js';
 
 import type { FeatureFlagService } from '@/shared/config/index.js';
 
@@ -24,8 +25,7 @@ const stagingLogger = createLogger(undefined, { name: 'staging-validation', leve
  * Log the new evaluator engine activation banner
  */
 export function logNewEvaluatorEngineBanner(): void {
-  const isEnabled =
-    process.env.USE_NEW_EVALUATOR_ENGINE === 'true' || process.env.USE_NEW_EVALUATOR_ENGINE === '1';
+  const isEnabled = config.USE_NEW_EVALUATOR_ENGINE;
 
   if (isEnabled) {
     stagingLogger.info(`
@@ -74,16 +74,12 @@ export function validateDependencies(
   }
 
   // Check environment-specific validations
-  if (process.env.NODE_ENV === 'staging') {
-    if (!process.env.DATABASE_URL) {
+  if (config.NODE_ENV === 'staging') {
+    if (!config.DATABASE_URL) {
       errors.push('DATABASE_URL is not set in staging');
     }
 
-    if (
-      !process.env.GEMINI_API_KEY &&
-      !process.env.OPENROUTER_API_KEY &&
-      !process.env.GROQ_API_KEY
-    ) {
+    if (!config.GEMINI_API_KEY && !config.OPENROUTER_API_KEY && !config.GROQ_API_KEY) {
       errors.push(
         'No LLM API key configured in staging (GEMINI_API_KEY, OPENROUTER_API_KEY, or GROQ_API_KEY)',
       );
@@ -109,9 +105,9 @@ export function logConfigurationSummary(featureFlagService?: FeatureFlagService)
   stagingLogger.info('─'.repeat(60));
 
   // Environment info
-  stagingLogger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  stagingLogger.info(`Environment: ${config.NODE_ENV}`);
   stagingLogger.info(
-    `USE_NEW_EVALUATOR_ENGINE: ${process.env.USE_NEW_EVALUATOR_ENGINE || '(not set)'}`,
+    `USE_NEW_EVALUATOR_ENGINE: ${config.USE_NEW_EVALUATOR_ENGINE ? 'enabled' : 'disabled'}`,
   );
 
   // Feature flag info
@@ -145,18 +141,18 @@ export function logConfigurationSummary(featureFlagService?: FeatureFlagService)
   }
 
   // LLM Configuration
-  const hasGemini = !!process.env.GEMINI_API_KEY;
-  const hasOpenRouter = !!process.env.OPENROUTER_API_KEY;
-  const hasGroq = !!process.env.GROQ_API_KEY;
+  const hasGemini = !!config.GEMINI_API_KEY;
+  const hasOpenRouter = !!config.OPENROUTER_API_KEY;
+  const hasGroq = !!config.GROQ_API_KEY;
   stagingLogger.info(`\nLLM Configuration:`);
   stagingLogger.info(`  Gemini: ${hasGemini ? '✅ Configured' : '❌ Not configured'}`);
   stagingLogger.info(`  OpenRouter: ${hasOpenRouter ? '✅ Configured' : '❌ Not configured'}`);
   stagingLogger.info(`  Groq: ${hasGroq ? '✅ Configured' : '❌ Not configured'}`);
-  stagingLogger.info(`  Provider: ${process.env.LLM_PROVIDER || 'gemini'}`);
+  stagingLogger.info(`  Provider: ${config.LLM_PROVIDER}`);
 
   // Database
   stagingLogger.info(`\nDatabase:`);
-  stagingLogger.info(`  URL: ${process.env.DATABASE_URL ? '✅ Configured' : '❌ Not configured'}`);
+  stagingLogger.info(`  URL: ${config.DATABASE_URL ? '✅ Configured' : '❌ Not configured'}`);
 
   stagingLogger.info('─'.repeat(60));
   stagingLogger.info('');
@@ -222,14 +218,13 @@ export function getEvaluationHealthCheck(
 
   // Determine if new engine is active
   const useNewEngine =
-    process.env.USE_NEW_EVALUATOR_ENGINE === 'true' ||
-    process.env.USE_NEW_EVALUATOR_ENGINE === '1' ||
+    config.USE_NEW_EVALUATOR_ENGINE ||
     (featureFlagService?.getConfig().useNewEvaluatorEngine ?? false);
 
   const configuredCohorts = featureFlagService?.getCohorts() ?? [];
 
   // Check for potential issues
-  if (process.env.NODE_ENV === 'production' && useNewEngine) {
+  if (config.NODE_ENV === 'production' && useNewEngine) {
     warnings.push('New evaluator engine is active in production');
   }
 

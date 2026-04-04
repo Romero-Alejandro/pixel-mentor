@@ -2,6 +2,7 @@ import { Router, type Request, type Response, type NextFunction } from 'express'
 import { z } from 'zod';
 import pino from 'pino';
 import { createLogger } from '@/shared/logger/logger.js';
+import { config } from '@/shared/config/index.js';
 
 import type { AuthRequest } from '@/features/auth/infrastructure/http/auth.middleware';
 import {
@@ -115,7 +116,7 @@ export function createRecipeRouter(
         return;
       }
 
-      if (!process.env.ENABLE_STREAMING) {
+      if (!config.ENABLE_STREAMING) {
         response.status(403).json({ error: 'Streaming disabled' });
         return;
       }
@@ -136,7 +137,7 @@ export function createRecipeRouter(
             fullResponse += chunk.text ?? '';
             response.write(`event: chunk\ndata: ${JSON.stringify({ text: chunk.text })}\n\n`);
           } else if (chunk.type === 'end') {
-            if (process.env.NODE_ENV === 'development') {
+            if (config.NODE_ENV === 'development') {
             }
             response.write(
               `event: end\ndata: ${JSON.stringify({
@@ -157,7 +158,7 @@ export function createRecipeRouter(
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        if (process.env.NODE_ENV === 'development') {
+        if (config.NODE_ENV === 'development') {
         }
         if (!errorSent) {
           const code = (error as { code?: string }).code ?? 'INTERNAL_ERROR';
@@ -177,7 +178,7 @@ export function createRecipeRouter(
         );
       } finally {
         response.end();
-        if (process.env.NODE_ENV === 'development') {
+        if (config.NODE_ENV === 'development') {
         }
       }
     },

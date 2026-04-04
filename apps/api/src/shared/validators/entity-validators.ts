@@ -6,11 +6,11 @@
  */
 
 import { z } from 'zod';
-import { createLogger, type LogLevel } from '@/shared/logger/logger.js';
+import { createLogger } from '@/shared/logger/logger.js';
 
 import { AppError, ErrorCodes } from '@/shared/errors/index.js';
 
-const logger = createLogger(undefined, { level: (process.env.LOG_LEVEL as LogLevel) || 'warn' });
+const logger = createLogger(undefined, { level: 'warn' });
 
 // ==================== Common Validation Schemas ====================
 
