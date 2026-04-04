@@ -13,7 +13,7 @@ export function LessonStart() {
   const { playMicro, playSprite } = useAudio();
   const alert = useAlert();
 
-  // Sonido al aparecer el panel de inicio de lección
+  // Play sound when the lesson start panel appears
   useEffect(() => {
     playSprite(SpriteAudioEvent.LessonStart);
   }, [playSprite]);

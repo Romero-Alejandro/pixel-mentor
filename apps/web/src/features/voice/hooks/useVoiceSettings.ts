@@ -2,19 +2,19 @@ import { useState, useCallback } from 'react';
 
 import { type VoiceSettings, DEFAULT_VOICE_SETTINGS } from '../components/VoiceSettingsPanel';
 
-/**r
- * Hook para gestionar la configuración de voz del tutor.
- * Maneja el estado local y la persistencia en localStorage.
+/**
+ * Hook to manage the voice tutor configuration.
+ * Handles local state and localStorage persistence.
  */
 export function useVoiceSettings() {
   const [settings, setSettings] = useState<VoiceSettings>(() => {
-    // Recuperar configuración guardada al inicializar
+    // Retrieve saved configuration on initialization
     const saved = localStorage.getItem('pixel-mentor-voice-settings');
     if (saved) {
       try {
         return { ...DEFAULT_VOICE_SETTINGS, ...JSON.parse(saved) };
       } catch (error) {
-        console.error('Error parseando voice settings:', error);
+        console.error('Error parsing voice settings:', error);
         return DEFAULT_VOICE_SETTINGS;
       }
     }
@@ -22,7 +22,7 @@ export function useVoiceSettings() {
   });
 
   /**
-   * Actualiza la configuración de forma parcial y persiste los cambios.
+   * Partially updates the configuration and persists changes.
    */
   const updateSettings = useCallback((newSettings: Partial<VoiceSettings>) => {
     setSettings((prev) => {
