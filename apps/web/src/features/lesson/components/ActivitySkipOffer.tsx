@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from 'react';
 import { IconRepeat, IconPlayerPlay } from '@tabler/icons-react';
 
-import { useLessonStore } from '@/stores/lessonStore';
+import { useLessonStore } from '@/features/lesson/stores/lesson.store';
 import { Button } from '@/components/ui';
 import { useAudio } from '@/contexts/AudioContext';
 

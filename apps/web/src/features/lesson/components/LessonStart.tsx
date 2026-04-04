@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 
-import { useLessonStore } from '../../stores/lessonStore';
-import { useRecipeInteraction } from '../../hooks/useLessonQueries';
-import { useAudio } from '../../contexts/AudioContext';
-import { SpriteAudioEvent, MicroAudioEvent } from '../../audio/types/audio-events';
+import { useLessonStore } from '@/features/lesson/stores/lesson.store';
+import { useRecipeInteraction } from '@/hooks/useLessonQueries';
+import { useAudio } from '@/contexts/AudioContext';
+import { SpriteAudioEvent, MicroAudioEvent } from '@/audio/types/audio-events';
 
 export function LessonStart() {
   const { sessionId, studentName } = useLessonStore();

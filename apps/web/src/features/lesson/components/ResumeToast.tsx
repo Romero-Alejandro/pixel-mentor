@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 
-import { useAudio } from '../../contexts/AudioContext';
-import { MicroAudioEvent } from '../../audio/types/audio-events';
+import { useAudio } from '@/contexts/AudioContext';
+import { MicroAudioEvent } from '@/audio/types/audio-events';
 
 interface ResumeToastProps {
   isVisible: boolean;

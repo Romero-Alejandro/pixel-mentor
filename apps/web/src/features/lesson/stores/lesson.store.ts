@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-import { type PedagogicalState } from '../services/api';
+import { type PedagogicalState } from '@/services/api';
 
 export interface LessonConfig {
   tutorName: string;
