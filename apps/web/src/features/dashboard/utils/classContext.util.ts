@@ -2,6 +2,8 @@ import { LESSON_STATUS, type LessonStatus } from '../constants/dashboard.constan
 
 import type { Class, Session } from '@/services/api';
 
+const TIER_DIVISOR = 1.5;
+
 export interface ClassContext {
   status: LessonStatus;
   progressPercent: number;
@@ -69,7 +71,7 @@ export function buildClassTiers(classes: Class[] = [], sessions: Session[] = [])
 
   for (let i = 0; i < classes.length; i++) {
     const classItem = classes[i];
-    const tier = (classItem as Class & { tier?: number }).tier ?? Math.floor(i / 1.5);
+    const tier = (classItem as Class & { tier?: number }).tier ?? Math.floor(i / TIER_DIVISOR);
     const context = getClassContext(classItem, sessions);
 
     if (!tiersObj[tier]) {

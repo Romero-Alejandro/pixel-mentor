@@ -18,6 +18,8 @@ import { AccuracyTier, TIER_CONFIG } from '../constants/lesson.constants';
 import { useAudio } from '@/contexts/AudioContext';
 import { SpriteAudioEvent } from '@/audio/types/audio-events';
 
+const COMPLETION_ITEM_STAGGER_DELAY_MS = 200;
+
 export interface QuestionResult {
   question: string;
   isCorrect: boolean;
@@ -48,7 +50,10 @@ function StarRating({ stars }: { stars: number }) {
         <div
           key={i}
           className="animate-bounce-in"
-          style={{ animationDelay: `${i * 200}ms`, animationFillMode: 'both' }}
+          style={{
+            animationDelay: `${i * COMPLETION_ITEM_STAGGER_DELAY_MS}ms`,
+            animationFillMode: 'both',
+          }}
         >
           <IconStar
             className={`w-12 h-12 sm:w-14 sm:h-14 ${i <= stars ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-200'}`}

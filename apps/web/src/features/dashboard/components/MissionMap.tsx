@@ -7,6 +7,8 @@ import { MissionNode } from './MissionNode';
 
 import type { Class, Session } from '@/services/api';
 
+const ANIMATION_STAGGER_DELAY_MS = 150;
+
 interface MissionMapProps {
   classes: Class[];
   sessions: Session[];
@@ -98,7 +100,10 @@ export function MissionMap({ classes = [], sessions = [], onInteract }: MissionM
             <div
               key={tier.tierId}
               className={`flex w-full px-4 ${alignmentClass} ${offsetClass} ${zIndexClass} relative transition-transform duration-500 animate-in fade-in slide-in-from-bottom-8`}
-              style={{ animationDelay: `${tIdx * 150}ms`, animationFillMode: 'both' }}
+              style={{
+                animationDelay: `${tIdx * ANIMATION_STAGGER_DELAY_MS}ms`,
+                animationFillMode: 'both',
+              }}
             >
               {tier.classes.map(({ classItem, context }) => (
                 <MissionNode

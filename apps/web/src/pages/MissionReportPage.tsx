@@ -24,6 +24,7 @@ interface ReportData {
 }
 
 const FALLBACK_CONCEPTS = ['Variables', 'Ciclos', 'Lógica Condicional'];
+const REPORT_ITEM_STAGGER_DELAY_MS = 200;
 
 function Confetti() {
   const particles = Array.from({ length: 50 }).map((_, i) => {
@@ -167,7 +168,7 @@ export function MissionReportPage() {
                   <div
                     key={badge.code}
                     className="flex items-center gap-2 bg-amber-100 border-2 border-amber-300 text-amber-900 px-3 py-1.5 rounded-full font-bold text-sm animate-bounce-in shadow-sm"
-                    style={{ animationDelay: `${idx * 200}ms` }}
+                    style={{ animationDelay: `${idx * REPORT_ITEM_STAGGER_DELAY_MS}ms` }}
                   >
                     <IconStar className="w-4 h-4 fill-amber-500 text-amber-500" />
                     <span>{badge.name}</span>
