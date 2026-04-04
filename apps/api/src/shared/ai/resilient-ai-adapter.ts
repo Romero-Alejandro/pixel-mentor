@@ -31,7 +31,6 @@ interface OperationMetrics {
 }
 
 function logMetrics(metrics: OperationMetrics): void {
-  // In production, this would go to a metrics service (DataDog, Prometheus, etc.)
   if (process.env.NODE_ENV === 'development') {
     logger.info(
       `[AI Metrics] ${metrics.operation} - ${metrics.provider}: ${metrics.latencyMs}ms - ${metrics.success ? 'OK' : 'FAIL'}`,
@@ -44,279 +43,220 @@ function logError(operation: string, provider: string, error: unknown): void {
   logger.error(`[AI Error] ${operation} - ${provider}: ${errorMessage}`);
 }
 
-// ==================== Resilient AI Adapter ====================
+// ==================== Generic Fallback Engine ====================
 
-export class ResilientAIAdapter implements AIService {
-  private readonly breakers: Map<string, CircuitBreaker> = new Map();
+/**
+ * Executes an operation across multiple provider instances with circuit breaker
+ * protection and automatic fallback.
+ *
+ * Strategy:
+ * 1. Try each instance in order
+ * 2. If circuit breaker is open OR any error occurs → try next instance
+ * 3. Log metrics for every attempt
+ * 4. If all instances fail, throw the last error
+ *
+ * This ensures that transient errors (timeout, rate limit, auth) also trigger
+ * fallback to the next provider, not just circuit breaker trips.
+ */
+async function executeWithFallback<T>(
+  instances: { instance: T; breaker: CircuitBreaker; name: string }[],
+  operation: string,
+  fn: (instance: T) => Promise<unknown>,
+): Promise<unknown> {
+  let lastError: unknown;
 
-  constructor(private readonly instances: AIService[]) {
-    if (instances.length === 0) throw new Error('No AI instances provided for resilience');
+  for (const { instance, breaker, name } of instances) {
+    try {
+      const startTime = Date.now();
+      const result = await breaker.execute(() => fn(instance));
+      logMetrics({
+        operation,
+        provider: name,
+        latencyMs: Date.now() - startTime,
+        success: true,
+      });
+      return result;
+    } catch (error) {
+      lastError = error;
 
-    // Create circuit breaker for each instance
-    for (const [index, instance] of instances.entries()) {
-      const name = `ai-${instance.constructor.name}-${index}`;
-      this.breakers.set(
-        name,
-        getCircuitBreaker(name, {
-          failureThreshold: 3,
-          resetTimeout: 30000,
-          onStateChange: (circuitName, from, to) => {
-            logger.info(`[Circuit Breaker] ${circuitName}: ${from} -> ${to}`);
-          },
-        }),
-      );
+      // Always try next provider on any error
+      // CircuitBreakerOpenError means the provider is known-failing
+      // Other errors (timeout, rate limit, auth) should also trigger fallback
+      if (error instanceof CircuitBreakerOpenError) {
+        logError(operation, name, error);
+      } else {
+        logMetrics({
+          operation,
+          provider: name,
+          latencyMs: 0,
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
   }
 
+  throw lastError;
+}
+
+/**
+ * Extracts a readable provider name from an instance's constructor.
+ */
+function getProviderName(instance: unknown): string {
+  const name = (instance as object).constructor.name;
+  // Strip common suffixes to get the provider name
+  // e.g. "GroqAdapter" -> "Groq", "GeminiAIModelAdapter" -> "Gemini"
+  return name.replace(/(AI)?(Model)?(Adapter|Service)$/, '');
+}
+
+/**
+ * Creates a breaker wrapper for an instance with a unique name.
+ */
+function wrapWithBreaker<T>(
+  instance: T,
+  prefix: string,
+  index: number,
+  options?: { failureThreshold?: number; resetTimeout?: number },
+): { instance: T; breaker: CircuitBreaker; name: string } {
+  const providerName = getProviderName(instance);
+  const name = `${prefix}-${providerName}-${index}`;
+  return {
+    instance,
+    breaker: getCircuitBreaker(name, {
+      failureThreshold: options?.failureThreshold ?? 3,
+      resetTimeout: options?.resetTimeout ?? 30000,
+      onStateChange: (circuitName, from, to) => {
+        logger.info(`[Circuit Breaker] ${circuitName}: ${from} -> ${to}`);
+      },
+    }),
+    name,
+  };
+}
+
+// ==================== Resilient AI Adapter ====================
+
+export class ResilientAIAdapter implements AIService {
+  private readonly instances: { instance: AIService; breaker: CircuitBreaker; name: string }[];
+
+  constructor(instances: AIService[]) {
+    if (instances.length === 0) throw new Error('No AI instances provided for resilience');
+    this.instances = instances.map((instance, i) => wrapWithBreaker(instance, 'ai', i));
+  }
+
   async generateResponse(params: GenerateResponseParams): Promise<AIResponse> {
-    return this.executeWithResilience('generateResponse', (instance) =>
+    return executeWithFallback(this.instances, 'generateResponse', (instance) =>
       instance.generateResponse(params),
-    );
+    ) as Promise<AIResponse>;
   }
 
   async *generateResponseStream(params: GenerateResponseParams): AsyncGenerator<string> {
-    for (let i = 0; i < this.instances.length; i++) {
-      const instance = this.instances[i];
-      const breakerName = `ai-${instance.constructor.name}-${i}`;
-      const breaker = this.breakers.get(breakerName);
-
+    for (const { instance, breaker, name } of this.instances) {
       try {
         const startTime = Date.now();
-        // Execute with circuit breaker, then yield from the stream
-        const stream = await breaker!.execute(async () => {
+        const stream = await breaker.execute(async () => {
           return instance.generateResponseStream(params);
         });
         yield* stream;
         logMetrics({
           operation: 'generateResponseStream',
-          provider: instance.constructor.name,
+          provider: name,
           latencyMs: Date.now() - startTime,
           success: true,
         });
         return;
       } catch (error) {
         if (error instanceof CircuitBreakerOpenError) {
-          logError('generateResponseStream', instance.constructor.name, error);
-          continue; // Try next instance
+          logError('generateResponseStream', name, error);
+        } else {
+          logMetrics({
+            operation: 'generateResponseStream',
+            provider: name,
+            latencyMs: 0,
+            success: false,
+            error: error instanceof Error ? error.message : String(error),
+          });
         }
-
-        logMetrics({
-          operation: 'generateResponseStream',
-          provider: instance.constructor.name,
-          latencyMs: 0,
-          success: false,
-          error: error instanceof Error ? error.message : String(error),
-        });
-
-        if (i === this.instances.length - 1) throw error;
+        // Continue to next provider
       }
     }
+    throw new Error('All AI providers failed to generate response stream');
   }
 
   async generateExplanation(params: any): Promise<{ voiceText: string }> {
-    return this.executeWithResilience('generateExplanation', (instance) =>
+    return executeWithFallback(this.instances, 'generateExplanation', (instance) =>
       instance.generateExplanation(params),
-    );
+    ) as Promise<{ voiceText: string }>;
   }
 
   async evaluateResponse(
     params: any,
   ): Promise<{ result: 'correct' | 'partial' | 'incorrect'; confidence: number; hint?: string }> {
-    return this.executeWithResilience('evaluateResponse', (instance) =>
+    return executeWithFallback(this.instances, 'evaluateResponse', (instance) =>
       instance.evaluateResponse(params),
-    );
+    ) as Promise<{
+      result: 'correct' | 'partial' | 'incorrect';
+      confidence: number;
+      hint?: string;
+    }>;
   }
 
   async generateAnswer(params: any): Promise<{ answer: string }> {
-    return this.executeWithResilience('generateAnswer', (instance) =>
+    return executeWithFallback(this.instances, 'generateAnswer', (instance) =>
       instance.generateAnswer(params),
-    );
-  }
-
-  /**
-   * Execute an operation with circuit breaker protection and fallback
-   */
-  private async executeWithResilience<T>(
-    operation: string,
-    fn: (instance: AIService) => Promise<T>,
-  ): Promise<T> {
-    let lastError: unknown;
-
-    for (let i = 0; i < this.instances.length; i++) {
-      const instance = this.instances[i];
-      const breakerName = `ai-${instance.constructor.name}-${i}`;
-      const breaker = this.breakers.get(breakerName);
-
-      if (!breaker) continue;
-
-      try {
-        const startTime = Date.now();
-        const result = await breaker.execute(() => fn(instance));
-        logMetrics({
-          operation,
-          provider: instance.constructor.name,
-          latencyMs: Date.now() - startTime,
-          success: true,
-        });
-        return result;
-      } catch (error) {
-        lastError = error;
-
-        if (error instanceof CircuitBreakerOpenError) {
-          logError(operation, instance.constructor.name, error);
-          continue; // Try next instance
-        }
-
-        logMetrics({
-          operation,
-          provider: instance.constructor.name,
-          latencyMs: 0,
-          success: false,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
-    }
-
-    throw lastError;
+    ) as Promise<{ answer: string }>;
   }
 }
 
 // ==================== Resilient Classifier Adapter ====================
 
 export class ResilientClassifierAdapter implements QuestionClassifier {
-  private readonly breakers: Map<string, CircuitBreaker> = new Map();
+  private readonly instances: {
+    instance: QuestionClassifier;
+    breaker: CircuitBreaker;
+    name: string;
+  }[];
 
-  constructor(private readonly instances: QuestionClassifier[]) {
-    for (const [index, instance] of instances.entries()) {
-      const name = `classifier-${instance.constructor.name}-${index}`;
-      this.breakers.set(
-        name,
-        getCircuitBreaker(name, {
-          failureThreshold: 3,
-          resetTimeout: 30000,
-        }),
-      );
-    }
+  constructor(instances: QuestionClassifier[]) {
+    if (instances.length === 0) throw new Error('No classifier instances provided for resilience');
+    this.instances = instances.map((instance, i) => wrapWithBreaker(instance, 'classifier', i));
   }
 
   async classify(payload: ClassificationPayload): Promise<QuestionClassification> {
-    let lastError: unknown;
-
-    for (let i = 0; i < this.instances.length; i++) {
-      const instance = this.instances[i];
-      const breakerName = `classifier-${instance.constructor.name}-${i}`;
-      const breaker = this.breakers.get(breakerName);
-
-      if (!breaker) continue;
-
-      try {
-        const startTime = Date.now();
-        const result = await breaker.execute(() => instance.classify(payload));
-        logMetrics({
-          operation: 'classify',
-          provider: instance.constructor.name,
-          latencyMs: Date.now() - startTime,
-          success: true,
-        });
-        return result;
-      } catch (error) {
-        lastError = error;
-
-        if (error instanceof CircuitBreakerOpenError) {
-          logError('classify', instance.constructor.name, error);
-          continue;
-        }
-
-        logMetrics({
-          operation: 'classify',
-          provider: instance.constructor.name,
-          latencyMs: 0,
-          success: false,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
-    }
-
-    throw lastError;
+    return executeWithFallback(this.instances, 'classify', (instance) =>
+      instance.classify(payload),
+    ) as Promise<QuestionClassification>;
   }
 }
 
 // ==================== Resilient Evaluator Adapter ====================
 
 export class ResilientEvaluatorAdapter implements ComprehensionEvaluator {
-  private readonly breakers: Map<string, CircuitBreaker> = new Map();
+  private readonly instances: {
+    instance: ComprehensionEvaluator;
+    breaker: CircuitBreaker;
+    name: string;
+  }[];
 
-  constructor(private readonly instances: ComprehensionEvaluator[]) {
-    for (const [index, instance] of instances.entries()) {
-      const name = `evaluator-${instance.constructor.name}-${index}`;
-      this.breakers.set(
-        name,
-        getCircuitBreaker(name, {
-          failureThreshold: 3,
-          resetTimeout: 30000,
-        }),
-      );
-    }
+  constructor(instances: ComprehensionEvaluator[]) {
+    if (instances.length === 0) throw new Error('No evaluator instances provided for resilience');
+    this.instances = instances.map((instance, i) => wrapWithBreaker(instance, 'evaluator', i));
   }
 
   async evaluate(payload: ComprehensionPayload): Promise<ComprehensionEvaluation> {
-    let lastError: unknown;
-
-    for (let i = 0; i < this.instances.length; i++) {
-      const instance = this.instances[i];
-      const breakerName = `evaluator-${instance.constructor.name}-${i}`;
-      const breaker = this.breakers.get(breakerName);
-
-      if (!breaker) continue;
-
-      try {
-        const startTime = Date.now();
-        const result = await breaker.execute(() => instance.evaluate(payload));
-        logMetrics({
-          operation: 'evaluate',
-          provider: instance.constructor.name,
-          latencyMs: Date.now() - startTime,
-          success: true,
-        });
-        return result;
-      } catch (error) {
-        lastError = error;
-
-        if (error instanceof CircuitBreakerOpenError) {
-          logError('evaluate', instance.constructor.name, error);
-          continue;
-        }
-
-        logMetrics({
-          operation: 'evaluate',
-          provider: instance.constructor.name,
-          latencyMs: 0,
-          success: false,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
-    }
-
-    throw lastError;
+    return executeWithFallback(this.instances, 'evaluate', (instance) =>
+      instance.evaluate(payload),
+    ) as Promise<ComprehensionEvaluation>;
   }
 }
 
 // ==================== Resilient RAG Adapter ====================
 
 export class ResilientRAGAdapter implements RAGService {
-  private readonly breakers: Map<string, CircuitBreaker> = new Map();
+  private readonly instances: { instance: RAGService; breaker: CircuitBreaker; name: string }[];
 
-  constructor(private readonly instances: RAGService[]) {
-    for (const [index, instance] of instances.entries()) {
-      const name = `rag-${instance.constructor.name}-${index}`;
-      this.breakers.set(
-        name,
-        getCircuitBreaker(name, {
-          failureThreshold: 3,
-          resetTimeout: 30000,
-        }),
-      );
-    }
+  constructor(instances: RAGService[]) {
+    if (instances.length === 0) throw new Error('No RAG instances provided for resilience');
+    this.instances = instances.map((instance, i) => wrapWithBreaker(instance, 'rag', i));
   }
 
   async retrieveChunks(query: any): Promise<{
@@ -324,84 +264,18 @@ export class ResilientRAGAdapter implements RAGService {
     totalAvailable: number;
     retrievalMethod: string;
   }> {
-    let lastError: unknown;
-
-    for (let i = 0; i < this.instances.length; i++) {
-      const instance = this.instances[i];
-      const breakerName = `rag-${instance.constructor.name}-${i}`;
-      const breaker = this.breakers.get(breakerName);
-
-      if (!breaker) continue;
-
-      try {
-        const startTime = Date.now();
-        const result = await breaker.execute(() => instance.retrieveChunks(query));
-        logMetrics({
-          operation: 'retrieveChunks',
-          provider: instance.constructor.name,
-          latencyMs: Date.now() - startTime,
-          success: true,
-        });
-        return result;
-      } catch (error) {
-        lastError = error;
-
-        if (error instanceof CircuitBreakerOpenError) {
-          logError('retrieveChunks', instance.constructor.name, error);
-          continue;
-        }
-
-        logMetrics({
-          operation: 'retrieveChunks',
-          provider: instance.constructor.name,
-          latencyMs: 0,
-          success: false,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
-    }
-
-    throw lastError;
+    return executeWithFallback(this.instances, 'retrieveChunks', (instance) =>
+      instance.retrieveChunks(query),
+    ) as Promise<{
+      chunks: { chunk: KnowledgeChunk; similarityScore: number; citations?: any[] }[];
+      totalAvailable: number;
+      retrievalMethod: string;
+    }>;
   }
 
   async generateEmbedding(text: string): Promise<number[]> {
-    let lastError: unknown;
-
-    for (let i = 0; i < this.instances.length; i++) {
-      const instance = this.instances[i];
-      const breakerName = `rag-${instance.constructor.name}-${i}`;
-      const breaker = this.breakers.get(breakerName);
-
-      if (!breaker) continue;
-
-      try {
-        const startTime = Date.now();
-        const result = await breaker.execute(() => instance.generateEmbedding(text));
-        logMetrics({
-          operation: 'generateEmbedding',
-          provider: instance.constructor.name,
-          latencyMs: Date.now() - startTime,
-          success: true,
-        });
-        return result;
-      } catch (error) {
-        lastError = error;
-
-        if (error instanceof CircuitBreakerOpenError) {
-          logError('generateEmbedding', instance.constructor.name, error);
-          continue;
-        }
-
-        logMetrics({
-          operation: 'generateEmbedding',
-          provider: instance.constructor.name,
-          latencyMs: 0,
-          success: false,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
-    }
-
-    throw lastError;
+    return executeWithFallback(this.instances, 'generateEmbedding', (instance) =>
+      instance.generateEmbedding(text),
+    ) as Promise<number[]>;
   }
 }

@@ -34,8 +34,12 @@ import type { RAGService } from '@/features/recipe/domain/ports/rag-service.port
 import type { PromptRepository } from '@/features/recipe/domain/ports/prompt.repository.port.js';
 import type { KnowledgeChunkRepository } from '@/features/knowledge/domain/ports/knowledge-chunk.repository.port.js';
 
+// ==================== Types ====================
+
+export type LLMProvider = 'gemini' | 'openrouter' | 'groq';
+
 export interface AIAdapterFactoryOptions {
-  provider: 'gemini' | 'openrouter' | 'groq';
+  provider: LLMProvider;
   geminiApiKey?: string;
   openRouterApiKey?: string;
   groqApiKey?: string;
@@ -45,6 +49,12 @@ export interface AIAdapterFactoryOptions {
   promptRepo: PromptRepository;
   knowledgeChunkRepository: KnowledgeChunkRepository;
   logger?: pino.Logger;
+  /**
+   * Override the fallback order for providers.
+   * If not provided, uses: [configured_provider, ...remaining_in_default_order]
+   * Default order: ['groq', 'gemini', 'openrouter']
+   */
+  fallbackOrder?: readonly LLMProvider[];
 }
 
 export interface AIAdapterInstances {
@@ -54,13 +64,29 @@ export interface AIAdapterInstances {
   ragService: RAGService;
 }
 
+interface InitializationResult {
+  provider: string;
+  success: boolean;
+  error?: string;
+}
+
+// ==================== Default Configuration ====================
+
+/**
+ * Default provider priority order for fallback.
+ * Groq is first by design (primary provider).
+ */
+const DEFAULT_FALLBACK_ORDER: readonly LLMProvider[] = ['groq', 'gemini', 'openrouter'];
+
+// ==================== Provider Strategies ====================
+
 interface AIProviderStrategy {
   create(options: AIAdapterFactoryOptions): AIAdapterInstances;
 }
 
 class GeminiStrategy implements AIProviderStrategy {
   create(options: AIAdapterFactoryOptions): AIAdapterInstances {
-    if (!options.geminiApiKey) throw new Error('GEMINI_API_KEY required');
+    if (!options.geminiApiKey) throw new Error('GEMINI_API_KEY is not configured');
     const model = options.defaultModelGemini || 'gemini-3.1-flash-lite';
     return {
       aiModel: new GeminiAIModelAdapter(
@@ -84,8 +110,8 @@ class GeminiStrategy implements AIProviderStrategy {
 
 class GroqStrategy implements AIProviderStrategy {
   create(options: AIAdapterFactoryOptions): AIAdapterInstances {
-    if (!options.groqApiKey) throw new Error('GROQ_API_KEY required');
-    const model = options.defaultModelGroq || 'moonshotai/kimi-k2-instruct-0905';
+    if (!options.groqApiKey) throw new Error('GROQ_API_KEY is not configured');
+    const model = options.defaultModelGroq || 'llama-3.3-70b-versatile';
     const fastModel = 'llama-3.1-8b-instant';
     return {
       aiModel: new GroqAdapter(options.promptRepo, options.groqApiKey, model, options.logger),
@@ -102,7 +128,7 @@ class GroqStrategy implements AIProviderStrategy {
 
 class OpenRouterStrategy implements AIProviderStrategy {
   create(options: AIAdapterFactoryOptions): AIAdapterInstances {
-    if (!options.openRouterApiKey) throw new Error('OPENROUTER_API_KEY required');
+    if (!options.openRouterApiKey) throw new Error('OPENROUTER_API_KEY is not configured');
     const model = options.defaultModelOpenRouter || 'stepfun/step-3.5-flash:free';
     return {
       aiModel: new OpenRouterAdapter(
@@ -129,48 +155,85 @@ class OpenRouterStrategy implements AIProviderStrategy {
   }
 }
 
+// ==================== Factory ====================
+
 export class AIAdapterFactory {
-  private static readonly strategies: Record<string, AIProviderStrategy> = {
+  private static readonly strategies: Record<LLMProvider, AIProviderStrategy> = {
     gemini: new GeminiStrategy(),
     groq: new GroqStrategy(),
     openrouter: new OpenRouterStrategy(),
   };
 
+  /**
+   * Creates resilient AI adapters with automatic fallback between providers.
+   *
+   * How it works:
+   * 1. Determines the order of providers to try (primary first, then fallback order)
+   * 2. Attempts to initialize each provider, logging successes and failures
+   * 3. Wraps all successful providers in resilient adapters with circuit breakers
+   * 4. At runtime, if the primary provider fails, automatically falls back to the next
+   *
+   * @throws Error if no providers could be initialized
+   */
   static createResilient(options: AIAdapterFactoryOptions): AIAdapterInstances {
-    const availableProviders: ('gemini' | 'openrouter' | 'groq')[] = [
-      'gemini',
-      'groq',
-      'openrouter',
-    ];
+    const logger = options.logger;
+    const fallbackOrder = options.fallbackOrder ?? DEFAULT_FALLBACK_ORDER;
 
+    // Build ordered provider list: primary first, then remaining in fallback order
     const orderedProviders = [
       options.provider,
-      ...availableProviders.filter((p) => p !== options.provider),
+      ...fallbackOrder.filter((p) => p !== options.provider),
     ];
 
-    const instances = orderedProviders
-      .map((provider) => {
-        try {
-          return this.strategies[provider].create(options);
-        } catch {
-          return null;
-        }
-      })
-      .filter((instance): instance is AIAdapterInstances => instance !== null);
+    // Initialize each provider, tracking results
+    const initResults: InitializationResult[] = [];
+    const successfulInstances: AIAdapterInstances[] = [];
 
-    if (instances.length === 0) {
-      throw new Error('No valid AI providers could be initialized');
+    for (const provider of orderedProviders) {
+      try {
+        const instances = this.strategies[provider].create(options);
+        successfulInstances.push(instances);
+        initResults.push({ provider, success: true });
+        logger?.info({ provider }, 'AI provider initialized');
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        initResults.push({ provider, success: false, error: errorMessage });
+        logger?.warn({ provider, error: errorMessage }, 'AI provider initialization failed');
+      }
+    }
+
+    // Log summary
+    const successCount = initResults.filter((r) => r.success).length;
+    const failCount = initResults.filter((r) => !r.success).length;
+    logger?.info(
+      {
+        primaryProvider: options.provider,
+        initialized: initResults.filter((r) => r.success).map((r) => r.provider),
+        failed: initResults.filter((r) => !r.success).map((r) => r.provider),
+        totalProviders: initResults.length,
+        successCount,
+        failCount,
+      },
+      `AI provider initialization complete: ${successCount}/${initResults.length} providers ready`,
+    );
+
+    if (successfulInstances.length === 0) {
+      const failedProviders = initResults
+        .filter((r) => !r.success)
+        .map((r) => `${r.provider}: ${r.error}`)
+        .join('; ');
+      throw new Error(`No valid AI providers could be initialized. Failures: ${failedProviders}`);
     }
 
     return {
-      aiModel: new ResilientAIAdapter(instances.map((i) => i.aiModel)),
+      aiModel: new ResilientAIAdapter(successfulInstances.map((i) => i.aiModel)),
       questionClassifier: new ResilientClassifierAdapter(
-        instances.map((i) => i.questionClassifier),
+        successfulInstances.map((i) => i.questionClassifier),
       ),
       comprehensionEvaluator: new ResilientEvaluatorAdapter(
-        instances.map((i) => i.comprehensionEvaluator),
+        successfulInstances.map((i) => i.comprehensionEvaluator),
       ),
-      ragService: new ResilientRAGAdapter(instances.map((i) => i.ragService)),
+      ragService: new ResilientRAGAdapter(successfulInstances.map((i) => i.ragService)),
     };
   }
 }
