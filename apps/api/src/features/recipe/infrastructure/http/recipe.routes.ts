@@ -102,17 +102,20 @@ export function createRecipeRouter(
     },
   );
 
-  router.get(
+  router.post(
     '/interact/stream',
     llmGovernance,
     async (request: Request, response: Response, _next: NextFunction): Promise<void> => {
+      const appRequest = request as AppRequest;
       const sessionId =
-        typeof request.query.sessionId === 'string' ? request.query.sessionId : undefined;
+        typeof appRequest.body?.sessionId === 'string' ? appRequest.body.sessionId : undefined;
       const studentInput =
-        typeof request.query.studentInput === 'string' ? request.query.studentInput : undefined;
+        typeof appRequest.body?.studentInput === 'string'
+          ? appRequest.body.studentInput
+          : undefined;
 
       if (!sessionId || !studentInput) {
-        response.status(400).json({ error: 'sessionId and studentInput required' });
+        response.status(400).json({ error: 'sessionId and studentInput required in request body' });
         return;
       }
 
@@ -152,7 +155,7 @@ export function createRecipeRouter(
             );
 
             // Record LLM usage for streaming
-            recordLLMUsage(request as AppRequest, `stream:${sessionId}`, fullResponse, true);
+            recordLLMUsage(appRequest, `stream:${sessionId}`, fullResponse, true);
             break;
           }
         }
@@ -169,13 +172,7 @@ export function createRecipeRouter(
         }
 
         // Record failed LLM usage for streaming
-        recordLLMUsage(
-          request as AppRequest,
-          `stream:${sessionId}`,
-          fullResponse,
-          false,
-          errorMessage,
-        );
+        recordLLMUsage(appRequest, `stream:${sessionId}`, fullResponse, false, errorMessage);
       } finally {
         response.end();
         if (config.NODE_ENV === 'development') {
