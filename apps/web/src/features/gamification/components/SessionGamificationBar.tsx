@@ -1,7 +1,7 @@
 import type { UserGamificationProfile } from '@pixel-mentor/shared/gamification';
 import { IconFlame, IconMedal } from '@tabler/icons-react';
 
-import { useStreakAudio } from '@/hooks/useStreakAudio';
+import { useStreakAudio } from '@/features/gamification/hooks/useStreakAudio';
 import { cn } from '@/utils/cn';
 
 const LEVEL_EMOJIS: Record<number, string> = {

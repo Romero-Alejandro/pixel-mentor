@@ -8,7 +8,7 @@ import { SessionGamificationBar } from '@/features/gamification/components/Sessi
 import { ChatMessage } from '@/features/session/components/ChatMessage';
 import { ChatInput } from '@/features/session/components/ChatInput';
 import { useGamificationStore } from '@/features/gamification/stores/gamification.store';
-import { useSessionLogic } from '@/hooks/useSessionLogic';
+import { useSessionLogic } from '@/features/session/hooks/useSessionLogic';
 import { useVoiceSettings } from '@/features/voice/hooks/useVoiceSettings';
 
 const STATE_LABELS: Record<string, string> = {

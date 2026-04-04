@@ -1,6 +1,6 @@
 import { IconRobotFace, IconUser } from '@tabler/icons-react';
 
-import type { Message } from '@/hooks/useSessionLogic';
+import type { Message } from '@/features/session/hooks/useSessionLogic';
 
 export function ChatMessage({ message }: { message: Message }) {
   const isStudent = message.role === 'student';

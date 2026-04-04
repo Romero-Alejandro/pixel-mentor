@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 
 import { useLessonStore } from '@/features/lesson/stores/lesson.store';
-import { useRecipeInteraction } from '@/hooks/useLessonQueries';
+import { useRecipeInteraction } from '@/features/lesson/hooks/useLessonQueries';
 import { useAudio } from '@/contexts/AudioContext';
 import { SpriteAudioEvent, MicroAudioEvent } from '@/audio/types/audio-events';
 
