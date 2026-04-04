@@ -13,8 +13,8 @@ import {
 import { useShallow } from 'zustand/react/shallow';
 import type { Recipe } from '@pixel-mentor/shared';
 
-import { useRecipeStore } from '@/stores/recipeStore';
-import { useAuthStore } from '@/stores/authStore';
+import { useRecipeStore } from '@/features/recipe-management/stores/recipe.store';
+import { useAuthStore } from '@/features/auth/stores/auth.store';
 import { useAudio } from '@/contexts/AudioContext';
 import { Button, Spinner, Badge } from '@/components/ui';
 
