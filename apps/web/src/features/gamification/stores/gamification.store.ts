@@ -5,7 +5,7 @@ import type {
   EarnedBadge,
 } from '@pixel-mentor/shared/gamification';
 
-import { gamificationApi } from '../api/gamification.api';
+import { gamificationApi } from '../services/gamification.api';
 
 interface GamificationState {
   // Data

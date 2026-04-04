@@ -6,7 +6,7 @@ import {
   type EarnedBadge,
 } from '@pixel-mentor/shared/gamification';
 
-import { apiClient } from '../services/api';
+import { apiClient } from '@/services/api-client';
 
 interface ActivityPayload {
   type: 'LESSON_COMPLETED' | 'ACTIVITY_ATTEMPT' | 'DAILY_LOGIN';
@@ -35,17 +35,17 @@ export const gamificationApi = {
     };
   },
 
-  getBadges: async (): Promise<any> => {
+  getBadges: async () => {
     const { data } = await apiClient.get('/api/gamification/badges');
     return data;
   },
 
-  getUserBadges: async (): Promise<any> => {
+  getUserBadges: async () => {
     const { data } = await apiClient.get('/api/gamification/badges/user');
     return data;
   },
 
-  getStreakHistory: async (): Promise<any> => {
+  getStreakHistory: async () => {
     const { data } = await apiClient.get('/api/gamification/streak-history');
     return data;
   },

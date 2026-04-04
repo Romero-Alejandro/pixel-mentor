@@ -3,7 +3,7 @@ import type { EarnedBadge } from '@pixel-mentor/shared/gamification';
 
 import { BadgeEarnedToast } from './BadgeEarnedToast';
 
-import { useGamificationStore } from '@/stores/gamification.store';
+import { useGamificationStore } from '../stores/gamification.store';
 
 export function BadgeToastQueue() {
   const showBadgeEarned = useGamificationStore((s) => s.showBadgeEarned);
