@@ -1,7 +1,7 @@
 import useSound from 'use-sound';
 
 import { SpriteAudioEvent } from '../types/audio-events';
-import { useAudioStore } from '../../stores/audio.store';
+import { useAudioStore } from '../../features/audio/stores/audio.store';
 
 // Sprite map: event -> [startMs, durationMs] in milliseconds
 const spriteMap: Record<SpriteAudioEvent, [number, number]> = {
