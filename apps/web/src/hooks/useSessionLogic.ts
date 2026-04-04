@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 
 import { api, type Session, type PedagogicalState } from '@/services/api';
-import { useVoice, type VoiceSettings } from '@/hooks/useVoice';
+import { useVoice, type VoiceSettings } from '@/features/voice/hooks/useVoice';
 
 export interface Message {
   role: 'tutor' | 'student';

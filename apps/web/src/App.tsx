@@ -1,8 +1,8 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
 
-import { useAuthStore, useAuthRedirect } from './stores/authStore';
-import { useGamificationSSE } from './hooks/useGamificationSSE';
+import { useAuthStore, useAuthRedirect } from './features/auth/stores/auth.store';
+import { useGamificationSSE } from './features/gamification/hooks/useGamificationSSE';
 import { Spinner } from './components/ui/Spinner';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';

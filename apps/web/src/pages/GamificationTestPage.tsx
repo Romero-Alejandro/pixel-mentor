@@ -13,12 +13,12 @@ import type {
   LevelUpInfo,
 } from '@pixel-mentor/shared/gamification';
 
-import { GamificationHeader } from '@/components/gamification/GamificationHeader';
-import { XPProgress } from '@/components/gamification/XPProgress';
-import { LevelUpModal } from '@/components/gamification/LevelUpModal';
-import { BadgeGrid } from '@/components/gamification/BadgeGrid';
-import { BadgeEarnedModal } from '@/components/gamification/BadgeEarnedModal';
-import { StreakCounter } from '@/components/gamification/StreakCounter';
+import { GamificationHeader } from '@/features/gamification/components/GamificationHeader';
+import { XPProgress } from '@/features/gamification/components/XPProgress';
+import { LevelUpModal } from '@/features/gamification/components/LevelUpModal';
+import { BadgeGrid } from '@/features/gamification/components/BadgeGrid';
+import { BadgeEarnedModal } from '@/features/gamification/components/BadgeEarnedModal';
+import { StreakCounter } from '@/features/gamification/components/StreakCounter';
 
 // ─── Test Data ────────────────────────────────────────────────────────────────
 

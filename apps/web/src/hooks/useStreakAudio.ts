@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 
-import { useGamificationStore } from '@/stores/gamification.store';
+import { useGamificationStore } from '@/features/gamification/stores/gamification.store';
 import { useAudio } from '@/contexts/AudioContext';
 import { SpriteAudioEvent } from '@/audio/types/audio-events';
 

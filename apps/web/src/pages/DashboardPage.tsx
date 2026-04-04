@@ -9,14 +9,14 @@ import {
   IconListDetails,
 } from '@tabler/icons-react';
 
-import { useAuthStore } from '@/stores/authStore';
-import { useGamificationStore } from '@/stores/gamification.store';
+import { useAuthStore } from '@/features/auth/stores/auth.store';
+import { useGamificationStore } from '@/features/gamification/stores/gamification.store';
 import { Spinner } from '@/components/ui';
-import { CompactGamificationHeader } from '@/components/gamification/CompactGamificationHeader';
-import { StreakWidget } from '@/components/gamification/StreakWidget';
-import { StreakCalendar } from '@/components/gamification/StreakCalendar';
-import { XPChart } from '@/components/gamification/XPChart';
-import { BadgeGrid } from '@/components/gamification/BadgeGrid';
+import { CompactGamificationHeader } from '@/features/gamification/components/CompactGamificationHeader';
+import { StreakWidget } from '@/features/gamification/components/StreakWidget';
+import { StreakCalendar } from '@/features/gamification/components/StreakCalendar';
+import { XPChart } from '@/features/gamification/components/XPChart';
+import { BadgeGrid } from '@/features/gamification/components/BadgeGrid';
 import { useAudio } from '@/contexts/AudioContext';
 import { AudioControl } from '@/components/AudioControl';
 import {

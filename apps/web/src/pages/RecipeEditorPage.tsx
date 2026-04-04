@@ -14,12 +14,12 @@ import {
 } from '@tabler/icons-react';
 import type { RecipeStep } from '@pixel-mentor/shared';
 
-import { useRecipeStore } from '@/stores/recipeStore';
-import { useAuthStore } from '@/stores/authStore';
+import { useRecipeStore } from '@/features/recipe-management/stores/recipe.store';
+import { useAuthStore } from '@/features/auth/stores/auth.store';
 import { useAudio } from '@/contexts/AudioContext';
 import { Button, Card, Spinner, Input, Textarea, Badge } from '@/components/ui';
-import { StepEditor } from '@/components/recipe/StepEditor';
-import { AIRecipeGeneratorModal } from '@/components/recipe/AIRecipeGeneratorModal';
+import { StepEditor } from '@/features/recipe-management/components/StepEditor';
+import { AIRecipeGeneratorModal } from '@/features/recipe-management/components/AIRecipeGeneratorModal';
 
 type StepType = 'content' | 'activity' | 'question' | 'intro' | 'closure';
 

@@ -11,10 +11,10 @@ import {
 } from '@tabler/icons-react';
 import type { ClassStatus } from '@pixel-mentor/shared';
 
-import { useClassStore } from '@/stores/classStore';
-import { useAuthStore } from '@/stores/authStore';
+import { useClassStore } from '@/features/class-management/stores/class.store';
+import { useAuthStore } from '@/features/auth/stores/auth.store';
 import { useAudio } from '@/contexts/AudioContext';
-import { ClassLessonList } from '@/components/class/ClassLessonList';
+import { ClassLessonList } from '@/features/class-management/components/ClassLessonList';
 import { Button, Card, Spinner, Input, Textarea } from '@/components/ui';
 
 const STATUS_LABELS: Record<ClassStatus, string> = {

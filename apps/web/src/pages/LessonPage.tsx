@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { IconArrowLeft, IconAlertOctagon } from '@tabler/icons-react';
 
-import { useGamificationStore } from '@/stores/gamification.store';
+import { useGamificationStore } from '@/features/gamification/stores/gamification.store';
 import { useAudio } from '@/contexts/AudioContext';
 import { SpriteAudioEvent } from '@/audio/types/audio-events';
 import { Mascot } from '@/components/mascot/Mascot';
@@ -20,8 +20,8 @@ import {
 } from '@/features/lesson/hooks/useClassOrchestrator';
 import { useAutoStart } from '@/features/lesson/hooks/useAutoStart';
 import { useTextSync } from '@/features/lesson/hooks/useTextSync';
-import { useVoiceSettings } from '@/components/voice-settings/useVoiceSettings';
-import { useLessonStore } from '@/stores/lessonStore';
+import { useVoiceSettings } from '@/features/voice/hooks/useVoiceSettings';
+import { useLessonStore } from '@/features/lesson/stores/lesson.store';
 
 export function LessonPage() {
   const { lessonId } = useParams<{ lessonId: string }>();
