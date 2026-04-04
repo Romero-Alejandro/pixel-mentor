@@ -12,6 +12,10 @@ import {
 // Re-export use cases from original location for backward compatibility
 import { OrchestrateRecipeUseCase } from '@/features/recipe/application/use-cases/orchestrate-recipe.use-case';
 import { QuestionAnsweringUseCase } from '@/features/recipe/application/use-cases/question-answering.use-case';
+import {
+  llmGovernanceMiddleware,
+  recordLLMUsage,
+} from '@/shared/http/llm-governance.middleware.js';
 
 // Create a local logger for route handlers
 const recipeRouterLogger = createLogger(undefined, { name: 'recipe-router', level: 'error' });
@@ -27,6 +31,9 @@ export function createRecipeRouter(
   questionAnsweringUseCase?: QuestionAnsweringUseCase,
 ): Router {
   const router = Router();
+
+  // LLM governance middleware for routes that call LLMs
+  const llmGovernance = llmGovernanceMiddleware();
 
   router.post(
     '/start',
@@ -56,20 +63,35 @@ export function createRecipeRouter(
 
   router.post(
     '/interact',
+    llmGovernance,
     async (request: Request, response: Response, next: NextFunction): Promise<void> => {
       const appRequest = request as AppRequest;
+      let sessionId = 'unknown';
       try {
         const validated = InteractRecipeInputSchema.parse(appRequest.body);
+        sessionId = validated.sessionId;
 
         const result = await orchestrateUseCase.interact(
           validated.sessionId,
           validated.studentInput,
         );
 
+        // Record LLM usage for governance tracking
+        recordLLMUsage(
+          appRequest,
+          `interact:${sessionId}`,
+          JSON.stringify(result).slice(0, 500),
+          true,
+        );
+
         response.json(result);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         recipeRouterLogger.error({ err: errorMessage }, '[POST /interact] Error');
+
+        // Record failed LLM usage
+        recordLLMUsage(appRequest, `interact:${sessionId}`, '', false, errorMessage);
+
         if (error instanceof z.ZodError) {
           response.status(400).json({ error: 'Validation error', details: error.issues });
           return;
@@ -81,6 +103,7 @@ export function createRecipeRouter(
 
   router.get(
     '/interact/stream',
+    llmGovernance,
     async (request: Request, response: Response, _next: NextFunction): Promise<void> => {
       const sessionId =
         typeof request.query.sessionId === 'string' ? request.query.sessionId : undefined;
@@ -103,12 +126,14 @@ export function createRecipeRouter(
       response.flushHeaders();
 
       let errorSent = false;
+      let fullResponse = '';
 
       try {
         const stream = orchestrateUseCase.interactStream(sessionId, studentInput);
 
         for await (const chunk of stream) {
           if (chunk.type === 'chunk') {
+            fullResponse += chunk.text ?? '';
             response.write(`event: chunk\ndata: ${JSON.stringify({ text: chunk.text })}\n\n`);
           } else if (chunk.type === 'end') {
             if (process.env.NODE_ENV === 'development') {
@@ -124,6 +149,9 @@ export function createRecipeRouter(
                 isCorrect: chunk.isCorrect,
               })}\n\n`,
             );
+
+            // Record LLM usage for streaming
+            recordLLMUsage(request as AppRequest, `stream:${sessionId}`, fullResponse, true);
             break;
           }
         }
@@ -138,6 +166,15 @@ export function createRecipeRouter(
           );
           errorSent = true;
         }
+
+        // Record failed LLM usage for streaming
+        recordLLMUsage(
+          request as AppRequest,
+          `stream:${sessionId}`,
+          fullResponse,
+          false,
+          errorMessage,
+        );
       } finally {
         response.end();
         if (process.env.NODE_ENV === 'development') {
@@ -148,6 +185,7 @@ export function createRecipeRouter(
 
   router.post(
     '/question',
+    llmGovernance,
     async (request: Request, response: Response, next: NextFunction): Promise<void> => {
       try {
         const appRequest = request as AppRequest;
@@ -162,6 +200,14 @@ export function createRecipeRouter(
           recipeId: validated.recipeId,
           question: validated.question,
         });
+
+        // Record LLM usage
+        recordLLMUsage(
+          appRequest,
+          `question:${validated.recipeId}`,
+          JSON.stringify(result).slice(0, 500),
+          true,
+        );
 
         response.json(result);
       } catch (error) {
