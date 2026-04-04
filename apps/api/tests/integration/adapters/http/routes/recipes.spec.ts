@@ -103,6 +103,7 @@ const createApp = (
   // Mock auth middleware
   app.use((req: any, _res: any, next: any) => {
     req.user = user;
+    req.logger = { info: () => {}, error: () => {}, warn: () => {}, debug: () => {} };
     next();
   });
 
