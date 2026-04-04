@@ -1,12 +1,21 @@
 import { useState, useEffect } from 'react';
+import type { BadgeInfo, EarnedBadge } from '@pixel-mentor/shared/gamification';
 
 import { api, type Class, type Session, type User } from '@/services/api';
 import { gamificationApi } from '@/features/gamification/services/gamification.api';
 
+interface StreakHistoryEntry {
+  date: string;
+  active: boolean;
+}
+
 interface AchievementsData {
-  badges: any[];
-  userBadges: any[];
-  streakHistory: any[];
+  badges: BadgeInfo[];
+  userBadges: EarnedBadge[];
+  // NOTE: streakHistory is typed as the API response shape.
+  // XPChart currently expects { date: string; xp: number }[] which is a pre-existing
+  // data mismatch — XPChart needs a separate fix to consume the correct data.
+  streakHistory: StreakHistoryEntry[];
 }
 
 export function useDashboardData(user: User | null) {

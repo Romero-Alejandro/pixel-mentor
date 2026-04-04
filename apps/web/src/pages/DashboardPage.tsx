@@ -300,7 +300,14 @@ export function DashboardPage() {
                   ) : null}
                   {activeTab === DASHBOARD_TABS.PROGRESS ? (
                     <div className="animate-in fade-in zoom-in-95 duration-300">
-                      <XPChart data={safeStreakHistory.slice(-7)} />
+                      <XPChart
+                        data={
+                          safeStreakHistory.slice(-7) as unknown as {
+                            date: string;
+                            xp: number;
+                          }[]
+                        }
+                      />
                     </div>
                   ) : null}
                 </div>

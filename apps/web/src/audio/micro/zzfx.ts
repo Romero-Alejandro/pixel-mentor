@@ -4,13 +4,21 @@ import { useAudioStore } from '../../features/audio/stores/audio.store';
 
 let audioCtx: AudioContext | null = null;
 
+interface AudioContextWindow extends Window {
+  webkitAudioContext?: typeof AudioContext;
+}
+
 /**
  * ZzFX Sound Generator
  */
 export const zzfx = (...parameters: number[]) => {
   if (!audioCtx) {
     try {
-      audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const AudioCtx = window.AudioContext ?? (window as AudioContextWindow).webkitAudioContext;
+      if (!AudioCtx) {
+        throw new Error('Web Audio API not available');
+      }
+      audioCtx = new AudioCtx();
     } catch (e) {
       console.warn('Web Audio API not supported', e);
       return;

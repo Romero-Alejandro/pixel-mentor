@@ -45,13 +45,13 @@ export interface UseVoiceReturn {
 }
 
 // Debug logging
-const debugLog = (...args: any[]) => {
+const debugLog = (...args: unknown[]) => {
   if (import.meta.env.DEV) {
     console.log('[Voice]', ...args);
   }
 };
 
-const debugError = (...args: any[]) => {
+const debugError = (...args: unknown[]) => {
   console.error('[Voice ERROR]', ...args);
 };
 
@@ -63,7 +63,7 @@ export function useVoice(): UseVoiceReturn {
   const [error, setError] = useState<string | null>(null);
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
 
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
 
   // Streaming TTS refs
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -618,9 +618,9 @@ export function useVoice(): UseVoiceReturn {
         // Try streaming first
         const success = await speakStream(text, voiceSettings, abortController.signal);
         return success;
-      } catch (err: any) {
+      } catch (err: unknown) {
         // If aborted, just return false without fallback
-        if (err.name === 'AbortError') {
+        if (err instanceof Error && err.name === 'AbortError') {
           debugLog('Speech aborted by user');
           return false;
         }
@@ -652,7 +652,8 @@ export function useVoice(): UseVoiceReturn {
     stopSpeaking();
 
     const SpeechRecognitionAPI =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      (window as SpeechRecognitionWindow).SpeechRecognition ??
+      (window as SpeechRecognitionWindow).webkitSpeechRecognition;
 
     if (!SpeechRecognitionAPI) {
       setError('Navegador no compatible con reconocimiento de voz');
@@ -689,7 +690,7 @@ export function useVoice(): UseVoiceReturn {
         setIsListening(false);
       };
 
-      recognition.onerror = (event: any) => {
+      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
         debugError('Recognition error:', event.error);
 
         if (event.error === 'not-allowed') {
@@ -706,7 +707,7 @@ export function useVoice(): UseVoiceReturn {
         setIsListening(false);
       };
 
-      recognition.onresult = (event: any) => {
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
         const results = Array.from(event.results) as SpeechRecognitionResult[];
         const lastResult = results[results.length - 1];
 

@@ -27,12 +27,13 @@ const spriteMap: Record<SpriteAudioEvent, [number, number]> = {
 };
 
 // Convert ms to seconds for use-sound
-const spriteMapSeconds = Object.fromEntries(
+type SpriteMap = Record<string, [number, number]>;
+const spriteMapSeconds: SpriteMap = Object.fromEntries(
   Object.entries(spriteMap).map(([key, [start, duration]]) => [
     key,
     [start / 1000, duration / 1000],
   ]),
-) as any;
+) as SpriteMap;
 
 /**
  * Hook to play sprite sounds.
@@ -46,8 +47,8 @@ export const useSpriteAudioEvents = () => {
     preload: true,
     // Debug callbacks
     onload: () => console.log('[Audio] ✅ Sprite file loaded successfully'),
-    onerror: (err: any) =>
-      console.error('[Audio] ❌ Sprite file failed to load:', err?.message || err),
+    onerror: (err: unknown) =>
+      console.error('[Audio] ❌ Sprite file failed to load:', (err as Error)?.message ?? err),
   });
 
   // Log initial state
@@ -72,8 +73,8 @@ export const useSpriteAudioEvents = () => {
     console.log('[Audio] ▶️ Playing sprite:', event, '(vol:', volume, ')');
     try {
       play({ id: event });
-    } catch (e: any) {
-      console.error('[Audio] ❌ Error playing', event, ':', e?.message || e);
+    } catch (e: unknown) {
+      console.error('[Audio] ❌ Error playing', event, ':', (e as Error)?.message ?? e);
     }
   };
 

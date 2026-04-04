@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
+import type { EventSourceMessage } from '@microsoft/fetch-event-source';
+import type { StartRecipeOutput } from '@pixel-mentor/shared';
+
+import { FEEDBACK_DISPLAY_MS, estimateReadTime } from '../constants/lesson.constants';
 
 import { useLessonState } from './useLessonState';
 import { useChatStream } from './useChatStream';
 
-import { FEEDBACK_DISPLAY_MS, estimateReadTime } from '../constants/lesson.constants';
 import { api, streamInteractWithRecipe, type PedagogicalState } from '@/services/api';
 import { useVoice, type VoiceSettings } from '@/features/voice/hooks/useVoice';
 import { useLessonStore } from '@/features/lesson/stores/lesson.store';
@@ -129,10 +132,8 @@ export function useClassOrchestrator() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const contentRef = useRef('');
   const abortControllerRef = useRef<AbortController | null>(null);
-  const eventSourceRef = useRef<EventSource | null>(null);
   const isMountedRef = useRef(true);
   const streamingChunksRef = useRef<string[]>([]);
-  const handlersRef = useRef({ chunk: null as any, end: null as any, error: null as any });
   const wasStreamingRef = useRef(false);
   const isInteractingRef = useRef(false); // Guard against concurrent doInteract calls
   const lastStepIndexRef = useRef<number | null>(null); // Track last step index to detect loops
@@ -161,15 +162,9 @@ export function useClassOrchestrator() {
 
   function cleanup() {
     if (timerRef.current) clearTimeout(timerRef.current);
-    if (abortControllerRef.current) abortControllerRef.current.abort();
-    if (eventSourceRef.current) {
-      const es = eventSourceRef.current;
-      if (handlersRef.current.chunk) es.removeEventListener('chunk', handlersRef.current.chunk);
-      if (handlersRef.current.end) es.removeEventListener('end', handlersRef.current.end);
-      if (handlersRef.current.error) es.removeEventListener('error', handlersRef.current.error);
-      es.close();
-      eventSourceRef.current = null;
-      handlersRef.current = { chunk: null, end: null, error: null };
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
     }
     isInteractingRef.current = false; // Reset guard so new interactions can start
     stopStream();
@@ -388,13 +383,9 @@ export function useClassOrchestrator() {
 
     if (import.meta.env.VITE_ENABLE_STREAMING === 'true') {
       if (import.meta.env.DEV) {
-        console.log('[useClassOrchestrator] doInteract: Streaming ENABLED, using EventSource');
+        console.log('[useClassOrchestrator] doInteract: Streaming ENABLED, using fetchEventSource');
       }
       try {
-        abortControllerRef.current = new AbortController();
-        const eventSource = streamInteractWithRecipe(sid, input);
-        eventSourceRef.current = eventSource;
-
         let fullText = '';
         wasStreamingRef.current = true;
         setStoreStreaming(true);
@@ -410,32 +401,28 @@ export function useClassOrchestrator() {
           rejectStream = reject;
         });
 
-        handlersRef.current.chunk = (e: MessageEvent) => {
-          if (!isMountedRef.current) return;
-          try {
-            const { text } = JSON.parse(e.data);
-            fullText += text;
-            streamingChunksRef.current = [...streamingChunksRef.current, text];
-            setStreamingChunks(streamingChunksRef.current);
-            setTimeout(() => {
-              setContentText((prev) => prev + text);
-            }, 0);
-          } catch (e) {
-            console.error('[ClassOrchestrator] Error in chunk handler:', e);
-          }
-        };
-
-        handlersRef.current.end = (e: MessageEvent) => {
-          if (!isMountedRef.current) return;
-          setStoreStreaming(false);
-          cleanup();
-          try {
-            const parsed = JSON.parse(e.data);
-            isInteractingRef.current = false;
-            resolveStream({ voiceText: fullText, ...parsed } as LessonResponse);
-          } catch (e) {
-            console.error('[ClassOrchestrator] Error in end handler, falling back to POST:', e);
-            // Fallback to POST
+        abortControllerRef.current = streamInteractWithRecipe(sid, input, {
+          onMessage: (event: EventSourceMessage) => {
+            if (!isMountedRef.current) return;
+            try {
+              const { text } = JSON.parse(event.data);
+              fullText += text;
+              streamingChunksRef.current = [...streamingChunksRef.current, text];
+              setStreamingChunks(streamingChunksRef.current);
+              setTimeout(() => {
+                setContentText((prev) => prev + text);
+              }, 0);
+            } catch (e) {
+              console.error('[ClassOrchestrator] Error in message handler:', e);
+            }
+          },
+          onError: (_error: Error) => {
+            if (!isMountedRef.current) return;
+            // Only fallback once — onerror may fire redundantly
+            if (!isInteractingRef.current) return;
+            console.error('[ClassOrchestrator] SSE error received, falling back to POST');
+            setStoreStreaming(false);
+            cleanup();
             api
               .interactWithRecipe(sid, input)
               .then((res) => {
@@ -443,43 +430,29 @@ export function useClassOrchestrator() {
                 resolveStream(res as LessonResponse);
               })
               .catch(rejectStream);
-          }
-        };
-
-        handlersRef.current.error = () => {
-          if (!isMountedRef.current) return;
-          // Only fallback once — onerror may fire redundantly
-          if (!isInteractingRef.current) return;
-          console.error('[ClassOrchestrator] SSE error event received, falling back to POST');
-          setStoreStreaming(false);
-          cleanup();
-          api
-            .interactWithRecipe(sid, input)
-            .then((res) => {
+          },
+          onClose: () => {
+            if (!isMountedRef.current) return;
+            setStoreStreaming(false);
+            cleanup();
+            try {
+              // Try to parse the last message as the final response
+              // If the backend sends an 'end' event with data, parse it
+              // Otherwise, use the accumulated fullText
               isInteractingRef.current = false;
-              resolveStream(res as LessonResponse);
-            })
-            .catch(rejectStream);
-        };
-
-        eventSource.addEventListener('chunk', handlersRef.current.chunk);
-        eventSource.addEventListener('end', handlersRef.current.end);
-        eventSource.addEventListener('error', handlersRef.current.error);
-        eventSource.onerror = () => {
-          if (!isMountedRef.current) return;
-          // Prevent duplicate fallback — error handler already handles it
-          if (!isInteractingRef.current) return;
-          console.error('[ClassOrchestrator] EventSource onerror triggered, falling back to POST');
-          setStoreStreaming(false);
-          cleanup();
-          api
-            .interactWithRecipe(sid, input)
-            .then((res) => {
-              isInteractingRef.current = false;
-              resolveStream(res as LessonResponse);
-            })
-            .catch(rejectStream);
-        };
+              resolveStream({ voiceText: fullText } as LessonResponse);
+            } catch (e) {
+              console.error('[ClassOrchestrator] Error in close handler, falling back to POST:', e);
+              api
+                .interactWithRecipe(sid, input)
+                .then((res) => {
+                  isInteractingRef.current = false;
+                  resolveStream(res as LessonResponse);
+                })
+                .catch(rejectStream);
+            }
+          },
+        });
 
         return await streamPromise;
       } catch (error) {
@@ -522,8 +495,8 @@ export function useClassOrchestrator() {
       if (!isMountedRef.current) return Ok(undefined);
 
       // Store content steps for reference (progress bar, etc.)
-      const contentSteps = (startResult as any).contentSteps ?? [];
-      contentStepsRef.current = contentSteps;
+      const contentSteps: StartRecipeOutput['contentSteps'] = startResult.contentSteps ?? [];
+      contentStepsRef.current = contentSteps as typeof contentStepsRef.current;
       contentStepIndexRef.current = 0;
 
       // Speak the welcome message
