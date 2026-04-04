@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { ACTIVITY_TIMEOUT_SECONDS } from '@/config/lessonTiming';
+import { ACTIVITY_TIMEOUT_SECONDS } from '@/features/lesson/constants/lesson.constants';
 
 interface UseLessonTimersProps {
   onWarning?: () => void;

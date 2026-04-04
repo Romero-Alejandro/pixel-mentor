@@ -50,3 +50,42 @@ export const TIER_CONFIG = {
 } as const;
 
 export type AccuracyTier = keyof typeof TIER_CONFIG;
+
+// Timing constants for lesson flow orchestration
+export const TIMING = {
+  WORDS_PER_SECOND: 2.5,
+  MIN_DISPLAY_MS: 3000,
+  POST_SPEECH_BUFFER_MS: 1200,
+  FEEDBACK_DISPLAY_MS: 1500,
+  ACTIVITY_TIMEOUT_SECONDS: 30,
+} as const;
+
+export function estimateReadTime(text: string): number {
+  if (!text || text.trim().length === 0) {
+    return TIMING.MIN_DISPLAY_MS;
+  }
+  const words = text.trim().split(/\s+/).length;
+  const estimatedMs = (words / TIMING.WORDS_PER_SECOND) * 1000;
+  return Math.max(TIMING.MIN_DISPLAY_MS, estimatedMs + TIMING.POST_SPEECH_BUFFER_MS);
+}
+
+export function calculateStateDuration(
+  state: 'concentration' | 'evaluation',
+  text?: string,
+): number {
+  switch (state) {
+    case 'concentration':
+      return text ? estimateReadTime(text) : TIMING.MIN_DISPLAY_MS;
+    case 'evaluation':
+      return TIMING.FEEDBACK_DISPLAY_MS + (text ? estimateReadTime(text) : 0);
+    default:
+      return TIMING.MIN_DISPLAY_MS;
+  }
+}
+
+// Backwards compatibility exports
+export const WORDS_PER_SECOND = TIMING.WORDS_PER_SECOND;
+export const MIN_DISPLAY_MS = TIMING.MIN_DISPLAY_MS;
+export const POST_SPEECH_BUFFER_MS = TIMING.POST_SPEECH_BUFFER_MS;
+export const FEEDBACK_DISPLAY_MS = TIMING.FEEDBACK_DISPLAY_MS;
+export const ACTIVITY_TIMEOUT_SECONDS = TIMING.ACTIVITY_TIMEOUT_SECONDS;

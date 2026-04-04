@@ -4,7 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useLessonState } from './useLessonState';
 import { useChatStream } from './useChatStream';
 
-import { FEEDBACK_DISPLAY_MS, estimateReadTime } from '@/config/lessonTiming';
+import { FEEDBACK_DISPLAY_MS, estimateReadTime } from '../constants/lesson.constants';
 import { api, streamInteractWithRecipe, type PedagogicalState } from '@/services/api';
 import { useVoice, type VoiceSettings } from '@/features/voice/hooks/useVoice';
 import { useLessonStore } from '@/features/lesson/stores/lesson.store';
