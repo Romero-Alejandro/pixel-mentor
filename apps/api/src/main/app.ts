@@ -88,6 +88,30 @@ export function createApp(deps: AppDependencies): Express {
     }),
   );
 
+  // Additional security headers beyond helmet defaults
+  app.use((_req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '0'); // Relies on CSP instead
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    next();
+  });
+
+  // HTTPS enforcement in production
+  if (config.NODE_ENV === 'production') {
+    app.use((req, res, next) => {
+      if (req.headers['x-forwarded-proto'] !== 'https' && !req.secure) {
+        res.redirect(301, `https://${req.headers.host}${req.url}`);
+        return;
+      }
+      next();
+    });
+  }
+
   // CORS
   const corsOrigins = config.CORS_ORIGIN.split(',').map((o) => o.trim());
   app.use(

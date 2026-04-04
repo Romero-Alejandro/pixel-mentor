@@ -6,6 +6,11 @@ import type pino from 'pino';
 import { GoogleFreeTTSAdapter } from './google-free.adapter';
 import { MockTTSAdapter } from './mock-tts-adapter';
 
+import {
+  isValidTTSHost,
+  validateTTSOptions,
+  type ValidatedTTSOptions,
+} from '@/features/tts/domain/validators/tts-options.validator.js';
 import type { TTSService } from '@/features/tts/domain/ports/tts-service.port';
 
 export const TTS_EVENT_TYPES = {
@@ -36,12 +41,22 @@ type TTSAudioMessage = TTSMessage<typeof TTS_EVENT_TYPES.AUDIO, TTSAudioMessageD
 type TTSEndMessage = TTSMessage<typeof TTS_EVENT_TYPES.END, TTSEndMessageData>;
 type TTSErrorMessage = TTSMessage<typeof TTS_EVENT_TYPES.ERROR, TTSErrorMessageData>;
 
+/**
+ * User-facing TTS options — intentionally excludes 'host' to prevent SSRF.
+ * The host is set internally from a strict whitelist.
+ */
 export interface TTSStreamOptions {
   lang?: string;
   slow?: boolean;
-  host?: string;
   timeout?: number;
   splitPunct?: string;
+}
+
+/**
+ * Internal options passed to googleTTS — includes host, which is never user-controllable.
+ */
+interface InternalTTSSOptions extends ValidatedTTSOptions {
+  host: string;
 }
 
 export interface TTSProviderOptions {
@@ -65,8 +80,11 @@ export class TTSProviderFactory {
   }
 }
 
+// Default internal host — only changed internally, never from user input
+const DEFAULT_TTS_HOST = 'https://translate.google.com';
+
 export class TTSStreamService extends Readable {
-  public readonly options: TTSStreamOptions;
+  public readonly options: InternalTTSSOptions;
 
   private readonly text: string;
   private isInitialized = false;
@@ -77,13 +95,26 @@ export class TTSStreamService extends Readable {
   constructor(text: string, options: TTSStreamOptions = {}) {
     super({ objectMode: true });
     this.text = text;
+
+    // Validate user-provided options through Zod schema (SSRF prevention)
+    const validated = validateTTSOptions({
+      lang: options.lang,
+      slow: options.slow,
+      timeout: options.timeout,
+      splitPunct: options.splitPunct,
+    });
+
+    // Set host internally — never from user input
+    const host = DEFAULT_TTS_HOST;
+
+    // Defense-in-depth: validate the internal host against whitelist
+    if (!isValidTTSHost(host)) {
+      throw new Error('Invalid TTS host configuration');
+    }
+
     this.options = {
-      lang: 'en',
-      slow: false,
-      host: 'https://translate.google.com',
-      timeout: 60000,
-      splitPunct: '.,;!?',
-      ...options,
+      ...validated,
+      host,
     };
   }
 

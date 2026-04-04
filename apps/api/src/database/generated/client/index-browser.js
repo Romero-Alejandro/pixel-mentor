@@ -449,6 +449,17 @@ exports.Prisma.DailyActivityScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.RefreshTokenScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  tokenHash: 'tokenHash',
+  expiresAt: 'expiresAt',
+  revoked: 'revoked',
+  revokedAt: 'revokedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.ClassTemplateScalarFieldEnum = {
   id: 'id',
   name: 'name',
@@ -640,6 +651,7 @@ exports.Prisma.ModelName = {
   UserBadge: 'UserBadge',
   LevelConfig: 'LevelConfig',
   DailyActivity: 'DailyActivity',
+  RefreshToken: 'RefreshToken',
   ClassTemplate: 'ClassTemplate',
   Class: 'Class',
   ClassLesson: 'ClassLesson',
