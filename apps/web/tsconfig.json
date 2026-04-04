@@ -7,15 +7,10 @@
     "rootDir": "./src",
     "baseUrl": "./src",
     "paths": {
-      "@/*": ["./*"],
-      "@/components/*": ["./components/*"],
-      "@/hooks/*": ["./hooks/*"],
-      "@/stores/*": ["./stores/*"],
-      "@/pages/*": ["./pages/*"],
-      "@/services/*": ["./services/*"],
+      "@/*": ["./*"]
     },
-    "types": ["vite/client"],
+    "types": ["vite/client", "@testing-library/jest-dom"]
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"],
+  "exclude": ["node_modules", "dist"]
 }
