@@ -17,7 +17,13 @@ export const envSchema = z.object({
   DEFAULT_MODEL_OPENROUTER: z.string().default('stepfun/step-3.5-flash:free'),
   DEFAULT_MODEL_GROQ: z.string().default('llama-3.3-70b-versatile'),
   TTS_PROVIDER: z.enum(['google-free', 'mock']).default('google-free'),
-  JWT_SECRET: z.string().min(1).default('change-me-in-development'),
+  JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
+  JWT_REFRESH_SECRET: z
+    .string()
+    .min(32, 'JWT_REFRESH_SECRET must be at least 32 characters')
+    .optional(),
+  JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
+  JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
   CORS_ORIGIN: z.string().min(1),
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60000),

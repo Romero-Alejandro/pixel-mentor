@@ -1,6 +1,6 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/infrastructure/adapters/database/generated/client"
+  output   = "../src/database/generated/client"
 }
 
 datasource db {
@@ -112,6 +112,7 @@ model User {
   userGamification UserGamification?
   userBadges      UserBadge[]
   dailyActivities DailyActivity[]
+  refreshTokens   RefreshToken[]
 
   // Class relations
   createdClasses   Class[]        @relation("ClassAuthor")
@@ -657,6 +658,25 @@ model DailyActivity {
   @@unique([userId, date])
   @@index([userId, date])
   @@map("daily_activities")
+}
+
+// Refresh token for JWT rotation and revocation
+model RefreshToken {
+  id          String   @id @default(uuid())
+  userId      String
+  tokenHash   String   @unique @db.VarChar(255)
+  expiresAt   DateTime
+  revoked     Boolean  @default(false)
+  revokedAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revoked])
+  @@index([tokenHash])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
 }
 
 // ==================== CLASS MODELS ====================

@@ -137,6 +137,7 @@ export function createApp(deps: AppDependencies): Express {
       auth.userRepository,
       auth.registerUseCase,
       auth.loginUseCase,
+      auth.refreshTokenUseCase,
       protectedMiddleware,
     ),
   );
