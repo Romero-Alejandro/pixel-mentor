@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
+import { config } from '@/shared/config/index.js';
 
 import type { IUserRepository } from '@/features/auth/domain/ports/user.repository.port.js';
 import type { VerifyTokenUseCase } from '@/features/auth/application/use-cases/verify-token.use-case.js';
@@ -20,7 +21,13 @@ export function authMiddleware(userRepo: IUserRepository, verifyTokenUseCase: Ve
 
       if (authHeader && authHeader.startsWith('Bearer ')) {
         token = authHeader.slice(7);
-      } else if (req.query.token && typeof req.query.token === 'string') {
+      } else if (
+        req.query.token &&
+        typeof req.query.token === 'string' &&
+        config.NODE_ENV !== 'production'
+      ) {
+        // Query param tokens are insecure (logged in URLs, browser history)
+        // Only allowed in non-production for SSE streaming workarounds
         token = req.query.token;
       }
 

@@ -117,7 +117,8 @@ export function createApp(deps: AppDependencies): Express {
   app.use(
     cors({
       origin: corsOrigins.length === 1 ? corsOrigins[0] : corsOrigins,
-      credentials: true,
+      // credentials: false — JWT is sent via Authorization header, no cookies needed
+      // This prevents CSRF and credential leakage
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
     }),
