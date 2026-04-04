@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { useCallback } from 'react';
 import type { User, Role } from '@pixel-mentor/shared';
 
 import { authApi } from '../services/auth.api';
@@ -150,29 +149,26 @@ export function useAuthRedirect() {
   const redirectPath = useAuthStore((state) => state.redirectPath);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
-  const saveRedirectPath = useCallback(
-    (path: string) => {
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('auth-redirect-path', path);
-      }
-      setRedirectPath(path);
-    },
-    [setRedirectPath],
-  );
+  const saveRedirectPath = (path: string) => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('auth-redirect-path', path);
+    }
+    setRedirectPath(path);
+  };
 
-  const getRedirectPath = useCallback((): string | null => {
+  const getRedirectPath = (): string | null => {
     return (
       redirectPath ||
       (typeof window !== 'undefined' ? sessionStorage.getItem('auth-redirect-path') : null)
     );
-  }, [redirectPath]);
+  };
 
-  const clearRedirect = useCallback(() => {
+  const clearRedirect = () => {
     clearRedirectPath();
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('auth-redirect-path');
     }
-  }, [clearRedirectPath]);
+  };
 
   return {
     saveRedirectPath,
