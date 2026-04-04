@@ -193,7 +193,7 @@ export function SessionPage() {
                 </p>
               </div>
             ) : (
-              conversation.map((message, index) => <ChatMessage key={index} message={message} />)
+              conversation.map((message) => <ChatMessage key={message.id} message={message} />)
             )}
             <div ref={conversationEndRef} className="h-4" />
           </div>

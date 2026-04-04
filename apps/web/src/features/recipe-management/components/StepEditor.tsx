@@ -56,15 +56,17 @@ export function StepEditor({
   const [stepOrder, setStepOrder] = useState<number>(1);
   const [scriptTransition, setScriptTransition] = useState('');
   const [scriptContent, setScriptContent] = useState('');
-  const [scriptExamples, setScriptExamples] = useState<string[]>(['']);
+  const [scriptExamples, setScriptExamples] = useState<Array<{ id: string; text: string }>>([
+    { id: crypto.randomUUID(), text: '' },
+  ]);
   const [scriptClosure, setScriptClosure] = useState('');
 
   // Activity fields
   const [activityTransition, setActivityTransition] = useState('');
   const [activityInstruction, setActivityInstruction] = useState('');
-  const [activityOptions, setActivityOptions] = useState<{ text: string; isCorrect: boolean }[]>([
-    { text: '', isCorrect: false },
-  ]);
+  const [activityOptions, setActivityOptions] = useState<
+    Array<{ id: string; text: string; isCorrect: boolean }>
+  >([{ id: crypto.randomUUID(), text: '', isCorrect: false }]);
   const [activityFeedbackCorrect, setActivityFeedbackCorrect] = useState('');
   const [activityFeedbackIncorrect, setActivityFeedbackIncorrect] = useState('');
 
@@ -94,7 +96,11 @@ export function StepEditor({
           setActivityTransition(extractText(scriptData.transition));
           setActivityInstruction(extractText(scriptData.instruction));
           const options = (scriptData.options as Array<{ text: string; isCorrect: boolean }>) || [];
-          setActivityOptions(options.length > 0 ? options : [{ text: '', isCorrect: false }]);
+          setActivityOptions(
+            options.length > 0
+              ? options.map((o) => ({ id: crypto.randomUUID(), ...o }))
+              : [{ id: crypto.randomUUID(), text: '', isCorrect: false }],
+          );
           const feedback = (scriptData.feedback as Record<string, string>) || {};
           setActivityFeedbackCorrect(feedback.correct || '');
           setActivityFeedbackIncorrect(feedback.incorrect || '');
@@ -119,7 +125,12 @@ export function StepEditor({
               : ((scriptData.content as Record<string, unknown>)?.text as string) || '',
           );
           const examples = (scriptData.examples as Array<string | Record<string, string>>) || [];
-          setScriptExamples(examples.map((e) => (typeof e === 'string' ? e : e.text || '')));
+          setScriptExamples(
+            examples.map((e) => ({
+              id: crypto.randomUUID(),
+              text: typeof e === 'string' ? e : e.text || '',
+            })),
+          );
           setScriptClosure(
             typeof scriptData.closure === 'string'
               ? scriptData.closure
@@ -132,11 +143,11 @@ export function StepEditor({
       setStepOrder(initialOrder);
       setScriptTransition('');
       setScriptContent('');
-      setScriptExamples(['']);
+      setScriptExamples([{ id: crypto.randomUUID(), text: '' }]);
       setScriptClosure('');
       setActivityTransition('');
       setActivityInstruction('');
-      setActivityOptions([{ text: '', isCorrect: false }]);
+      setActivityOptions([{ id: crypto.randomUUID(), text: '', isCorrect: false }]);
       setActivityFeedbackCorrect('');
       setActivityFeedbackIncorrect('');
       setQuestionText('');
@@ -189,7 +200,7 @@ export function StepEditor({
       script = {
         transition: scriptTransition,
         content: scriptContent,
-        examples: scriptExamples.filter((e) => e.trim()),
+        examples: scriptExamples.filter((e) => e.text.trim()).map((e) => e.text),
         closure: scriptClosure,
       };
     } else if (stepType === 'intro' || stepType === 'closure') {
@@ -242,39 +253,47 @@ export function StepEditor({
   };
 
   const addExample = () => {
-    setScriptExamples([...scriptExamples, '']);
+    setScriptExamples([...scriptExamples, { id: crypto.randomUUID(), text: '' }]);
   };
 
-  const removeExample = (index: number) => {
-    setScriptExamples(scriptExamples.filter((_, i) => i !== index));
+  const removeExample = (id: string) => {
+    setScriptExamples(scriptExamples.filter((e) => e.id !== id));
   };
 
-  const updateExample = (index: number, value: string) => {
-    const updated = [...scriptExamples];
-    updated[index] = value;
+  const updateExample = (id: string, value: string) => {
+    const updated = scriptExamples.map((e) => (e.id === id ? { ...e, text: value } : e));
     setScriptExamples(updated);
   };
 
   const addActivityOption = () => {
-    setActivityOptions([...activityOptions, { text: '', isCorrect: false }]);
+    setActivityOptions([
+      ...activityOptions,
+      { id: crypto.randomUUID(), text: '', isCorrect: false },
+    ]);
   };
 
-  const removeActivityOption = (index: number) => {
-    setActivityOptions(activityOptions.filter((_, i) => i !== index));
+  const removeActivityOption = (id: string) => {
+    setActivityOptions(activityOptions.filter((o) => o.id !== id));
   };
 
   const updateActivityOption = (
-    index: number,
+    id: string,
     field: 'text' | 'isCorrect',
     value: string | boolean,
   ) => {
-    const updated = [...activityOptions];
-    if (field === 'isCorrect' && value === true) {
-      for (const [i, o] of updated.entries()) {
-        o.isCorrect = i === index;
+    const updated = activityOptions.map((o) => {
+      if (o.id !== id) return o;
+      if (field === 'isCorrect' && value === true) {
+        return { ...o, isCorrect: true };
       }
-    } else {
-      updated[index] = { ...updated[index], [field]: value };
+      return { ...o, [field]: value };
+    });
+    if (field === 'isCorrect' && value === true) {
+      for (const opt of updated) {
+        if (opt.id !== id) {
+          opt.isCorrect = false;
+        }
+      }
     }
     setActivityOptions(updated);
   };
@@ -349,16 +368,16 @@ export function StepEditor({
                 <div>
                   <label className="block text-sm font-bold text-slate-600 mb-2">Ejemplos</label>
                   {scriptExamples.map((example, index) => (
-                    <div key={index} className="flex gap-2 mb-2">
+                    <div key={example.id} className="flex gap-2 mb-2">
                       <Input
-                        value={example}
-                        onChange={(e) => updateExample(index, e.target.value)}
+                        value={example.text}
+                        onChange={(e) => updateExample(example.id, e.target.value)}
                         placeholder={`Ejemplo ${index + 1}`}
                         className="flex-1"
                       />
                       {scriptExamples.length > 1 ? (
                         <button
-                          onClick={() => removeExample(index)}
+                          onClick={() => removeExample(example.id)}
                           className="p-2 text-slate-400 hover:text-rose-500"
                         >
                           <IconTrash className="w-5 h-5" />
@@ -405,22 +424,24 @@ export function StepEditor({
                 <div>
                   <label className="block text-sm font-bold text-slate-600 mb-2">Opciones</label>
                   {activityOptions.map((option, index) => (
-                    <div key={index} className="flex gap-2 mb-2 items-center">
+                    <div key={option.id} className="flex gap-2 mb-2 items-center">
                       <input
                         type="checkbox"
                         checked={option.isCorrect}
-                        onChange={(e) => updateActivityOption(index, 'isCorrect', e.target.checked)}
+                        onChange={(e) =>
+                          updateActivityOption(option.id, 'isCorrect', e.target.checked)
+                        }
                         className="w-5 h-5 rounded border-slate-300 text-sky-500 focus:ring-sky-400"
                       />
                       <Input
                         value={option.text}
-                        onChange={(e) => updateActivityOption(index, 'text', e.target.value)}
+                        onChange={(e) => updateActivityOption(option.id, 'text', e.target.value)}
                         placeholder={`Opción ${index + 1}`}
                         className="flex-1"
                       />
                       {activityOptions.length > 1 ? (
                         <button
-                          onClick={() => removeActivityOption(index)}
+                          onClick={() => removeActivityOption(option.id)}
                           className="p-2 text-slate-400 hover:text-rose-500"
                         >
                           <IconTrash className="w-5 h-5" />

@@ -182,9 +182,9 @@ export function MissionReportPage() {
               <IconBooks className="w-4 h-4" /> Conceptos Dominados
             </h3>
             <div className="flex flex-wrap gap-2">
-              {conceptsMastered.map((concept, index) => (
+              {conceptsMastered.map((concept) => (
                 <div
-                  key={index}
+                  key={concept}
                   className="bg-emerald-100 border-2 border-emerald-300 text-emerald-800 px-3 py-1.5 rounded-full font-bold text-sm shadow-sm flex items-center gap-1.5"
                 >
                   <IconChevronRight className="w-4 h-4 text-emerald-500" stroke={3} /> {concept}

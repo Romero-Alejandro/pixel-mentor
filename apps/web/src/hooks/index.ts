@@ -11,3 +11,18 @@ export * from '@/contexts/ToastContext';
 // UI Components
 export * from '@/components/ui/AsyncStateView';
 export * from '@/components/ui/ToastContainer';
+
+// Confirmation dialogs
+export {
+  DialogProvider,
+  useConfirm,
+  useAlert,
+  usePrompt,
+  useDialogContext,
+} from './useConfirmationDialogs';
+export type {
+  ConfirmOptions,
+  AlertOptions,
+  PromptOptions,
+  DialogVariant,
+} from './useConfirmationDialogs';

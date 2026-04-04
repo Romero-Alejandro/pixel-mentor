@@ -26,7 +26,11 @@ export function AIDraftModal({ isOpen, onClose, onGenerated }: AIDraftModalProps
   const [topic, setTopic] = useState('');
   const [targetAgeMin, setTargetAgeMin] = useState(6);
   const [targetAgeMax, setTargetAgeMax] = useState(12);
-  const [objectives, setObjectives] = useState<string[]>(['', '', '']);
+  const [objectives, setObjectives] = useState<Array<{ id: string; text: string }>>([
+    { id: crypto.randomUUID(), text: '' },
+    { id: crypto.randomUUID(), text: '' },
+    { id: crypto.randomUUID(), text: '' },
+  ]);
   const [generatedDraft, setGeneratedDraft] = useState<GenerateClassDraftOutput | null>(null);
   const [step, setStep] = useState<'form' | 'preview'>('form');
   const [hasOpened, setHasOpened] = useState(false);
@@ -43,15 +47,18 @@ export function AIDraftModal({ isOpen, onClose, onGenerated }: AIDraftModalProps
     setTopic('');
     setTargetAgeMin(6);
     setTargetAgeMax(12);
-    setObjectives(['', '', '']);
+    setObjectives([
+      { id: crypto.randomUUID(), text: '' },
+      { id: crypto.randomUUID(), text: '' },
+      { id: crypto.randomUUID(), text: '' },
+    ]);
     setGeneratedDraft(null);
     setStep('form');
     onClose();
   };
 
-  const updateObjective = (index: number, value: string) => {
-    const newObjectives = [...objectives];
-    newObjectives[index] = value;
+  const updateObjective = (id: string, value: string) => {
+    const newObjectives = objectives.map((o) => (o.id === id ? { ...o, text: value } : o));
     setObjectives(newObjectives);
   };
 
@@ -60,7 +67,7 @@ export function AIDraftModal({ isOpen, onClose, onGenerated }: AIDraftModalProps
       playErrorSubtle();
       return;
     }
-    const validObjectives = objectives.filter((o) => o.trim());
+    const validObjectives = objectives.filter((o) => o.text.trim());
     if (validObjectives.length < 3) {
       playErrorSubtle();
       return;
@@ -71,7 +78,7 @@ export function AIDraftModal({ isOpen, onClose, onGenerated }: AIDraftModalProps
         topic: topic.trim(),
         targetAgeMin,
         targetAgeMax,
-        objectives: validObjectives,
+        objectives: validObjectives.map((o) => o.text),
       });
       setGeneratedDraft(draft);
       setStep('preview');
@@ -171,15 +178,15 @@ export function AIDraftModal({ isOpen, onClose, onGenerated }: AIDraftModalProps
                 <div className="space-y-2">
                   {objectives.map((obj, index) => (
                     <Input
-                      key={index}
-                      value={obj}
-                      onChange={(e) => updateObjective(index, e.target.value)}
+                      key={obj.id}
+                      value={obj.text}
+                      onChange={(e) => updateObjective(obj.id, e.target.value)}
                       placeholder={`Objetivo ${index + 1}`}
                       className="w-full"
                     />
                   ))}
                 </div>
-                {objectives.filter((o) => o.trim()).length < 3 ? (
+                {objectives.filter((o) => o.text.trim()).length < 3 ? (
                   <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
                     <IconAlertCircle className="w-3 h-3" />
                     Añade al menos 3 objetivos de aprendizaje
@@ -215,7 +222,7 @@ export function AIDraftModal({ isOpen, onClose, onGenerated }: AIDraftModalProps
                     <div className="space-y-2">
                       {generatedDraft.lessons.map((lesson, index) => (
                         <div
-                          key={index}
+                          key={lesson.title}
                           className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl"
                         >
                           <div className="w-8 h-8 flex items-center justify-center bg-sky-100 rounded-full text-sm font-bold text-sky-600">
@@ -268,7 +275,7 @@ export function AIDraftModal({ isOpen, onClose, onGenerated }: AIDraftModalProps
                 onClick={handleGenerate}
                 variant="primary"
                 isLoading={isLoading}
-                disabled={!topic.trim() || objectives.filter((o) => o.trim()).length < 3}
+                disabled={!topic.trim() || objectives.filter((o) => o.text.trim()).length < 3}
                 className="flex-1"
               >
                 <IconSparkles className="w-5 h-5 mr-2" />
