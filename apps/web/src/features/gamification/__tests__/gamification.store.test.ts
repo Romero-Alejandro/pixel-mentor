@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { UserGamificationProfile, EarnedBadge } from '@pixel-mentor/shared/gamification';
 
-import { useGamificationStore } from '../../features/gamification/stores/gamification.store';
-import { gamificationApi } from '../../features/gamification/services/gamification.api';
+import { useGamificationStore } from '../stores/gamification.store';
+import { gamificationApi } from '../services/gamification.api';
 
-vi.mock('../../features/gamification/services/gamification.api', () => ({
+vi.mock('../services/gamification.api', () => ({
   gamificationApi: {
     getProfile: vi.fn(),
     recordActivity: vi.fn(),
