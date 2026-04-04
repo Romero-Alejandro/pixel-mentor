@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { fetchEventSource, type EventSourceMessage } from '@microsoft/fetch-event-source';
 import type { EarnedBadge } from '@pixel-mentor/shared/gamification';
 
 import { useGamificationStore } from '../stores/gamification.store';
+
 import { getToken } from '@/services/api-client';
 
 interface XPEarnedEvent {
@@ -35,7 +37,7 @@ const MAX_RECONNECT_DELAY = 30000; // 30 seconds max
 const INITIAL_RECONNECT_DELAY = 1000;
 
 export function useGamificationSSE(enabled = true) {
-  const eventSourceRef = useRef<EventSource | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const store = useGamificationStore();
   const [isConnected, setIsConnected] = useState(false);
   const reconnectAttemptRef = useRef(0);
@@ -46,9 +48,9 @@ export function useGamificationSSE(enabled = true) {
       clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = null;
     }
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
     }
     setIsConnected(false);
   }, []);
@@ -61,18 +63,25 @@ export function useGamificationSSE(enabled = true) {
 
     const connect = () => {
       const token = getToken();
-      const url = token ? `/api/gamification/events?token=${token}` : '/api/gamification/events';
+      if (!token) {
+        console.error('[GamificationSSE] No auth token available, cannot connect');
+        return;
+      }
 
-      try {
-        const eventSource = new EventSource(url);
-        eventSourceRef.current = eventSource;
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
 
-        eventSource.onopen = () => {
+      fetchEventSource('/api/gamification/events', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        signal: controller.signal,
+        onopen: async () => {
           setIsConnected(true);
           reconnectAttemptRef.current = 0;
-        };
-
-        eventSource.onmessage = (event) => {
+        },
+        onmessage: (event: EventSourceMessage) => {
           try {
             const data: SSEEvent = JSON.parse(event.data);
 
@@ -102,12 +111,10 @@ export function useGamificationSSE(enabled = true) {
           } catch (e) {
             console.error('[GamificationSSE] Failed to parse event:', e);
           }
-        };
-
-        eventSource.onerror = () => {
+        },
+        onerror: () => {
           setIsConnected(false);
-          eventSource.close();
-          eventSourceRef.current = null;
+          abortControllerRef.current = null;
 
           // Exponential backoff reconnection
           const delay = Math.min(
@@ -127,10 +134,20 @@ export function useGamificationSSE(enabled = true) {
           } else {
             console.error('[GamificationSSE] Max reconnection attempts reached');
           }
-        };
-      } catch (error) {
-        console.error('[GamificationSSE] Failed to create EventSource:', error);
-      }
+
+          // Return a retry delay to stop fetchEventSource from auto-retrying
+          // We handle reconnection manually with setTimeout
+          return null;
+        },
+        onclose: () => {
+          setIsConnected(false);
+          abortControllerRef.current = null;
+        },
+      }).catch((err) => {
+        if (err.name !== 'AbortError') {
+          console.error('[GamificationSSE] fetchEventSource error:', err);
+        }
+      });
     };
 
     connect();

@@ -1,3 +1,4 @@
+import { fetchEventSource, type EventSourceMessage } from '@microsoft/fetch-event-source';
 import {
   RecipeSchema,
   SessionSchema,
@@ -55,7 +56,17 @@ export { apiClient, getToken } from './api-client';
 // Re-export token functions for backward compatibility
 export { setToken, clearToken } from './api-client';
 
-export const streamInteractWithRecipe = (sessionId: string, studentInput: string): EventSource => {
+export interface StreamInteractHandlers {
+  onMessage: (event: EventSourceMessage) => void;
+  onError: (error: Error) => void;
+  onClose: () => void;
+}
+
+export const streamInteractWithRecipe = (
+  sessionId: string,
+  studentInput: string,
+  handlers: StreamInteractHandlers,
+): AbortController => {
   if (import.meta.env.VITE_ENABLE_STREAMING !== 'true') {
     throw new Error('Streaming disabled');
   }
@@ -65,17 +76,39 @@ export const streamInteractWithRecipe = (sessionId: string, studentInput: string
     throw new Error('Authentication token required for streaming');
   }
   if (import.meta.env.DEV) {
-    console.log('[API] Creating EventSource for streaming:', {
+    console.log('[API] Starting fetchEventSource for streaming:', {
       sessionId,
       studentInput: studentInput.slice(0, 50),
     });
   }
-  const url = `/api/recipe/interact/stream?sessionId=${encodeURIComponent(sessionId)}&studentInput=${encodeURIComponent(studentInput)}&token=${encodeURIComponent(token)}`;
-  const es = new EventSource(url);
+
+  const controller = new AbortController();
+
+  fetchEventSource('/api/recipe/interact/stream', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ sessionId, studentInput }),
+    signal: controller.signal,
+    onmessage: handlers.onMessage,
+    onerror: (error) => {
+      handlers.onError(error);
+      throw error;
+    },
+    onclose: handlers.onClose,
+  }).catch((err) => {
+    if (err.name !== 'AbortError') {
+      handlers.onError(err);
+    }
+  });
+
   if (import.meta.env.DEV) {
-    console.log('[API] EventSource created, readyState:', es.readyState);
+    console.log('[API] fetchEventSource started for streaming');
   }
-  return es;
+
+  return controller;
 };
 
 export const api = {
