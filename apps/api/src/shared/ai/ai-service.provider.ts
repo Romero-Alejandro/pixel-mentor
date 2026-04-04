@@ -2,6 +2,11 @@ import type pino from 'pino';
 
 import type { Config } from '@/shared/config/index.js';
 import { AIAdapterFactory, type AIAdapterFactoryOptions } from './ai-adapter-factory.js';
+import {
+  LLMGovernanceEngine,
+  DEFAULT_GOVERNANCE_CONFIG,
+  type GovernanceConfig,
+} from './governance/index.js';
 
 import type { AIService } from '@/features/recipe/domain/ports/ai-service.port.js';
 import type {
@@ -19,6 +24,7 @@ export interface IAIServiceProvider {
   questionClassifier: QuestionClassifier;
   comprehensionEvaluator: ComprehensionEvaluator;
   ragService: RAGService;
+  governance: LLMGovernanceEngine;
   health: () => ProviderHealthStatus;
 }
 
@@ -110,6 +116,20 @@ function getPrimaryModel(config: Config): string {
   }
 }
 
+/**
+ * Builds governance configuration from environment variables.
+ */
+function buildGovernanceConfig(config: Config): GovernanceConfig {
+  return {
+    maxPromptLength: config.LLM_MAX_PROMPT_LENGTH,
+    maxUserInputLength: config.LLM_MAX_USER_INPUT_LENGTH,
+    defaultUserQuota: config.LLM_DEFAULT_USER_QUOTA,
+    dailyBudgetUsd: config.LLM_DAILY_BUDGET_USD,
+    maxRequestsPerUserPerHour: config.LLM_MAX_REQUESTS_PER_USER_PER_HOUR,
+    pricing: DEFAULT_GOVERNANCE_CONFIG.pricing,
+  };
+}
+
 // ==================== Provider Factory ====================
 
 /**
@@ -147,6 +167,9 @@ function createProvider(
   // and wraps them in circuit-breaker protected resilient adapters
   const instances = AIAdapterFactory.createResilient(factoryOptions);
 
+  // Initialize governance engine with environment-based configuration
+  const governance = new LLMGovernanceEngine(buildGovernanceConfig(config));
+
   let healthStatus: ProviderHealthStatus | null = null;
 
   const provider: IAIServiceProvider = {
@@ -154,6 +177,7 @@ function createProvider(
     questionClassifier: instances.questionClassifier,
     comprehensionEvaluator: instances.comprehensionEvaluator,
     ragService: instances.ragService,
+    governance,
     health: () => {
       if (!healthStatus) {
         healthStatus = {

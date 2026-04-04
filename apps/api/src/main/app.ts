@@ -24,6 +24,7 @@ import {
 } from '@/features/class/infrastructure/http/class-ai.routes.js';
 import { createClassTemplateRouter } from '@/features/class/infrastructure/http/class-templates.routes.js';
 import { createAdminRouter } from '@/shared/http/admin.routes.js';
+import { createLLMGovernanceRouter } from '@/shared/http/llm-governance.routes.js';
 
 // Health and metrics
 import { healthRouter } from '@/shared/http/health.routes.js';
@@ -247,6 +248,9 @@ export function createApp(deps: AppDependencies): Express {
   // Admin routes (protected, requires ADMIN role)
   const adminMiddleware = [protectedMiddleware, requireRole('ADMIN')] as const;
   app.use('/api/admin', ...adminMiddleware, createAdminRouter(auth.adminUserService));
+
+  // LLM Governance admin routes (protected, requires ADMIN role)
+  app.use('/api/admin/llm-governance', ...adminMiddleware, createLLMGovernanceRouter());
 
   // Metrics endpoint for evaluation monitoring (public, no auth required)
   app.use('/api/metrics/evaluation', createMetricsRouter());

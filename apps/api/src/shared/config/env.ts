@@ -26,6 +26,13 @@ export const envSchema = z.object({
   REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
   ENABLE_STREAMING: z.coerce.boolean().default(false),
   USE_NEW_EVALUATOR_ENGINE: z.coerce.boolean().default(false),
+
+  // LLM Governance - Cost protection and security
+  LLM_MAX_PROMPT_LENGTH: z.coerce.number().int().positive().default(16000),
+  LLM_MAX_USER_INPUT_LENGTH: z.coerce.number().int().positive().default(2000),
+  LLM_DEFAULT_USER_QUOTA: z.coerce.number().int().nonnegative().default(100),
+  LLM_DAILY_BUDGET_USD: z.coerce.number().positive().default(10),
+  LLM_MAX_REQUESTS_PER_USER_PER_HOUR: z.coerce.number().int().positive().default(60),
 });
 
 export type Config = z.infer<typeof envSchema>;
