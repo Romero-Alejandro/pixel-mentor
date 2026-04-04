@@ -1,7 +1,4 @@
-import axios from 'axios';
 import {
-  UserSchema,
-  AuthResponseSchema,
   RecipeSchema,
   SessionSchema,
   StartRecipeOutputSchema,
@@ -32,7 +29,7 @@ import {
   type ClassLesson,
 } from '@pixel-mentor/shared';
 
-import { useAuthStore } from '../stores/authStore';
+import { apiClient, getToken } from './api-client';
 
 export {
   type User,
@@ -52,44 +49,11 @@ export {
   type ClassLesson,
 };
 
-export const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:3001',
-  headers: { 'Content-Type': 'application/json' },
-});
+// Re-export apiClient for backward compatibility
+export { apiClient, getToken } from './api-client';
 
-apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token && config.headers) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-apiClient.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      useAuthStore.getState().logout();
-    }
-    return Promise.reject(error);
-  },
-);
-
-export const setToken = (token: string | null): void => {
-  if (token) {
-    localStorage.setItem('token', token);
-  } else {
-    localStorage.removeItem('token');
-  }
-};
-
-export const getToken = (): string | null => {
-  return localStorage.getItem('token');
-};
-
-export const clearToken = (): void => {
-  localStorage.removeItem('token');
-};
+// Re-export token functions for backward compatibility
+export { setToken, clearToken } from './api-client';
 
 export const streamInteractWithRecipe = (sessionId: string, studentInput: string): EventSource => {
   if (import.meta.env.VITE_ENABLE_STREAMING !== 'true') {
@@ -115,18 +79,7 @@ export const streamInteractWithRecipe = (sessionId: string, studentInput: string
 };
 
 export const api = {
-  login: async (data: { identifier: string; password: string }) => {
-    const { data: res } = await apiClient.post('/api/auth/login', data);
-    return AuthResponseSchema.parse(res);
-  },
-  register: async (data: { email: string; password: string; name: string; username?: string }) => {
-    const { data: res } = await apiClient.post('/api/auth/register', data);
-    return AuthResponseSchema.parse(res);
-  },
-  getCurrentUser: async () => {
-    const { data } = await apiClient.get('/api/auth/me');
-    return { user: UserSchema.parse(data.user) };
-  },
+  // Auth methods moved to features/auth/services/auth.api.ts
   listRecipes: async (activeOnly = true) => {
     const { data } = await apiClient.get(`/api/recipes?activeOnly=${activeOnly}`);
     return RecipeSchema.array().parse(data);
@@ -178,7 +131,6 @@ export const api = {
   listClasses: async (status?: string) => {
     const url = status ? `/api/classes?status=${status}` : '/api/classes';
     const { data } = await apiClient.get(url);
-    // Safe parse: raw data to avoid Zod strict validation failures
     const classes = (data.classes ?? data) as Class[];
     return {
       classes,
@@ -189,12 +141,10 @@ export const api = {
   },
   getClass: async (classId: string) => {
     const { data } = await apiClient.get(`/api/classes/${classId}`);
-    // Safe parse: return raw data to avoid Zod strict validation failures
     return data;
   },
   createClass: async (data: ClassCreate) => {
     const { data: res } = await apiClient.post('/api/classes', ClassCreateSchema.parse(data));
-    // Safe parse: API returns Class entity directly, dates are ISO strings
     return res;
   },
   updateClass: async (classId: string, data: ClassUpdate) => {
@@ -220,19 +170,16 @@ export const api = {
   },
   addClassLesson: async (classId: string, lesson: { recipeId: string; order?: number }) => {
     const { data } = await apiClient.post(`/api/classes/${classId}/lessons`, lesson);
-    // Backend returns ClassLessonEntity, not the full class
     return data;
   },
   removeClassLesson: async (classId: string, lessonId: string) => {
     await apiClient.delete(`/api/classes/${classId}/lessons/${lessonId}`);
-    // Backend returns 204 No Content, return void
     return undefined;
   },
   reorderClassLessons: async (classId: string, lessonIds: string[]) => {
     const { data } = await apiClient.patch(`/api/classes/${classId}/lessons/reorder`, {
       lessonIds,
     });
-    // Backend returns { message: "Lessons reordered successfully" }
     return data;
   },
   updateClassLesson: async (
@@ -241,7 +188,6 @@ export const api = {
     lesson: Partial<{ recipeId: string; order: number }>,
   ) => {
     const { data } = await apiClient.patch(`/api/classes/${classId}/lessons/${lessonId}`, lesson);
-    // Backend returns updated ClassLessonEntity
     return data;
   },
   // ==================== Class Templates ====================
@@ -279,17 +225,14 @@ export const api = {
   },
   // ==================== Recipe Management ====================
   listAllRecipes: async (options?: { status?: 'my' | 'published' }) => {
-    // The backend supports activeOnly param - map 'published' to activeOnly=true
     const activeOnly =
       options?.status === 'published' ? true : options?.status === 'my' ? false : undefined;
     const { data } = await apiClient.get('/api/recipes', { params: { activeOnly } });
-    // Safe parse: raw data to avoid Zod strict validation failures
     const recipes = (data.recipes ?? data) as Recipe[];
     return recipes;
   },
   getRecipe: async (recipeId: string) => {
     const { data } = await apiClient.get(`/api/recipes/${recipeId}`);
-    // Safe parse: return raw data to avoid Zod strict validation failures
     return data as Recipe;
   },
   createRecipe: async (data: {
@@ -310,7 +253,6 @@ export const api = {
     }>;
   }) => {
     const { data: res } = await apiClient.post('/api/recipes', data);
-    // Safe parse: API returns Recipe entity directly
     return res as Recipe;
   },
   updateRecipe: async (
@@ -328,7 +270,6 @@ export const api = {
   },
   deleteRecipe: async (recipeId: string) => {
     await apiClient.delete(`/api/recipes/${recipeId}`);
-    // Backend returns 204 No Content
     return undefined;
   },
   addStep: async (
@@ -345,7 +286,6 @@ export const api = {
     },
   ) => {
     const { data } = await apiClient.post(`/api/recipes/${recipeId}/steps`, step);
-    // Backend returns step entity
     return data as RecipeStep;
   },
   updateStep: async (
@@ -367,12 +307,10 @@ export const api = {
   },
   deleteStep: async (recipeId: string, stepId: string) => {
     await apiClient.delete(`/api/recipes/${recipeId}/steps/${stepId}`);
-    // Backend returns 204 No Content
     return undefined;
   },
   reorderSteps: async (recipeId: string, stepIds: string[]) => {
     const { data } = await apiClient.patch(`/api/recipes/${recipeId}/steps/reorder`, { stepIds });
-    // Backend returns 204 No Content
     return data;
   },
   // ==================== Admin ====================
@@ -388,7 +326,6 @@ export const api = {
     if (options?.page) params.set('page', String(options.page));
     if (options?.limit) params.set('limit', String(options.limit));
     const { data } = await apiClient.get(`/api/admin/users?${params.toString()}`);
-    // Safe parsing: filter out users with invalid data instead of crashing
     const users = (data.users ?? []).map((u: Record<string, unknown>) => ({
       id: String(u.id ?? ''),
       email: String(u.email ?? ''),
@@ -423,5 +360,4 @@ export const api = {
   adminDeleteUser: async (userId: string) => {
     await apiClient.delete(`/api/admin/users/${userId}`);
   },
-  streamInteractWithRecipe,
 };

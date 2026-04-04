@@ -1,9 +1,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { useCallback } from 'react';
+import type { User, Role } from '@pixel-mentor/shared';
 
-import { api, type User, type Role } from '../services/api';
-import { setToken, getToken, clearToken } from '../services/api';
+import { authApi } from '../services/auth.api';
+
+import { setToken, getToken, clearToken } from '@/services/api-client';
 
 interface AuthState {
   user: User | null;
@@ -44,7 +46,9 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
       error: null,
       redirectPath: null,
+
       setAuth: (user, token) => set({ user, token, isAuthenticated: true, isHydrated: true }),
+
       logout: () => {
         clearToken();
         set({
@@ -54,10 +58,11 @@ export const useAuthStore = create<AuthState>()(
           isValidating: false,
         });
       },
+
       login: async (identifier: string, password: string) => {
         set({ isLoading: true, error: null });
         try {
-          const result = await api.login({ identifier, password });
+          const result = await authApi.login({ identifier, password });
           setToken(result.token);
           set({
             user: result.user,
@@ -72,6 +77,7 @@ export const useAuthStore = create<AuthState>()(
           throw err;
         }
       },
+
       register: async (
         email: string,
         password: string,
@@ -81,7 +87,7 @@ export const useAuthStore = create<AuthState>()(
       ) => {
         set({ isLoading: true, error: null });
         try {
-          const result = await api.register({ email, password, name, username });
+          const result = await authApi.register({ email, password, name, username });
           setToken(result.token);
           set({
             user: result.user,
@@ -96,6 +102,7 @@ export const useAuthStore = create<AuthState>()(
           throw err;
         }
       },
+
       checkAuth: async () => {
         const token = getToken();
         if (!token) {
@@ -104,16 +111,20 @@ export const useAuthStore = create<AuthState>()(
         }
         set({ isValidating: true });
         try {
-          const { user } = await api.getCurrentUser();
+          const { user } = await authApi.getCurrentUser();
           set({ user, token, isAuthenticated: true, isValidating: false });
         } catch {
           clearToken();
           set({ user: null, token: null, isAuthenticated: false, isValidating: false });
         }
       },
+
       clearError: () => set({ error: null }),
+
       setRedirectPath: (path) => set({ redirectPath: path }),
+
       clearRedirectPath: () => set({ redirectPath: null }),
+
       _setHydrated: (hydrated: boolean) => set({ isHydrated: hydrated }),
     }),
     {
