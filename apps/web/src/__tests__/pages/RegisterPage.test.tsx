@@ -3,10 +3,24 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import { RegisterPage } from '../../pages/RegisterPage';
-import { useAuthStore } from '../../stores/authStore';
+import { useAuthStore } from '../../features/auth/stores/auth.store';
+
+// Mock AudioContext
+const mockAudio = {
+  playFocus: vi.fn(),
+  playClick: vi.fn(),
+  playClickSecondary: vi.fn(),
+  playSprite: vi.fn(),
+  playMicro: vi.fn(),
+  playRive: vi.fn(),
+};
+vi.mock('@/contexts/AudioContext', () => ({
+  useAudio: () => mockAudio,
+  AudioProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
 
 // Mock the entire authStore module
-vi.mock('../../stores/authStore', () => ({
+vi.mock('../../features/auth/stores/auth.store', () => ({
   useAuthStore: vi.fn(),
 }));
 

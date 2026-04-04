@@ -4,8 +4,22 @@ import { MemoryRouter } from 'react-router-dom';
 
 import { LoginPage } from '../../pages/LoginPage';
 
+// Mock AudioContext
+const mockAudio = {
+  playFocus: vi.fn(),
+  playClick: vi.fn(),
+  playClickSecondary: vi.fn(),
+  playSprite: vi.fn(),
+  playMicro: vi.fn(),
+  playRive: vi.fn(),
+};
+vi.mock('@/contexts/AudioContext', () => ({
+  useAudio: () => mockAudio,
+  AudioProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
 // Mock the entire authStore module
-vi.mock('../../stores/authStore', () => ({
+vi.mock('../../features/auth/stores/auth.store', () => ({
   useAuthStore: vi.fn(),
 }));
 
@@ -19,7 +33,7 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-import { useAuthStore } from '../../stores/authStore';
+import { useAuthStore } from '../../features/auth/stores/auth.store';
 
 describe('LoginPage', () => {
   const mockLogin = vi.fn();
