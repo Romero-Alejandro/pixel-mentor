@@ -17,9 +17,9 @@ import { useShallow } from 'zustand/react/shallow';
 import type { ClassLesson, Recipe } from '@pixel-mentor/shared';
 
 import { useAudio } from '@/contexts/AudioContext';
-import { useRecipeStore } from '@/stores/recipeStore';
+import { useRecipeStore } from '@/features/recipe-management/stores/recipe.store';
 import { Button, Badge, Card, Modal } from '@/components/ui';
-import { RecipeSelector } from '@/components/recipe';
+import { RecipeSelector } from '@/features/recipe-management/components';
 
 interface ClassLessonListProps {
   lessons: ClassLesson[];

@@ -9,7 +9,7 @@ import {
 } from '@tabler/icons-react';
 import type { GenerateClassDraftOutput } from '@pixel-mentor/shared';
 
-import { useClassStore } from '@/stores/classStore';
+import { useClassStore } from '@/features/class-management/stores/class.store';
 import { useAudio } from '@/contexts/AudioContext';
 import { Button, Input } from '@/components/ui';
 
