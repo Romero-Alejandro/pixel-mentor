@@ -2,7 +2,10 @@ import type { CreateUserInput } from '@/features/auth/application/services/admin
 import { AdminUserService } from '@/features/auth/application/services/admin-user.service.js';
 import type { User, UserRole } from '@/features/auth/domain/entities/user.entity.js';
 import type { IUserRepository as UserRepository } from '@/features/auth/domain/ports/user.repository.port.js';
-import { UserAlreadyExistsError, UserNotFoundError } from '@/features/auth/domain/ports/user.repository.port.js';
+import {
+  UserAlreadyExistsError,
+  UserNotFoundError,
+} from '@/features/auth/domain/ports/user.repository.port.js';
 import { ForbiddenError } from '@/features/auth/domain/auth.errors.js';
 import type { IHashingService } from '@/features/auth/domain/ports/hashing.service.port.js';
 
@@ -32,6 +35,7 @@ const createMockUserRepository = (): jest.Mocked<UserRepository> => {
     findByIdentifierWithPassword: jest.fn(),
     create: jest.fn(),
     updateRole: jest.fn(),
+    updateQuota: jest.fn(),
     delete: jest.fn(),
     findAll: jest.fn(),
   };

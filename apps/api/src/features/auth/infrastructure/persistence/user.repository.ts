@@ -8,7 +8,10 @@ import type {
   UserListOptions,
   UserListResult,
 } from '@/features/auth/domain/ports/user.repository.port.js';
-import { UserNotFoundError, UserAlreadyExistsError } from '@/features/auth/domain/ports/user.repository.port.js';
+import {
+  UserNotFoundError,
+  UserAlreadyExistsError,
+} from '@/features/auth/domain/ports/user.repository.port.js';
 
 type PrismaUser = NonNullable<Awaited<ReturnType<typeof prisma.user.findUnique>>>;
 
@@ -170,6 +173,31 @@ export class PrismaUserRepository implements IUserRepository {
       const updated = await prisma.user.update({
         where: { id },
         data: { role },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          name: true,
+          role: true,
+          age: true,
+          quota: true,
+          cohort: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+      return mapToDomain(updated);
+    } catch (error) {
+      handlePrismaError(error, UserNotFoundError, id);
+      throw error;
+    }
+  }
+
+  async updateQuota(id: string, quota: number): Promise<User> {
+    try {
+      const updated = await prisma.user.update({
+        where: { id },
+        data: { quota },
         select: {
           id: true,
           email: true,

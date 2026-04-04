@@ -30,6 +30,8 @@ export interface IUserRepository {
 
   updateRole(id: string, role: UserRole): Promise<User>;
 
+  updateQuota(id: string, quota: number): Promise<User>;
+
   delete(id: string): Promise<void>;
 
   findAll(options: UserListOptions): Promise<UserListResult>;
