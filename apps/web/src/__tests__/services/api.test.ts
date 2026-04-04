@@ -1,22 +1,21 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-import { authApi } from '../../features/auth/services/auth.api';
-
-const mockPost = vi.fn();
-const mockGet = vi.fn();
-
-vi.mock('axios', () => ({
-  default: {
-    create: vi.fn(() => ({
-      get: mockGet,
-      post: mockPost,
-      interceptors: {
-        request: { use: vi.fn((fn) => fn({})) },
-        response: { use: vi.fn((fn) => fn) },
-      },
-    })),
+// Mock api-client BEFORE importing authApi
+vi.mock('../../services/api-client', () => ({
+  apiClient: {
+    get: vi.fn(),
+    post: vi.fn(),
+    patch: vi.fn(),
+    delete: vi.fn(),
   },
+  getToken: vi.fn(() => 'mock-token'),
+  setToken: vi.fn(),
+  clearToken: vi.fn(),
 }));
+
+// Now import authApi - it will use the mocked apiClient
+import { authApi } from '../../features/auth/services/auth.api';
+import { apiClient } from '../../services/api-client';
 
 describe('authApi', () => {
   beforeEach(() => {
@@ -31,11 +30,11 @@ describe('authApi', () => {
           token: 'jwt-token-123',
         },
       };
-      mockPost.mockResolvedValueOnce(mockResponse);
+      (apiClient.post as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockResponse);
 
       const result = await authApi.login({ identifier: 'test@test.com', password: 'password123' });
 
-      expect(mockPost).toHaveBeenCalledWith('/api/auth/login', {
+      expect(apiClient.post).toHaveBeenCalledWith('/api/auth/login', {
         identifier: 'test@test.com',
         password: 'password123',
       });
@@ -45,7 +44,7 @@ describe('authApi', () => {
 
     it('should throw error on invalid credentials', async () => {
       const mockError = new Error('Request failed with status code 401');
-      mockPost.mockRejectedValueOnce(mockError);
+      (apiClient.post as ReturnType<typeof vi.fn>).mockRejectedValueOnce(mockError);
 
       await expect(
         authApi.login({ identifier: 'test@test.com', password: 'wrong' }),
@@ -61,7 +60,7 @@ describe('authApi', () => {
           token: 'jwt-token-456',
         },
       };
-      mockPost.mockResolvedValueOnce(mockResponse);
+      (apiClient.post as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockResponse);
 
       const result = await authApi.register({
         email: 'test@test.com',
@@ -69,7 +68,7 @@ describe('authApi', () => {
         name: 'Test User',
       });
 
-      expect(mockPost).toHaveBeenCalledWith('/api/auth/register', {
+      expect(apiClient.post).toHaveBeenCalledWith('/api/auth/register', {
         email: 'test@test.com',
         password: 'password123',
         name: 'Test User',
@@ -82,11 +81,13 @@ describe('authApi', () => {
   describe('getCurrentUser', () => {
     it('should fetch current user', async () => {
       const mockUser = { id: '1', email: 'test@test.com', name: 'Test', role: 'STUDENT', quota: 0 };
-      mockGet.mockResolvedValueOnce({ data: { user: mockUser } });
+      (apiClient.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        data: { user: mockUser },
+      });
 
       const result = await authApi.getCurrentUser();
 
-      expect(mockGet).toHaveBeenCalledWith('/api/auth/me');
+      expect(apiClient.get).toHaveBeenCalledWith('/api/auth/me');
       expect(result.user).toEqual(mockUser);
     });
   });
