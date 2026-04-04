@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 
 import { useAuthStore, useAuthRedirect } from './features/auth/stores/auth.store';
 import { useGamificationSSE } from './features/gamification/hooks/useGamificationSSE';
-import { Spinner } from './components/ui/Spinner';
+import { ErrorBoundary, Spinner } from './components/ui';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -108,132 +108,134 @@ export default function App() {
   useGamificationSSE(isAuthenticated);
 
   return (
-    <Routes>
-      <Route
-        path="/login"
-        element={
-          <PublicRoute>
-            <LoginPage />
-          </PublicRoute>
-        }
-      />
-      <Route
-        path="/register"
-        element={
-          <PublicRoute>
-            <RegisterPage />
-          </PublicRoute>
-        }
-      />
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <DashboardPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/lesson/:lessonId"
-        element={
-          <ProtectedRoute>
-            <LessonPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/mission-report"
-        element={
-          <ProtectedRoute>
-            <MissionReportPage />
-          </ProtectedRoute>
-        }
-      />
-      {/* Class Routes - Teacher only */}
-      <Route
-        path="/classes"
-        element={
-          <ProtectedRoute>
-            <TeacherRoute>
-              <ClassListPage />
-            </TeacherRoute>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/classes/new"
-        element={
-          <ProtectedRoute>
-            <TeacherRoute>
-              <ClassEditorPage />
-            </TeacherRoute>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/classes/:classId/edit"
-        element={
-          <ProtectedRoute>
-            <TeacherRoute>
-              <ClassEditorPage />
-            </TeacherRoute>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/templates"
-        element={
-          <ProtectedRoute>
-            <TeacherRoute>
-              <ClassTemplatesPage />
-            </TeacherRoute>
-          </ProtectedRoute>
-        }
-      />
-      {/* Admin Routes */}
-      <Route
-        path="/admin/users"
-        element={
-          <ProtectedRoute>
-            <TeacherRoute>
-              <AdminUsersPage />
-            </TeacherRoute>
-          </ProtectedRoute>
-        }
-      />
-      {/* Unit Routes - Teacher only */}
-      <Route
-        path="/units"
-        element={
-          <ProtectedRoute>
-            <TeacherRoute>
-              <RecipesPage />
-            </TeacherRoute>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/units/new/edit"
-        element={
-          <ProtectedRoute>
-            <TeacherRoute>
-              <RecipeEditorPage />
-            </TeacherRoute>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/units/:recipeId/edit"
-        element={
-          <ProtectedRoute>
-            <TeacherRoute>
-              <RecipeEditorPage />
-            </TeacherRoute>
-          </ProtectedRoute>
-        }
-      />
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
-    </Routes>
+    <ErrorBoundary>
+      <Routes>
+        <Route
+          path="/login"
+          element={
+            <PublicRoute>
+              <LoginPage />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <PublicRoute>
+              <RegisterPage />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/lesson/:lessonId"
+          element={
+            <ProtectedRoute>
+              <LessonPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/mission-report"
+          element={
+            <ProtectedRoute>
+              <MissionReportPage />
+            </ProtectedRoute>
+          }
+        />
+        {/* Class Routes - Teacher only */}
+        <Route
+          path="/classes"
+          element={
+            <ProtectedRoute>
+              <TeacherRoute>
+                <ClassListPage />
+              </TeacherRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/classes/new"
+          element={
+            <ProtectedRoute>
+              <TeacherRoute>
+                <ClassEditorPage />
+              </TeacherRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/classes/:classId/edit"
+          element={
+            <ProtectedRoute>
+              <TeacherRoute>
+                <ClassEditorPage />
+              </TeacherRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/templates"
+          element={
+            <ProtectedRoute>
+              <TeacherRoute>
+                <ClassTemplatesPage />
+              </TeacherRoute>
+            </ProtectedRoute>
+          }
+        />
+        {/* Admin Routes */}
+        <Route
+          path="/admin/users"
+          element={
+            <ProtectedRoute>
+              <TeacherRoute>
+                <AdminUsersPage />
+              </TeacherRoute>
+            </ProtectedRoute>
+          }
+        />
+        {/* Unit Routes - Teacher only */}
+        <Route
+          path="/units"
+          element={
+            <ProtectedRoute>
+              <TeacherRoute>
+                <RecipesPage />
+              </TeacherRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/units/new/edit"
+          element={
+            <ProtectedRoute>
+              <TeacherRoute>
+                <RecipeEditorPage />
+              </TeacherRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/units/:recipeId/edit"
+          element={
+            <ProtectedRoute>
+              <TeacherRoute>
+                <RecipeEditorPage />
+              </TeacherRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </ErrorBoundary>
   );
 }

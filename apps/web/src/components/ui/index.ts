@@ -29,4 +29,8 @@ export {
 
 export { ErrorBanner, CompactError } from './ErrorBanner';
 export type { ErrorBannerProps, CompactErrorProps } from './ErrorBanner';
+
+export { ErrorBoundary } from './ErrorBoundary';
+export type { ErrorBoundaryProps } from './ErrorBoundary';
+
 export * from './Modal';
