@@ -1,6 +1,6 @@
 import { type Page, type Locator, expect } from '@playwright/test';
 
-import { BasePage } from '../../../../../tests/base-page';
+import { BasePage } from '../base-page';
 
 /**
  * Page Object for the Gamification Test Page.
