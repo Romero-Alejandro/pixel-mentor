@@ -99,6 +99,8 @@
 ## Running These Tests
 
 ```bash
+# From the apps/web directory
+
 # Install browsers (once)
 npx playwright install chromium
 
@@ -106,13 +108,13 @@ npx playwright install chromium
 npx playwright test
 
 # Run only these tests
-npx playwright test tests/lesson-long-text/
+npx playwright test tests/e2e/lesson-long-text/
 
 # Run with UI
-npx playwright test tests/lesson-long-text/ --ui
+npx playwright test tests/e2e/lesson-long-text/ --ui
 
 # Debug mode
-npx playwright test tests/lesson-long-text/ --debug
+npx playwright test tests/e2e/lesson-long-text/ --debug
 
 # Set environment variables
 TEST_LESSON_ID=your-lesson-id BASE_URL=http://localhost:5173 npx playwright test

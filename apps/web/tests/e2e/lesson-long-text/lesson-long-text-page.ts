@@ -1,6 +1,6 @@
 import { type Page } from '@playwright/test';
 
-import { BasePage } from '../base-page';
+import { BasePage } from '../../base-page';
 
 /**
  * Lesson Page Object for the Lesson Player
