@@ -15,6 +15,8 @@ import { ClassTemplatesPage } from './pages/ClassTemplatesPage';
 import { AdminUsersPage } from './pages/AdminUsersPage';
 import { RecipesPage } from './pages/RecipesPage';
 import { RecipeEditorPage } from './pages/RecipeEditorPage';
+import { GamificationTestPage } from './pages/GamificationTestPage';
+import { LongTextTestPage } from './pages/LongTextTestPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isHydrated, isAuthenticated, isValidating } = useAuthStore();
@@ -233,6 +235,9 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        {/* Test Routes (no auth required) - only available in development/E2E mode */}
+        <Route path="/test/gamification" element={<GamificationTestPage />} />
+        <Route path="/test/lesson-long-text" element={<LongTextTestPage />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

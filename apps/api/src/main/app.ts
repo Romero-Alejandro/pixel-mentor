@@ -218,8 +218,12 @@ export function createApp(deps: AppDependencies): Express {
     ),
   );
 
-  // TTS routes
-  app.use('/api/tts', ttsLimiter, protectedMiddleware, createTTSRouter(tts.ttsService));
+  // TTS routes: in E2E mode, skip auth for easier testing
+  if (process.env.E2E_MODE === 'true') {
+    app.use('/api/tts', ttsLimiter, createTTSRouter(tts.ttsService));
+  } else {
+    app.use('/api/tts', ttsLimiter, protectedMiddleware, createTTSRouter(tts.ttsService));
+  }
 
   // Gamification routes (protected, requires auth)
   app.use(

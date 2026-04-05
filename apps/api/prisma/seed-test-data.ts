@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import argon2 from 'argon2';
 
-import { PrismaClient } from '../src/infrastructure/adapters/database/client.js';
+import { PrismaClient } from '../src/database/client';
 
 const prisma = new PrismaClient();
 
@@ -266,6 +266,13 @@ async function main() {
   const teacherPasswordHash = await argon2.hash('testpassword123', HASH_OPTIONS);
 
   try {
+    // Clear class-related data first (they reference recipes)
+    await prisma.classLesson.deleteMany();
+    await prisma.classVersionLesson.deleteMany();
+    await prisma.classVersion.deleteMany();
+    await prisma.class.deleteMany();
+    await prisma.classTemplate.deleteMany();
+
     await prisma.recipeStep.deleteMany();
     await prisma.activity.deleteMany();
     await prisma.concept.deleteMany();

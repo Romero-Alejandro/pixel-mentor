@@ -137,10 +137,11 @@ async function bootstrap(): Promise<void> {
     if (err.code === 'EADDRINUSE') {
       logger.fatal(
         { port: config.PORT },
-        `Port ${config.PORT} is already in use. Another instance may be running. Kill it or change PORT.`,
+        `Port ${config.PORT} is already in use. Another instance of the API may be running. ` +
+          'Kill the existing process or change the PORT environment variable.',
       );
     } else {
-      logger.fatal(error as Error, 'Server error');
+      logger.fatal(error, 'Server error');
     }
     process.exit(1);
   });

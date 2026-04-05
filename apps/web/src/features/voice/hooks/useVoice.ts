@@ -544,6 +544,14 @@ export function useVoice(): UseVoiceReturn {
           });
 
           eventSource.addEventListener('error', (event: MessageEvent) => {
+            // Ignore empty or non-JSON data events — these are usually connection closures, not application errors
+            if (
+              !event.data ||
+              typeof event.data !== 'string' ||
+              !event.data.trim().startsWith('{')
+            ) {
+              return;
+            }
             try {
               const data = JSON.parse(event.data) as TTSErrorMessageData;
               console.error('Stream error from server', data);

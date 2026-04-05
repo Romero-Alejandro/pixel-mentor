@@ -34,10 +34,8 @@ test.describe('TTS Long Text Streaming', () => {
     async ({ page }) => {
       const lessonPage = new LessonPageObject(page);
 
-      // Navigate to a lesson (uses a test lesson ID — update as needed for your env)
-      // In a real test environment, you'd seed a lesson with > 5000 chars of content
-      const lessonId = process.env.TEST_LESSON_ID || 'lesson-with-long-content';
-      await lessonPage.goto(lessonId);
+      // Navigate to the test page (no lesson ID needed)
+      await lessonPage.goto();
 
       // Wait for the page to load
       await lessonPage.verifyPageLoaded();
@@ -96,15 +94,15 @@ test.describe('TTS Long Text Streaming', () => {
     async ({ page }) => {
       const lessonPage = new LessonPageObject(page);
 
-      const lessonId = process.env.TEST_LESSON_ID || 'lesson-with-long-content';
-      await lessonPage.goto(lessonId);
+      // Navigate to the test page (no lesson ID needed)
+      await lessonPage.goto();
 
       // Wait for page to load
       await lessonPage.verifyPageLoaded();
 
       // Wait for TTS to start streaming (Escuchando indicator)
       // This is the "listening" indicator that appears when isSpeaking=true
-      const listeningIndicator = page.getByText('Escuchando');
+      const listeningIndicator = page.getByRole('status', { name: 'Escuchando' });
       await expect(listeningIndicator).toBeVisible({ timeout: 15000 });
 
       // Verify the "Tu tutor está hablando" indicator is also visible
@@ -151,8 +149,8 @@ test.describe('TTS Long Text Streaming', () => {
     async ({ page }) => {
       const lessonPage = new LessonPageObject(page);
 
-      const lessonId = process.env.TEST_LESSON_ID || 'lesson-with-long-content';
-      await lessonPage.goto(lessonId);
+      // Navigate to the test page (no lesson ID needed)
+      await lessonPage.goto();
 
       // Wait for content to be visible
       await lessonPage.verifyPageLoaded();

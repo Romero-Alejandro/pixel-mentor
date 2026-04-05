@@ -23,7 +23,8 @@ export default defineConfig({
     { name: 'Mobile Safari', use: { ...devices['iPhone 12'] } },
   ],
   webServer: {
-    command: 'cd ../.. && pnpm dev',
+    command:
+      'cd ../.. && pnpm --filter @pixel-mentor/api db:push && pnpm --filter @pixel-mentor/api prisma:seed && E2E_MODE=true VITE_E2E_MODE=true VITE_ENABLE_STREAMING=true pnpm dev',
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
