@@ -131,8 +131,17 @@ async function bootstrap(): Promise<void> {
     logger.info(`API running on port ${config.PORT}`);
   });
 
-  server.on('error', (error: Error) => {
-    logger.fatal(error, 'Server error');
+  server.on('error', (error: unknown) => {
+    // Check for EADDRINUSE to provide a helpful message
+    const err = error as { code?: string };
+    if (err.code === 'EADDRINUSE') {
+      logger.fatal(
+        { port: config.PORT },
+        `Port ${config.PORT} is already in use. Another instance may be running. Kill it or change PORT.`,
+      );
+    } else {
+      logger.fatal(error as Error, 'Server error');
+    }
     process.exit(1);
   });
 

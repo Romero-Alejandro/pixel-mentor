@@ -1,5 +1,6 @@
 import type pino from 'pino';
 
+import OpenAI from 'openai';
 import { OpenAIBaseClientAdapter } from '../open-ai-base-adapter';
 import { AIResponseSchema, ClassificationSchema, ComprehensionSchema } from '../schemas';
 import { BaseRAGAdapter } from '../base-rag-adapter';
@@ -16,7 +17,7 @@ import type { KnowledgeChunkRepository } from '@/features/knowledge/domain/ports
 import type { PromptRepository } from '@/features/recipe/domain/ports/prompt.repository.port.js';
 
 export class GroqAdapter extends BaseGenerativeAdapter implements AIService {
-  private readonly client: any;
+  private readonly client: OpenAI;
   constructor(
     promptRepo: PromptRepository,
     apiKey: string,
@@ -24,7 +25,7 @@ export class GroqAdapter extends BaseGenerativeAdapter implements AIService {
     logger?: pino.Logger,
   ) {
     super(promptRepo, logger);
-    this.client = new (require('openai'))({ apiKey, baseURL: 'https://api.groq.com/openai/v1' });
+    this.client = new OpenAI({ apiKey, baseURL: 'https://api.groq.com/openai/v1' });
   }
 
   async generateResponse(params: any): Promise<AIResponse> {
@@ -101,10 +102,10 @@ export class GroqComprehensionEvaluatorAdapter
 }
 
 export class GroqRAGServiceAdapter extends BaseRAGAdapter {
-  private client: any;
+  private client: OpenAI;
   constructor(apiKey: string, repo: KnowledgeChunkRepository) {
     super(repo);
-    this.client = new (require('openai'))({ apiKey, baseURL: 'https://api.groq.com/openai/v1' });
+    this.client = new OpenAI({ apiKey, baseURL: 'https://api.groq.com/openai/v1' });
   }
   async generateEmbedding(text: string) {
     const res = await this.client.embeddings.create({
