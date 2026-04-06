@@ -54,7 +54,7 @@ export class AuthController {
 
       res.status(201).json({
         user: result.user,
-        accessToken: result.token,
+        token: result.token,
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -78,7 +78,7 @@ export class AuthController {
 
       res.status(200).json({
         user: result.user,
-        accessToken: result.token,
+        token: result.token,
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
