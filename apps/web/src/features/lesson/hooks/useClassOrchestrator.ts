@@ -248,6 +248,36 @@ export function useClassOrchestrator() {
     }
 
     if (pedagogicalState === 'EVALUATION') {
+      // Helper to extract text from string or {text: string} object
+      const extractText = (val: unknown): string => {
+        if (typeof val === 'string') return val;
+        if (
+          val &&
+          typeof val === 'object' &&
+          'text' in val &&
+          typeof (val as { text: unknown }).text === 'string'
+        ) {
+          return (val as { text: string }).text;
+        }
+        return '';
+      };
+
+      // Helper to extract the main content text for display
+      const getMainContent = (content: LessonResponse['staticContent']): string => {
+        if (!content) return '';
+        if (content.activity?.instruction) {
+          return extractText(content.activity.instruction);
+        }
+        return extractText(content.script?.content);
+      };
+
+      // ALSO set the next step's content for FeedbackPanel to display
+      if (staticContent) {
+        setContentText(getMainContent(staticContent));
+        setTransitionText(extractText(staticContent.script?.transition));
+        setClosureText(extractText(staticContent.script?.closure));
+      }
+      
       const msg = feedback || (isCorrect ? '¡Muy bien!' : '¡Sigue intentando!');
       // Calculate proportional XP per question
       const totalActivities = accuracy?.totalActivities || totalSteps || 1;

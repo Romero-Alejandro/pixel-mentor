@@ -1788,6 +1788,7 @@ export class OrchestrateRecipeUseCase {
     // ── AWAITING_START fast path (no streaming needed) ──────────────────────
     if (currentState === 'AWAITING_START') {
       const lower = studentInput.toLowerCase();
+      // Only these words mean "I'm ready to start" - NOT navigation
       const ready = [
         'sí',
         'si',
@@ -1799,26 +1800,54 @@ export class OrchestrateRecipeUseCase {
         'ready',
         'ok',
         'dale',
-        'continuar',
       ].some((w) => lower.includes(w));
 
       if (ready) {
-        const vt = this.buildVoiceText(currentStep);
+        // Advance to next step (step 1 = first content) when user is ready
+        const navNextIdx = this.advanceStep(steps, currentIdx);
+        
+        if (navNextIdx === null) {
+          // No more steps - complete the lesson
+          await this.sessionRepo.complete(sessionId);
+          await this.emitLessonCompleted(
+            session.studentId,
+            session.recipeId,
+            recipe.title,
+            steps,
+            skippedActivities,
+          );
+          const completionContent = this.extractStaticContent(currentStep);
+          yield {
+            type: 'end',
+            reason: 'completed',
+            pedagogicalState: 'COMPLETED',
+            sessionCompleted: true,
+            staticContent: completionContent,
+            lessonProgress: { currentStep: currentIdx, totalSteps: steps.length },
+          };
+          return;
+        }
+
+        // Get the next step and determine its state
+        const nextStep = steps[navNextIdx];
+        const nextStepState = this.stateForStep(nextStep);
+        const navVoiceText = this.buildVoiceText(nextStep);
+        
         await this.record(sessionId, history.length, studentInput, null, currentIdx);
-        await this.record(sessionId, history.length + 1, vt, 'answer', currentIdx);
+        await this.record(sessionId, history.length + 1, navVoiceText, 'answer', currentIdx);
         await this.sessionRepo.updateCheckpoint(sessionId, {
           ...cp,
-          currentState: this.stateForStep(currentStep),
-          currentStepIndex: currentIdx,
+          currentState: nextStepState,
+          currentStepIndex: navNextIdx,
         });
-        yield { type: 'chunk', text: vt };
+        yield { type: 'chunk', text: navVoiceText };
         yield {
           type: 'end',
           reason: 'completed',
-          pedagogicalState: this.stateForStep(currentStep),
+          pedagogicalState: nextStepState,
           sessionCompleted: false,
-          staticContent: this.extractStaticContent(currentStep),
-          lessonProgress: { currentStep: currentIdx, totalSteps: steps.length },
+          staticContent: this.extractStaticContent(nextStep),
+          lessonProgress: { currentStep: navNextIdx, totalSteps: steps.length },
         };
         return;
       }
