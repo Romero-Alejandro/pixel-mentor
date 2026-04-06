@@ -84,6 +84,11 @@ export function useGamificationSSE(enabled = true) {
         },
         onmessage: (event: EventSourceMessage) => {
           try {
+            // Skip empty messages or SSE comments (like heartbeat)
+            if (!event.data || event.data.startsWith(':')) {
+              return;
+            }
+
             const data: SSEEvent = JSON.parse(event.data);
 
             switch (data.type) {
