@@ -382,7 +382,7 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
       expect(result.staticContent.stepType).toBe('activity'); // Question is treated as activity in frontend
       expect(result.staticContent.activity.instruction).toBe('What is the capital of France?');
 
-      // Try incorrect answer for question
+      // Try incorrect answer for question - should stay in ACTIVITY_WAIT for retry
       studentInput = 'London';
       mockComprehensionEvaluator.evaluate.mockResolvedValueOnce({
         result: 'incorrect',
@@ -391,7 +391,7 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
       });
       result = await orchestrator.interact(testSessionId, studentInput, studentId);
 
-      expect(result.pedagogicalState).toBe('EVALUATION');
+      expect(result.pedagogicalState).toBe('ACTIVITY_WAIT'); // Fixed: stays in ACTIVITY_WAIT for retry
       expect(result.voiceText).toBe('Incorrect.');
       expect(result.isCorrect).toBe(false);
 
@@ -427,11 +427,11 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
       expect(result.staticContent.stepType).toBe('activity');
       expect(result.staticContent.activity.instruction).toBe('Select the correct option.');
 
-      // Try incorrect answer for activity
+      // Try incorrect answer for activity - should stay in ACTIVITY_WAIT for retry
       studentInput = 'Option A';
       result = await orchestrator.interact(testSessionId, studentInput, studentId);
 
-      expect(result.pedagogicalState).toBe('EVALUATION'); // Failed attempts < skipAfterFailedAttempts
+      expect(result.pedagogicalState).toBe('ACTIVITY_WAIT'); // Fixed: stays in ACTIVITY_WAIT for retry
       expect(result.voiceText).toBe('Try again.');
       expect(result.isCorrect).toBe(false);
 
@@ -678,7 +678,7 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
       expect(result.pedagogicalState).toBe('ACTIVITY_WAIT');
       expect(result.staticContent.activity.instruction).toBe('What is the capital of France?');
 
-      // Answer incorrectly twice to trigger ACTIVITY_SKIP_OFFER if configured, then repeat
+      // Answer incorrectly - should stay in ACTIVITY_WAIT for retry
       studentInput = 'London';
       mockComprehensionEvaluator.evaluate.mockResolvedValueOnce({
         result: 'incorrect',
@@ -686,8 +686,9 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
         hint: 'It starts with P',
       });
       result = await orchestrator.interact(testSessionId, studentInput, studentId);
-      expect(result.pedagogicalState).toBe('EVALUATION');
+      expect(result.pedagogicalState).toBe('ACTIVITY_WAIT'); // Fixed: stays in ACTIVITY_WAIT for retry
 
+      // Second incorrect answer - after 2 attempts, goes to ACTIVITY_SKIP_OFFER
       studentInput = 'Berlin';
       mockComprehensionEvaluator.evaluate.mockResolvedValueOnce({
         result: 'incorrect',
