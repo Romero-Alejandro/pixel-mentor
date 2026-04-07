@@ -1153,6 +1153,7 @@ export class OrchestrateRecipeUseCase {
           pedagogicalState: this.stateForStep(currentStep),
           staticContent: this.extractStaticContent(currentStep),
           lessonProgress: { currentStep: currentIdx, totalSteps: steps.length },
+          autoAdvance: !this.requiresStudentInput(currentStep.stepType), // Auto-advance for content steps
         };
       }
 

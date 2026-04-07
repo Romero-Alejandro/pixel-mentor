@@ -303,19 +303,24 @@ export function useClassOrchestrator() {
     await speak(voiceText, _voiceSettings);
 
     // AUTO-ADVANCE: If backend signals autoAdvance, automatically proceed to next step
-    // Only applies to content steps - NOT for AWAITING_START or completed states
+    // Only applies to content steps - NOT for completed states
     const currentStateStr = String(pedagogicalState);
-    if (
-      autoAdvance &&
-      !sessionCompleted &&
-      currentStateStr !== 'COMPLETED' &&
-      currentStateStr !== 'AWAITING_START'
-    ) {
+    if (autoAdvance && !sessionCompleted && currentStateStr !== 'COMPLETED') {
       logger.log('[useClassOrchestrator] Auto-advancing to next step', {
         autoAdvance,
         pedagogicalState,
       });
       const next = await doInteract('__auto__');
+      processResponse(next);
+      return;
+    }
+
+    // AWAITING_START: Need to manually advance to first step
+    // The backend returns AWAITING_START but needs user input to transition
+    // Send a default "ready" input to advance automatically
+    if (currentStateStr === 'AWAITING_START' && !sessionCompleted) {
+      logger.log('[useClassOrchestrator] AWAITING_START - auto-advancing to first step');
+      const next = await doInteract('listo');
       processResponse(next);
     }
   }
