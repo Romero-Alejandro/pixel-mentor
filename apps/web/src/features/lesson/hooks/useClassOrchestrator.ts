@@ -176,10 +176,12 @@ export function useClassOrchestrator() {
   }, []);
 
   async function processResponse(raw: LessonResponse): Promise<void> {
-    if (!isMountedRef.current) return;
-
-    // Skip blocked calls from the concurrency guard
-    if ((raw as unknown as { _blocked?: boolean })?._blocked) return;
+    logger.log('[useClassOrchestrator] processResponse called', {
+      pedagogicalState: (raw as any).pedagogicalState,
+      voiceText: (raw as any).voiceText?.substring(0, 50),
+      autoAdvance: (raw as any).autoAdvance,
+      staticContent: (raw as any).staticContent?.stepType,
+    });
 
     const {
       voiceText = '',
@@ -333,6 +335,8 @@ export function useClassOrchestrator() {
   }
 
   async function doInteract(input: string): Promise<LessonResponse> {
+    logger.log('[useClassOrchestrator] doInteract called', { input, isProcessing });
+
     // Guard against concurrent calls (SSE error + onerror both firing)
     if (isInteractingRef.current) {
       // Return a sentinel that processResponse recognizes to skip timer setup
@@ -347,7 +351,10 @@ export function useClassOrchestrator() {
     }
 
     if (import.meta.env.VITE_ENABLE_STREAMING === 'true') {
-      logger.log('[useClassOrchestrator] doInteract: Streaming ENABLED, using fetchEventSource');
+      logger.log('[useClassOrchestrator] doInteract: Streaming ENABLED, using fetchEventSource', {
+        sid,
+        input,
+      });
       try {
         let fullText = '';
         wasStreamingRef.current = true;
