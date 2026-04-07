@@ -62,10 +62,10 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         try {
           const result = await authApi.login({ identifier, password });
-          setToken(result.token);
+          setToken(result.accessToken);
           set({
             user: result.user,
-            token: result.token,
+            token: result.accessToken,
             isAuthenticated: true,
             isLoading: false,
             isHydrated: true,
@@ -87,10 +87,10 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         try {
           const result = await authApi.register({ email, password, name, username });
-          setToken(result.token);
+          setToken(result.accessToken);
           set({
             user: result.user,
-            token: result.token,
+            token: result.accessToken,
             isAuthenticated: true,
             isLoading: false,
             isHydrated: true,

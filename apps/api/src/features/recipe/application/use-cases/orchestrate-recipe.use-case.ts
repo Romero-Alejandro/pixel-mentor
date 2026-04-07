@@ -1352,7 +1352,24 @@ export class OrchestrateRecipeUseCase {
     // ── Máquina de estados ────────────────────────────────────────────────
 
     if (currentState === 'ACTIVE_CLASS' || currentState === 'EXPLANATION') {
-      if (action.type === 'ACCEPT' && classification.intent === 'question' && canAsk()) {
+      // AUTO-ADVANCE: For content steps (intro, content, closure), automatically advance
+      // to the next step without requiring user input
+      const currentStepRequiresInput = this.requiresStudentInput(currentStep.stepType);
+
+      if (!currentStepRequiresInput && action.type !== 'ACCEPT') {
+        // Content step: auto-advance automatically
+        const adv = this.advanceStep(steps, currentIdx);
+        if (adv === null) {
+          willComplete = true;
+          nextState = this.applyStateTransition(currentState, 'COMPLETE');
+        } else {
+          nextIdx = adv;
+          nextState = this.applyStateTransition(currentState, 'AUTO_ADVANCE');
+          // Override to step type state for content/activity steps
+          nextState = this.stateForStep(steps[nextIdx]);
+          voiceText = this.buildVoiceText(steps[nextIdx]);
+        }
+      } else if (action.type === 'ACCEPT' && classification.intent === 'question' && canAsk()) {
         questionCount++;
         lastQuestionTime = new Date().toISOString();
         nextState = this.applyStateTransition(currentState, 'RAISE_HAND');
@@ -1537,7 +1554,8 @@ export class OrchestrateRecipeUseCase {
             responseFeedback = qs.feedback.incorrect;
             isCorrectValue = false;
             const evalEvent =
-              failedAttempts >= this.config.skipAfterFailedAttempts && this.config.enableActivitySkip
+              failedAttempts >= this.config.skipAfterFailedAttempts &&
+              this.config.enableActivitySkip
                 ? 'OFFER_SKIP'
                 : 'EVALUATE_INCORRECT';
             nextState = this.applyStateTransition('EVALUATION', evalEvent);
@@ -1557,7 +1575,8 @@ export class OrchestrateRecipeUseCase {
             failedAttempts++;
             totalWrongAnswers++;
             const evalEvent =
-              failedAttempts >= this.config.skipAfterFailedAttempts && this.config.enableActivitySkip
+              failedAttempts >= this.config.skipAfterFailedAttempts &&
+              this.config.enableActivitySkip
                 ? 'OFFER_SKIP'
                 : 'EVALUATE_INCORRECT';
             nextState = this.applyStateTransition('EVALUATION', evalEvent);
@@ -1689,6 +1708,7 @@ export class OrchestrateRecipeUseCase {
       lessonProgress: { currentStep: nextIdx, totalSteps: steps.length },
       xpEarned,
       accuracy: accuracyData,
+      autoAdvance: !this.requiresStudentInput(currentStep.stepType), // Auto-advance for content steps
     };
   }
 
@@ -1949,6 +1969,7 @@ export class OrchestrateRecipeUseCase {
           reason: 'completed',
           pedagogicalState: 'COMPLETED',
           sessionCompleted: true,
+          staticContent: this.extractStaticContent(currentStep),
           lessonProgress: { currentStep: currentIdx, totalSteps: steps.length },
         };
         return;
@@ -2127,7 +2148,24 @@ export class OrchestrateRecipeUseCase {
     let willComplete = false;
 
     if (currentState === 'ACTIVE_CLASS' || currentState === 'EXPLANATION') {
-      if (action.type === 'ACCEPT' && classification.intent === 'question' && canAsk()) {
+      // AUTO-ADVANCE: For content steps (intro, content, closure), automatically advance
+      // to the next step without requiring user input
+      const currentStepRequiresInput = this.requiresStudentInput(currentStep.stepType);
+
+      if (!currentStepRequiresInput && action.type !== 'ACCEPT') {
+        // Content step: auto-advance automatically
+        const adv = this.advanceStep(steps, currentIdx);
+        if (adv === null) {
+          willComplete = true;
+          nextState = this.applyStateTransition(currentState, 'COMPLETE');
+        } else {
+          nextIdx = adv;
+          nextState = this.applyStateTransition(currentState, 'AUTO_ADVANCE');
+          // Override to step type state for content/activity steps
+          nextState = this.stateForStep(steps[nextIdx]);
+          voiceText = this.buildVoiceText(steps[nextIdx]);
+        }
+      } else if (action.type === 'ACCEPT' && classification.intent === 'question' && canAsk()) {
         questionCount++;
         lastQuestionTime = new Date().toISOString();
         nextState = this.applyStateTransition(currentState, 'RAISE_HAND');
@@ -2390,7 +2428,9 @@ export class OrchestrateRecipeUseCase {
       reason: 'completed',
       pedagogicalState: nextState,
       sessionCompleted: willComplete,
+      staticContent: this.extractStaticContent(steps[nextIdx] ?? currentStep),
       lessonProgress: { currentStep: nextIdx, totalSteps: steps.length },
+      autoAdvance: !this.requiresStudentInput(currentStep.stepType),
     };
   }
   catch(_error: unknown) {

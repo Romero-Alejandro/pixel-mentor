@@ -39,7 +39,7 @@ describe('authStore', () => {
     it('should login successfully and set user state', async () => {
       const mockResponse = {
         user: { id: '1', email: 'test@test.com', name: 'Test', role: 'STUDENT', quota: 0 },
-        token: 'jwt-token-123',
+        accessToken: 'jwt-token-123',
       };
       (authApi.login as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockResponse);
 
@@ -52,7 +52,7 @@ describe('authStore', () => {
 
       const state = useAuthStore.getState();
       expect(state.user).toEqual(mockResponse.user);
-      expect(state.token).toBe(mockResponse.token);
+      expect(state.token).toBe(mockResponse.accessToken);
       expect(state.isAuthenticated).toBe(true);
       expect(state.isLoading).toBe(false);
     });
@@ -73,7 +73,7 @@ describe('authStore', () => {
     it('should register successfully and set user state', async () => {
       const mockResponse = {
         user: { id: '1', email: 'test@test.com', name: 'Test', role: 'STUDENT', quota: 0 },
-        token: 'jwt-token-123',
+        accessToken: 'jwt-token-123',
       };
       (authApi.register as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockResponse);
 
@@ -90,6 +90,7 @@ describe('authStore', () => {
 
       const state = useAuthStore.getState();
       expect(state.user).toEqual(mockResponse.user);
+      expect(state.token).toBe(mockResponse.accessToken);
       expect(state.isAuthenticated).toBe(true);
     });
   });

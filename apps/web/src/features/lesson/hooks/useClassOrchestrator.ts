@@ -27,6 +27,7 @@ interface LessonResponse {
   feedback?: string;
   sessionCompleted?: boolean;
   lessonProgress?: { currentStep: number; totalSteps: number };
+  autoAdvance?: boolean; // Backend signals to auto-advance after TTS
   staticContent?: {
     script?: {
       transition?: string | { text: string };
@@ -188,11 +189,12 @@ export function useClassOrchestrator() {
       feedback,
       sessionCompleted,
       lessonProgress,
+      autoAdvance,
       xpEarned,
       accuracy,
     } = raw;
 
-    // Simply update state and speak - NO business logic, NO auto-advance
+    // Simply update state and speak - NO business logic
     // The backend drives the flow via pedagogicalState
     if (lessonProgress) {
       setCurrentStep(lessonProgress.currentStep);
@@ -297,10 +299,21 @@ export function useClassOrchestrator() {
     setFeedbackData(null);
     setUIState('concentration');
 
-    // Just speak the content - NO auto-advance
-    // The backend will send the next state when the student provides input
+    // Speak the content
     await speak(voiceText, _voiceSettings);
-    // Wait for user interaction - no timer-based auto-advance
+
+    // AUTO-ADVANCE: If backend signals autoAdvance, automatically proceed to next step
+    // This applies to content steps (intro, content, closure) that should auto-progress
+    if (autoAdvance && !sessionCompleted && String(pedagogicalState) !== 'COMPLETED') {
+      logger.log('[useClassOrchestrator] Auto-advancing to next step', {
+        autoAdvance,
+        pedagogicalState,
+      });
+      // Trigger next step automatically without user input
+      setTimeout(() => {
+        doInteract('__auto__').then(processResponse).catch(console.error);
+      }, 500); // Small delay for smooth transition
+    }
   }
 
   async function doInteract(input: string): Promise<LessonResponse> {

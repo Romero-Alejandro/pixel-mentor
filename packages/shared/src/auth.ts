@@ -23,13 +23,18 @@ export const RegisterInputSchema = z.object({
   email: z.string().email('Correo electrónico inválido'),
   password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
   name: z.string().min(1, 'El nombre es requerido').max(100),
-  username: z.string().min(3).max(30).regex(/^[a-zA-Z0-9_]+$/, 'Solo letras, números y guiones bajos').optional(),
+  username: z
+    .string()
+    .min(3)
+    .max(30)
+    .regex(/^[a-zA-Z0-9_]+$/, 'Solo letras, números y guiones bajos')
+    .optional(),
   age: z.number().int().positive().optional(),
 });
 
 export const AuthResponseSchema = z.object({
   user: UserSchema,
-  token: z.string(),
+  accessToken: z.string(),
 });
 
 // Error response schema

@@ -48,6 +48,7 @@ export type StateEventType =
   | 'OFFER_SKIP' // Ofrecer saltar actividad
   | 'SKIP_ACTIVITY' // Procesar decisión de salto
   | 'REPEAT_CONCEPT' // Repetir explicación del tema
+  | 'AUTO_ADVANCE' // Avanzar automáticamente sin input del usuario
 
   // Eventos de preguntas y dudas
   | 'RAISE_HAND' // El estudiante tiene una pregunta
@@ -88,7 +89,8 @@ const transitions: Record<PedagogicalState, Partial<Record<StateEventType, Pedag
   EXPLANATION: {
     RAISE_HAND: 'RESOLVING_DOUBT',
     CLARIFY: 'CLARIFYING',
-    CONTINUE: 'EXPLANATION', // Avanzar al siguiente contenido
+    CONTINUE: 'EXPLANATION', // Avanzar al siguiente contenido (input del usuario)
+    AUTO_ADVANCE: 'EXPLANATION', // Avanzar automáticamente sin input del usuario
     ADVANCE: 'EXPLANATION', // Avanzar al siguiente paso
     COMPLETE: 'COMPLETED', // Completar la lección
     ACTIVITY_TIMEOUT: 'ACTIVITY_INACTIVITY_WARNING',
@@ -134,7 +136,6 @@ const transitions: Record<PedagogicalState, Partial<Record<StateEventType, Pedag
     EVALUATE_PARTIAL: 'EVALUATION',
     RAISE_HAND: 'RESOLVING_DOUBT',
   },
-
 
   // Evaluando respuesta
   EVALUATION: {
