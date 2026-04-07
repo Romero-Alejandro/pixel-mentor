@@ -305,12 +305,15 @@ export function useClassOrchestrator() {
     await speak(voiceText, _voiceSettings);
 
     // AUTO-ADVANCE: If backend signals autoAdvance, automatically proceed to next step
-    // Only applies to content steps - NOT for completed states
+    // Also auto-advance for EXPLANATION states (content steps) even if autoAdvance is undefined
     const currentStateStr = String(pedagogicalState);
-    if (autoAdvance && !sessionCompleted && currentStateStr !== 'COMPLETED') {
+    const shouldAutoAdvance = autoAdvance || currentStateStr === 'EXPLANATION';
+
+    if (shouldAutoAdvance && !sessionCompleted && currentStateStr !== 'COMPLETED') {
       logger.log('[useClassOrchestrator] Auto-advancing to next step', {
         autoAdvance,
         pedagogicalState,
+        reason: currentStateStr === 'EXPLANATION' ? 'implicit for content step' : 'explicit flag',
       });
       const next = await doInteract('__auto__');
       processResponse(next);

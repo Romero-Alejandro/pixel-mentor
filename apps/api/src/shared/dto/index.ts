@@ -62,6 +62,11 @@ export const StartRecipeOutputSchema = z.object({
   isRepeat: z.boolean().optional(),
   staticContent: StaticContentSchema.optional(),
   config: z.record(z.string(), z.unknown()).optional(),
+  autoAdvance: z.boolean().optional(),
+  lessonProgress: z.object({ currentStep: z.number(), totalSteps: z.number() }).optional(),
+  contentSteps: z
+    .array(z.object({ stepIndex: z.number(), stepType: z.string(), staticContent: z.any() }))
+    .optional(),
 });
 export type StartRecipeOutput = z.infer<typeof StartRecipeOutputSchema>;
 

@@ -941,6 +941,8 @@ export class OrchestrateRecipeUseCase {
             title: recipe.title,
           })
         : `¡Bienvenido de vuelta, ${name}! Continuemos con ${recipe.title}.`;
+
+      const stepRequiresInput = this.requiresStudentInput(steps[idx]?.stepType);
       return {
         sessionId: existing.id,
         voiceText: resumeMsg,
@@ -953,6 +955,7 @@ export class OrchestrateRecipeUseCase {
         needsStart: needsToStart,
         lessonProgress: { currentStep: idx, totalSteps: steps.length },
         contentSteps: this.buildContentSteps(steps),
+        autoAdvance: needsToStart ? false : !stepRequiresInput, // Auto-advance if not needsStart and step doesn't require input
       };
     }
 
