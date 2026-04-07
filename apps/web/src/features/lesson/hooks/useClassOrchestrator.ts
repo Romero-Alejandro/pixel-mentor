@@ -368,16 +368,20 @@ export function useClassOrchestrator() {
           onMessage: (event: EventSourceMessage) => {
             if (!isMountedRef.current) return;
             try {
-              // Event format from backend: "event: end\ndata: {...}\n\n"
-              // event.data contains the JSON, event.event contains the event type ('end' or 'chunk')
+              // Log raw event for debugging
+              logger.log('[useClassOrchestrator] SSE event received', {
+                eventType: event.event,
+                dataPreview: event.data?.substring(0, 100),
+              });
+
               const data = JSON.parse(event.data);
 
               // Check the EVENT TYPE (event.event), not data.type
               if (event.event === 'end') {
-                // Use complete data from 'end' event
-                logger.log('[useClassOrchestrator] Received end event', {
+                logger.log('[useClassOrchestrator] END event received', {
                   pedagogicalState: data.pedagogicalState,
                   autoAdvance: data.autoAdvance,
+                  staticContent: data.staticContent?.stepType,
                 });
                 resolveStream(data as LessonResponse);
                 return;
@@ -415,14 +419,23 @@ export function useClassOrchestrator() {
             if (!isMountedRef.current) return;
             setStoreStreaming(false);
             cleanup();
-            // Note: The 'end' event should have been handled by onMessage.
-            // If we reach here without receiving 'end', it might be an error.
-            // However, don't try to resolve with partial data - let the caller handle timeout.
             isInteractingRef.current = false;
-            // If fullText exists but no 'end' event was received, something went wrong
-            if (!fullText) {
-              console.warn('[ClassOrchestrator] Stream closed without receiving end event');
+
+            // If we received streaming chunks but never got 'end' event, fallback
+            if (fullText) {
+              logger.log(
+                '[useClassOrchestrator] Stream closed with chunks but no end event, using chunks',
+              );
+              resolveStream({
+                voiceText: fullText,
+                pedagogicalState: 'EXPLANATION',
+              } as LessonResponse);
+              return;
             }
+
+            logger.warn(
+              '[useClassOrchestrator] Stream closed without receiving end event or chunks',
+            );
           },
         });
 

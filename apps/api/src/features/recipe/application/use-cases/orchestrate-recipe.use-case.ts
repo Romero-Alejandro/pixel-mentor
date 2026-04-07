@@ -1889,6 +1889,10 @@ export class OrchestrateRecipeUseCase {
     // ── AWAITING_START fast path (no streaming needed) ──────────────────────
     if (currentState === 'AWAITING_START') {
       const lower = studentInput.toLowerCase();
+      orchestrateLogger.info(
+        { studentInput, lower, currentIdx, stepType: currentStep.stepType },
+        '[interactStream] AWAITING_START - checking if input triggers start',
+      );
       const ready = [
         'sí',
         'si',
@@ -1904,6 +1908,15 @@ export class OrchestrateRecipeUseCase {
       ].some((w) => lower.includes(w));
 
       if (ready) {
+        orchestrateLogger.info(
+          {
+            ready,
+            currentIdx,
+            stepType: currentStep.stepType,
+            stateForStep: this.stateForStep(currentStep),
+          },
+          '[interactStream] AWAITING_START - matched ready input, will transition',
+        );
         const vt = this.buildVoiceText(currentStep);
         await this.record(sessionId, history.length, studentInput, null, currentIdx);
         await this.record(sessionId, history.length + 1, vt, 'answer', currentIdx);
