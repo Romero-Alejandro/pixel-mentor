@@ -319,8 +319,15 @@ export function useClassOrchestrator() {
     // The backend returns AWAITING_START but needs user input to transition
     // Send a default "ready" input to advance automatically
     if (currentStateStr === 'AWAITING_START' && !sessionCompleted) {
-      logger.log('[useClassOrchestrator] AWAITING_START - auto-advancing to first step');
+      logger.log('[useClassOrchestrator] AWAITING_START - auto-advancing to first step', {
+        autoAdvance,
+        voiceText: voiceText?.substring(0, 50),
+      });
       const next = await doInteract('listo');
+      logger.log('[useClassOrchestrator] AWAITING_START advance result', {
+        nextState: next.pedagogicalState,
+        nextAutoAdvance: (next as any).autoAdvance,
+      });
       processResponse(next);
     }
   }

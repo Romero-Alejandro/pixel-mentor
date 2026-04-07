@@ -1036,6 +1036,7 @@ export class OrchestrateRecipeUseCase {
       needsStart: true,
       lessonProgress: { currentStep: 0, totalSteps: steps.length },
       contentSteps: this.buildContentSteps(steps),
+      autoAdvance: false, // AWAITING_START needs explicit input to advance
     };
   }
 
@@ -1919,6 +1920,7 @@ export class OrchestrateRecipeUseCase {
           sessionCompleted: false,
           staticContent: this.extractStaticContent(currentStep),
           lessonProgress: { currentStep: currentIdx, totalSteps: steps.length },
+          autoAdvance: !this.requiresStudentInput(currentStep.stepType),
         };
         return;
       }
