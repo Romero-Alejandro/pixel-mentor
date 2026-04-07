@@ -27,7 +27,7 @@ interface LessonResponse {
   feedback?: string;
   sessionCompleted?: boolean;
   lessonProgress?: { currentStep: number; totalSteps: number };
-  autoAdvance?: boolean; // Backend signals: can auto-advance after TTS (content steps)
+  // autoAdvance removed - frontend determines auto-advance from pedagogicalState
   staticContent?: {
     script?: {
       transition?: string | { text: string };
@@ -191,10 +191,18 @@ export function useClassOrchestrator() {
       feedback,
       sessionCompleted,
       lessonProgress,
-      autoAdvance,
+      // autoAdvance now computed from pedagogicalState (see below)
       xpEarned,
       accuracy,
     } = raw;
+
+    // AUTO-ADVANCE LOGIC: Simple and deterministic
+    // - Content states (EXPLANATION, CLARIFYING, etc.): auto-advance
+    // - Interactive states (ACTIVITY_WAIT, QUESTION, EVALUATION): wait for user
+    const state = pedagogicalState as string;
+    const needsUserInput =
+      state === 'ACTIVITY_WAIT' || state === 'QUESTION' || state === 'EVALUATION';
+    const canAutoAdvance = !needsUserInput && !sessionCompleted;
 
     // Simply update state and speak - NO business logic
     // The backend drives the flow via pedagogicalState
@@ -304,18 +312,11 @@ export function useClassOrchestrator() {
     // Speak the content and wait for completion
     await speak(voiceText, _voiceSettings);
 
-    // AUTO-ADVANCE: After TTS completes, automatically advance if backend signals it's safe
-    // Backend knows which steps are content-only (autoAdvance: true) vs require input
-    const state = pedagogicalState as string;
-    const needsUserInput =
-      state === 'ACTIVITY_WAIT' || state === 'QUESTION' || state === 'EVALUATION';
-
-    const canAutoAdvance = autoAdvance && !sessionCompleted && !needsUserInput;
-
+    // AUTO-ADVANCE: After TTS completes, automatically advance if safe
+    // Uses canAutoAdvance computed at the top of processResponse
     if (canAutoAdvance) {
       logger.log('[useClassOrchestrator] Auto-advancing to next step', {
         pedagogicalState,
-        autoAdvance,
       });
       const next = await doInteract('__auto__');
       processResponse(next);
@@ -323,7 +324,7 @@ export function useClassOrchestrator() {
     }
 
     // AWAITING_START: One-time trigger to start the lesson (first interaction only)
-    // After this, the lesson flows automatically via autoAdvance
+    // After this, the lesson flows automatically via canAutoAdvance
     if (pedagogicalState === 'AWAITING_START' && !sessionCompleted) {
       logger.log('[useClassOrchestrator] AWAITING_START - triggering start');
       const next = await doInteract('listo');
