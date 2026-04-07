@@ -299,20 +299,24 @@ export function useClassOrchestrator() {
     setFeedbackData(null);
     setUIState('concentration');
 
-    // Speak the content
+    // Speak the content and wait for completion
     await speak(voiceText, _voiceSettings);
 
     // AUTO-ADVANCE: If backend signals autoAdvance, automatically proceed to next step
-    // This applies to content steps (intro, content, closure) that should auto-progress
-    if (autoAdvance && !sessionCompleted && String(pedagogicalState) !== 'COMPLETED') {
+    // Only applies to content steps - NOT for AWAITING_START or completed states
+    const currentStateStr = String(pedagogicalState);
+    if (
+      autoAdvance &&
+      !sessionCompleted &&
+      currentStateStr !== 'COMPLETED' &&
+      currentStateStr !== 'AWAITING_START'
+    ) {
       logger.log('[useClassOrchestrator] Auto-advancing to next step', {
         autoAdvance,
         pedagogicalState,
       });
-      // Trigger next step automatically without user input
-      setTimeout(() => {
-        doInteract('__auto__').then(processResponse).catch(console.error);
-      }, 500); // Small delay for smooth transition
+      const next = await doInteract('__auto__');
+      processResponse(next);
     }
   }
 
@@ -352,13 +356,24 @@ export function useClassOrchestrator() {
           onMessage: (event: EventSourceMessage) => {
             if (!isMountedRef.current) return;
             try {
-              const { text } = JSON.parse(event.data);
-              fullText += text;
-              streamingChunksRef.current = [...streamingChunksRef.current, text];
-              setStreamingChunks(streamingChunksRef.current);
-              setTimeout(() => {
-                setContentText((prev) => prev + text);
-              }, 0);
+              const data = JSON.parse(event.data);
+
+              // Handle 'end' event with complete response data
+              if (data.type === 'end') {
+                // Use complete data from 'end' event instead of accumulated text
+                resolveStream(data as LessonResponse);
+                return;
+              }
+
+              // Handle 'chunk' event for streaming text
+              if (data.type === 'chunk' && data.text) {
+                fullText += data.text;
+                streamingChunksRef.current = [...streamingChunksRef.current, data.text];
+                setStreamingChunks(streamingChunksRef.current);
+                setTimeout(() => {
+                  setContentText((prev) => prev + data.text);
+                }, 0);
+              }
             } catch (e) {
               console.error('[ClassOrchestrator] Error in message handler:', e);
             }
@@ -382,21 +397,13 @@ export function useClassOrchestrator() {
             if (!isMountedRef.current) return;
             setStoreStreaming(false);
             cleanup();
-            try {
-              // Try to parse the last message as the final response
-              // If the backend sends an 'end' event with data, parse it
-              // Otherwise, use the accumulated fullText
-              isInteractingRef.current = false;
-              resolveStream({ voiceText: fullText } as LessonResponse);
-            } catch (e) {
-              console.error('[ClassOrchestrator] Error in close handler, falling back to POST:', e);
-              api
-                .interactWithRecipe(sid, input)
-                .then((res) => {
-                  isInteractingRef.current = false;
-                  resolveStream(res as LessonResponse);
-                })
-                .catch(rejectStream);
+            // Note: The 'end' event should have been handled by onMessage.
+            // If we reach here without receiving 'end', it might be an error.
+            // However, don't try to resolve with partial data - let the caller handle timeout.
+            isInteractingRef.current = false;
+            // If fullText exists but no 'end' event was received, something went wrong
+            if (!fullText) {
+              console.warn('[ClassOrchestrator] Stream closed without receiving end event');
             }
           },
         });
@@ -440,17 +447,10 @@ export function useClassOrchestrator() {
       contentStepsRef.current = contentSteps as typeof contentStepsRef.current;
       contentStepIndexRef.current = 0;
 
-      // Speak the welcome message
-      speak(startResult.voiceText || '¡Bienvenido!', _voiceSettings).catch((e) =>
-        console.error('[ClassOrchestrator] Speak error:', e),
-      );
-
-      // Don't call processResponse(startResult) — it has pedagogicalState: 'AWAITING_START'
-      // which would show the same step 0 content again and create a duplicate timer.
-      // Instead, directly advance to the first content step via the backend.
-      // The AWAITING_START fast path will transition to EXPLANATION for step 0.
-      const firstStep = await doInteract('continuar');
-      processResponse(firstStep);
+      // Simply process the start result - the backend returns AWAITING_START
+      // The frontend's auto-advance logic will handle transitioning to the first step
+      // No need to manually send 'continuar' - that was causing double advancement
+      processResponse(startResult);
 
       return Ok(undefined);
     } catch (e) {
