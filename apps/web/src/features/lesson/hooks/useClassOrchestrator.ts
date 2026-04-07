@@ -369,8 +369,8 @@ export function useClassOrchestrator() {
     }
   }
 
-  async function doInteract(input: string): Promise<LessonResponse> {
-    logger.log('[useClassOrchestrator] doInteract called', { input, isProcessing });
+  async function doInteract(input: string, retries = 3): Promise<LessonResponse> {
+    logger.log('[useClassOrchestrator] doInteract called', { input, isProcessing, retries });
 
     // Guard against concurrent calls (SSE error + onerror both firing)
     if (isInteractingRef.current) {
@@ -387,117 +387,109 @@ export function useClassOrchestrator() {
       throw new Error('Sesión no activa');
     }
 
-    if (import.meta.env.VITE_ENABLE_STREAMING === 'true') {
-      logger.log('[useClassOrchestrator] doInteract: Streaming ENABLED, using fetchEventSource', {
-        sid,
-        input,
-      });
-      try {
-        let fullText = '';
-        wasStreamingRef.current = true;
-        setStoreStreaming(true);
-        setStreamError(null);
-        clearStream();
-        setContentText('');
-
-        // Promise-based resolution: resolves when stream ends, rejects on error
-        let resolveStream: (value: LessonResponse) => void;
-        let rejectStream: (reason: unknown) => void;
-        const streamPromise = new Promise<LessonResponse>((resolve, reject) => {
-          resolveStream = resolve;
-          rejectStream = reject;
+    // Helper function to make the API call with retry logic
+    async function callAPI(): Promise<LessonResponse> {
+      if (import.meta.env.VITE_ENABLE_STREAMING === 'true') {
+        logger.log('[useClassOrchestrator] doInteract: Streaming ENABLED, using fetchEventSource', {
+          sid,
+          input,
         });
+        try {
+          let fullText = '';
+          wasStreamingRef.current = true;
+          setStoreStreaming(true);
+          setStreamError(null);
+          clearStream();
+          setContentText('');
 
-        abortControllerRef.current = streamInteractWithRecipe(sid, input, {
-          onMessage: (event: EventSourceMessage) => {
-            if (!isMountedRef.current) return;
-            try {
-              // Log raw event for debugging
-              logger.log('[useClassOrchestrator] SSE event received', {
-                eventType: event.event,
-                dataPreview: event.data?.substring(0, 100),
-              });
+          // Promise-based resolution: resolves when stream ends, rejects on error
+          let resolveStream: (value: LessonResponse) => void;
+          let rejectStream: (reason: unknown) => void;
+          const streamPromise = new Promise<LessonResponse>((resolve, reject) => {
+            resolveStream = resolve;
+            rejectStream = reject;
+          });
 
-              const data = JSON.parse(event.data);
-
-              // Check the EVENT TYPE (event.event), not data.type
-              if (event.event === 'end') {
-                logger.log('[useClassOrchestrator] END event received', {
-                  pedagogicalState: data.pedagogicalState,
-                  autoAdvance: data.autoAdvance,
-                  staticContent: data.staticContent?.stepType,
+          abortControllerRef.current = streamInteractWithRecipe(sid!, input, {
+            onMessage: (event: EventSourceMessage) => {
+              if (!isMountedRef.current) return;
+              try {
+                // Log raw event for debugging
+                logger.log('[useClassOrchestrator] SSE event received', {
+                  eventType: event.event,
+                  dataPreview: event.data?.substring(0, 100),
                 });
-                resolveStream(data as LessonResponse);
-                return;
+
+                const data = JSON.parse(event.data);
+
+                // Check the EVENT TYPE (event.event), not data.type
+                if (event.event === 'end') {
+                  logger.log('[useClassOrchestrator] END event received', {
+                    pedagogicalState: data.pedagogicalState,
+                    staticContent: data.staticContent?.stepType,
+                  });
+                  resolveStream(data as LessonResponse);
+                  return;
+                }
+
+                // Handle 'chunk' event for streaming text
+                if (event.event === 'chunk') {
+                  fullText += data.text || '';
+                  setContentText(fullText);
+                  return;
+                }
+
+                // Handle 'error' event
+                if (event.event === 'error') {
+                  logger.error('[useClassOrchestrator] SSE error event', { data });
+                  rejectStream(new Error(data.message || 'Stream error'));
+                  return;
+                }
+              } catch (e) {
+                logger.error('[useClassOrchestrator] SSE parse error', { e, data: event.data });
+                rejectStream(e);
               }
-
-              // Handle 'chunk' event for streaming text
-              if (event.event === 'chunk' && data.text) {
-                fullText += data.text;
-                streamingChunksRef.current = [...streamingChunksRef.current, data.text];
-                setStreamingChunks(streamingChunksRef.current);
-                setTimeout(() => {
-                  setContentText((prev) => prev + data.text);
-                }, 0);
+            },
+            onError: (error: Error) => {
+              logger.error('[useClassOrchestrator] SSE onError', { error: error.message });
+              if (error.message?.includes('429') || error.message?.includes('Too Many Requests')) {
+                logger.warn('[useClassOrchestrator] Rate limited (429), will retry...');
+                rejectStream(error);
+              } else {
+                rejectStream(error);
               }
-            } catch (e) {
-              console.error('[ClassOrchestrator] Error in message handler:', e);
-            }
-          },
-          onError: (_error: Error) => {
-            if (!isMountedRef.current) return;
-            // Only fallback once — onerror may fire redundantly
-            if (!isInteractingRef.current) return;
-            console.error('[ClassOrchestrator] SSE error received, falling back to POST');
-            setStoreStreaming(false);
-            cleanup();
-            api
-              .interactWithRecipe(sid, input)
-              .then((res) => {
-                isInteractingRef.current = false;
-                resolveStream(res as LessonResponse);
-              })
-              .catch(rejectStream);
-          },
-          onClose: () => {
-            if (!isMountedRef.current) return;
-            setStoreStreaming(false);
-            cleanup();
-            isInteractingRef.current = false;
+            },
+            onClose: () => {
+              logger.log('[useClassOrchestrator] Stream closed');
+            },
+          });
 
-            // If we received streaming chunks but never got 'end' event, fallback
-            if (fullText) {
-              logger.log(
-                '[useClassOrchestrator] Stream closed with chunks but no end event, using chunks',
-              );
-              resolveStream({
-                voiceText: fullText,
-                pedagogicalState: 'EXPLANATION',
-              } as LessonResponse);
-              return;
-            }
-
-            logger.warn(
-              '[useClassOrchestrator] Stream closed without receiving end event or chunks',
-            );
-          },
-        });
-
-        return await streamPromise;
-      } catch (error) {
-        console.error(
-          '[ClassOrchestrator] Failed to setup streaming, falling back to POST:',
-          error,
-        );
+          return await streamPromise;
+        } catch (error) {
+          const err = error as any;
+          // Check if it's a 429 error and we have retries left
+          if (retries > 0 && (err?.response?.status === 429 || err?.message?.includes('429'))) {
+            const backoffMs = Math.pow(2, 3 - retries) * 1000; // 1s, 2s, 4s
+            logger.warn(`[useClassOrchestrator] Rate limited, retrying in ${backoffMs}ms...`);
+            await new Promise((r) => setTimeout(r, backoffMs));
+            return doInteract(input, retries - 1);
+          }
+          console.error(
+            '[ClassOrchestrator] Failed to setup streaming, falling back to POST:',
+            error,
+          );
+          isInteractingRef.current = false;
+          return (await api.interactWithRecipe(sid!, input)) as LessonResponse;
+        }
+      }
+      try {
+        return (await api.interactWithRecipe(sid!, input)) as LessonResponse;
+      } finally {
         isInteractingRef.current = false;
-        return (await api.interactWithRecipe(sid, input)) as LessonResponse;
       }
     }
-    try {
-      return (await api.interactWithRecipe(sid, input)) as LessonResponse;
-    } finally {
-      isInteractingRef.current = false;
-    }
+
+    return await callAPI();
   }
 
   async function startClass(lessonId: string): Promise<Result<void, Error>> {
