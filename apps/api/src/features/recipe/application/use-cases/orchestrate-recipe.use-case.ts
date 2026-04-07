@@ -1177,6 +1177,7 @@ export class OrchestrateRecipeUseCase {
     // Skip LLM calls for simple navigation inputs like "continuar", "siguiente", etc.
     // These inputs should just advance to the next step using static content.
     const navWords = [
+      '__auto__', // Auto-advance trigger from frontend
       'continuar',
       'siguiente',
       'next',
@@ -1244,6 +1245,7 @@ export class OrchestrateRecipeUseCase {
           pedagogicalState: 'ACTIVITY_WAIT' as PedagogicalState,
           staticContent: this.extractStaticContent(nextStep),
           lessonProgress: { currentStep: navNextIdx, totalSteps: steps.length },
+          autoAdvance: false, // User must answer the question
         };
       }
 
@@ -1266,6 +1268,7 @@ export class OrchestrateRecipeUseCase {
           pedagogicalState: 'ACTIVITY_WAIT' as PedagogicalState,
           staticContent: this.extractStaticContent(nextStep),
           lessonProgress: { currentStep: navNextIdx, totalSteps: steps.length },
+          autoAdvance: false, // User must complete the activity
         };
       }
 
@@ -1289,6 +1292,7 @@ export class OrchestrateRecipeUseCase {
         pedagogicalState: navNextState as PedagogicalState,
         staticContent: this.extractStaticContent(nextStep),
         lessonProgress: { currentStep: navNextIdx, totalSteps: steps.length },
+        autoAdvance: !this.requiresStudentInput(nextStep.stepType), // Auto-advance for content steps
       };
     }
 
@@ -1958,6 +1962,7 @@ export class OrchestrateRecipeUseCase {
     // ── Navigation Fast Path (streaming) ─────────────────────────────────
     // Skip LLM calls for simple navigation inputs. Use static content only.
     const navWords = [
+      '__auto__', // Auto-advance trigger from frontend
       'continuar',
       'siguiente',
       'next',

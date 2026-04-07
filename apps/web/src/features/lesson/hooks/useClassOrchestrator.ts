@@ -27,7 +27,7 @@ interface LessonResponse {
   feedback?: string;
   sessionCompleted?: boolean;
   lessonProgress?: { currentStep: number; totalSteps: number };
-  // autoAdvance removed - backend controls flow deterministically via pedagogicalState
+  autoAdvance?: boolean; // Backend signals: can auto-advance after TTS (content steps)
   staticContent?: {
     script?: {
       transition?: string | { text: string };
@@ -191,7 +191,7 @@ export function useClassOrchestrator() {
       feedback,
       sessionCompleted,
       lessonProgress,
-      // autoAdvance removed - backend controls flow
+      autoAdvance,
       xpEarned,
       accuracy,
     } = raw;
@@ -304,12 +304,27 @@ export function useClassOrchestrator() {
     // Speak the content and wait for completion
     await speak(voiceText, _voiceSettings);
 
-    // SIMPLIFIED: No auto-advance in frontend.
-    // The backend decides when to advance - frontend just renders what backend sends.
-    // For AWAITING_START, we need one initial trigger to start the lesson.
-    const currentStateStr = String(pedagogicalState);
+    // AUTO-ADVANCE: After TTS completes, automatically advance if backend signals it's safe
+    // Backend knows which steps are content-only (autoAdvance: true) vs require input
+    const state = pedagogicalState as string;
+    const needsUserInput =
+      state === 'ACTIVITY_WAIT' || state === 'QUESTION' || state === 'EVALUATION';
 
-    if (currentStateStr === 'AWAITING_START' && !sessionCompleted) {
+    const canAutoAdvance = autoAdvance && !sessionCompleted && !needsUserInput;
+
+    if (canAutoAdvance) {
+      logger.log('[useClassOrchestrator] Auto-advancing to next step', {
+        pedagogicalState,
+        autoAdvance,
+      });
+      const next = await doInteract('__auto__');
+      processResponse(next);
+      return;
+    }
+
+    // AWAITING_START: One-time trigger to start the lesson (first interaction only)
+    // After this, the lesson flows automatically via autoAdvance
+    if (pedagogicalState === 'AWAITING_START' && !sessionCompleted) {
       logger.log('[useClassOrchestrator] AWAITING_START - triggering start');
       const next = await doInteract('listo');
       processResponse(next);
