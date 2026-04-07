@@ -994,6 +994,7 @@ export class OrchestrateRecipeUseCase {
         isRepeat: true,
         lessonProgress: { currentStep: 0, totalSteps: steps.length },
         contentSteps: this.buildContentSteps(steps),
+        autoAdvance: false, // AWAITING_START needs explicit input to advance
       };
     }
 
