@@ -139,6 +139,10 @@ const transitions: Record<PedagogicalState, Partial<Record<StateEventType, Pedag
     ADVANCE: 'EXPLANATION', // Avanzar al siguiente paso
     COMPLETE: 'COMPLETED',
     OFFER_SKIP: 'ACTIVITY_SKIP_OFFER',
+    // Re-evaluación dentro de EVALUATION (respuesta del estudiante en estado de feedback)
+    EVALUATE_CORRECT: 'EVALUATION', // Respuesta correcta - permanece en EVALUATION
+    EVALUATE_INCORRECT: 'EVALUATION', // Incorrecta - permanece en EVALUATION para reintentar
+    EVALUATE_PARTIAL: 'ACTIVITY_WAIT', // Parcial - va a ACTIVITY_WAIT para pista
   },
 
   // Lección completada

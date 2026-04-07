@@ -44,7 +44,12 @@ import {
 } from '@/shared/monitoring/eval-metrics.js';
 import type { AdvisoryLockManager } from '@/features/session/domain/ports/advisory-lock.port.js';
 import { createSessionLockId } from '@/features/session/domain/ports/advisory-lock.port.js';
-import type { PedagogicalState } from '@/features/evaluation/domain/entities/pedagogical-state-machine.js';
+import {
+  type PedagogicalState,
+  type StateEventType,
+  isTransitionAllowed,
+  getNextState,
+} from '@/features/evaluation/domain/entities/pedagogical-state-machine.js';
 import type { Interaction } from '@/features/session/domain/entities/interaction.entity.js';
 import type { SessionCheckpoint } from '@/features/session/domain/entities/session.entity.js';
 import type { InteractRecipeOutput, StaticContent, InteractionChunk } from '@/shared/dto/index.js';
@@ -432,6 +437,61 @@ export class OrchestrateRecipeUseCase {
   }
 
   // ─── Helpers de clasificación de paso ───────────────────────────────────
+
+  /**
+   * Determine the pedagogical event based on evaluation result.
+   * This maps evaluation outcomes to state machine events.
+   */
+  private getEventForEvaluation(
+    evaluationResult: 'correct' | 'partial' | 'incorrect',
+    currentState: PedagogicalState,
+    _failedAttempts: number,
+  ): StateEventType {
+    // Map evaluation results to events based on current state
+    if (currentState === 'ACTIVITY_WAIT' || currentState === 'ACTIVITY_INACTIVITY_WARNING') {
+      switch (evaluationResult) {
+        case 'correct':
+          return 'EVALUATE_CORRECT';
+        case 'partial':
+          return 'EVALUATE_INCORRECT'; // Partial stays in ACTIVITY_WAIT
+        case 'incorrect':
+          // Check if should offer skip
+          return 'EVALUATE_INCORRECT'; // Will transition based on failedAttempts in next step
+      }
+    }
+
+    if (currentState === 'QUESTION') {
+      switch (evaluationResult) {
+        case 'correct':
+          return 'EVALUATE_CORRECT';
+        case 'partial':
+        case 'incorrect':
+          return 'EVALUATE_INCORRECT';
+      }
+    }
+
+    // Default fallback
+    return evaluationResult === 'correct' ? 'EVALUATE_CORRECT' : 'EVALUATE_INCORRECT';
+  }
+
+  /**
+   * Apply state machine transition with validation.
+   * Returns the new state based on the event, or current state if invalid.
+   */
+  private applyStateTransition(
+    currentState: PedagogicalState,
+    event: StateEventType,
+  ): PedagogicalState {
+    if (isTransitionAllowed(currentState, event)) {
+      return getNextState(currentState, { type: event });
+    }
+    // Invalid transition - stay in current state
+    orchestrateLogger.warn(
+      { currentState, event, allowed: isTransitionAllowed(currentState, event) },
+      '[OrchestrateRecipe] Invalid transition attempted, staying in current state',
+    );
+    return currentState;
+  }
 
   private requiresStudentInput(stepType?: string | null): boolean {
     return stepType === 'activity' || stepType === 'exam' || stepType === 'question';
@@ -1344,26 +1404,37 @@ export class OrchestrateRecipeUseCase {
           studentId: userId,
         });
         const qs = script as QuestionScript;
+        // Determine event based on evaluation result
+        const evalEvent = this.getEventForEvaluation(
+          evaluation.result,
+          'ACTIVITY_WAIT',
+          failedAttempts,
+        );
+
         if (evaluation.result === 'correct') {
           voiceText = qs.feedback.correct;
           responseFeedback = qs.feedback.correct;
           isCorrectValue = true;
-          nextState = 'EVALUATION';
+          // Use state machine to determine next state
+          nextState = this.applyStateTransition('ACTIVITY_WAIT', evalEvent);
           failedAttempts = 0;
         } else if (evaluation.result === 'partial') {
           voiceText = qs.hint ?? evaluation.hint ?? qs.feedback.incorrect;
           isCorrectValue = false;
-          nextState = 'ACTIVITY_WAIT';
+          // For partial, stay in ACTIVITY_WAIT
+          nextState = this.applyStateTransition('ACTIVITY_WAIT', 'EVALUATE_INCORRECT');
         } else {
           failedAttempts++;
           totalWrongAnswers++;
           voiceText = qs.feedback.incorrect;
           responseFeedback = qs.feedback.incorrect;
           isCorrectValue = false;
-          nextState =
+          // Determine next state based on failed attempts
+          const event =
             failedAttempts >= this.config.skipAfterFailedAttempts && this.config.enableActivitySkip
-              ? 'ACTIVITY_SKIP_OFFER'
-              : 'EVALUATION';
+              ? 'ACTIVITY_TIMEOUT'
+              : 'EVALUATE_INCORRECT';
+          nextState = this.applyStateTransition('ACTIVITY_WAIT', event);
         }
       } else if (stepType === 'activity') {
         // Use deterministic comparison for activity steps (MCQ)
@@ -1390,15 +1461,17 @@ export class OrchestrateRecipeUseCase {
         isCorrectValue = isCorrect;
 
         if (isCorrect) {
-          nextState = 'EVALUATION';
+          nextState = this.applyStateTransition('ACTIVITY_WAIT', 'EVALUATE_CORRECT');
           failedAttempts = 0;
         } else {
           failedAttempts++;
           totalWrongAnswers++;
-          nextState =
+          // Determine next state based on failed attempts
+          const event =
             failedAttempts >= this.config.skipAfterFailedAttempts && this.config.enableActivitySkip
-              ? 'ACTIVITY_SKIP_OFFER'
-              : 'EVALUATION';
+              ? 'ACTIVITY_TIMEOUT'
+              : 'EVALUATE_INCORRECT';
+          nextState = this.applyStateTransition('ACTIVITY_WAIT', event);
         }
       }
     } else if (currentState === 'EVALUATION') {
@@ -1421,10 +1494,14 @@ export class OrchestrateRecipeUseCase {
         const adv = this.advanceStep(steps, currentIdx);
         if (adv === null) {
           willComplete = true;
-          nextState = 'COMPLETED';
+          nextState = this.applyStateTransition('EVALUATION', 'COMPLETE');
         } else {
           nextIdx = adv;
-          nextState = this.stateForStep(steps[nextIdx]);
+          nextState = this.applyStateTransition('EVALUATION', 'ADVANCE');
+          // Determine target state based on step type
+          if (nextState === 'EXPLANATION') {
+            nextState = this.stateForStep(steps[nextIdx]);
+          }
           voiceText = this.buildVoiceText(steps[nextIdx]);
           failedAttempts = 0;
         }
@@ -1445,23 +1522,23 @@ export class OrchestrateRecipeUseCase {
             voiceText = qs.feedback.correct;
             responseFeedback = qs.feedback.correct;
             isCorrectValue = true;
-            nextState = 'EVALUATION';
+            nextState = this.applyStateTransition('EVALUATION', 'EVALUATE_CORRECT');
             failedAttempts = 0;
           } else if (evaluation.result === 'partial') {
             voiceText = qs.hint ?? evaluation.hint ?? qs.feedback.incorrect;
             isCorrectValue = false;
-            nextState = 'ACTIVITY_WAIT';
+            nextState = this.applyStateTransition('EVALUATION', 'EVALUATE_PARTIAL');
           } else {
             failedAttempts++;
             totalWrongAnswers++;
             voiceText = qs.feedback.incorrect;
             responseFeedback = qs.feedback.incorrect;
             isCorrectValue = false;
-            nextState =
-              failedAttempts >= this.config.skipAfterFailedAttempts &&
-              this.config.enableActivitySkip
-                ? 'ACTIVITY_SKIP_OFFER'
-                : 'EVALUATION';
+            const evalEvent =
+              failedAttempts >= this.config.skipAfterFailedAttempts && this.config.enableActivitySkip
+                ? 'OFFER_SKIP'
+                : 'EVALUATE_INCORRECT';
+            nextState = this.applyStateTransition('EVALUATION', evalEvent);
           }
         } else if (isActivityScript(script)) {
           const as = script as ActivityScript;
@@ -1472,16 +1549,16 @@ export class OrchestrateRecipeUseCase {
           responseFeedback = voiceText;
           isCorrectValue = isCorrect;
           if (isCorrect) {
-            nextState = 'EVALUATION';
+            nextState = this.applyStateTransition('EVALUATION', 'EVALUATE_CORRECT');
             failedAttempts = 0;
           } else {
             failedAttempts++;
             totalWrongAnswers++;
-            nextState =
-              failedAttempts >= this.config.skipAfterFailedAttempts &&
-              this.config.enableActivitySkip
-                ? 'ACTIVITY_SKIP_OFFER'
-                : 'EVALUATION';
+            const evalEvent =
+              failedAttempts >= this.config.skipAfterFailedAttempts && this.config.enableActivitySkip
+                ? 'OFFER_SKIP'
+                : 'EVALUATE_INCORRECT';
+            nextState = this.applyStateTransition('EVALUATION', evalEvent);
           }
         } else {
           // Not a question/activity step — just advance
