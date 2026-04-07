@@ -32,8 +32,6 @@ interface StreakUpdatedEvent {
   longestStreak: number;
 }
 
-type SSEEvent = XPEarnedEvent | BadgeEarnedEvent | LevelUpEvent | StreakUpdatedEvent;
-
 const MAX_RECONNECT_DELAY = 30000; // 30 seconds max
 const INITIAL_RECONNECT_DELAY = 1000;
 
@@ -84,9 +82,12 @@ export function useGamificationSSE(enabled = true) {
         },
         onmessage: (event: EventSourceMessage) => {
           try {
-            const data: SSEEvent = JSON.parse(event.data);
+            // Event format: "event: {type}\ndata: {...}\n\n"
+            // Need to check event.event for event type, not data.type
+            const data = JSON.parse(event.data);
+            const eventType = event.event;
 
-            switch (data.type) {
+            switch (eventType) {
               case 'xp_earned': {
                 const { profile } = store;
                 if (!profile) break;
@@ -107,10 +108,11 @@ export function useGamificationSSE(enabled = true) {
                 );
                 break;
               default:
-                logger.warn('[GamificationSSE] Unknown event type:', (data as SSEEvent).type);
+                logger.warn('[GamificationSSE] Unknown event type:', eventType);
             }
           } catch (e) {
-            console.error('[GamificationSSE] Failed to parse event:', e);
+            // Silently ignore parse errors - they may be from connection issues
+            // Don't spam console with gamification errors
           }
         },
         onerror: () => {
