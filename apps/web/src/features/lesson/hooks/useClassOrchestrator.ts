@@ -206,9 +206,13 @@ export function useClassOrchestrator() {
     // AUTO-ADVANCE LOGIC: Simple and deterministic
     // - Content states (EXPLANATION, CLARIFYING, etc.): auto-advance
     // - Interactive states (ACTIVITY_WAIT, QUESTION, EVALUATION): wait for user
+    // - AWAITING_START: wait for user confirmation
     const state = pedagogicalState as string;
     const needsUserInput =
-      state === 'ACTIVITY_WAIT' || state === 'QUESTION' || state === 'EVALUATION';
+      state === 'ACTIVITY_WAIT' ||
+      state === 'QUESTION' ||
+      state === 'EVALUATION' ||
+      state === 'AWAITING_START'; // AWAITING_START needs user confirmation
     const canAutoAdvance = !needsUserInput && !sessionCompleted;
 
     // DEBUG: Log computed values
