@@ -452,8 +452,13 @@ export function useClassOrchestrator() {
                   logger.log('[useClassOrchestrator] END event received', {
                     pedagogicalState: data.pedagogicalState,
                     staticContent: data.staticContent?.stepType,
+                    accumulatedText: fullText.length,
                   });
-                  resolveStream(data as LessonResponse);
+                  // Combine accumulated chunks with end event data
+                  resolveStream({
+                    ...data,
+                    voiceText: fullText,
+                  } as LessonResponse);
                   return;
                 }
 
