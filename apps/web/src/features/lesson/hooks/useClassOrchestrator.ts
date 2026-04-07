@@ -329,6 +329,12 @@ export function useClassOrchestrator() {
 
     // AUTO-ADVANCE: After TTS completes, automatically advance if safe
     // Uses canAutoAdvance computed at the top of processResponse
+    logger.log('[useClassOrchestrator] Before auto-advance check', {
+      canAutoAdvance,
+      state,
+      voiceTextLen: voiceText?.length,
+    });
+
     if (canAutoAdvance) {
       logger.log('[useClassOrchestrator] AUTO-ADVANCE TRIGGERED', {
         state,
