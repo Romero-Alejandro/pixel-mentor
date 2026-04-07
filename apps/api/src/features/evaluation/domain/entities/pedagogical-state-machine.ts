@@ -89,6 +89,8 @@ const transitions: Record<PedagogicalState, Partial<Record<StateEventType, Pedag
     RAISE_HAND: 'RESOLVING_DOUBT',
     CLARIFY: 'CLARIFYING',
     CONTINUE: 'EXPLANATION', // Avanzar al siguiente contenido
+    ADVANCE: 'EXPLANATION', // Avanzar al siguiente paso
+    COMPLETE: 'COMPLETED', // Completar la lección
     ACTIVITY_TIMEOUT: 'ACTIVITY_INACTIVITY_WARNING',
   },
 

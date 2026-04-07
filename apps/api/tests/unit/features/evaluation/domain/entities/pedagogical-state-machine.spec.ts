@@ -163,6 +163,16 @@ describe('PedagogicalStateMachine', () => {
         expect(nextState).toBe('EXPLANATION');
       });
 
+      it('should transition from EXPLANATION to EXPLANATION on ADVANCE', () => {
+        const nextState = getNextState('EXPLANATION', { type: 'ADVANCE' });
+        expect(nextState).toBe('EXPLANATION');
+      });
+
+      it('should transition from EXPLANATION to COMPLETED on COMPLETE', () => {
+        const nextState = getNextState('EXPLANATION', { type: 'COMPLETE' });
+        expect(nextState).toBe('COMPLETED');
+      });
+
       it('should transition from EXPLANATION to ACTIVITY_INACTIVITY_WARNING on ACTIVITY_TIMEOUT', () => {
         const nextState = getNextState('EXPLANATION', { type: 'ACTIVITY_TIMEOUT' });
         expect(nextState).toBe('ACTIVITY_INACTIVITY_WARNING');

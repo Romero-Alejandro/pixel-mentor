@@ -1355,7 +1355,7 @@ export class OrchestrateRecipeUseCase {
       if (action.type === 'ACCEPT' && classification.intent === 'question' && canAsk()) {
         questionCount++;
         lastQuestionTime = new Date().toISOString();
-        nextState = 'RESOLVING_DOUBT';
+        nextState = this.applyStateTransition(currentState, 'RAISE_HAND');
         savedStepIndex = currentIdx;
         doubtContext = { question: studentInput, stepIndex: currentIdx };
       } else if (action.type === 'ACCEPT' && classification.intent === 'question') {
@@ -1365,9 +1365,11 @@ export class OrchestrateRecipeUseCase {
         const adv = this.advanceStep(steps, currentIdx);
         if (adv === null) {
           willComplete = true;
-          nextState = 'COMPLETED';
+          nextState = this.applyStateTransition(currentState, 'COMPLETE');
         } else {
           nextIdx = adv;
+          nextState = this.applyStateTransition(currentState, 'ADVANCE');
+          // Override to step type state for content/activity steps
           nextState = this.stateForStep(steps[nextIdx]);
           voiceText = this.buildVoiceText(steps[nextIdx]);
         }
@@ -2128,7 +2130,7 @@ export class OrchestrateRecipeUseCase {
       if (action.type === 'ACCEPT' && classification.intent === 'question' && canAsk()) {
         questionCount++;
         lastQuestionTime = new Date().toISOString();
-        nextState = 'RESOLVING_DOUBT';
+        nextState = this.applyStateTransition(currentState, 'RAISE_HAND');
         savedStepIndex = currentIdx;
         doubtContext = { question: studentInput, stepIndex: currentIdx };
       } else if (action.type === 'ACCEPT' && classification.intent === 'question') {
@@ -2138,9 +2140,11 @@ export class OrchestrateRecipeUseCase {
         const adv = this.advanceStep(steps, currentIdx);
         if (adv === null) {
           willComplete = true;
-          nextState = 'COMPLETED';
+          nextState = this.applyStateTransition(currentState, 'COMPLETE');
         } else {
           nextIdx = adv;
+          nextState = this.applyStateTransition(currentState, 'ADVANCE');
+          // Override to step type state for content/activity steps
           nextState = this.stateForStep(steps[nextIdx]);
           voiceText = this.buildVoiceText(steps[nextIdx]);
         }
