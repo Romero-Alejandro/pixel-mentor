@@ -27,32 +27,35 @@ export const PEDAGOGICAL_STATES: readonly PedagogicalState[] = [
 
 export type StateEventType =
   // Eventos de control de clase
-  | 'START_CLASS' // NUEVO: Iniciar después de presentación
-  | 'RESTART_CLASS' // NUEVO: Reiniciar clase desde el principio
+  | 'START_CLASS' // Iniciar después de presentación
+  | 'RESTART_CLASS' // Reiniciar clase desde el principio
 
   // Eventos de explicación
   | 'EXPLAIN'
+  | 'CONTINUE'
 
-  // Eventos de actividad
-  | 'ANSWER'
-  | 'ADVANCE'
-  | 'EVALUATE'
-  | 'COMPLETE' // Mantener para compatibilidad
-  | 'ACTIVITY_TIMEOUT' // NUEVO: Timeout de actividad
-  | 'SHOW_ENCOURAGEMENT' // NUEVO: Mostrar mensaje de ánimo
-  | 'OFFER_SKIP' // NUEVO: Ofrecer saltar actividad
-  | 'SKIP_ACTIVITY' // NUEVO: Procesar decisión de salto
-  | 'REPEAT_CONCEPT' // NUEVO: Repetir explicación del tema
+  // Eventos de evaluación de respuestas
+  | 'ANSWER' // Respuesta del estudiante (sin evaluar)
+  | 'EVALUATE_CORRECT' // Respuesta evaluada como correcta
+  | 'EVALUATE_INCORRECT' // Respuesta evaluada como incorrecta
+  | 'EVALUATE_PARTIAL' // Respuesta evaluada como parcial
+  | 'ADVANCE' // Avanzar al siguiente paso
+  | 'COMPLETE' // Completar la lección
+
+  // Eventos de timeouts
+  | 'ACTIVITY_TIMEOUT' // Timeout de actividad
+  | 'SHOW_ENCOURAGEMENT' // Mostrar mensaje de ánimo
+  | 'OFFER_SKIP' // Ofrecer saltar actividad
+  | 'SKIP_ACTIVITY' // Procesar decisión de salto
+  | 'REPEAT_CONCEPT' // Repetir explicación del tema
 
   // Eventos de preguntas y dudas
-  | 'RAISE_HAND'
-  | 'RESUME_CLASS'
-  | 'CONTINUE'
-  | 'ASK_QUESTION'
-  | 'VALIDATE'
-  | 'CLARIFY'
-  | 'QUESTION_COOLDOWN' // NUEVO: Iniciar cooldown después de pregunta
-  | 'LIMIT_REACHED'; // NUEVO: Indica límite alcanzado
+  | 'RAISE_HAND' // El estudiante tiene una pregunta
+  | 'RESUME_CLASS' // Regresar a la clase después de una duda
+  | 'ASK_QUESTION' // Hacer una pregunta formal
+  | 'CLARIFY' // Solicitar clarificación
+  | 'QUESTION_COOLDOWN' // Cooldown después de pregunta
+  | 'LIMIT_REACHED'; // Límite alcanzado
 
 export interface StateEvent {
   type: StateEventType;
@@ -68,7 +71,7 @@ export interface StateEvent {
 const transitions: Record<PedagogicalState, Partial<Record<StateEventType, PedagogicalState>>> = {
   // Estado inicial: esperando que el estudiante confirme
   AWAITING_START: {
-    START_CLASS: 'ACTIVE_CLASS',
+    START_CLASS: 'EXPLANATION',
     RESTART_CLASS: 'AWAITING_START',
   },
 
@@ -81,57 +84,61 @@ const transitions: Record<PedagogicalState, Partial<Record<StateEventType, Pedag
     EXPLAIN: 'EXPLANATION',
   },
 
-  // Resolviendo duda del estudiante
-  RESOLVING_DOUBT: {
-    RESUME_CLASS: 'ACTIVE_CLASS',
-    QUESTION_COOLDOWN: 'ACTIVE_CLASS',
-  },
-
-  // Solicitando clarificación
-  CLARIFYING: {
-    RESUME_CLASS: 'ACTIVE_CLASS',
-  },
-
   // Explicación del tutor
   EXPLANATION: {
     RAISE_HAND: 'RESOLVING_DOUBT',
     CLARIFY: 'CLARIFYING',
-    EXPLAIN: 'QUESTION', // Transición a actividad
+    CONTINUE: 'EXPLANATION', // Avanzar al siguiente contenido
     ACTIVITY_TIMEOUT: 'ACTIVITY_INACTIVITY_WARNING',
   },
 
-  // Esperando respuesta a actividad
-  ACTIVITY_WAIT: {
-    ANSWER: 'EVALUATION',
-    SHOW_ENCOURAGEMENT: 'ACTIVITY_INACTIVITY_WARNING',
-    ACTIVITY_TIMEOUT: 'ACTIVITY_SKIP_OFFER',
+  // Resolviendo duda del estudiante
+  RESOLVING_DOUBT: {
+    RESUME_CLASS: 'EXPLANATION',
+    QUESTION_COOLDOWN: 'EXPLANATION',
   },
 
-  // Mostrando mensaje de ánimo
+  // Solicitando clarificación
+  CLARIFYING: {
+    RESUME_CLASS: 'EXPLANATION',
+  },
+
+  // Esperando respuesta a actividad (CORREGIDO: evaluar antes de transitar)
+  ACTIVITY_WAIT: {
+    EVALUATE_CORRECT: 'EVALUATION', // Respuesta correcta
+    EVALUATE_INCORRECT: 'ACTIVITY_WAIT', // Incorrecta pero puede intentar de nuevo
+    SHOW_ENCOURAGEMENT: 'ACTIVITY_INACTIVITY_WARNING',
+    ACTIVITY_TIMEOUT: 'ACTIVITY_SKIP_OFFER', // Timeout o max intentos alcanzados
+  },
+
+  // Mostrando mensaje de ánimo por inactividad
   ACTIVITY_INACTIVITY_WARNING: {
-    ANSWER: 'EVALUATION',
+    EVALUATE_CORRECT: 'EVALUATION',
+    EVALUATE_INCORRECT: 'ACTIVITY_WAIT',
     ACTIVITY_TIMEOUT: 'ACTIVITY_SKIP_OFFER',
   },
 
   // Ofreciendo saltar actividad
   ACTIVITY_SKIP_OFFER: {
-    REPEAT_CONCEPT: 'EXPLANATION',
-    SKIP_ACTIVITY: 'QUESTION', // Continuar a sig actividad
-    CONTINUE: 'QUESTION',
+    REPEAT_CONCEPT: 'EXPLANATION', // Volver a explicar
+    SKIP_ACTIVITY: 'EXPLANATION', // Saltar y continuar
+    CONTINUE: 'EXPLANATION', // Continuar sin saltar
   },
 
   // Pregunta formal
   QUESTION: {
-    ANSWER: 'EVALUATION',
-    RAISE_HAND: 'RESOLVING_DOUBT', // Permitir duda durante pregunta
+    EVALUATE_CORRECT: 'EVALUATION',
+    EVALUATE_INCORRECT: 'EVALUATION', // Las preguntas formales siempre van a evaluación
+    EVALUATE_PARTIAL: 'EVALUATION',
+    RAISE_HAND: 'RESOLVING_DOUBT',
   },
+
 
   // Evaluando respuesta
   EVALUATION: {
-    ADVANCE: 'QUESTION',
+    ADVANCE: 'EXPLANATION', // Avanzar al siguiente paso
     COMPLETE: 'COMPLETED',
-    VALIDATE: 'ACTIVE_CLASS',
-    OFFER_SKIP: 'ACTIVITY_SKIP_OFFER', // Ofrecer salto si hay fallos
+    OFFER_SKIP: 'ACTIVITY_SKIP_OFFER',
   },
 
   // Lección completada

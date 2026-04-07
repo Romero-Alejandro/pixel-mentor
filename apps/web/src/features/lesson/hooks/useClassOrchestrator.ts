@@ -3,8 +3,6 @@ import { useShallow } from 'zustand/react/shallow';
 import type { EventSourceMessage } from '@microsoft/fetch-event-source';
 import type { StartRecipeOutput } from '@pixel-mentor/shared';
 
-import { FEEDBACK_DISPLAY_MS, estimateReadTime } from '../constants/lesson.constants';
-
 import { useLessonState } from './useLessonState';
 import { useChatStream } from './useChatStream';
 
@@ -137,9 +135,6 @@ export function useClassOrchestrator() {
   const streamingChunksRef = useRef<string[]>([]);
   const wasStreamingRef = useRef(false);
   const isInteractingRef = useRef(false); // Guard against concurrent doInteract calls
-  const lastStepIndexRef = useRef<number | null>(null); // Track last step index to detect loops
-  const sameStepCountRef = useRef(0); // Count consecutive same step occurrences
-  const MAX_SAME_STEP_COUNT = 3; // Break loop after this many repetitions
   const contentStepsRef = useRef<
     Array<{
       stepIndex: number;
@@ -197,35 +192,8 @@ export function useClassOrchestrator() {
       accuracy,
     } = raw;
 
-    // ── Loop detection: track step index from lessonProgress ──────────────
-    // If the same step index is received too many times, force-advance
-    const currentStepIdx = lessonProgress?.currentStep ?? null;
-    if (currentStepIdx !== null) {
-      if (currentStepIdx === lastStepIndexRef.current) {
-        sameStepCountRef.current++;
-        if (sameStepCountRef.current >= MAX_SAME_STEP_COUNT) {
-          console.error(
-            `[ClassOrchestrator] LOOP DETECTED: Step ${currentStepIdx} repeated ${sameStepCountRef.current} times. Breaking loop by advancing.`,
-          );
-          sameStepCountRef.current = 0;
-          lastStepIndexRef.current = null;
-          setIsProcessing(true);
-          doInteract('continuar')
-            .then(processResponse)
-            .catch((err) => {
-              if (err?.message !== 'Interaction already in progress') {
-                console.error('[ClassOrchestrator] Forced advance error:', err);
-              }
-            })
-            .finally(() => setIsProcessing(false));
-          return;
-        }
-      } else {
-        sameStepCountRef.current = 0;
-        lastStepIndexRef.current = currentStepIdx;
-      }
-    }
-
+    // Simply update state and speak - NO business logic, NO auto-advance
+    // The backend drives the flow via pedagogicalState
     if (lessonProgress) {
       setCurrentStep(lessonProgress.currentStep);
       setTotalSteps(lessonProgress.totalSteps);
@@ -247,37 +215,9 @@ export function useClassOrchestrator() {
       return;
     }
 
+    // EVALUATION: Show feedback but WAIT for backend to drive next transition
+    // NO auto-advance - backend sends next pedagogicalState when ready
     if (pedagogicalState === 'EVALUATION') {
-      // Helper to extract text from string or {text: string} object
-      const extractText = (val: unknown): string => {
-        if (typeof val === 'string') return val;
-        if (
-          val &&
-          typeof val === 'object' &&
-          'text' in val &&
-          typeof (val as { text: unknown }).text === 'string'
-        ) {
-          return (val as { text: string }).text;
-        }
-        return '';
-      };
-
-      // Helper to extract the main content text for display
-      const getMainContent = (content: LessonResponse['staticContent']): string => {
-        if (!content) return '';
-        if (content.activity?.instruction) {
-          return extractText(content.activity.instruction);
-        }
-        return extractText(content.script?.content);
-      };
-
-      // ALSO set the next step's content for FeedbackPanel to display
-      if (staticContent) {
-        setContentText(getMainContent(staticContent));
-        setTransitionText(extractText(staticContent.script?.transition));
-        setClosureText(extractText(staticContent.script?.closure));
-      }
-      
       const msg = feedback || (isCorrect ? '¡Muy bien!' : '¡Sigue intentando!');
       // Calculate proportional XP per question
       const totalActivities = accuracy?.totalActivities || totalSteps || 1;
@@ -291,22 +231,9 @@ export function useClassOrchestrator() {
       });
       setUIState('feedback');
 
-      const startTime = Date.now();
+      // Just speak - NO auto-advance
       await speak(voiceText || msg, _voiceSettings);
-      const elapsed = Date.now() - startTime;
-      const totalDuration = FEEDBACK_DISPLAY_MS + estimateReadTime(msg);
-
-      if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(
-        () => {
-          if (!isMountedRef.current) return;
-          setIsProcessing(true);
-          doInteract('continuar')
-            .then(processResponse)
-            .finally(() => setIsProcessing(false));
-        },
-        Math.max(0, totalDuration - elapsed),
-      );
+      // Wait for user input or backend push - NO timer
       return;
     }
 
@@ -365,37 +292,15 @@ export function useClassOrchestrator() {
       setClosureText('');
     }
 
-    // Reset the flag after use, so subsequent non-streaming interactions behave normally.
-    wasStreamingRef.current = false;
-
     setFullVoiceText(voiceText);
     contentRef.current = voiceText;
     setFeedbackData(null);
     setUIState('concentration');
 
-    const startTime = Date.now();
+    // Just speak the content - NO auto-advance
+    // The backend will send the next state when the student provides input
     await speak(voiceText, _voiceSettings);
-    const elapsed = Date.now() - startTime;
-
-    const totalDuration = estimateReadTime(voiceText);
-
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(
-      () => {
-        if (!sessionIdRef.current || !isMountedRef.current) return;
-        setIsProcessing(true);
-        doInteract('continuar')
-          .then(processResponse)
-          .catch((err) => {
-            // Silently ignore guard rejections — they mean a request is already in progress
-            if (err?.message !== 'Interaction already in progress') {
-              console.error('[ClassOrchestrator] Auto-advance error:', err);
-            }
-          })
-          .finally(() => setIsProcessing(false));
-      },
-      Math.max(0, totalDuration - elapsed),
-    );
+    // Wait for user interaction - no timer-based auto-advance
   }
 
   async function doInteract(input: string): Promise<LessonResponse> {
