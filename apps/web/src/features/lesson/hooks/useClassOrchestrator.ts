@@ -354,6 +354,7 @@ export function useClassOrchestrator() {
         nextState: next.pedagogicalState,
         nextSessionCompleted: next.sessionCompleted,
         hasContent: next.voiceText?.length,
+        isInteractingRefAfter: isInteractingRef.current,
       });
 
       // Only process if there's actual content - prevents infinite loops
@@ -368,8 +369,13 @@ export function useClassOrchestrator() {
 
     // No content or can't advance - just wait
     if (!hasContent) {
-      logger.log('[useClassOrchestrator] No content, not auto-advancing');
+      logger.log('[useClassOrchestrator] No content, not auto-advancing', {
+        isInteractingRefBefore: isInteractingRef.current,
+      });
       isInteractingRef.current = false; // Reset flag
+      logger.log('[useClassOrchestrator] After reset', {
+        isInteractingRef: isInteractingRef.current,
+      });
     }
 
     // AWAITING_START: One-time trigger to start the lesson (first interaction only)
