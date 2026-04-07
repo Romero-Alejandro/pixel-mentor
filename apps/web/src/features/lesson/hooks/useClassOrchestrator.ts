@@ -196,6 +196,13 @@ export function useClassOrchestrator() {
       accuracy,
     } = raw;
 
+    // DEBUG: Log raw response
+    logger.log('[useClassOrchestrator] processResponse INPUT', {
+      raw_pedagogicalState: raw.pedagogicalState,
+      raw_sessionCompleted: raw.sessionCompleted,
+      voiceText: voiceText?.substring(0, 50),
+    });
+
     // AUTO-ADVANCE LOGIC: Simple and deterministic
     // - Content states (EXPLANATION, CLARIFYING, etc.): auto-advance
     // - Interactive states (ACTIVITY_WAIT, QUESTION, EVALUATION): wait for user
@@ -203,6 +210,14 @@ export function useClassOrchestrator() {
     const needsUserInput =
       state === 'ACTIVITY_WAIT' || state === 'QUESTION' || state === 'EVALUATION';
     const canAutoAdvance = !needsUserInput && !sessionCompleted;
+
+    // DEBUG: Log computed values
+    logger.log('[useClassOrchestrator] processResponse COMPUTED', {
+      state,
+      needsUserInput,
+      sessionCompleted,
+      canAutoAdvance,
+    });
 
     // Simply update state and speak - NO business logic
     // The backend drives the flow via pedagogicalState
@@ -315,10 +330,15 @@ export function useClassOrchestrator() {
     // AUTO-ADVANCE: After TTS completes, automatically advance if safe
     // Uses canAutoAdvance computed at the top of processResponse
     if (canAutoAdvance) {
-      logger.log('[useClassOrchestrator] Auto-advancing to next step', {
-        pedagogicalState,
+      logger.log('[useClassOrchestrator] AUTO-ADVANCE TRIGGERED', {
+        state,
+        canAutoAdvance,
       });
       const next = await doInteract('__auto__');
+      logger.log('[useClassOrchestrator] doInteract returned', {
+        nextState: next.pedagogicalState,
+        nextSessionCompleted: next.sessionCompleted,
+      });
       processResponse(next);
       return;
     }
@@ -326,8 +346,15 @@ export function useClassOrchestrator() {
     // AWAITING_START: One-time trigger to start the lesson (first interaction only)
     // After this, the lesson flows automatically via canAutoAdvance
     if (pedagogicalState === 'AWAITING_START' && !sessionCompleted) {
-      logger.log('[useClassOrchestrator] AWAITING_START - triggering start');
+      logger.log('[useClassOrchestrator] AWAITING_START TRIGGERED', {
+        state,
+        sessionCompleted,
+      });
       const next = await doInteract('listo');
+      logger.log('[useClassOrchestrator] doInteract returned', {
+        nextState: next.pedagogicalState,
+        nextSessionCompleted: next.sessionCompleted,
+      });
       processResponse(next);
     }
   }
@@ -337,6 +364,7 @@ export function useClassOrchestrator() {
 
     // Guard against concurrent calls (SSE error + onerror both firing)
     if (isInteractingRef.current) {
+      logger.warn('[useClassOrchestrator] doInteract BLOCKED - already processing');
       // Return a sentinel that processResponse recognizes to skip timer setup
       return { _blocked: true } as unknown as LessonResponse;
     }
@@ -345,6 +373,7 @@ export function useClassOrchestrator() {
     const sid = sessionIdRef.current;
     if (!sid) {
       isInteractingRef.current = false;
+      logger.error('[useClassOrchestrator] doInteract: No sessionId');
       throw new Error('Sesión no activa');
     }
 
