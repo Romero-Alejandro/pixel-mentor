@@ -4,6 +4,40 @@ import { getAIServices, isAIServicesInitialized } from '@/shared/ai/ai-service.p
 import { GovernanceError } from '@/shared/ai/governance/governance-ai-adapter.js';
 
 /**
+ * Navigation inputs that bypass LLM governance (fast path).
+ * These are processed by the navigation fast path in the use case,
+ * so they don't actually call the LLM and shouldn't count against rate limits.
+ */
+const NAVIGATION_INPUTS = [
+  '__auto__', // Auto-advance trigger
+  'listo', // Start lesson trigger
+  'continuar',
+  'siguiente',
+  'next',
+  'ok',
+  'dale',
+  'vamos',
+  'adelante',
+  'seguir',
+  'avanzar',
+  'proseguir',
+  'forward',
+  'sí',
+  'si',
+  'comenzar',
+  'empezar',
+  'start',
+];
+
+/**
+ * Check if input is a navigation input (bypasses LLM).
+ */
+function isNavigationInput(input: string): boolean {
+  const lower = input.toLowerCase().trim();
+  return NAVIGATION_INPUTS.some((nav) => lower === nav || lower.includes(nav));
+}
+
+/**
  * Express middleware that enforces LLM governance checks on requests
  * that will trigger LLM calls.
  *
@@ -17,6 +51,13 @@ export function llmGovernanceMiddleware() {
       return;
     }
 
+    // Skip governance for navigation inputs - these use the fast path and don't call LLM
+    const studentInput = req.body?.studentInput;
+    if (typeof studentInput === 'string' && isNavigationInput(studentInput)) {
+      next();
+      return;
+    }
+
     const userId = req.user?.id ?? null;
     const governance = getAIServices().governance;
 
@@ -24,7 +65,7 @@ export function llmGovernanceMiddleware() {
     const decision = await governance.preCallCheck(
       userId,
       `route:${req.path}`,
-      typeof req.body?.studentInput === 'string' ? req.body.studentInput : undefined,
+      typeof studentInput === 'string' ? studentInput : undefined,
     );
 
     if (!decision.allowed) {
