@@ -331,26 +331,45 @@ export function useClassOrchestrator() {
     // Speak the content and wait for completion
     await speak(voiceText, _voiceSettings);
 
-    // AUTO-ADVANCE: After TTS completes, automatically advance if safe
-    // Uses canAutoAdvance computed at the top of processResponse
+    // AUTO-ADVANCE: Only if there's actual content to show
+    // If voiceText is empty, we're at the end of the lesson - don't auto-advance
+    const hasContent = voiceText && voiceText.trim().length > 0;
+    const canAdvance = canAutoAdvance && hasContent;
+
     logger.log('[useClassOrchestrator] Before auto-advance check', {
       canAutoAdvance,
+      canAdvance,
+      hasContent,
       state,
       voiceTextLen: voiceText?.length,
     });
 
-    if (canAutoAdvance) {
+    if (canAdvance) {
       logger.log('[useClassOrchestrator] AUTO-ADVANCE TRIGGERED', {
         state,
-        canAutoAdvance,
+        canAdvance,
       });
       const next = await doInteract('__auto__');
       logger.log('[useClassOrchestrator] doInteract returned', {
         nextState: next.pedagogicalState,
         nextSessionCompleted: next.sessionCompleted,
+        hasContent: next.voiceText?.length,
       });
-      processResponse(next);
+
+      // Only process if there's actual content - prevents infinite loops
+      if (next.voiceText && next.pedagogicalState) {
+        processResponse(next);
+      } else {
+        logger.warn('[useClassOrchestrator] Empty response, stopping auto-advance');
+        isInteractingRef.current = false; // Reset flag to allow future interactions
+      }
       return;
+    }
+
+    // No content or can't advance - just wait
+    if (!hasContent) {
+      logger.log('[useClassOrchestrator] No content, not auto-advancing');
+      isInteractingRef.current = false; // Reset flag
     }
 
     // AWAITING_START: One-time trigger to start the lesson (first interaction only)
