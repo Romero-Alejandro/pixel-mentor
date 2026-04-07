@@ -368,17 +368,23 @@ export function useClassOrchestrator() {
           onMessage: (event: EventSourceMessage) => {
             if (!isMountedRef.current) return;
             try {
+              // Event format from backend: "event: end\ndata: {...}\n\n"
+              // event.data contains the JSON, event.event contains the event type ('end' or 'chunk')
               const data = JSON.parse(event.data);
 
-              // Handle 'end' event with complete response data
-              if (data.type === 'end') {
-                // Use complete data from 'end' event instead of accumulated text
+              // Check the EVENT TYPE (event.event), not data.type
+              if (event.event === 'end') {
+                // Use complete data from 'end' event
+                logger.log('[useClassOrchestrator] Received end event', {
+                  pedagogicalState: data.pedagogicalState,
+                  autoAdvance: data.autoAdvance,
+                });
                 resolveStream(data as LessonResponse);
                 return;
               }
 
               // Handle 'chunk' event for streaming text
-              if (data.type === 'chunk' && data.text) {
+              if (event.event === 'chunk' && data.text) {
                 fullText += data.text;
                 streamingChunksRef.current = [...streamingChunksRef.current, data.text];
                 setStreamingChunks(streamingChunksRef.current);
