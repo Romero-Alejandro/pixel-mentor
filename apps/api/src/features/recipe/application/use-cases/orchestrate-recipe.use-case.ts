@@ -1782,6 +1782,7 @@ export class OrchestrateRecipeUseCase {
         pedagogicalState: currentState,
         sessionCompleted: true,
         lessonProgress: { currentStep: currentIdx, totalSteps: steps.length },
+        autoAdvance: false,
       };
       return;
     }
@@ -1886,6 +1887,7 @@ export class OrchestrateRecipeUseCase {
           isCorrect,
           staticContent: this.extractStaticContent(currentStep),
           lessonProgress: { currentStep: currentIdx, totalSteps: steps.length },
+          autoAdvance: false, // Wait for user to continue
         };
         return;
       } else if (stepType === 'question') {
@@ -1955,6 +1957,7 @@ export class OrchestrateRecipeUseCase {
         pedagogicalState: 'AWAITING_START',
         sessionCompleted: false,
         lessonProgress: { currentStep: currentIdx, totalSteps: steps.length },
+        autoAdvance: false, // Wait for user to confirm
       };
       return;
     }
@@ -2032,6 +2035,7 @@ export class OrchestrateRecipeUseCase {
           sessionCompleted: false,
           staticContent: this.extractStaticContent(nextStep),
           lessonProgress: { currentStep: navNextIdx, totalSteps: steps.length },
+          autoAdvance: false, // User must answer the question
         };
         return;
       }
@@ -2062,6 +2066,7 @@ export class OrchestrateRecipeUseCase {
           sessionCompleted: false,
           staticContent: this.extractStaticContent(nextStep),
           lessonProgress: { currentStep: navNextIdx, totalSteps: steps.length },
+          autoAdvance: false, // User must complete the activity
         };
         return;
       }
@@ -2091,6 +2096,7 @@ export class OrchestrateRecipeUseCase {
         sessionCompleted: false,
         staticContent: this.extractStaticContent(nextStep),
         lessonProgress: { currentStep: navNextIdx, totalSteps: steps.length },
+        autoAdvance: !this.requiresStudentInput(nextStep.stepType), // Auto-advance for content steps
       };
       return;
     }
