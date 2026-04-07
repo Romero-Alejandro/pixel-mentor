@@ -489,7 +489,14 @@ export function useClassOrchestrator() {
             },
           });
 
-          return await streamPromise;
+          // IMPORTANT: Reset flag when stream completes successfully
+          // The stream promise resolves when 'end' event is received
+          const result = await streamPromise;
+          isInteractingRef.current = false; // Reset flag after successful stream
+          logger.log('[useClassOrchestrator] Stream completed, flag reset', {
+            isInteractingRef: isInteractingRef.current,
+          });
+          return result;
         } catch (error) {
           const err = error as any;
           // Check if it's a 429 error and we have retries left
