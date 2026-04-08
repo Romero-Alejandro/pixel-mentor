@@ -3,7 +3,6 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import { RegisterPage } from '../../pages/RegisterPage';
-import { useAuthStore } from '../../features/auth/stores/auth.store';
 
 // Mock AudioContext
 const mockAudio = {
@@ -19,9 +18,9 @@ vi.mock('@/contexts/AudioContext', () => ({
   AudioProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-// Mock the entire authStore module
-vi.mock('../../features/auth/stores/auth.store', () => ({
-  useAuthStore: vi.fn(),
+// Mock the useAuth hook
+vi.mock('../../features/auth/hooks/useAuth', () => ({
+  useAuth: vi.fn(),
 }));
 
 // Mock useNavigate
@@ -34,16 +33,19 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
+import { useAuth } from '../../features/auth/hooks/useAuth';
+
 describe('RegisterPage', () => {
   const mockRegister = vi.fn();
   const mockClearError = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (useAuthStore as any).mockReturnValue({
+    (useAuth as any).mockReturnValue({
       register: mockRegister,
       clearError: mockClearError,
       isLoading: false,
+      isRegistering: false,
       error: null,
     });
   });
@@ -65,11 +67,12 @@ describe('RegisterPage', () => {
     expect(screen.getByRole('link', { name: /Iniciar sesión/i })).toHaveAttribute('href', '/login');
   });
 
-  it('should show error message when store has error', () => {
-    (useAuthStore as any).mockReturnValue({
+  it('should show error message when hook has error', () => {
+    (useAuth as any).mockReturnValue({
       register: mockRegister,
       clearError: mockClearError,
       isLoading: false,
+      isRegistering: false,
       error: 'Email already exists',
     });
 
@@ -150,23 +153,23 @@ describe('RegisterPage', () => {
     fireEvent.click(submitButton);
 
     expect(mockClearError).toHaveBeenCalled();
-    expect(mockRegister).toHaveBeenCalledWith(
-      'test@example.com',
-      'password123',
-      'Test User',
-      'STUDENT',
-      '', // username is empty string since field was not filled
-    );
+    expect(mockRegister).toHaveBeenCalledWith({
+      email: 'test@example.com',
+      password: 'password123',
+      name: 'Test User',
+      username: '', // username is empty string since field was filled with empty value
+    });
 
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
   });
 
   it('should display loading state during registration', () => {
-    (useAuthStore as any).mockReturnValue({
+    (useAuth as any).mockReturnValue({
       register: mockRegister,
       clearError: mockClearError,
-      isLoading: true,
+      isLoading: false,
+      isRegistering: true,
       error: null,
     });
 

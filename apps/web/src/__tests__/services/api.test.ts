@@ -27,7 +27,7 @@ describe('authApi', () => {
       const mockResponse = {
         data: {
           user: { id: '1', email: 'test@test.com', name: 'Test', role: 'STUDENT', quota: 0 },
-          token: 'jwt-token-123',
+          accessToken: 'jwt-token-123',
         },
       };
       (apiClient.post as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockResponse);
@@ -38,7 +38,7 @@ describe('authApi', () => {
         identifier: 'test@test.com',
         password: 'password123',
       });
-      expect(result).toHaveProperty('token', 'jwt-token-123');
+      expect(result).toHaveProperty('accessToken', 'jwt-token-123');
       expect(result.user).toHaveProperty('email', 'test@test.com');
     });
 
@@ -57,7 +57,7 @@ describe('authApi', () => {
       const mockResponse = {
         data: {
           user: { id: '1', email: 'test@test.com', name: 'Test User', role: 'STUDENT', quota: 0 },
-          token: 'jwt-token-456',
+          accessToken: 'jwt-token-456',
         },
       };
       (apiClient.post as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockResponse);
@@ -74,7 +74,7 @@ describe('authApi', () => {
         name: 'Test User',
         username: undefined,
       });
-      expect(result).toHaveProperty('token', 'jwt-token-456');
+      expect(result).toHaveProperty('accessToken', 'jwt-token-456');
     });
   });
 

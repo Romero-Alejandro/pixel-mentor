@@ -18,9 +18,9 @@ vi.mock('@/contexts/AudioContext', () => ({
   AudioProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-// Mock the entire authStore module
-vi.mock('../../features/auth/stores/auth.store', () => ({
-  useAuthStore: vi.fn(),
+// Mock the useAuth hook
+vi.mock('../../features/auth/hooks/useAuth', () => ({
+  useAuth: vi.fn(),
 }));
 
 // Mock useNavigate
@@ -33,7 +33,7 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-import { useAuthStore } from '../../features/auth/stores/auth.store';
+import { useAuth } from '../../features/auth/hooks/useAuth';
 
 describe('LoginPage', () => {
   const mockLogin = vi.fn();
@@ -41,16 +41,15 @@ describe('LoginPage', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (useAuthStore as any).mockReturnValue({
+    (useAuth as any).mockReturnValue({
       login: mockLogin,
       clearError: mockClearError,
       isLoading: false,
       error: null,
+      isLoggingIn: false,
       user: null,
-      token: null,
       isAuthenticated: false,
       logout: vi.fn(),
-      checkAuth: vi.fn(),
     });
   });
 
@@ -71,11 +70,12 @@ describe('LoginPage', () => {
     );
   });
 
-  it('should show error message when store has error', () => {
-    (useAuthStore as any).mockReturnValue({
+  it('should show error message when hook has error', () => {
+    (useAuth as any).mockReturnValue({
       login: mockLogin,
       clearError: mockClearError,
       isLoading: false,
+      isLoggingIn: false,
       error: 'Invalid credentials',
     });
 
@@ -123,17 +123,21 @@ describe('LoginPage', () => {
     fireEvent.click(submitButton);
 
     expect(mockClearError).toHaveBeenCalled();
-    expect(mockLogin).toHaveBeenCalledWith('test@example.com', 'password123');
+    expect(mockLogin).toHaveBeenCalledWith({
+      identifier: 'test@example.com',
+      password: 'password123',
+    });
 
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
   });
 
   it('should display loading state during login', () => {
-    (useAuthStore as any).mockReturnValue({
+    (useAuth as any).mockReturnValue({
       login: mockLogin,
       clearError: mockClearError,
-      isLoading: true,
+      isLoading: false,
+      isLoggingIn: true,
       error: null,
     });
 
