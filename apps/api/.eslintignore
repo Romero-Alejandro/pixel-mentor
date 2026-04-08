@@ -1,2 +1,0 @@
-# Ignore config files that trigger ESLint plugin issues
-prisma.config.ts

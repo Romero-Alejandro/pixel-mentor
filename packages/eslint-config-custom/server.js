@@ -20,6 +20,8 @@ export default tseslint.config(
       },
     },
     rules: {
+      // Allow var for global declarations (needed for Prisma client singleton pattern)
+      'no-var': 'off',
       /**
        * REGLAS DE ARQUITECTURA HEXAGONAL (ESTRICTAS)
        * Justificación: Estas restricciones previenen el acoplamiento bidireccional
