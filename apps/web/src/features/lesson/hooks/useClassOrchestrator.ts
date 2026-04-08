@@ -68,7 +68,6 @@ export function useClassOrchestrator() {
     setCurrentState,
     setIsSpeaking: syncStore,
     setError,
-    setStreamingChunks,
     setIsStreaming: setStoreStreaming,
     setStreamError,
     clearStream,
@@ -82,7 +81,6 @@ export function useClassOrchestrator() {
       setCurrentState: state.setCurrentState,
       setIsSpeaking: state.setIsSpeaking,
       setError: state.setError,
-      setStreamingChunks: state.setStreamingChunks,
       setIsStreaming: state.setIsStreaming,
       setStreamError: state.setStreamError,
       clearStream: state.clearStream,
@@ -133,7 +131,6 @@ export function useClassOrchestrator() {
   const contentRef = useRef('');
   const abortControllerRef = useRef<AbortController | null>(null);
   const isMountedRef = useRef(true);
-  const streamingChunksRef = useRef<string[]>([]);
   const wasStreamingRef = useRef(false);
   const isInteractingRef = useRef(false); // Guard against concurrent doInteract calls
   const contentStepsRef = useRef<

@@ -33,7 +33,7 @@
   "lint-staged": {
     "apps/api/src/**/*.{ts,tsx}": [
       "eslint --fix",
-      "tsc --noEmit"
+      "pnpm --filter @pixel-mentor/api typecheck"
     ],
     "*.{js,jsx,json,md}": [
       "prettier --write"

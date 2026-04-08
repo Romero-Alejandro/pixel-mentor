@@ -7,7 +7,7 @@
     "dev": "tsx watch src/entry.ts",
     "prebuild": "rimraf dist",
     "build": "tsup",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit --excludeDirectories 'src/**/generated'",
     "start": "node dist/index.js",
     "lint": "eslint . --fix",
     "format": "prettier . --write --ignore-unknown",
