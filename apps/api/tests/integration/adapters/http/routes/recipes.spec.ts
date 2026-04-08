@@ -402,7 +402,18 @@ describe('Recipes API Routes', () => {
 
       const response = await request(app)
         .post(`/api/recipes/${RECIPE_ID}/steps`)
-        .send({ stepType: 'content' });
+        .send({
+          stepType: 'content',
+          script: {
+            transition: { text: 'Next' },
+            content: {
+              text: 'Content text',
+              chunks: [{ text: 'Chunk', pauseAfter: 0 }],
+            },
+            examples: [{ text: 'Example', visual: { type: 'image' } }],
+            closure: { text: 'Closure' },
+          },
+        });
 
       expect(response.status).toBe(201);
       expect(addStepUseCase.execute).toHaveBeenCalled();
@@ -425,7 +436,18 @@ describe('Recipes API Routes', () => {
 
       const response = await request(app)
         .post(`/api/recipes/${RECIPE_ID}/steps`)
-        .send({ stepType: 'content' });
+        .send({
+          stepType: 'content',
+          script: {
+            transition: { text: 'Next' },
+            content: {
+              text: 'Content text',
+              chunks: [{ text: 'Chunk', pauseAfter: 0 }],
+            },
+            examples: [{ text: 'Example', visual: { type: 'image' } }],
+            closure: { text: 'Closure' },
+          },
+        });
 
       expect(response.status).toBe(404);
     });
@@ -450,7 +472,19 @@ describe('Recipes API Routes', () => {
 
       const response = await request(app)
         .patch(`/api/recipes/${RECIPE_ID}/steps/${STEP_ID_1}`)
-        .send({ order: 1 });
+        .send({
+          order: 1,
+          stepType: 'content',
+          script: {
+            transition: { text: 'Next' },
+            content: {
+              text: 'Updated content',
+              chunks: [{ text: 'Chunk', pauseAfter: 0 }],
+            },
+            examples: [{ text: 'Example', visual: { type: 'image' } }],
+            closure: { text: 'Closure' },
+          },
+        });
 
       expect(response.status).toBe(200);
       expect(updateStepUseCase.execute).toHaveBeenCalled();
@@ -473,7 +507,19 @@ describe('Recipes API Routes', () => {
 
       const response = await request(app)
         .patch(`/api/recipes/${RECIPE_ID}/steps/${STEP_ID_1}`)
-        .send({ order: 1 });
+        .send({
+          order: 1,
+          stepType: 'content',
+          script: {
+            transition: { text: 'Next' },
+            content: {
+              text: 'Updated content',
+              chunks: [{ text: 'Chunk', pauseAfter: 0 }],
+            },
+            examples: [{ text: 'Example', visual: { type: 'image' } }],
+            closure: { text: 'Closure' },
+          },
+        });
 
       expect(response.status).toBe(404);
     });
