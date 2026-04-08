@@ -25,6 +25,7 @@
     "@google-cloud/text-to-speech": "^6.4.0",
     "@google/generative-ai": "0.24.1",
     "@huggingface/inference": "^4.13.15",
+    "@pixel-mentor/shared": "workspace:*",
     "@prisma/client": "6.19.2",
     "@sefinek/google-tts-api": "^2.1.13",
     "argon2": "0.44.0",
