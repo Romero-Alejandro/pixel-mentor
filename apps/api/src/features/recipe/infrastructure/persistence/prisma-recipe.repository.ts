@@ -1,9 +1,17 @@
 import { prisma } from '@/database/client';
 
 import type { Recipe, RecipeStep } from '@/features/recipe/domain/entities/recipe.entity';
-import type { RecipeRepository, RecipeStepWithContent } from '@/features/recipe/domain/ports/recipe.repository.port';
+import type {
+  RecipeRepository,
+  RecipeStepWithContent,
+  RecipeCreateInput,
+  RecipeUpdateInput,
+} from '@/features/recipe/domain/ports/recipe.repository.port';
 import type { Concept } from '@/features/knowledge/domain/entities/concept.entity';
 import type { Activity } from '@/features/activity/domain/entities/activity.entity';
+import { CanonicalId } from '@/features/recipe/domain/valueObjects/canonical-id.vo.js';
+import { SemanticVersion } from '@/features/recipe/domain/valueObjects/semantic-version.vo.js';
+import { ExpectedDuration } from '@/features/recipe/domain/valueObjects/expected-duration.vo.js';
 
 export class PrismaRecipeRepository implements RecipeRepository {
   async findById(id: string): Promise<Recipe | null> {
@@ -22,10 +30,11 @@ export class PrismaRecipeRepository implements RecipeRepository {
       },
     });
     if (!raw) return null;
-    return {
-      ...this.mapRecipe(raw),
-      steps: raw.steps.map(this.mapRecipeStep),
-    };
+    const base = this.mapRecipe(raw);
+    return Object.freeze({
+      ...base,
+      steps: Object.freeze(raw.steps.map(this.mapRecipeStep)),
+    });
   }
 
   async findAll(): Promise<Recipe[]> {
@@ -38,7 +47,7 @@ export class PrismaRecipeRepository implements RecipeRepository {
     return raw.map(this.mapRecipe);
   }
 
-  async create(recipe: Omit<Recipe, 'createdAt' | 'updatedAt' | 'steps'>): Promise<Recipe> {
+  async create(recipe: RecipeCreateInput): Promise<Recipe> {
     const raw = await prisma.recipe.create({
       data: {
         canonicalId: recipe.canonicalId,
@@ -54,18 +63,34 @@ export class PrismaRecipeRepository implements RecipeRepository {
     return this.mapRecipe(raw);
   }
 
-  async update(id: string, data: Partial<Recipe>): Promise<Recipe> {
+  async update(id: string, data: RecipeUpdateInput): Promise<Recipe> {
+    const updateData: Record<string, unknown> = {};
+
+    if (data.canonicalId !== undefined) {
+      updateData.canonicalId = data.canonicalId;
+    }
+    if (data.title !== undefined) {
+      updateData.title = data.title;
+    }
+    if (data.description !== undefined) {
+      updateData.description = data.description;
+    }
+    if (data.expectedDurationMinutes !== undefined) {
+      updateData.expectedDurationMinutes = data.expectedDurationMinutes;
+    }
+    if (data.version !== undefined) {
+      updateData.version = data.version;
+    }
+    if (data.published !== undefined) {
+      updateData.published = data.published;
+    }
+    if (data.moduleId !== undefined) {
+      updateData.moduleId = data.moduleId;
+    }
+
     const raw = await prisma.recipe.update({
       where: { id },
-      data: {
-        canonicalId: data.canonicalId,
-        title: data.title,
-        description: data.description,
-        expectedDurationMinutes: data.expectedDurationMinutes,
-        version: data.version,
-        published: data.published,
-        moduleId: data.moduleId,
-      },
+      data: updateData,
     });
     return this.mapRecipe(raw);
   }
@@ -146,23 +171,27 @@ export class PrismaRecipeRepository implements RecipeRepository {
   }
 
   private mapRecipe(raw: Record<string, unknown>): Recipe {
-    return {
+    return Object.freeze({
       id: raw.id as string,
-      canonicalId: raw.canonicalId as string,
+      canonicalId: CanonicalId.create(raw.canonicalId as string),
       title: raw.title as string,
       description: raw.description as string | undefined,
-      expectedDurationMinutes: raw.expectedDurationMinutes as number | undefined,
-      version: raw.version as string,
+      expectedDurationMinutes: raw.expectedDurationMinutes
+        ? ExpectedDuration.create(raw.expectedDurationMinutes as number)
+        : undefined,
+      version: SemanticVersion.parse(raw.version as string),
       published: raw.published as boolean,
       moduleId: raw.moduleId as string | undefined,
       authorId: raw.authorId as string,
-      steps: [],
-      tags: [],
-      attachments: [],
-      progressEntries: [],
+      steps: Object.freeze([]),
+      concepts: Object.freeze([]),
+      tags: Object.freeze([]),
+      attachments: Object.freeze([]),
+      progressEntries: Object.freeze([]),
+      meta: undefined,
       createdAt: raw.createdAt as Date,
       updatedAt: raw.updatedAt as Date,
-    };
+    });
   }
 
   private mapRecipeStep(raw: Record<string, unknown>): RecipeStep {
@@ -177,7 +206,13 @@ export class PrismaRecipeRepository implements RecipeRepository {
       conceptId: raw.conceptId as string | undefined,
       activityId: raw.activityId as string | undefined,
       script: raw.script as Record<string, unknown> | undefined,
-      stepType: raw.stepType as 'content' | 'activity' | 'question' | 'intro' | 'closure' | undefined,
+      stepType: raw.stepType as
+        | 'content'
+        | 'activity'
+        | 'question'
+        | 'intro'
+        | 'closure'
+        | undefined,
     };
   }
 }

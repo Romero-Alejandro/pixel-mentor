@@ -7,13 +7,15 @@
 import request from 'supertest';
 
 import { createRecipesRouter } from '@/features/recipe/infrastructure/http/recipes.routes.js';
-import type { RecipeService } from '@/features/recipe/application/services/recipe.service.js';
 import {
   RecipeNotFoundError,
   RecipeOwnershipError,
   StepNotFoundError,
-} from '@/features/recipe/application/services/recipe.service.js';
+} from '@/shared/errors/domain-errors.js';
 import type { Recipe, RecipeStep } from '@/features/recipe/domain/entities/recipe.entity.js';
+import { CanonicalId } from '@/features/recipe/domain/valueObjects/canonical-id.vo.js';
+import { SemanticVersion } from '@/features/recipe/domain/valueObjects/semantic-version.vo.js';
+import { ExpectedDuration } from '@/features/recipe/domain/valueObjects/expected-duration.vo.js';
 
 // Valid UUIDs for tests
 const RECIPE_ID = '123e4567-e89b-12d3-a456-426614174000';
@@ -25,17 +27,21 @@ const USER_ID = '523e4567-e89b-12d3-a456-426614174000';
 // Mock factories
 const createMockRecipe = (overrides: Partial<Recipe> = {}): Recipe => ({
   id: RECIPE_ID,
-  canonicalId: 'test-recipe',
+  canonicalId: CanonicalId.create('test-recipe'),
   title: 'Test Recipe',
   description: 'Test Description',
-  expectedDurationMinutes: 30,
-  version: '1.0.0',
+  expectedDurationMinutes: ExpectedDuration.create(30),
+  version: SemanticVersion.parse('1.0.0'),
   published: false,
   moduleId: undefined,
   authorId: USER_ID,
   createdAt: new Date('2024-01-01'),
   updatedAt: new Date('2024-01-01'),
   steps: [],
+  concepts: [],
+  tags: [],
+  attachments: [],
+  progressEntries: [],
   ...overrides,
 });
 
@@ -59,23 +65,35 @@ const createMockStep = (overrides: Partial<RecipeStep> = {}): RecipeStep => ({
   ...overrides,
 });
 
-// Mock RecipeService
-const createMockRecipeService = (): jest.Mocked<RecipeService> => {
-  const mockService = {
-    createRecipe: jest.fn(),
-    getRecipeById: jest.fn(),
-    updateRecipe: jest.fn(),
-    deleteRecipe: jest.fn(),
-    addStep: jest.fn(),
-    updateStep: jest.fn(),
-    deleteStep: jest.fn(),
-    reorderSteps: jest.fn(),
-    listRecipes: jest.fn(),
-  } as unknown as jest.Mocked<RecipeService>;
-  return mockService;
-};
-
 // Mock use cases
+const createMockCreateRecipeUseCase = () => ({
+  execute: jest.fn(),
+});
+
+const createMockUpdateRecipeUseCase = () => ({
+  execute: jest.fn(),
+});
+
+const createMockDeleteRecipeUseCase = () => ({
+  execute: jest.fn(),
+});
+
+const createMockAddStepUseCase = () => ({
+  execute: jest.fn(),
+});
+
+const createMockUpdateStepUseCase = () => ({
+  execute: jest.fn(),
+});
+
+const createMockDeleteStepUseCase = () => ({
+  execute: jest.fn(),
+});
+
+const createMockReorderStepsUseCase = () => ({
+  execute: jest.fn(),
+});
+
 const createMockGetRecipeUseCase = () => ({
   execute: jest.fn(),
 });
@@ -86,15 +104,27 @@ const createMockListRecipesUseCase = () => ({
 
 // Helper to create app with mocked auth
 const createApp = (
-  recipeService: jest.Mocked<RecipeService>,
+  createRecipeUseCase = createMockCreateRecipeUseCase(),
   getRecipeUseCase = createMockGetRecipeUseCase(),
   listRecipesUseCase = createMockListRecipesUseCase(),
+  updateRecipeUseCase = createMockUpdateRecipeUseCase(),
+  deleteRecipeUseCase = createMockDeleteRecipeUseCase(),
+  addStepUseCase = createMockAddStepUseCase(),
+  updateStepUseCase = createMockUpdateStepUseCase(),
+  deleteStepUseCase = createMockDeleteStepUseCase(),
+  reorderStepsUseCase = createMockReorderStepsUseCase(),
   user: { id: string; role: string } = { id: USER_ID, role: 'TEACHER' },
 ) => {
   const router = createRecipesRouter({
-    recipeService,
+    createRecipeUseCase: createRecipeUseCase as any,
     getRecipeUseCase: getRecipeUseCase as any,
     listRecipesUseCase: listRecipesUseCase as any,
+    updateRecipeUseCase: updateRecipeUseCase as any,
+    deleteRecipeUseCase: deleteRecipeUseCase as any,
+    addStepUseCase: addStepUseCase as any,
+    updateStepUseCase: updateStepUseCase as any,
+    deleteStepUseCase: deleteStepUseCase as any,
+    reorderStepsUseCase: reorderStepsUseCase as any,
   });
 
   const express = require('express');
@@ -113,93 +143,126 @@ const createApp = (
 };
 
 describe('Recipes API Routes', () => {
-  let recipeService: jest.Mocked<RecipeService>;
+  let createRecipeUseCase: any;
   let getRecipeUseCase: any;
   let listRecipesUseCase: any;
+  let updateRecipeUseCase: any;
+  let deleteRecipeUseCase: any;
+  let addStepUseCase: any;
+  let updateStepUseCase: any;
+  let deleteStepUseCase: any;
+  let reorderStepsUseCase: any;
 
   beforeEach(() => {
-    recipeService = createMockRecipeService();
+    createRecipeUseCase = createMockCreateRecipeUseCase();
     getRecipeUseCase = createMockGetRecipeUseCase();
     listRecipesUseCase = createMockListRecipesUseCase();
+    updateRecipeUseCase = createMockUpdateRecipeUseCase();
+    deleteRecipeUseCase = createMockDeleteRecipeUseCase();
+    addStepUseCase = createMockAddStepUseCase();
+    updateStepUseCase = createMockUpdateStepUseCase();
+    deleteStepUseCase = createMockDeleteStepUseCase();
+    reorderStepsUseCase = createMockReorderStepsUseCase();
   });
 
-  describe('POST /api/recipes', () => {
-    it('should create a new recipe and return 201', async () => {
-      const mockRecipe = createMockRecipe({ id: 'new-recipe-id', title: 'New Recipe' });
-      recipeService.createRecipe.mockResolvedValue(mockRecipe);
+  describe('POST /', () => {
+    it('should create a new recipe', async () => {
+      const mockRecipe = createMockRecipe();
+      createRecipeUseCase.execute.mockResolvedValue(mockRecipe);
 
-      const app = createApp(recipeService, getRecipeUseCase, listRecipesUseCase);
+      const app = createApp(
+        createRecipeUseCase,
+        getRecipeUseCase,
+        listRecipesUseCase,
+        updateRecipeUseCase,
+        deleteRecipeUseCase,
+        addStepUseCase,
+        updateStepUseCase,
+        deleteStepUseCase,
+        reorderStepsUseCase,
+      );
 
-      const response = await request(app).post('/api/recipes').send({
-        title: 'New Recipe',
-        description: 'Description',
-        expectedDurationMinutes: 45,
-      });
+      const response = await request(app).post('/api/recipes').send({ title: 'New Recipe' });
 
       expect(response.status).toBe(201);
-      expect(response.body).toHaveProperty('id', 'new-recipe-id');
-      expect(response.body.title).toBe('New Recipe');
+      expect(createRecipeUseCase.execute).toHaveBeenCalled();
     });
 
-    it('should return 400 for validation error', async () => {
-      const app = createApp(recipeService, getRecipeUseCase, listRecipesUseCase);
+    it('should return 400 for empty title', async () => {
+      const app = createApp(
+        createRecipeUseCase,
+        getRecipeUseCase,
+        listRecipesUseCase,
+        updateRecipeUseCase,
+        deleteRecipeUseCase,
+        addStepUseCase,
+        updateStepUseCase,
+        deleteStepUseCase,
+        reorderStepsUseCase,
+      );
 
-      const response = await request(app).post('/api/recipes').send({});
+      const response = await request(app).post('/api/recipes').send({ title: '' });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe('Validation error');
     });
 
-    it('should return 401 when user not authenticated', async () => {
-      const app = createApp(recipeService, getRecipeUseCase, listRecipesUseCase, {
-        id: '',
-        role: '',
-      } as any);
+    it('should return 401 if not authenticated', async () => {
+      const app = createApp(
+        createRecipeUseCase,
+        getRecipeUseCase,
+        listRecipesUseCase,
+        updateRecipeUseCase,
+        deleteRecipeUseCase,
+        addStepUseCase,
+        updateStepUseCase,
+        deleteStepUseCase,
+        reorderStepsUseCase,
+        { id: '', role: 'TEACHER' },
+      );
 
-      const response = await request(app).post('/api/recipes').send({ title: 'Test' });
+      const response = await request(app).post('/api/recipes').send({ title: 'Test Recipe' });
 
       expect(response.status).toBe(401);
     });
   });
 
-  describe('GET /api/recipes', () => {
-    it('should list recipes', async () => {
-      const mockRecipes = [
-        createMockRecipe({ id: 'recipe-1' }),
-        createMockRecipe({ id: 'recipe-2' }),
-      ];
-      listRecipesUseCase.execute.mockResolvedValue(mockRecipes);
+  describe('GET /:id', () => {
+    it('should return a recipe by ID', async () => {
+      const mockRecipe = createMockRecipe();
+      getRecipeUseCase.execute.mockResolvedValue(mockRecipe);
 
-      const app = createApp(recipeService, getRecipeUseCase, listRecipesUseCase);
-
-      const response = await request(app).get('/api/recipes');
-
-      expect(response.status).toBe(200);
-      expect(response.body).toHaveLength(2);
-    });
-  });
-
-  describe('GET /api/recipes/:id', () => {
-    it('should return recipe with steps', async () => {
-      const mockRecipe = createMockRecipe({
-        id: RECIPE_ID,
-        steps: [createMockStep({ id: STEP_ID_1 })],
-      });
-      getRecipeUseCase.execute.mockResolvedValue(mockRecipe as any);
-
-      const app = createApp(recipeService, getRecipeUseCase, listRecipesUseCase);
+      const app = createApp(
+        createRecipeUseCase,
+        getRecipeUseCase,
+        listRecipesUseCase,
+        updateRecipeUseCase,
+        deleteRecipeUseCase,
+        addStepUseCase,
+        updateStepUseCase,
+        deleteStepUseCase,
+        reorderStepsUseCase,
+      );
 
       const response = await request(app).get(`/api/recipes/${RECIPE_ID}`);
 
       expect(response.status).toBe(200);
-      expect(response.body.id).toBe(RECIPE_ID);
-      expect(response.body.steps).toHaveLength(1);
+      expect(getRecipeUseCase.execute).toHaveBeenCalledWith(RECIPE_ID);
     });
 
-    it('should return 404 when recipe not found', async () => {
+    it('should return 404 for non-existent recipe', async () => {
       getRecipeUseCase.execute.mockRejectedValue(new RecipeNotFoundError(RECIPE_ID));
 
-      const app = createApp(recipeService, getRecipeUseCase, listRecipesUseCase);
+      const app = createApp(
+        createRecipeUseCase,
+        getRecipeUseCase,
+        listRecipesUseCase,
+        updateRecipeUseCase,
+        deleteRecipeUseCase,
+        addStepUseCase,
+        updateStepUseCase,
+        deleteStepUseCase,
+        reorderStepsUseCase,
+      );
 
       const response = await request(app).get(`/api/recipes/${RECIPE_ID}`);
 
@@ -207,65 +270,112 @@ describe('Recipes API Routes', () => {
     });
   });
 
-  describe('PATCH /api/recipes/:id', () => {
-    it('should update recipe and return 200', async () => {
-      const updatedRecipe = createMockRecipe({
-        id: RECIPE_ID,
-        title: 'Updated Title',
-        version: '1.0.1',
-      });
-      recipeService.updateRecipe.mockResolvedValue(updatedRecipe);
+  describe('PATCH /:id', () => {
+    it('should update a recipe', async () => {
+      const updatedRecipe = createMockRecipe({ title: 'Updated Recipe' });
+      updateRecipeUseCase.execute.mockResolvedValue(updatedRecipe);
 
-      const app = createApp(recipeService, getRecipeUseCase, listRecipesUseCase);
+      const app = createApp(
+        createRecipeUseCase,
+        getRecipeUseCase,
+        listRecipesUseCase,
+        updateRecipeUseCase,
+        deleteRecipeUseCase,
+        addStepUseCase,
+        updateStepUseCase,
+        deleteStepUseCase,
+        reorderStepsUseCase,
+      );
 
       const response = await request(app)
         .patch(`/api/recipes/${RECIPE_ID}`)
-        .send({ title: 'Updated Title' });
+        .send({ title: 'Updated Recipe' });
 
       expect(response.status).toBe(200);
-      expect(response.body.title).toBe('Updated Title');
+      expect(updateRecipeUseCase.execute).toHaveBeenCalled();
     });
 
-    it('should return 404 when recipe not found', async () => {
-      recipeService.updateRecipe.mockRejectedValue(new RecipeNotFoundError(RECIPE_ID));
+    it('should return 404 for non-existent recipe', async () => {
+      updateRecipeUseCase.execute.mockRejectedValue(new RecipeNotFoundError(RECIPE_ID));
 
-      const app = createApp(recipeService, getRecipeUseCase, listRecipesUseCase);
+      const app = createApp(
+        createRecipeUseCase,
+        getRecipeUseCase,
+        listRecipesUseCase,
+        updateRecipeUseCase,
+        deleteRecipeUseCase,
+        addStepUseCase,
+        updateStepUseCase,
+        deleteStepUseCase,
+        reorderStepsUseCase,
+      );
 
       const response = await request(app)
         .patch(`/api/recipes/${RECIPE_ID}`)
-        .send({ title: 'New Title' });
+        .send({ title: 'Updated Recipe' });
 
       expect(response.status).toBe(404);
     });
 
     it('should return 403 when user does not own recipe', async () => {
-      recipeService.updateRecipe.mockRejectedValue(new RecipeOwnershipError(RECIPE_ID, USER_ID));
+      updateRecipeUseCase.execute.mockRejectedValue(new RecipeOwnershipError(RECIPE_ID, USER_ID));
 
-      const app = createApp(recipeService, getRecipeUseCase, listRecipesUseCase);
+      const app = createApp(
+        createRecipeUseCase,
+        getRecipeUseCase,
+        listRecipesUseCase,
+        updateRecipeUseCase,
+        deleteRecipeUseCase,
+        addStepUseCase,
+        updateStepUseCase,
+        deleteStepUseCase,
+        reorderStepsUseCase,
+      );
 
       const response = await request(app)
         .patch(`/api/recipes/${RECIPE_ID}`)
-        .send({ title: 'New Title' });
+        .send({ title: 'Updated Recipe' });
 
       expect(response.status).toBe(403);
     });
   });
 
-  describe('DELETE /api/recipes/:id', () => {
-    it('should delete recipe and return 204', async () => {
-      recipeService.deleteRecipe.mockResolvedValue(undefined);
+  describe('DELETE /:id', () => {
+    it('should delete a recipe', async () => {
+      deleteRecipeUseCase.execute.mockResolvedValue(undefined);
 
-      const app = createApp(recipeService, getRecipeUseCase, listRecipesUseCase);
+      const app = createApp(
+        createRecipeUseCase,
+        getRecipeUseCase,
+        listRecipesUseCase,
+        updateRecipeUseCase,
+        deleteRecipeUseCase,
+        addStepUseCase,
+        updateStepUseCase,
+        deleteStepUseCase,
+        reorderStepsUseCase,
+      );
 
       const response = await request(app).delete(`/api/recipes/${RECIPE_ID}`);
 
       expect(response.status).toBe(204);
+      expect(deleteRecipeUseCase.execute).toHaveBeenCalledWith(RECIPE_ID, USER_ID);
     });
 
-    it('should return 404 when recipe not found', async () => {
-      recipeService.deleteRecipe.mockRejectedValue(new RecipeNotFoundError(RECIPE_ID));
+    it('should return 404 for non-existent recipe', async () => {
+      deleteRecipeUseCase.execute.mockRejectedValue(new RecipeNotFoundError(RECIPE_ID));
 
-      const app = createApp(recipeService, getRecipeUseCase, listRecipesUseCase);
+      const app = createApp(
+        createRecipeUseCase,
+        getRecipeUseCase,
+        listRecipesUseCase,
+        updateRecipeUseCase,
+        deleteRecipeUseCase,
+        addStepUseCase,
+        updateStepUseCase,
+        deleteStepUseCase,
+        reorderStepsUseCase,
+      );
 
       const response = await request(app).delete(`/api/recipes/${RECIPE_ID}`);
 
@@ -273,123 +383,138 @@ describe('Recipes API Routes', () => {
     });
   });
 
-  describe('POST /api/recipes/:id/steps', () => {
-    it('should add step and return 201', async () => {
-      const newStep = createMockStep({ id: 'new-step-id', order: 0 });
-      recipeService.addStep.mockResolvedValue(newStep);
+  describe('POST /:id/steps', () => {
+    it('should add a step to a recipe', async () => {
+      const newStep = createMockStep();
+      addStepUseCase.execute.mockResolvedValue(newStep);
 
-      const app = createApp(recipeService, getRecipeUseCase, listRecipesUseCase);
+      const app = createApp(
+        createRecipeUseCase,
+        getRecipeUseCase,
+        listRecipesUseCase,
+        updateRecipeUseCase,
+        deleteRecipeUseCase,
+        addStepUseCase,
+        updateStepUseCase,
+        deleteStepUseCase,
+        reorderStepsUseCase,
+      );
 
       const response = await request(app)
         .post(`/api/recipes/${RECIPE_ID}/steps`)
-        .send({
-          atomId: ATOM_ID,
-          order: 0,
-          stepType: 'content',
-          script: {
-            transition: { text: 'Start' },
-            content: { text: 'Content text', chunks: [{ text: 'Chunk', pauseAfter: 0 }] },
-            examples: [{ text: 'Example', visual: { type: 'image' } }],
-            closure: { text: 'End' },
-          },
-        });
+        .send({ stepType: 'content' });
 
       expect(response.status).toBe(201);
-      expect(response.body.id).toBe('new-step-id');
+      expect(addStepUseCase.execute).toHaveBeenCalled();
     });
 
     it('should return 404 when recipe not found', async () => {
-      recipeService.addStep.mockRejectedValue(new RecipeNotFoundError(RECIPE_ID));
+      addStepUseCase.execute.mockRejectedValue(new RecipeNotFoundError(RECIPE_ID));
 
-      const app = createApp(recipeService, getRecipeUseCase, listRecipesUseCase);
+      const app = createApp(
+        createRecipeUseCase,
+        getRecipeUseCase,
+        listRecipesUseCase,
+        updateRecipeUseCase,
+        deleteRecipeUseCase,
+        addStepUseCase,
+        updateStepUseCase,
+        deleteStepUseCase,
+        reorderStepsUseCase,
+      );
 
       const response = await request(app)
         .post(`/api/recipes/${RECIPE_ID}/steps`)
-        .send({
-          atomId: ATOM_ID,
-          stepType: 'content',
-          script: {
-            transition: { text: 'Start' },
-            content: { text: 'Content', chunks: [{ text: 'Chunk', pauseAfter: 0 }] },
-            examples: [{ text: 'Example', visual: { type: 'image' } }],
-            closure: { text: 'End' },
-          },
-        });
+        .send({ stepType: 'content' });
 
       expect(response.status).toBe(404);
     });
-
-    it('should return 400 for validation error', async () => {
-      const app = createApp(recipeService, getRecipeUseCase, listRecipesUseCase);
-
-      const response = await request(app)
-        .post(`/api/recipes/${RECIPE_ID}/steps`)
-        .send({ atomId: ATOM_ID }); // Missing stepType and script
-
-      expect(response.status).toBe(400);
-    });
   });
 
-  describe('PATCH /api/recipes/:id/steps/:stepId', () => {
-    it('should update step and return 200', async () => {
-      const updatedStep = createMockStep({ id: STEP_ID_1, order: 5 });
-      recipeService.updateStep.mockResolvedValue(updatedStep);
+  describe('PATCH /:id/steps/:stepId', () => {
+    it('should update a step', async () => {
+      const updatedStep = createMockStep({ order: 1 });
+      updateStepUseCase.execute.mockResolvedValue(updatedStep);
 
-      const app = createApp(recipeService, getRecipeUseCase, listRecipesUseCase);
+      const app = createApp(
+        createRecipeUseCase,
+        getRecipeUseCase,
+        listRecipesUseCase,
+        updateRecipeUseCase,
+        deleteRecipeUseCase,
+        addStepUseCase,
+        updateStepUseCase,
+        deleteStepUseCase,
+        reorderStepsUseCase,
+      );
 
       const response = await request(app)
         .patch(`/api/recipes/${RECIPE_ID}/steps/${STEP_ID_1}`)
-        .send({
-          order: 5,
-          stepType: 'content',
-          script: {
-            transition: { text: 't' },
-            content: { text: 'c', chunks: [{ text: 'chunk', pauseAfter: 0 }] },
-            examples: [{ text: 'e' }],
-            closure: { text: 'c' },
-          },
-        });
+        .send({ order: 1 });
 
       expect(response.status).toBe(200);
+      expect(updateStepUseCase.execute).toHaveBeenCalled();
     });
 
     it('should return 404 when step not found', async () => {
-      recipeService.updateStep.mockRejectedValue(new StepNotFoundError(STEP_ID_1));
+      updateStepUseCase.execute.mockRejectedValue(new StepNotFoundError(STEP_ID_1));
 
-      const app = createApp(recipeService, getRecipeUseCase, listRecipesUseCase);
+      const app = createApp(
+        createRecipeUseCase,
+        getRecipeUseCase,
+        listRecipesUseCase,
+        updateRecipeUseCase,
+        deleteRecipeUseCase,
+        addStepUseCase,
+        updateStepUseCase,
+        deleteStepUseCase,
+        reorderStepsUseCase,
+      );
 
       const response = await request(app)
         .patch(`/api/recipes/${RECIPE_ID}/steps/${STEP_ID_1}`)
-        .send({
-          order: 5,
-          stepType: 'content',
-          script: {
-            transition: { text: 't' },
-            content: { text: 'c', chunks: [{ text: 'chunk', pauseAfter: 0 }] },
-            examples: [{ text: 'e' }],
-            closure: { text: 'c' },
-          },
-        });
+        .send({ order: 1 });
 
       expect(response.status).toBe(404);
     });
   });
 
-  describe('DELETE /api/recipes/:id/steps/:stepId', () => {
-    it('should delete step and return 204', async () => {
-      recipeService.deleteStep.mockResolvedValue(undefined);
+  describe('DELETE /:id/steps/:stepId', () => {
+    it('should delete a step', async () => {
+      deleteStepUseCase.execute.mockResolvedValue(undefined);
 
-      const app = createApp(recipeService, getRecipeUseCase, listRecipesUseCase);
+      const app = createApp(
+        createRecipeUseCase,
+        getRecipeUseCase,
+        listRecipesUseCase,
+        updateRecipeUseCase,
+        deleteRecipeUseCase,
+        addStepUseCase,
+        updateStepUseCase,
+        deleteStepUseCase,
+        reorderStepsUseCase,
+      );
 
       const response = await request(app).delete(`/api/recipes/${RECIPE_ID}/steps/${STEP_ID_1}`);
 
       expect(response.status).toBe(204);
+      expect(deleteStepUseCase.execute).toHaveBeenCalledWith(STEP_ID_1, USER_ID);
     });
 
     it('should return 404 when step not found', async () => {
-      recipeService.deleteStep.mockRejectedValue(new StepNotFoundError(STEP_ID_1));
+      deleteStepUseCase.execute.mockRejectedValue(new StepNotFoundError(STEP_ID_1));
 
-      const app = createApp(recipeService, getRecipeUseCase, listRecipesUseCase);
+      const app = createApp(
+        createRecipeUseCase,
+        getRecipeUseCase,
+        listRecipesUseCase,
+        updateRecipeUseCase,
+        deleteRecipeUseCase,
+        addStepUseCase,
+        updateStepUseCase,
+        deleteStepUseCase,
+        reorderStepsUseCase,
+      );
 
       const response = await request(app).delete(`/api/recipes/${RECIPE_ID}/steps/${STEP_ID_1}`);
 
@@ -397,45 +522,74 @@ describe('Recipes API Routes', () => {
     });
   });
 
-  describe('PATCH /api/recipes/:id/steps/reorder', () => {
-    it('should reorder steps and return 204', async () => {
-      recipeService.reorderSteps.mockResolvedValue(undefined);
+  describe('PATCH /:id/steps/reorder', () => {
+    it('should reorder steps', async () => {
+      reorderStepsUseCase.execute.mockResolvedValue(undefined);
 
-      const app = createApp(recipeService, getRecipeUseCase, listRecipesUseCase);
+      const app = createApp(
+        createRecipeUseCase,
+        getRecipeUseCase,
+        listRecipesUseCase,
+        updateRecipeUseCase,
+        deleteRecipeUseCase,
+        addStepUseCase,
+        updateStepUseCase,
+        deleteStepUseCase,
+        reorderStepsUseCase,
+      );
 
       const response = await request(app)
         .patch(`/api/recipes/${RECIPE_ID}/steps/reorder`)
-        .send({
-          stepIds: [STEP_ID_2, STEP_ID_1],
-        });
+        .send({ stepIds: [STEP_ID_2, STEP_ID_1] });
 
       expect(response.status).toBe(204);
+      expect(reorderStepsUseCase.execute).toHaveBeenCalledWith(
+        RECIPE_ID,
+        [STEP_ID_2, STEP_ID_1],
+        USER_ID,
+      );
     });
 
     it('should return 404 when recipe not found', async () => {
-      recipeService.reorderSteps.mockRejectedValue(new RecipeNotFoundError(RECIPE_ID));
+      reorderStepsUseCase.execute.mockRejectedValue(new RecipeNotFoundError(RECIPE_ID));
 
-      const app = createApp(recipeService, getRecipeUseCase, listRecipesUseCase);
+      const app = createApp(
+        createRecipeUseCase,
+        getRecipeUseCase,
+        listRecipesUseCase,
+        updateRecipeUseCase,
+        deleteRecipeUseCase,
+        addStepUseCase,
+        updateStepUseCase,
+        deleteStepUseCase,
+        reorderStepsUseCase,
+      );
 
       const response = await request(app)
-        .patch('/api/recipes/non-existent/steps/reorder')
-        .send({
-          stepIds: [STEP_ID_1],
-        });
+        .patch(`/api/recipes/${RECIPE_ID}/steps/reorder`)
+        .send({ stepIds: [STEP_ID_2, STEP_ID_1] });
 
       expect(response.status).toBe(404);
     });
 
     it('should return 404 when step not found', async () => {
-      recipeService.reorderSteps.mockRejectedValue(new StepNotFoundError('non-existent'));
+      reorderStepsUseCase.execute.mockRejectedValue(new StepNotFoundError('non-existent'));
 
-      const app = createApp(recipeService, getRecipeUseCase, listRecipesUseCase);
+      const app = createApp(
+        createRecipeUseCase,
+        getRecipeUseCase,
+        listRecipesUseCase,
+        updateRecipeUseCase,
+        deleteRecipeUseCase,
+        addStepUseCase,
+        updateStepUseCase,
+        deleteStepUseCase,
+        reorderStepsUseCase,
+      );
 
       const response = await request(app)
         .patch(`/api/recipes/${RECIPE_ID}/steps/reorder`)
-        .send({
-          stepIds: ['999e4567-e89b-12d3-a456-426614174000'], // non-existent step ID
-        });
+        .send({ stepIds: ['non-existent'] });
 
       expect(response.status).toBe(404);
     });

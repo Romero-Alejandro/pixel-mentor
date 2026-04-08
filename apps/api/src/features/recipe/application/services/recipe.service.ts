@@ -284,10 +284,12 @@ export class RecipeService {
     }
 
     // Increment version on any change
-    const newVersion = this.incrementVersion(recipe.version);
+    const newVersion = this.incrementVersion(
+      typeof recipe.version === 'string' ? recipe.version : recipe.version.toString(),
+    );
 
     // Build update data as a single object using spreads to avoid mutating readonly properties
-    const updateData: Partial<Recipe> = {
+    const updateData: Record<string, unknown> = {
       version: newVersion,
       ...(data.title !== undefined && {
         title: data.title.trim(),
@@ -307,7 +309,7 @@ export class RecipeService {
       }),
     };
 
-    await this.recipeRepository.update(id, updateData);
+    await this.recipeRepository.update(id, updateData as any);
 
     return this.getRecipeById(id);
   }

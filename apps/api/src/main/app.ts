@@ -204,7 +204,13 @@ export function createApp(deps: AppDependencies): Express {
     createRecipesRouter({
       getRecipeUseCase: recipe.getRecipeUseCase,
       listRecipesUseCase: recipe.listRecipesUseCase,
-      recipeService: recipe.recipeService,
+      createRecipeUseCase: recipe.createRecipeUseCase,
+      updateRecipeUseCase: recipe.updateRecipeUseCase,
+      deleteRecipeUseCase: recipe.deleteRecipeUseCase,
+      addStepUseCase: recipe.addStepUseCase,
+      updateStepUseCase: recipe.updateStepUseCase,
+      deleteStepUseCase: recipe.deleteStepUseCase,
+      reorderStepsUseCase: recipe.reorderStepsUseCase,
     }),
   );
   app.use(

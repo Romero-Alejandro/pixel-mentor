@@ -3,14 +3,20 @@ import { z } from 'zod';
 
 import type { GetRecipeUseCase } from '@/features/recipe/application/use-cases/get-recipe.use-case';
 import type { ListRecipesUseCase } from '@/features/recipe/application/use-cases/list-recipes.use-case';
-import type { RecipeService } from '@/features/recipe/application/services/recipe.service.js';
+import type { CreateRecipeUseCase } from '@/features/recipe/application/use-cases/create-recipe.use-case';
+import type { UpdateRecipeUseCase } from '@/features/recipe/application/use-cases/update-recipe.use-case';
+import type { DeleteRecipeUseCase } from '@/features/recipe/application/use-cases/delete-recipe.use-case';
+import type { AddStepUseCase } from '@/features/recipe/application/use-cases/add-step.use-case';
+import type { UpdateStepUseCase } from '@/features/recipe/application/use-cases/update-step.use-case';
+import type { DeleteStepUseCase } from '@/features/recipe/application/use-cases/delete-step.use-case';
+import type { ReorderStepsUseCase } from '@/features/recipe/application/use-cases/reorder-steps.use-case';
 import {
   RecipeNotFoundError,
   RecipeOwnershipError,
   RecipeInUseError,
   RecipeValidationError,
   StepNotFoundError,
-} from '@/features/recipe/application/services/recipe.service.js';
+} from '@/shared/errors/domain-errors.js';
 import {
   GetRecipeInputSchema,
   ListRecipesInputSchema,
@@ -24,11 +30,27 @@ import type { AppRequest } from '@/shared/types/express.d.js';
 export interface RecipesRouterDependencies {
   getRecipeUseCase: GetRecipeUseCase;
   listRecipesUseCase: ListRecipesUseCase;
-  recipeService: RecipeService;
+  createRecipeUseCase: CreateRecipeUseCase;
+  updateRecipeUseCase: UpdateRecipeUseCase;
+  deleteRecipeUseCase: DeleteRecipeUseCase;
+  addStepUseCase: AddStepUseCase;
+  updateStepUseCase: UpdateStepUseCase;
+  deleteStepUseCase: DeleteStepUseCase;
+  reorderStepsUseCase: ReorderStepsUseCase;
 }
 
 export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
-  const { getRecipeUseCase, listRecipesUseCase, recipeService } = deps;
+  const {
+    getRecipeUseCase,
+    listRecipesUseCase,
+    createRecipeUseCase,
+    updateRecipeUseCase,
+    deleteRecipeUseCase,
+    addStepUseCase,
+    updateStepUseCase,
+    deleteStepUseCase,
+    reorderStepsUseCase,
+  } = deps;
   const router = Router();
 
   // GET /:id - Get recipe by ID
@@ -100,7 +122,7 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
 
         const validated = CreateRecipeInputSchema.parse(request.body);
 
-        const recipe = await recipeService.createRecipe(
+        const recipe = await createRecipeUseCase.execute(
           {
             title: validated.title,
             description: validated.description,
@@ -142,9 +164,7 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
         const recipeId = request.params.id as string;
         const validated = UpdateRecipeInputSchema.parse(request.body);
 
-        const isAdmin = request.user?.role === 'ADMIN';
-
-        const recipe = await recipeService.updateRecipe(
+        const recipe = await updateRecipeUseCase.execute(
           recipeId,
           {
             title: validated.title,
@@ -154,7 +174,6 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
             published: validated.published,
           },
           userId,
-          isAdmin,
         );
 
         response.json(recipe);
@@ -193,9 +212,8 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
         }
 
         const recipeId = request.params.id as string;
-        const isAdmin = request.user?.role === 'ADMIN';
 
-        await recipeService.deleteRecipe(recipeId, userId, isAdmin);
+        await deleteRecipeUseCase.execute(recipeId, userId);
 
         response.status(204).send();
       } catch (error) {
@@ -231,7 +249,7 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
         const recipeId = request.params.id as string;
         const validated = RecipeStepInputSchema.parse(request.body);
 
-        const step = await recipeService.addStep(
+        const step = await addStepUseCase.execute(
           recipeId,
           {
             atomId: validated.atomId,
@@ -249,7 +267,6 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
         response.status(201).json(step);
       } catch (error) {
         if (error instanceof z.ZodError) {
-          // Format error messages for better UX
           const errorMessages = error.issues
             .map((issue) => {
               const path = issue.path.join('.');
@@ -294,7 +311,7 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
 
         request.logger.info({ recipeId, stepIds: validated.stepIds }, '[reorderSteps]');
 
-        await recipeService.reorderSteps(recipeId, validated.stepIds, userId);
+        await reorderStepsUseCase.execute(recipeId, validated.stepIds, userId);
 
         response.status(204).send();
       } catch (error) {
@@ -339,7 +356,7 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
         const stepId = request.params.stepId as string;
         const validated = RecipeStepInputSchema.parse(request.body);
 
-        const step = await recipeService.updateStep(
+        const step = await updateStepUseCase.execute(
           stepId,
           {
             atomId: validated.atomId,
@@ -357,7 +374,6 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
         response.json(step);
       } catch (error) {
         if (error instanceof z.ZodError) {
-          // Format error messages for better UX
           const errorMessages = error.issues
             .map((issue) => {
               const path = issue.path.join('.');
@@ -403,7 +419,7 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
 
         const stepId = request.params.stepId as string;
 
-        await recipeService.deleteStep(stepId, userId);
+        await deleteStepUseCase.execute(stepId, userId);
 
         response.status(204).send();
       } catch (error) {
@@ -412,53 +428,6 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
           return;
         }
         if (error instanceof RecipeNotFoundError) {
-          response.status(404).json({ error: error.message, code: error.code });
-          return;
-        }
-        if (error instanceof RecipeOwnershipError) {
-          response.status(403).json({ error: error.message, code: error.code });
-          return;
-        }
-        next(error);
-      }
-    },
-  );
-
-  // PATCH /:id/steps/reorder - Reorder steps
-  router.patch(
-    '/:id/steps/reorder',
-    // @ts-expect-error - Express 5 compatibility
-    async (request: AppRequest, response: Response, next: NextFunction): Promise<void> => {
-      try {
-        const userId = request.user?.id;
-        if (!userId) {
-          response.status(401).json({ error: 'Unauthorized' });
-          return;
-        }
-
-        const recipeId = request.params.id as string;
-        const validated = ReorderStepsInputSchema.parse(request.body);
-
-        request.logger.info({ recipeId, stepIds: validated.stepIds }, '[reorderSteps]');
-
-        await recipeService.reorderSteps(recipeId, validated.stepIds, userId);
-
-        response.status(204).send();
-      } catch (error) {
-        request.logger.error({ err: error }, '[reorderSteps] Full error');
-        if (error instanceof z.ZodError) {
-          response.status(400).json({
-            error: 'Validation error',
-            message: error.message,
-            details: error.issues,
-          });
-          return;
-        }
-        if (error instanceof RecipeNotFoundError) {
-          response.status(404).json({ error: error.message, code: error.code });
-          return;
-        }
-        if (error instanceof StepNotFoundError) {
           response.status(404).json({ error: error.message, code: error.code });
           return;
         }

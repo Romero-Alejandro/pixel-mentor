@@ -11,13 +11,35 @@ export interface RecipeStepWithContent extends RecipeStep {
   readonly activity?: Activity | null | undefined;
 }
 
+export interface RecipeCreateInput {
+  id: string;
+  canonicalId: string;
+  title: string;
+  description?: string;
+  expectedDurationMinutes?: number;
+  version: string;
+  published: boolean;
+  moduleId?: string;
+  authorId: string;
+}
+
+export interface RecipeUpdateInput {
+  canonicalId?: string;
+  title?: string;
+  description?: string;
+  expectedDurationMinutes?: number;
+  version?: string;
+  published?: boolean;
+  moduleId?: string;
+}
+
 export interface RecipeRepository {
   findById(id: string): Promise<Recipe | null>;
   findByIdWithSteps(id: string): Promise<Recipe | null>;
   findAll(): Promise<Recipe[]>;
   findPublished(): Promise<Recipe[]>;
-  create(recipe: Omit<Recipe, 'createdAt' | 'updatedAt' | 'steps'>): Promise<Recipe>;
-  update(id: string, data: Partial<Recipe>): Promise<Recipe>;
+  create(recipe: RecipeCreateInput): Promise<Recipe>;
+  update(id: string, data: RecipeUpdateInput): Promise<Recipe>;
   delete(id: string): Promise<void>;
   findStepsByRecipeId(recipeId: string): Promise<RecipeStep[]>;
   findStepsWithContent(recipeId: string): Promise<RecipeStepWithContent[]>;

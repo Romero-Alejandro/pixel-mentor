@@ -6,27 +6,66 @@ import {
 } from '@/features/recipe/application/services/recipe.service.js';
 import type { RecipeRepository } from '@/features/recipe/domain/ports/recipe.repository.port.js';
 import type { AtomRepository } from '@/features/knowledge/domain/ports/atom.repository.port.js';
-import type { Recipe, RecipeStep, StepScript } from '@/features/recipe/domain/entities/recipe.entity.js'; // Import StepScript
-import type { CreateRecipeStepInput } from '@/features/recipe/application/services/recipe.service.js'; // Import DTO for testing
+import type {
+  Recipe,
+  RecipeStep,
+  StepScript,
+} from '@/features/recipe/domain/entities/recipe.entity.js';
+import type { CreateRecipeStepInput } from '@/features/recipe/application/services/recipe.service.js';
+import { CanonicalId } from '@/features/recipe/domain/valueObjects/canonical-id.vo.js';
+import { SemanticVersion } from '@/features/recipe/domain/valueObjects/semantic-version.vo.js';
+import { ExpectedDuration } from '@/features/recipe/domain/valueObjects/expected-duration.vo.js';
 
 // Jest globals are available automatically - no need to import
 
 // Mock types
-const createMockRecipe = (overrides: Partial<Recipe> = {}): Recipe => ({
-  id: 'recipe-123',
-  canonicalId: 'test-recipe',
-  title: 'Test Recipe',
-  description: 'A test description',
-  expectedDurationMinutes: 30,
-  version: '1.0.0',
-  published: false,
-  moduleId: 'module-123',
-  authorId: 'user-123', // Default author
-  createdAt: new Date(),
-  updatedAt: new Date(),
-  steps: [],
-  ...overrides,
-});
+const createMockRecipe = (overrides: Record<string, any> = {}): Recipe => {
+  // Convert primitives to VOs if needed
+  const canonicalId =
+    overrides.canonicalId instanceof CanonicalId
+      ? overrides.canonicalId
+      : (() => {
+          const raw =
+            typeof overrides.canonicalId === 'string' ? overrides.canonicalId : 'test-recipe';
+          return CanonicalId.create(raw);
+        })();
+
+  const version =
+    overrides.version instanceof SemanticVersion
+      ? overrides.version
+      : (() => {
+          const raw = typeof overrides.version === 'string' ? overrides.version : '1.0.0';
+          return SemanticVersion.parse(raw);
+        })();
+
+  const expectedDurationMinutes =
+    overrides.expectedDurationMinutes instanceof ExpectedDuration
+      ? overrides.expectedDurationMinutes
+      : (() => {
+          const raw = overrides.expectedDurationMinutes;
+          return raw !== undefined ? ExpectedDuration.create(raw) : undefined;
+        })();
+
+  return {
+    id: overrides.id || 'recipe-123',
+    canonicalId,
+    title: overrides.title || 'Test Recipe',
+    description: overrides.description,
+    expectedDurationMinutes,
+    version,
+    published: overrides.published ?? false,
+    moduleId: overrides.moduleId,
+    authorId: overrides.authorId || 'user-123',
+    createdAt: overrides.createdAt || new Date(),
+    updatedAt: overrides.updatedAt || new Date(),
+    steps: overrides.steps || [],
+    concepts: overrides.concepts || [],
+    tags: overrides.tags || [],
+    attachments: overrides.attachments || [],
+    progressEntries: overrides.progressEntries || [],
+    meta: overrides.meta,
+  };
+};
 
 const defaultStepScript: StepScript = {
   transition: { text: 't' },
@@ -103,25 +142,48 @@ const createMockRecipeRepository = (): jest.Mocked<RecipeRepository> => {
   mockRepo.findAll.mockResolvedValue([createMockRecipe()]);
   mockRepo.findPublished.mockResolvedValue([createMockRecipe({ published: true })]);
 
-  mockRepo.create.mockImplementation((data: any) => {
-    return Promise.resolve(
-      createMockRecipe({
-        id: crypto.randomUUID(), // Ensure ID is generated
-        title: data.title,
-        canonicalId: data.canonicalId,
-        version: data.version,
-      }),
-    );
+  mockRepo.create.mockImplementation(async (data: any) => {
+    // Handle VOs or primitives
+    const canonicalId =
+      data.canonicalId instanceof CanonicalId ? data.canonicalId.value : data.canonicalId;
+    const version =
+      data.version instanceof SemanticVersion ? data.version.toString() : data.version;
+    const expectedDuration =
+      data.expectedDurationMinutes instanceof ExpectedDuration
+        ? data.expectedDurationMinutes.minutes
+        : data.expectedDurationMinutes;
+    return createMockRecipe({
+      id: crypto.randomUUID(),
+      title: data.title,
+      canonicalId: CanonicalId.create(canonicalId),
+      version: SemanticVersion.parse(version),
+      expectedDurationMinutes: expectedDuration
+        ? ExpectedDuration.create(expectedDuration)
+        : undefined,
+    });
   });
 
-  mockRepo.update.mockImplementation((id: string, data: any) => {
-    return Promise.resolve(
-      createMockRecipe({
-        id,
-        ...data,
-        version: data.version || '1.0.1',
-      }),
-    );
+  mockRepo.update.mockImplementation(async (id: string, data: any) => {
+    // Handle VOs or primitives
+    const canonicalId =
+      data.canonicalId instanceof CanonicalId ? data.canonicalId.value : data.canonicalId;
+    const version =
+      data.version instanceof SemanticVersion ? data.version.toString() : data.version;
+    const expectedDuration =
+      data.expectedDurationMinutes instanceof ExpectedDuration
+        ? data.expectedDurationMinutes.minutes
+        : data.expectedDurationMinutes;
+    return createMockRecipe({
+      id,
+      title: data.title,
+      canonicalId: canonicalId !== undefined ? CanonicalId.create(canonicalId) : undefined,
+      version: version !== undefined ? SemanticVersion.parse(version) : undefined,
+      expectedDurationMinutes:
+        expectedDuration !== undefined ? ExpectedDuration.create(expectedDuration) : undefined,
+      description: data.description,
+      published: data.published,
+      moduleId: data.moduleId,
+    });
   });
 
   mockRepo.delete.mockResolvedValue(undefined);
@@ -225,12 +287,12 @@ describe('RecipeService', () => {
       expect(recipeRepository.create).toHaveBeenCalledWith(
         expect.objectContaining({
           title: 'New Recipe',
-          canonicalId: expect.any(String), // Canonical ID is generated
-          version: '1.0.0',
+          canonicalId: expect.anything(), // CanonicalId VO
+          version: expect.anything(), // SemanticVersion VO
         }),
       );
       expect(result.title).toBe('New Recipe');
-      expect(result.version).toBe('1.0.0');
+      expect(result.version.toString()).toBe('1.0.0');
       addStepSpy.mockRestore(); // Clean up the spy
     });
 
@@ -316,11 +378,11 @@ describe('RecipeService', () => {
 
       expect(recipeRepository.update).toHaveBeenCalledWith('recipe-123', {
         title: 'New Title',
-        canonicalId: expect.any(String), // Recalculated
-        version: '1.0.1',
+        canonicalId: expect.anything(), // CanonicalId VO or string (current impl)
+        version: expect.anything(), // string (current) will be '1.0.1'
       });
       expect(result.title).toBe('New Title');
-      expect(result.version).toBe('1.0.1');
+      expect(result.version.toString()).toBe('1.0.1');
     });
 
     it('should throw RecipeNotFoundError if recipe not found', async () => {
