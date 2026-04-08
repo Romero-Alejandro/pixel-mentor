@@ -118,6 +118,9 @@ model User {
   createdClasses Class[]         @relation("ClassAuthor")
   classTemplates ClassTemplate[]
 
+  // Recipe relations
+  recipes Recipe[]
+
   @@index([email])
   @@index([username])
   @@index([role])
@@ -194,10 +197,12 @@ model Recipe {
   version                 String   @default("1.0.0") @db.VarChar(20)
   published               Boolean  @default(false)
   moduleId                String?
+  authorId                String
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
 
   module          Module?           @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  author          User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
   steps           RecipeStep[]
   concepts        Concept[]
   tags            RecipeTag[]
@@ -210,6 +215,7 @@ model Recipe {
   classVersionLessons ClassVersionLesson[]
 
   @@index([published, moduleId])
+  @@index([authorId])
   @@map("recipes")
 }
 

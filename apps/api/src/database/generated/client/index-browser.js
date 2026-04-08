@@ -185,6 +185,7 @@ exports.Prisma.RecipeScalarFieldEnum = {
   version: 'version',
   published: 'published',
   moduleId: 'moduleId',
+  authorId: 'authorId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };

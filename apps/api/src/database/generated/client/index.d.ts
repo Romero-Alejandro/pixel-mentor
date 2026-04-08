@@ -4202,6 +4202,7 @@ export namespace Prisma {
     refreshTokens: number
     createdClasses: number
     classTemplates: number
+    recipes: number
   }
 
   export type UserCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -4216,6 +4217,7 @@ export namespace Prisma {
     refreshTokens?: boolean | UserCountOutputTypeCountRefreshTokensArgs
     createdClasses?: boolean | UserCountOutputTypeCountCreatedClassesArgs
     classTemplates?: boolean | UserCountOutputTypeCountClassTemplatesArgs
+    recipes?: boolean | UserCountOutputTypeCountRecipesArgs
   }
 
   // Custom InputTypes
@@ -4304,6 +4306,13 @@ export namespace Prisma {
    */
   export type UserCountOutputTypeCountClassTemplatesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: ClassTemplateWhereInput
+  }
+
+  /**
+   * UserCountOutputType without action
+   */
+  export type UserCountOutputTypeCountRecipesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: RecipeWhereInput
   }
 
 
@@ -5232,6 +5241,7 @@ export namespace Prisma {
     refreshTokens?: boolean | User$refreshTokensArgs<ExtArgs>
     createdClasses?: boolean | User$createdClassesArgs<ExtArgs>
     classTemplates?: boolean | User$classTemplatesArgs<ExtArgs>
+    recipes?: boolean | User$recipesArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["user"]>
 
@@ -5292,6 +5302,7 @@ export namespace Prisma {
     refreshTokens?: boolean | User$refreshTokensArgs<ExtArgs>
     createdClasses?: boolean | User$createdClassesArgs<ExtArgs>
     classTemplates?: boolean | User$classTemplatesArgs<ExtArgs>
+    recipes?: boolean | User$recipesArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type UserIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
@@ -5313,6 +5324,7 @@ export namespace Prisma {
       refreshTokens: Prisma.$RefreshTokenPayload<ExtArgs>[]
       createdClasses: Prisma.$ClassPayload<ExtArgs>[]
       classTemplates: Prisma.$ClassTemplatePayload<ExtArgs>[]
+      recipes: Prisma.$RecipePayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -5733,6 +5745,7 @@ export namespace Prisma {
     refreshTokens<T extends User$refreshTokensArgs<ExtArgs> = {}>(args?: Subset<T, User$refreshTokensArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$RefreshTokenPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     createdClasses<T extends User$createdClassesArgs<ExtArgs> = {}>(args?: Subset<T, User$createdClassesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ClassPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     classTemplates<T extends User$classTemplatesArgs<ExtArgs> = {}>(args?: Subset<T, User$classTemplatesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ClassTemplatePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    recipes<T extends User$recipesArgs<ExtArgs> = {}>(args?: Subset<T, User$recipesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$RecipePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -6460,6 +6473,30 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: ClassTemplateScalarFieldEnum | ClassTemplateScalarFieldEnum[]
+  }
+
+  /**
+   * User.recipes
+   */
+  export type User$recipesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Recipe
+     */
+    select?: RecipeSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Recipe
+     */
+    omit?: RecipeOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: RecipeInclude<ExtArgs> | null
+    where?: RecipeWhereInput
+    orderBy?: RecipeOrderByWithRelationInput | RecipeOrderByWithRelationInput[]
+    cursor?: RecipeWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: RecipeScalarFieldEnum | RecipeScalarFieldEnum[]
   }
 
   /**
@@ -10992,6 +11029,7 @@ export namespace Prisma {
     version: string | null
     published: boolean | null
     moduleId: string | null
+    authorId: string | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -11005,6 +11043,7 @@ export namespace Prisma {
     version: string | null
     published: boolean | null
     moduleId: string | null
+    authorId: string | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -11018,6 +11057,7 @@ export namespace Prisma {
     version: number
     published: number
     moduleId: number
+    authorId: number
     createdAt: number
     updatedAt: number
     _all: number
@@ -11041,6 +11081,7 @@ export namespace Prisma {
     version?: true
     published?: true
     moduleId?: true
+    authorId?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -11054,6 +11095,7 @@ export namespace Prisma {
     version?: true
     published?: true
     moduleId?: true
+    authorId?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -11067,6 +11109,7 @@ export namespace Prisma {
     version?: true
     published?: true
     moduleId?: true
+    authorId?: true
     createdAt?: true
     updatedAt?: true
     _all?: true
@@ -11167,6 +11210,7 @@ export namespace Prisma {
     version: string
     published: boolean
     moduleId: string | null
+    authorId: string
     createdAt: Date
     updatedAt: Date
     _count: RecipeCountAggregateOutputType | null
@@ -11199,9 +11243,11 @@ export namespace Prisma {
     version?: boolean
     published?: boolean
     moduleId?: boolean
+    authorId?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     module?: boolean | Recipe$moduleArgs<ExtArgs>
+    author?: boolean | UserDefaultArgs<ExtArgs>
     steps?: boolean | Recipe$stepsArgs<ExtArgs>
     concepts?: boolean | Recipe$conceptsArgs<ExtArgs>
     tags?: boolean | Recipe$tagsArgs<ExtArgs>
@@ -11222,9 +11268,11 @@ export namespace Prisma {
     version?: boolean
     published?: boolean
     moduleId?: boolean
+    authorId?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     module?: boolean | Recipe$moduleArgs<ExtArgs>
+    author?: boolean | UserDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["recipe"]>
 
   export type RecipeSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -11236,9 +11284,11 @@ export namespace Prisma {
     version?: boolean
     published?: boolean
     moduleId?: boolean
+    authorId?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     module?: boolean | Recipe$moduleArgs<ExtArgs>
+    author?: boolean | UserDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["recipe"]>
 
   export type RecipeSelectScalar = {
@@ -11250,13 +11300,15 @@ export namespace Prisma {
     version?: boolean
     published?: boolean
     moduleId?: boolean
+    authorId?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type RecipeOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "canonicalId" | "title" | "description" | "expectedDurationMinutes" | "version" | "published" | "moduleId" | "createdAt" | "updatedAt", ExtArgs["result"]["recipe"]>
+  export type RecipeOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "canonicalId" | "title" | "description" | "expectedDurationMinutes" | "version" | "published" | "moduleId" | "authorId" | "createdAt" | "updatedAt", ExtArgs["result"]["recipe"]>
   export type RecipeInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     module?: boolean | Recipe$moduleArgs<ExtArgs>
+    author?: boolean | UserDefaultArgs<ExtArgs>
     steps?: boolean | Recipe$stepsArgs<ExtArgs>
     concepts?: boolean | Recipe$conceptsArgs<ExtArgs>
     tags?: boolean | Recipe$tagsArgs<ExtArgs>
@@ -11269,15 +11321,18 @@ export namespace Prisma {
   }
   export type RecipeIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     module?: boolean | Recipe$moduleArgs<ExtArgs>
+    author?: boolean | UserDefaultArgs<ExtArgs>
   }
   export type RecipeIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     module?: boolean | Recipe$moduleArgs<ExtArgs>
+    author?: boolean | UserDefaultArgs<ExtArgs>
   }
 
   export type $RecipePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "Recipe"
     objects: {
       module: Prisma.$ModulePayload<ExtArgs> | null
+      author: Prisma.$UserPayload<ExtArgs>
       steps: Prisma.$RecipeStepPayload<ExtArgs>[]
       concepts: Prisma.$ConceptPayload<ExtArgs>[]
       tags: Prisma.$RecipeTagPayload<ExtArgs>[]
@@ -11296,6 +11351,7 @@ export namespace Prisma {
       version: string
       published: boolean
       moduleId: string | null
+      authorId: string
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["recipe"]>
@@ -11693,6 +11749,7 @@ export namespace Prisma {
   export interface Prisma__RecipeClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     module<T extends Recipe$moduleArgs<ExtArgs> = {}>(args?: Subset<T, Recipe$moduleArgs<ExtArgs>>): Prisma__ModuleClient<$Result.GetResult<Prisma.$ModulePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    author<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     steps<T extends Recipe$stepsArgs<ExtArgs> = {}>(args?: Subset<T, Recipe$stepsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$RecipeStepPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     concepts<T extends Recipe$conceptsArgs<ExtArgs> = {}>(args?: Subset<T, Recipe$conceptsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ConceptPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     tags<T extends Recipe$tagsArgs<ExtArgs> = {}>(args?: Subset<T, Recipe$tagsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$RecipeTagPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -11738,6 +11795,7 @@ export namespace Prisma {
     readonly version: FieldRef<"Recipe", 'String'>
     readonly published: FieldRef<"Recipe", 'Boolean'>
     readonly moduleId: FieldRef<"Recipe", 'String'>
+    readonly authorId: FieldRef<"Recipe", 'String'>
     readonly createdAt: FieldRef<"Recipe", 'DateTime'>
     readonly updatedAt: FieldRef<"Recipe", 'DateTime'>
   }
@@ -46811,6 +46869,7 @@ export namespace Prisma {
     version: 'version',
     published: 'published',
     moduleId: 'moduleId',
+    authorId: 'authorId',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   };
@@ -47520,6 +47579,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenListRelationFilter
     createdClasses?: ClassListRelationFilter
     classTemplates?: ClassTemplateListRelationFilter
+    recipes?: RecipeListRelationFilter
   }
 
   export type UserOrderByWithRelationInput = {
@@ -47547,6 +47607,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenOrderByRelationAggregateInput
     createdClasses?: ClassOrderByRelationAggregateInput
     classTemplates?: ClassTemplateOrderByRelationAggregateInput
+    recipes?: RecipeOrderByRelationAggregateInput
   }
 
   export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -47577,6 +47638,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenListRelationFilter
     createdClasses?: ClassListRelationFilter
     classTemplates?: ClassTemplateListRelationFilter
+    recipes?: RecipeListRelationFilter
   }, "id" | "email" | "username">
 
   export type UserOrderByWithAggregationInput = {
@@ -47899,9 +47961,11 @@ export namespace Prisma {
     version?: StringFilter<"Recipe"> | string
     published?: BoolFilter<"Recipe"> | boolean
     moduleId?: StringNullableFilter<"Recipe"> | string | null
+    authorId?: StringFilter<"Recipe"> | string
     createdAt?: DateTimeFilter<"Recipe"> | Date | string
     updatedAt?: DateTimeFilter<"Recipe"> | Date | string
     module?: XOR<ModuleNullableScalarRelationFilter, ModuleWhereInput> | null
+    author?: XOR<UserScalarRelationFilter, UserWhereInput>
     steps?: RecipeStepListRelationFilter
     concepts?: ConceptListRelationFilter
     tags?: RecipeTagListRelationFilter
@@ -47921,9 +47985,11 @@ export namespace Prisma {
     version?: SortOrder
     published?: SortOrder
     moduleId?: SortOrderInput | SortOrder
+    authorId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     module?: ModuleOrderByWithRelationInput
+    author?: UserOrderByWithRelationInput
     steps?: RecipeStepOrderByRelationAggregateInput
     concepts?: ConceptOrderByRelationAggregateInput
     tags?: RecipeTagOrderByRelationAggregateInput
@@ -47946,9 +48012,11 @@ export namespace Prisma {
     version?: StringFilter<"Recipe"> | string
     published?: BoolFilter<"Recipe"> | boolean
     moduleId?: StringNullableFilter<"Recipe"> | string | null
+    authorId?: StringFilter<"Recipe"> | string
     createdAt?: DateTimeFilter<"Recipe"> | Date | string
     updatedAt?: DateTimeFilter<"Recipe"> | Date | string
     module?: XOR<ModuleNullableScalarRelationFilter, ModuleWhereInput> | null
+    author?: XOR<UserScalarRelationFilter, UserWhereInput>
     steps?: RecipeStepListRelationFilter
     concepts?: ConceptListRelationFilter
     tags?: RecipeTagListRelationFilter
@@ -47968,6 +48036,7 @@ export namespace Prisma {
     version?: SortOrder
     published?: SortOrder
     moduleId?: SortOrderInput | SortOrder
+    authorId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: RecipeCountOrderByAggregateInput
@@ -47989,6 +48058,7 @@ export namespace Prisma {
     version?: StringWithAggregatesFilter<"Recipe"> | string
     published?: BoolWithAggregatesFilter<"Recipe"> | boolean
     moduleId?: StringNullableWithAggregatesFilter<"Recipe"> | string | null
+    authorId?: StringWithAggregatesFilter<"Recipe"> | string
     createdAt?: DateTimeWithAggregatesFilter<"Recipe"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Recipe"> | Date | string
   }
@@ -50254,6 +50324,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
+    recipes?: RecipeCreateNestedManyWithoutAuthorInput
   }
 
   export type UserUncheckedCreateInput = {
@@ -50281,6 +50352,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
+    recipes?: RecipeUncheckedCreateNestedManyWithoutAuthorInput
   }
 
   export type UserUpdateInput = {
@@ -50308,6 +50380,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
+    recipes?: RecipeUpdateManyWithoutAuthorNestedInput
   }
 
   export type UserUncheckedUpdateInput = {
@@ -50335,6 +50408,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
+    recipes?: RecipeUncheckedUpdateManyWithoutAuthorNestedInput
   }
 
   export type UserCreateManyInput = {
@@ -50682,6 +50756,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     module?: ModuleCreateNestedOneWithoutRecipesInput
+    author: UserCreateNestedOneWithoutRecipesInput
     steps?: RecipeStepCreateNestedManyWithoutRecipeInput
     concepts?: ConceptCreateNestedManyWithoutRecipeInput
     tags?: RecipeTagCreateNestedManyWithoutRecipeInput
@@ -50701,6 +50776,7 @@ export namespace Prisma {
     version?: string
     published?: boolean
     moduleId?: string | null
+    authorId: string
     createdAt?: Date | string
     updatedAt?: Date | string
     steps?: RecipeStepUncheckedCreateNestedManyWithoutRecipeInput
@@ -50724,6 +50800,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     module?: ModuleUpdateOneWithoutRecipesNestedInput
+    author?: UserUpdateOneRequiredWithoutRecipesNestedInput
     steps?: RecipeStepUpdateManyWithoutRecipeNestedInput
     concepts?: ConceptUpdateManyWithoutRecipeNestedInput
     tags?: RecipeTagUpdateManyWithoutRecipeNestedInput
@@ -50743,6 +50820,7 @@ export namespace Prisma {
     version?: StringFieldUpdateOperationsInput | string
     published?: BoolFieldUpdateOperationsInput | boolean
     moduleId?: NullableStringFieldUpdateOperationsInput | string | null
+    authorId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     steps?: RecipeStepUncheckedUpdateManyWithoutRecipeNestedInput
@@ -50764,6 +50842,7 @@ export namespace Prisma {
     version?: string
     published?: boolean
     moduleId?: string | null
+    authorId: string
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -50789,6 +50868,7 @@ export namespace Prisma {
     version?: StringFieldUpdateOperationsInput | string
     published?: BoolFieldUpdateOperationsInput | boolean
     moduleId?: NullableStringFieldUpdateOperationsInput | string | null
+    authorId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -53268,6 +53348,12 @@ export namespace Prisma {
     none?: ClassTemplateWhereInput
   }
 
+  export type RecipeListRelationFilter = {
+    every?: RecipeWhereInput
+    some?: RecipeWhereInput
+    none?: RecipeWhereInput
+  }
+
   export type SortOrderInput = {
     sort: SortOrder
     nulls?: NullsOrder
@@ -53314,6 +53400,10 @@ export namespace Prisma {
   }
 
   export type ClassTemplateOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type RecipeOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -53653,19 +53743,9 @@ export namespace Prisma {
     maxAge?: SortOrder
   }
 
-  export type RecipeListRelationFilter = {
-    every?: RecipeWhereInput
-    some?: RecipeWhereInput
-    none?: RecipeWhereInput
-  }
-
   export type LevelScalarRelationFilter = {
     is?: LevelWhereInput
     isNot?: LevelWhereInput
-  }
-
-  export type RecipeOrderByRelationAggregateInput = {
-    _count?: SortOrder
   }
 
   export type ModuleCountOrderByAggregateInput = {
@@ -53766,6 +53846,7 @@ export namespace Prisma {
     version?: SortOrder
     published?: SortOrder
     moduleId?: SortOrder
+    authorId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -53783,6 +53864,7 @@ export namespace Prisma {
     version?: SortOrder
     published?: SortOrder
     moduleId?: SortOrder
+    authorId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -53796,6 +53878,7 @@ export namespace Prisma {
     version?: SortOrder
     published?: SortOrder
     moduleId?: SortOrder
+    authorId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -55502,6 +55585,13 @@ export namespace Prisma {
     connect?: ClassTemplateWhereUniqueInput | ClassTemplateWhereUniqueInput[]
   }
 
+  export type RecipeCreateNestedManyWithoutAuthorInput = {
+    create?: XOR<RecipeCreateWithoutAuthorInput, RecipeUncheckedCreateWithoutAuthorInput> | RecipeCreateWithoutAuthorInput[] | RecipeUncheckedCreateWithoutAuthorInput[]
+    connectOrCreate?: RecipeCreateOrConnectWithoutAuthorInput | RecipeCreateOrConnectWithoutAuthorInput[]
+    createMany?: RecipeCreateManyAuthorInputEnvelope
+    connect?: RecipeWhereUniqueInput | RecipeWhereUniqueInput[]
+  }
+
   export type SessionUncheckedCreateNestedManyWithoutStudentInput = {
     create?: XOR<SessionCreateWithoutStudentInput, SessionUncheckedCreateWithoutStudentInput> | SessionCreateWithoutStudentInput[] | SessionUncheckedCreateWithoutStudentInput[]
     connectOrCreate?: SessionCreateOrConnectWithoutStudentInput | SessionCreateOrConnectWithoutStudentInput[]
@@ -55589,6 +55679,13 @@ export namespace Prisma {
     connectOrCreate?: ClassTemplateCreateOrConnectWithoutTutorInput | ClassTemplateCreateOrConnectWithoutTutorInput[]
     createMany?: ClassTemplateCreateManyTutorInputEnvelope
     connect?: ClassTemplateWhereUniqueInput | ClassTemplateWhereUniqueInput[]
+  }
+
+  export type RecipeUncheckedCreateNestedManyWithoutAuthorInput = {
+    create?: XOR<RecipeCreateWithoutAuthorInput, RecipeUncheckedCreateWithoutAuthorInput> | RecipeCreateWithoutAuthorInput[] | RecipeUncheckedCreateWithoutAuthorInput[]
+    connectOrCreate?: RecipeCreateOrConnectWithoutAuthorInput | RecipeCreateOrConnectWithoutAuthorInput[]
+    createMany?: RecipeCreateManyAuthorInputEnvelope
+    connect?: RecipeWhereUniqueInput | RecipeWhereUniqueInput[]
   }
 
   export type StringFieldUpdateOperationsInput = {
@@ -55797,6 +55894,20 @@ export namespace Prisma {
     deleteMany?: ClassTemplateScalarWhereInput | ClassTemplateScalarWhereInput[]
   }
 
+  export type RecipeUpdateManyWithoutAuthorNestedInput = {
+    create?: XOR<RecipeCreateWithoutAuthorInput, RecipeUncheckedCreateWithoutAuthorInput> | RecipeCreateWithoutAuthorInput[] | RecipeUncheckedCreateWithoutAuthorInput[]
+    connectOrCreate?: RecipeCreateOrConnectWithoutAuthorInput | RecipeCreateOrConnectWithoutAuthorInput[]
+    upsert?: RecipeUpsertWithWhereUniqueWithoutAuthorInput | RecipeUpsertWithWhereUniqueWithoutAuthorInput[]
+    createMany?: RecipeCreateManyAuthorInputEnvelope
+    set?: RecipeWhereUniqueInput | RecipeWhereUniqueInput[]
+    disconnect?: RecipeWhereUniqueInput | RecipeWhereUniqueInput[]
+    delete?: RecipeWhereUniqueInput | RecipeWhereUniqueInput[]
+    connect?: RecipeWhereUniqueInput | RecipeWhereUniqueInput[]
+    update?: RecipeUpdateWithWhereUniqueWithoutAuthorInput | RecipeUpdateWithWhereUniqueWithoutAuthorInput[]
+    updateMany?: RecipeUpdateManyWithWhereWithoutAuthorInput | RecipeUpdateManyWithWhereWithoutAuthorInput[]
+    deleteMany?: RecipeScalarWhereInput | RecipeScalarWhereInput[]
+  }
+
   export type SessionUncheckedUpdateManyWithoutStudentNestedInput = {
     create?: XOR<SessionCreateWithoutStudentInput, SessionUncheckedCreateWithoutStudentInput> | SessionCreateWithoutStudentInput[] | SessionUncheckedCreateWithoutStudentInput[]
     connectOrCreate?: SessionCreateOrConnectWithoutStudentInput | SessionCreateOrConnectWithoutStudentInput[]
@@ -55971,6 +56082,20 @@ export namespace Prisma {
     deleteMany?: ClassTemplateScalarWhereInput | ClassTemplateScalarWhereInput[]
   }
 
+  export type RecipeUncheckedUpdateManyWithoutAuthorNestedInput = {
+    create?: XOR<RecipeCreateWithoutAuthorInput, RecipeUncheckedCreateWithoutAuthorInput> | RecipeCreateWithoutAuthorInput[] | RecipeUncheckedCreateWithoutAuthorInput[]
+    connectOrCreate?: RecipeCreateOrConnectWithoutAuthorInput | RecipeCreateOrConnectWithoutAuthorInput[]
+    upsert?: RecipeUpsertWithWhereUniqueWithoutAuthorInput | RecipeUpsertWithWhereUniqueWithoutAuthorInput[]
+    createMany?: RecipeCreateManyAuthorInputEnvelope
+    set?: RecipeWhereUniqueInput | RecipeWhereUniqueInput[]
+    disconnect?: RecipeWhereUniqueInput | RecipeWhereUniqueInput[]
+    delete?: RecipeWhereUniqueInput | RecipeWhereUniqueInput[]
+    connect?: RecipeWhereUniqueInput | RecipeWhereUniqueInput[]
+    update?: RecipeUpdateWithWhereUniqueWithoutAuthorInput | RecipeUpdateWithWhereUniqueWithoutAuthorInput[]
+    updateMany?: RecipeUpdateManyWithWhereWithoutAuthorInput | RecipeUpdateManyWithWhereWithoutAuthorInput[]
+    deleteMany?: RecipeScalarWhereInput | RecipeScalarWhereInput[]
+  }
+
   export type UserCreateNestedOneWithoutApiKeysInput = {
     create?: XOR<UserCreateWithoutApiKeysInput, UserUncheckedCreateWithoutApiKeysInput>
     connectOrCreate?: UserCreateOrConnectWithoutApiKeysInput
@@ -56117,6 +56242,12 @@ export namespace Prisma {
     connect?: ModuleWhereUniqueInput
   }
 
+  export type UserCreateNestedOneWithoutRecipesInput = {
+    create?: XOR<UserCreateWithoutRecipesInput, UserUncheckedCreateWithoutRecipesInput>
+    connectOrCreate?: UserCreateOrConnectWithoutRecipesInput
+    connect?: UserWhereUniqueInput
+  }
+
   export type RecipeStepCreateNestedManyWithoutRecipeInput = {
     create?: XOR<RecipeStepCreateWithoutRecipeInput, RecipeStepUncheckedCreateWithoutRecipeInput> | RecipeStepCreateWithoutRecipeInput[] | RecipeStepUncheckedCreateWithoutRecipeInput[]
     connectOrCreate?: RecipeStepCreateOrConnectWithoutRecipeInput | RecipeStepCreateOrConnectWithoutRecipeInput[]
@@ -56237,6 +56368,14 @@ export namespace Prisma {
     delete?: ModuleWhereInput | boolean
     connect?: ModuleWhereUniqueInput
     update?: XOR<XOR<ModuleUpdateToOneWithWhereWithoutRecipesInput, ModuleUpdateWithoutRecipesInput>, ModuleUncheckedUpdateWithoutRecipesInput>
+  }
+
+  export type UserUpdateOneRequiredWithoutRecipesNestedInput = {
+    create?: XOR<UserCreateWithoutRecipesInput, UserUncheckedCreateWithoutRecipesInput>
+    connectOrCreate?: UserCreateOrConnectWithoutRecipesInput
+    upsert?: UserUpsertWithoutRecipesInput
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutRecipesInput, UserUpdateWithoutRecipesInput>, UserUncheckedUpdateWithoutRecipesInput>
   }
 
   export type RecipeStepUpdateManyWithoutRecipeNestedInput = {
@@ -58986,6 +59125,58 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
+  export type RecipeCreateWithoutAuthorInput = {
+    id?: string
+    canonicalId: string
+    title: string
+    description?: string | null
+    expectedDurationMinutes?: number | null
+    version?: string
+    published?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    module?: ModuleCreateNestedOneWithoutRecipesInput
+    steps?: RecipeStepCreateNestedManyWithoutRecipeInput
+    concepts?: ConceptCreateNestedManyWithoutRecipeInput
+    tags?: RecipeTagCreateNestedManyWithoutRecipeInput
+    progressEntries?: UserProgressCreateNestedManyWithoutRecipeInput
+    attachments?: AssetAttachmentCreateNestedManyWithoutRecipeInput
+    sessions?: SessionCreateNestedManyWithoutRecipeInput
+    classLessons?: ClassLessonCreateNestedManyWithoutRecipeInput
+    classVersionLessons?: ClassVersionLessonCreateNestedManyWithoutRecipeInput
+  }
+
+  export type RecipeUncheckedCreateWithoutAuthorInput = {
+    id?: string
+    canonicalId: string
+    title: string
+    description?: string | null
+    expectedDurationMinutes?: number | null
+    version?: string
+    published?: boolean
+    moduleId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    steps?: RecipeStepUncheckedCreateNestedManyWithoutRecipeInput
+    concepts?: ConceptUncheckedCreateNestedManyWithoutRecipeInput
+    tags?: RecipeTagUncheckedCreateNestedManyWithoutRecipeInput
+    progressEntries?: UserProgressUncheckedCreateNestedManyWithoutRecipeInput
+    attachments?: AssetAttachmentUncheckedCreateNestedManyWithoutRecipeInput
+    sessions?: SessionUncheckedCreateNestedManyWithoutRecipeInput
+    classLessons?: ClassLessonUncheckedCreateNestedManyWithoutRecipeInput
+    classVersionLessons?: ClassVersionLessonUncheckedCreateNestedManyWithoutRecipeInput
+  }
+
+  export type RecipeCreateOrConnectWithoutAuthorInput = {
+    where: RecipeWhereUniqueInput
+    create: XOR<RecipeCreateWithoutAuthorInput, RecipeUncheckedCreateWithoutAuthorInput>
+  }
+
+  export type RecipeCreateManyAuthorInputEnvelope = {
+    data: RecipeCreateManyAuthorInput | RecipeCreateManyAuthorInput[]
+    skipDuplicates?: boolean
+  }
+
   export type SessionUpsertWithWhereUniqueWithoutStudentInput = {
     where: SessionWhereUniqueInput
     update: XOR<SessionUpdateWithoutStudentInput, SessionUncheckedUpdateWithoutStudentInput>
@@ -59385,6 +59576,39 @@ export namespace Prisma {
     tutorId?: StringFilter<"ClassTemplate"> | string
   }
 
+  export type RecipeUpsertWithWhereUniqueWithoutAuthorInput = {
+    where: RecipeWhereUniqueInput
+    update: XOR<RecipeUpdateWithoutAuthorInput, RecipeUncheckedUpdateWithoutAuthorInput>
+    create: XOR<RecipeCreateWithoutAuthorInput, RecipeUncheckedCreateWithoutAuthorInput>
+  }
+
+  export type RecipeUpdateWithWhereUniqueWithoutAuthorInput = {
+    where: RecipeWhereUniqueInput
+    data: XOR<RecipeUpdateWithoutAuthorInput, RecipeUncheckedUpdateWithoutAuthorInput>
+  }
+
+  export type RecipeUpdateManyWithWhereWithoutAuthorInput = {
+    where: RecipeScalarWhereInput
+    data: XOR<RecipeUpdateManyMutationInput, RecipeUncheckedUpdateManyWithoutAuthorInput>
+  }
+
+  export type RecipeScalarWhereInput = {
+    AND?: RecipeScalarWhereInput | RecipeScalarWhereInput[]
+    OR?: RecipeScalarWhereInput[]
+    NOT?: RecipeScalarWhereInput | RecipeScalarWhereInput[]
+    id?: StringFilter<"Recipe"> | string
+    canonicalId?: StringFilter<"Recipe"> | string
+    title?: StringFilter<"Recipe"> | string
+    description?: StringNullableFilter<"Recipe"> | string | null
+    expectedDurationMinutes?: IntNullableFilter<"Recipe"> | number | null
+    version?: StringFilter<"Recipe"> | string
+    published?: BoolFilter<"Recipe"> | boolean
+    moduleId?: StringNullableFilter<"Recipe"> | string | null
+    authorId?: StringFilter<"Recipe"> | string
+    createdAt?: DateTimeFilter<"Recipe"> | Date | string
+    updatedAt?: DateTimeFilter<"Recipe"> | Date | string
+  }
+
   export type UserCreateWithoutApiKeysInput = {
     id?: string
     email: string
@@ -59409,6 +59633,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
+    recipes?: RecipeCreateNestedManyWithoutAuthorInput
   }
 
   export type UserUncheckedCreateWithoutApiKeysInput = {
@@ -59435,6 +59660,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
+    recipes?: RecipeUncheckedCreateNestedManyWithoutAuthorInput
   }
 
   export type UserCreateOrConnectWithoutApiKeysInput = {
@@ -59477,6 +59703,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
+    recipes?: RecipeUpdateManyWithoutAuthorNestedInput
   }
 
   export type UserUncheckedUpdateWithoutApiKeysInput = {
@@ -59503,6 +59730,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
+    recipes?: RecipeUncheckedUpdateManyWithoutAuthorNestedInput
   }
 
   export type UserCreateWithoutConsentInput = {
@@ -59529,6 +59757,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
+    recipes?: RecipeCreateNestedManyWithoutAuthorInput
   }
 
   export type UserUncheckedCreateWithoutConsentInput = {
@@ -59555,6 +59784,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
+    recipes?: RecipeUncheckedCreateNestedManyWithoutAuthorInput
   }
 
   export type UserCreateOrConnectWithoutConsentInput = {
@@ -59597,6 +59827,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
+    recipes?: RecipeUpdateManyWithoutAuthorNestedInput
   }
 
   export type UserUncheckedUpdateWithoutConsentInput = {
@@ -59623,6 +59854,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
+    recipes?: RecipeUncheckedUpdateManyWithoutAuthorNestedInput
   }
 
   export type ModuleCreateWithoutLevelInput = {
@@ -59688,6 +59920,7 @@ export namespace Prisma {
     published?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
+    author: UserCreateNestedOneWithoutRecipesInput
     steps?: RecipeStepCreateNestedManyWithoutRecipeInput
     concepts?: ConceptCreateNestedManyWithoutRecipeInput
     tags?: RecipeTagCreateNestedManyWithoutRecipeInput
@@ -59706,6 +59939,7 @@ export namespace Prisma {
     expectedDurationMinutes?: number | null
     version?: string
     published?: boolean
+    authorId: string
     createdAt?: Date | string
     updatedAt?: Date | string
     steps?: RecipeStepUncheckedCreateNestedManyWithoutRecipeInput
@@ -59767,22 +60001,6 @@ export namespace Prisma {
     data: XOR<RecipeUpdateManyMutationInput, RecipeUncheckedUpdateManyWithoutModuleInput>
   }
 
-  export type RecipeScalarWhereInput = {
-    AND?: RecipeScalarWhereInput | RecipeScalarWhereInput[]
-    OR?: RecipeScalarWhereInput[]
-    NOT?: RecipeScalarWhereInput | RecipeScalarWhereInput[]
-    id?: StringFilter<"Recipe"> | string
-    canonicalId?: StringFilter<"Recipe"> | string
-    title?: StringFilter<"Recipe"> | string
-    description?: StringNullableFilter<"Recipe"> | string | null
-    expectedDurationMinutes?: IntNullableFilter<"Recipe"> | number | null
-    version?: StringFilter<"Recipe"> | string
-    published?: BoolFilter<"Recipe"> | boolean
-    moduleId?: StringNullableFilter<"Recipe"> | string | null
-    createdAt?: DateTimeFilter<"Recipe"> | Date | string
-    updatedAt?: DateTimeFilter<"Recipe"> | Date | string
-  }
-
   export type LevelUpsertWithoutModulesInput = {
     update: XOR<LevelUpdateWithoutModulesInput, LevelUncheckedUpdateWithoutModulesInput>
     create: XOR<LevelCreateWithoutModulesInput, LevelUncheckedCreateWithoutModulesInput>
@@ -59831,6 +60049,65 @@ export namespace Prisma {
   export type ModuleCreateOrConnectWithoutRecipesInput = {
     where: ModuleWhereUniqueInput
     create: XOR<ModuleCreateWithoutRecipesInput, ModuleUncheckedCreateWithoutRecipesInput>
+  }
+
+  export type UserCreateWithoutRecipesInput = {
+    id?: string
+    email: string
+    username?: string | null
+    passwordHash: string
+    name: string
+    role?: $Enums.Role
+    age?: number | null
+    quota?: number
+    cohort?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    sessions?: SessionCreateNestedManyWithoutStudentInput
+    apiKeys?: ApiKeyCreateNestedManyWithoutUserInput
+    attempts?: ActivityAttemptCreateNestedManyWithoutUserInput
+    progressEntries?: UserProgressCreateNestedManyWithoutUserInput
+    competencies?: CompetencyMasteryCreateNestedManyWithoutUserInput
+    events?: EventLogCreateNestedManyWithoutUserInput
+    consent?: ParentalConsentCreateNestedOneWithoutStudentInput
+    userGamification?: UserGamificationCreateNestedOneWithoutUserInput
+    userBadges?: UserBadgeCreateNestedManyWithoutUserInput
+    dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
+    refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
+    createdClasses?: ClassCreateNestedManyWithoutTutorInput
+    classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
+  }
+
+  export type UserUncheckedCreateWithoutRecipesInput = {
+    id?: string
+    email: string
+    username?: string | null
+    passwordHash: string
+    name: string
+    role?: $Enums.Role
+    age?: number | null
+    quota?: number
+    cohort?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    sessions?: SessionUncheckedCreateNestedManyWithoutStudentInput
+    apiKeys?: ApiKeyUncheckedCreateNestedManyWithoutUserInput
+    attempts?: ActivityAttemptUncheckedCreateNestedManyWithoutUserInput
+    progressEntries?: UserProgressUncheckedCreateNestedManyWithoutUserInput
+    competencies?: CompetencyMasteryUncheckedCreateNestedManyWithoutUserInput
+    events?: EventLogUncheckedCreateNestedManyWithoutUserInput
+    consent?: ParentalConsentUncheckedCreateNestedOneWithoutStudentInput
+    userGamification?: UserGamificationUncheckedCreateNestedOneWithoutUserInput
+    userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
+    dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
+    refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+    createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
+    classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
+  }
+
+  export type UserCreateOrConnectWithoutRecipesInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutRecipesInput, UserUncheckedCreateWithoutRecipesInput>
   }
 
   export type RecipeStepCreateWithoutRecipeInput = {
@@ -60114,6 +60391,71 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type UserUpsertWithoutRecipesInput = {
+    update: XOR<UserUpdateWithoutRecipesInput, UserUncheckedUpdateWithoutRecipesInput>
+    create: XOR<UserCreateWithoutRecipesInput, UserUncheckedCreateWithoutRecipesInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutRecipesInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutRecipesInput, UserUncheckedUpdateWithoutRecipesInput>
+  }
+
+  export type UserUpdateWithoutRecipesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    username?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    role?: EnumRoleFieldUpdateOperationsInput | $Enums.Role
+    age?: NullableIntFieldUpdateOperationsInput | number | null
+    quota?: IntFieldUpdateOperationsInput | number
+    cohort?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    sessions?: SessionUpdateManyWithoutStudentNestedInput
+    apiKeys?: ApiKeyUpdateManyWithoutUserNestedInput
+    attempts?: ActivityAttemptUpdateManyWithoutUserNestedInput
+    progressEntries?: UserProgressUpdateManyWithoutUserNestedInput
+    competencies?: CompetencyMasteryUpdateManyWithoutUserNestedInput
+    events?: EventLogUpdateManyWithoutUserNestedInput
+    consent?: ParentalConsentUpdateOneWithoutStudentNestedInput
+    userGamification?: UserGamificationUpdateOneWithoutUserNestedInput
+    userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
+    dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
+    refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
+    createdClasses?: ClassUpdateManyWithoutTutorNestedInput
+    classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutRecipesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    username?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    role?: EnumRoleFieldUpdateOperationsInput | $Enums.Role
+    age?: NullableIntFieldUpdateOperationsInput | number | null
+    quota?: IntFieldUpdateOperationsInput | number
+    cohort?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    sessions?: SessionUncheckedUpdateManyWithoutStudentNestedInput
+    apiKeys?: ApiKeyUncheckedUpdateManyWithoutUserNestedInput
+    attempts?: ActivityAttemptUncheckedUpdateManyWithoutUserNestedInput
+    progressEntries?: UserProgressUncheckedUpdateManyWithoutUserNestedInput
+    competencies?: CompetencyMasteryUncheckedUpdateManyWithoutUserNestedInput
+    events?: EventLogUncheckedUpdateManyWithoutUserNestedInput
+    consent?: ParentalConsentUncheckedUpdateOneWithoutStudentNestedInput
+    userGamification?: UserGamificationUncheckedUpdateOneWithoutUserNestedInput
+    userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
+    dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
+    refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+    createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
+    classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
+  }
+
   export type RecipeStepUpsertWithWhereUniqueWithoutRecipeInput = {
     where: RecipeStepWhereUniqueInput
     update: XOR<RecipeStepUpdateWithoutRecipeInput, RecipeStepUncheckedUpdateWithoutRecipeInput>
@@ -60331,6 +60673,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     module?: ModuleCreateNestedOneWithoutRecipesInput
+    author: UserCreateNestedOneWithoutRecipesInput
     concepts?: ConceptCreateNestedManyWithoutRecipeInput
     tags?: RecipeTagCreateNestedManyWithoutRecipeInput
     progressEntries?: UserProgressCreateNestedManyWithoutRecipeInput
@@ -60349,6 +60692,7 @@ export namespace Prisma {
     version?: string
     published?: boolean
     moduleId?: string | null
+    authorId: string
     createdAt?: Date | string
     updatedAt?: Date | string
     concepts?: ConceptUncheckedCreateNestedManyWithoutRecipeInput
@@ -60500,6 +60844,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     module?: ModuleUpdateOneWithoutRecipesNestedInput
+    author?: UserUpdateOneRequiredWithoutRecipesNestedInput
     concepts?: ConceptUpdateManyWithoutRecipeNestedInput
     tags?: RecipeTagUpdateManyWithoutRecipeNestedInput
     progressEntries?: UserProgressUpdateManyWithoutRecipeNestedInput
@@ -60518,6 +60863,7 @@ export namespace Prisma {
     version?: StringFieldUpdateOperationsInput | string
     published?: BoolFieldUpdateOperationsInput | boolean
     moduleId?: NullableStringFieldUpdateOperationsInput | string | null
+    authorId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     concepts?: ConceptUncheckedUpdateManyWithoutRecipeNestedInput
@@ -60671,6 +61017,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     module?: ModuleCreateNestedOneWithoutRecipesInput
+    author: UserCreateNestedOneWithoutRecipesInput
     steps?: RecipeStepCreateNestedManyWithoutRecipeInput
     tags?: RecipeTagCreateNestedManyWithoutRecipeInput
     progressEntries?: UserProgressCreateNestedManyWithoutRecipeInput
@@ -60689,6 +61036,7 @@ export namespace Prisma {
     version?: string
     published?: boolean
     moduleId?: string | null
+    authorId: string
     createdAt?: Date | string
     updatedAt?: Date | string
     steps?: RecipeStepUncheckedCreateNestedManyWithoutRecipeInput
@@ -60797,6 +61145,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     module?: ModuleUpdateOneWithoutRecipesNestedInput
+    author?: UserUpdateOneRequiredWithoutRecipesNestedInput
     steps?: RecipeStepUpdateManyWithoutRecipeNestedInput
     tags?: RecipeTagUpdateManyWithoutRecipeNestedInput
     progressEntries?: UserProgressUpdateManyWithoutRecipeNestedInput
@@ -60815,6 +61164,7 @@ export namespace Prisma {
     version?: StringFieldUpdateOperationsInput | string
     published?: BoolFieldUpdateOperationsInput | boolean
     moduleId?: NullableStringFieldUpdateOperationsInput | string | null
+    authorId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     steps?: RecipeStepUncheckedUpdateManyWithoutRecipeNestedInput
@@ -61657,6 +62007,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
+    recipes?: RecipeCreateNestedManyWithoutAuthorInput
   }
 
   export type UserUncheckedCreateWithoutSessionsInput = {
@@ -61683,6 +62034,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
+    recipes?: RecipeUncheckedCreateNestedManyWithoutAuthorInput
   }
 
   export type UserCreateOrConnectWithoutSessionsInput = {
@@ -61701,6 +62053,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     module?: ModuleCreateNestedOneWithoutRecipesInput
+    author: UserCreateNestedOneWithoutRecipesInput
     steps?: RecipeStepCreateNestedManyWithoutRecipeInput
     concepts?: ConceptCreateNestedManyWithoutRecipeInput
     tags?: RecipeTagCreateNestedManyWithoutRecipeInput
@@ -61719,6 +62072,7 @@ export namespace Prisma {
     version?: string
     published?: boolean
     moduleId?: string | null
+    authorId: string
     createdAt?: Date | string
     updatedAt?: Date | string
     steps?: RecipeStepUncheckedCreateNestedManyWithoutRecipeInput
@@ -61866,6 +62220,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
+    recipes?: RecipeUpdateManyWithoutAuthorNestedInput
   }
 
   export type UserUncheckedUpdateWithoutSessionsInput = {
@@ -61892,6 +62247,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
+    recipes?: RecipeUncheckedUpdateManyWithoutAuthorNestedInput
   }
 
   export type RecipeUpsertWithoutSessionsInput = {
@@ -61916,6 +62272,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     module?: ModuleUpdateOneWithoutRecipesNestedInput
+    author?: UserUpdateOneRequiredWithoutRecipesNestedInput
     steps?: RecipeStepUpdateManyWithoutRecipeNestedInput
     concepts?: ConceptUpdateManyWithoutRecipeNestedInput
     tags?: RecipeTagUpdateManyWithoutRecipeNestedInput
@@ -61934,6 +62291,7 @@ export namespace Prisma {
     version?: StringFieldUpdateOperationsInput | string
     published?: BoolFieldUpdateOperationsInput | boolean
     moduleId?: NullableStringFieldUpdateOperationsInput | string | null
+    authorId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     steps?: RecipeStepUncheckedUpdateManyWithoutRecipeNestedInput
@@ -62345,6 +62703,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     module?: ModuleCreateNestedOneWithoutRecipesInput
+    author: UserCreateNestedOneWithoutRecipesInput
     steps?: RecipeStepCreateNestedManyWithoutRecipeInput
     concepts?: ConceptCreateNestedManyWithoutRecipeInput
     tags?: RecipeTagCreateNestedManyWithoutRecipeInput
@@ -62363,6 +62722,7 @@ export namespace Prisma {
     version?: string
     published?: boolean
     moduleId?: string | null
+    authorId: string
     createdAt?: Date | string
     updatedAt?: Date | string
     steps?: RecipeStepUncheckedCreateNestedManyWithoutRecipeInput
@@ -62489,6 +62849,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     module?: ModuleUpdateOneWithoutRecipesNestedInput
+    author?: UserUpdateOneRequiredWithoutRecipesNestedInput
     steps?: RecipeStepUpdateManyWithoutRecipeNestedInput
     concepts?: ConceptUpdateManyWithoutRecipeNestedInput
     tags?: RecipeTagUpdateManyWithoutRecipeNestedInput
@@ -62507,6 +62868,7 @@ export namespace Prisma {
     version?: StringFieldUpdateOperationsInput | string
     published?: BoolFieldUpdateOperationsInput | boolean
     moduleId?: NullableStringFieldUpdateOperationsInput | string | null
+    authorId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     steps?: RecipeStepUncheckedUpdateManyWithoutRecipeNestedInput
@@ -62801,6 +63163,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     module?: ModuleCreateNestedOneWithoutRecipesInput
+    author: UserCreateNestedOneWithoutRecipesInput
     steps?: RecipeStepCreateNestedManyWithoutRecipeInput
     concepts?: ConceptCreateNestedManyWithoutRecipeInput
     progressEntries?: UserProgressCreateNestedManyWithoutRecipeInput
@@ -62819,6 +63182,7 @@ export namespace Prisma {
     version?: string
     published?: boolean
     moduleId?: string | null
+    authorId: string
     createdAt?: Date | string
     updatedAt?: Date | string
     steps?: RecipeStepUncheckedCreateNestedManyWithoutRecipeInput
@@ -62872,6 +63236,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     module?: ModuleUpdateOneWithoutRecipesNestedInput
+    author?: UserUpdateOneRequiredWithoutRecipesNestedInput
     steps?: RecipeStepUpdateManyWithoutRecipeNestedInput
     concepts?: ConceptUpdateManyWithoutRecipeNestedInput
     progressEntries?: UserProgressUpdateManyWithoutRecipeNestedInput
@@ -62890,6 +63255,7 @@ export namespace Prisma {
     version?: StringFieldUpdateOperationsInput | string
     published?: BoolFieldUpdateOperationsInput | boolean
     moduleId?: NullableStringFieldUpdateOperationsInput | string | null
+    authorId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     steps?: RecipeStepUncheckedUpdateManyWithoutRecipeNestedInput
@@ -62946,6 +63312,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
+    recipes?: RecipeCreateNestedManyWithoutAuthorInput
   }
 
   export type UserUncheckedCreateWithoutProgressEntriesInput = {
@@ -62972,6 +63339,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
+    recipes?: RecipeUncheckedCreateNestedManyWithoutAuthorInput
   }
 
   export type UserCreateOrConnectWithoutProgressEntriesInput = {
@@ -62990,6 +63358,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     module?: ModuleCreateNestedOneWithoutRecipesInput
+    author: UserCreateNestedOneWithoutRecipesInput
     steps?: RecipeStepCreateNestedManyWithoutRecipeInput
     concepts?: ConceptCreateNestedManyWithoutRecipeInput
     tags?: RecipeTagCreateNestedManyWithoutRecipeInput
@@ -63008,6 +63377,7 @@ export namespace Prisma {
     version?: string
     published?: boolean
     moduleId?: string | null
+    authorId: string
     createdAt?: Date | string
     updatedAt?: Date | string
     steps?: RecipeStepUncheckedCreateNestedManyWithoutRecipeInput
@@ -63110,6 +63480,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
+    recipes?: RecipeUpdateManyWithoutAuthorNestedInput
   }
 
   export type UserUncheckedUpdateWithoutProgressEntriesInput = {
@@ -63136,6 +63507,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
+    recipes?: RecipeUncheckedUpdateManyWithoutAuthorNestedInput
   }
 
   export type RecipeUpsertWithoutProgressEntriesInput = {
@@ -63160,6 +63532,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     module?: ModuleUpdateOneWithoutRecipesNestedInput
+    author?: UserUpdateOneRequiredWithoutRecipesNestedInput
     steps?: RecipeStepUpdateManyWithoutRecipeNestedInput
     concepts?: ConceptUpdateManyWithoutRecipeNestedInput
     tags?: RecipeTagUpdateManyWithoutRecipeNestedInput
@@ -63178,6 +63551,7 @@ export namespace Prisma {
     version?: StringFieldUpdateOperationsInput | string
     published?: BoolFieldUpdateOperationsInput | boolean
     moduleId?: NullableStringFieldUpdateOperationsInput | string | null
+    authorId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     steps?: RecipeStepUncheckedUpdateManyWithoutRecipeNestedInput
@@ -63270,6 +63644,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
+    recipes?: RecipeCreateNestedManyWithoutAuthorInput
   }
 
   export type UserUncheckedCreateWithoutAttemptsInput = {
@@ -63296,6 +63671,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
+    recipes?: RecipeUncheckedCreateNestedManyWithoutAuthorInput
   }
 
   export type UserCreateOrConnectWithoutAttemptsInput = {
@@ -63416,6 +63792,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
+    recipes?: RecipeUpdateManyWithoutAuthorNestedInput
   }
 
   export type UserUncheckedUpdateWithoutAttemptsInput = {
@@ -63442,6 +63819,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
+    recipes?: RecipeUncheckedUpdateManyWithoutAuthorNestedInput
   }
 
   export type AtomUpsertWithoutAttemptsInput = {
@@ -63558,6 +63936,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
+    recipes?: RecipeCreateNestedManyWithoutAuthorInput
   }
 
   export type UserUncheckedCreateWithoutCompetenciesInput = {
@@ -63584,6 +63963,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
+    recipes?: RecipeUncheckedCreateNestedManyWithoutAuthorInput
   }
 
   export type UserCreateOrConnectWithoutCompetenciesInput = {
@@ -63649,6 +64029,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
+    recipes?: RecipeUpdateManyWithoutAuthorNestedInput
   }
 
   export type UserUncheckedUpdateWithoutCompetenciesInput = {
@@ -63675,6 +64056,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
+    recipes?: RecipeUncheckedUpdateManyWithoutAuthorNestedInput
   }
 
   export type CompetencyUpsertWithoutMasteryInput = {
@@ -63730,6 +64112,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
+    recipes?: RecipeCreateNestedManyWithoutAuthorInput
   }
 
   export type UserUncheckedCreateWithoutEventsInput = {
@@ -63756,6 +64139,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
+    recipes?: RecipeUncheckedCreateNestedManyWithoutAuthorInput
   }
 
   export type UserCreateOrConnectWithoutEventsInput = {
@@ -63843,6 +64227,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
+    recipes?: RecipeUpdateManyWithoutAuthorNestedInput
   }
 
   export type UserUncheckedUpdateWithoutEventsInput = {
@@ -63869,6 +64254,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
+    recipes?: RecipeUncheckedUpdateManyWithoutAuthorNestedInput
   }
 
   export type SessionUpsertWithoutEventLogsInput = {
@@ -63946,6 +64332,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
+    recipes?: RecipeCreateNestedManyWithoutAuthorInput
   }
 
   export type UserUncheckedCreateWithoutUserGamificationInput = {
@@ -63972,6 +64359,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
+    recipes?: RecipeUncheckedCreateNestedManyWithoutAuthorInput
   }
 
   export type UserCreateOrConnectWithoutUserGamificationInput = {
@@ -64038,6 +64426,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
+    recipes?: RecipeUpdateManyWithoutAuthorNestedInput
   }
 
   export type UserUncheckedUpdateWithoutUserGamificationInput = {
@@ -64064,6 +64453,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
+    recipes?: RecipeUncheckedUpdateManyWithoutAuthorNestedInput
   }
 
   export type UserBadgeUpsertWithWhereUniqueWithoutUserGamificationInput = {
@@ -64146,6 +64536,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
+    recipes?: RecipeCreateNestedManyWithoutAuthorInput
   }
 
   export type UserUncheckedCreateWithoutUserBadgesInput = {
@@ -64172,6 +64563,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
+    recipes?: RecipeUncheckedCreateNestedManyWithoutAuthorInput
   }
 
   export type UserCreateOrConnectWithoutUserBadgesInput = {
@@ -64272,6 +64664,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
+    recipes?: RecipeUpdateManyWithoutAuthorNestedInput
   }
 
   export type UserUncheckedUpdateWithoutUserBadgesInput = {
@@ -64298,6 +64691,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
+    recipes?: RecipeUncheckedUpdateManyWithoutAuthorNestedInput
   }
 
   export type BadgeUpsertWithoutUsersInput = {
@@ -64394,6 +64788,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
+    recipes?: RecipeCreateNestedManyWithoutAuthorInput
   }
 
   export type UserUncheckedCreateWithoutDailyActivitiesInput = {
@@ -64420,6 +64815,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
+    recipes?: RecipeUncheckedCreateNestedManyWithoutAuthorInput
   }
 
   export type UserCreateOrConnectWithoutDailyActivitiesInput = {
@@ -64462,6 +64858,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
+    recipes?: RecipeUpdateManyWithoutAuthorNestedInput
   }
 
   export type UserUncheckedUpdateWithoutDailyActivitiesInput = {
@@ -64488,6 +64885,7 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
+    recipes?: RecipeUncheckedUpdateManyWithoutAuthorNestedInput
   }
 
   export type UserCreateWithoutRefreshTokensInput = {
@@ -64514,6 +64912,7 @@ export namespace Prisma {
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
+    recipes?: RecipeCreateNestedManyWithoutAuthorInput
   }
 
   export type UserUncheckedCreateWithoutRefreshTokensInput = {
@@ -64540,6 +64939,7 @@ export namespace Prisma {
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
+    recipes?: RecipeUncheckedCreateNestedManyWithoutAuthorInput
   }
 
   export type UserCreateOrConnectWithoutRefreshTokensInput = {
@@ -64582,6 +64982,7 @@ export namespace Prisma {
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
+    recipes?: RecipeUpdateManyWithoutAuthorNestedInput
   }
 
   export type UserUncheckedUpdateWithoutRefreshTokensInput = {
@@ -64608,6 +65009,7 @@ export namespace Prisma {
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
+    recipes?: RecipeUncheckedUpdateManyWithoutAuthorNestedInput
   }
 
   export type UserCreateWithoutClassTemplatesInput = {
@@ -64634,6 +65036,7 @@ export namespace Prisma {
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
+    recipes?: RecipeCreateNestedManyWithoutAuthorInput
   }
 
   export type UserUncheckedCreateWithoutClassTemplatesInput = {
@@ -64660,6 +65063,7 @@ export namespace Prisma {
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
+    recipes?: RecipeUncheckedCreateNestedManyWithoutAuthorInput
   }
 
   export type UserCreateOrConnectWithoutClassTemplatesInput = {
@@ -64740,6 +65144,7 @@ export namespace Prisma {
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
+    recipes?: RecipeUpdateManyWithoutAuthorNestedInput
   }
 
   export type UserUncheckedUpdateWithoutClassTemplatesInput = {
@@ -64766,6 +65171,7 @@ export namespace Prisma {
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
+    recipes?: RecipeUncheckedUpdateManyWithoutAuthorNestedInput
   }
 
   export type ClassUpsertWithWhereUniqueWithoutClassTemplateInput = {
@@ -64808,6 +65214,7 @@ export namespace Prisma {
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
+    recipes?: RecipeCreateNestedManyWithoutAuthorInput
   }
 
   export type UserUncheckedCreateWithoutCreatedClassesInput = {
@@ -64834,6 +65241,7 @@ export namespace Prisma {
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
+    recipes?: RecipeUncheckedCreateNestedManyWithoutAuthorInput
   }
 
   export type UserCreateOrConnectWithoutCreatedClassesInput = {
@@ -64959,6 +65367,7 @@ export namespace Prisma {
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
+    recipes?: RecipeUpdateManyWithoutAuthorNestedInput
   }
 
   export type UserUncheckedUpdateWithoutCreatedClassesInput = {
@@ -64985,6 +65394,7 @@ export namespace Prisma {
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
+    recipes?: RecipeUncheckedUpdateManyWithoutAuthorNestedInput
   }
 
   export type ClassTemplateUpsertWithoutClassesInput = {
@@ -65107,6 +65517,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     module?: ModuleCreateNestedOneWithoutRecipesInput
+    author: UserCreateNestedOneWithoutRecipesInput
     steps?: RecipeStepCreateNestedManyWithoutRecipeInput
     concepts?: ConceptCreateNestedManyWithoutRecipeInput
     tags?: RecipeTagCreateNestedManyWithoutRecipeInput
@@ -65125,6 +65536,7 @@ export namespace Prisma {
     version?: string
     published?: boolean
     moduleId?: string | null
+    authorId: string
     createdAt?: Date | string
     updatedAt?: Date | string
     steps?: RecipeStepUncheckedCreateNestedManyWithoutRecipeInput
@@ -65202,6 +65614,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     module?: ModuleUpdateOneWithoutRecipesNestedInput
+    author?: UserUpdateOneRequiredWithoutRecipesNestedInput
     steps?: RecipeStepUpdateManyWithoutRecipeNestedInput
     concepts?: ConceptUpdateManyWithoutRecipeNestedInput
     tags?: RecipeTagUpdateManyWithoutRecipeNestedInput
@@ -65220,6 +65633,7 @@ export namespace Prisma {
     version?: StringFieldUpdateOperationsInput | string
     published?: BoolFieldUpdateOperationsInput | boolean
     moduleId?: NullableStringFieldUpdateOperationsInput | string | null
+    authorId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     steps?: RecipeStepUncheckedUpdateManyWithoutRecipeNestedInput
@@ -65389,6 +65803,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     module?: ModuleCreateNestedOneWithoutRecipesInput
+    author: UserCreateNestedOneWithoutRecipesInput
     steps?: RecipeStepCreateNestedManyWithoutRecipeInput
     concepts?: ConceptCreateNestedManyWithoutRecipeInput
     tags?: RecipeTagCreateNestedManyWithoutRecipeInput
@@ -65407,6 +65822,7 @@ export namespace Prisma {
     version?: string
     published?: boolean
     moduleId?: string | null
+    authorId: string
     createdAt?: Date | string
     updatedAt?: Date | string
     steps?: RecipeStepUncheckedCreateNestedManyWithoutRecipeInput
@@ -65480,6 +65896,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     module?: ModuleUpdateOneWithoutRecipesNestedInput
+    author?: UserUpdateOneRequiredWithoutRecipesNestedInput
     steps?: RecipeStepUpdateManyWithoutRecipeNestedInput
     concepts?: ConceptUpdateManyWithoutRecipeNestedInput
     tags?: RecipeTagUpdateManyWithoutRecipeNestedInput
@@ -65498,6 +65915,7 @@ export namespace Prisma {
     version?: StringFieldUpdateOperationsInput | string
     published?: BoolFieldUpdateOperationsInput | boolean
     moduleId?: NullableStringFieldUpdateOperationsInput | string | null
+    authorId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     steps?: RecipeStepUncheckedUpdateManyWithoutRecipeNestedInput
@@ -65614,6 +66032,19 @@ export namespace Prisma {
     id?: string
     name: string
     description?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type RecipeCreateManyAuthorInput = {
+    id?: string
+    canonicalId: string
+    title: string
+    description?: string | null
+    expectedDurationMinutes?: number | null
+    version?: string
+    published?: boolean
+    moduleId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -65957,6 +66388,61 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type RecipeUpdateWithoutAuthorInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    canonicalId?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    expectedDurationMinutes?: NullableIntFieldUpdateOperationsInput | number | null
+    version?: StringFieldUpdateOperationsInput | string
+    published?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    module?: ModuleUpdateOneWithoutRecipesNestedInput
+    steps?: RecipeStepUpdateManyWithoutRecipeNestedInput
+    concepts?: ConceptUpdateManyWithoutRecipeNestedInput
+    tags?: RecipeTagUpdateManyWithoutRecipeNestedInput
+    progressEntries?: UserProgressUpdateManyWithoutRecipeNestedInput
+    attachments?: AssetAttachmentUpdateManyWithoutRecipeNestedInput
+    sessions?: SessionUpdateManyWithoutRecipeNestedInput
+    classLessons?: ClassLessonUpdateManyWithoutRecipeNestedInput
+    classVersionLessons?: ClassVersionLessonUpdateManyWithoutRecipeNestedInput
+  }
+
+  export type RecipeUncheckedUpdateWithoutAuthorInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    canonicalId?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    expectedDurationMinutes?: NullableIntFieldUpdateOperationsInput | number | null
+    version?: StringFieldUpdateOperationsInput | string
+    published?: BoolFieldUpdateOperationsInput | boolean
+    moduleId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    steps?: RecipeStepUncheckedUpdateManyWithoutRecipeNestedInput
+    concepts?: ConceptUncheckedUpdateManyWithoutRecipeNestedInput
+    tags?: RecipeTagUncheckedUpdateManyWithoutRecipeNestedInput
+    progressEntries?: UserProgressUncheckedUpdateManyWithoutRecipeNestedInput
+    attachments?: AssetAttachmentUncheckedUpdateManyWithoutRecipeNestedInput
+    sessions?: SessionUncheckedUpdateManyWithoutRecipeNestedInput
+    classLessons?: ClassLessonUncheckedUpdateManyWithoutRecipeNestedInput
+    classVersionLessons?: ClassVersionLessonUncheckedUpdateManyWithoutRecipeNestedInput
+  }
+
+  export type RecipeUncheckedUpdateManyWithoutAuthorInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    canonicalId?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    expectedDurationMinutes?: NullableIntFieldUpdateOperationsInput | number | null
+    version?: StringFieldUpdateOperationsInput | string
+    published?: BoolFieldUpdateOperationsInput | boolean
+    moduleId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type ModuleCreateManyLevelInput = {
     id?: string
     slug: string
@@ -65995,6 +66481,7 @@ export namespace Prisma {
     expectedDurationMinutes?: number | null
     version?: string
     published?: boolean
+    authorId: string
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -66009,6 +66496,7 @@ export namespace Prisma {
     published?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    author?: UserUpdateOneRequiredWithoutRecipesNestedInput
     steps?: RecipeStepUpdateManyWithoutRecipeNestedInput
     concepts?: ConceptUpdateManyWithoutRecipeNestedInput
     tags?: RecipeTagUpdateManyWithoutRecipeNestedInput
@@ -66027,6 +66515,7 @@ export namespace Prisma {
     expectedDurationMinutes?: NullableIntFieldUpdateOperationsInput | number | null
     version?: StringFieldUpdateOperationsInput | string
     published?: BoolFieldUpdateOperationsInput | boolean
+    authorId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     steps?: RecipeStepUncheckedUpdateManyWithoutRecipeNestedInput
@@ -66047,6 +66536,7 @@ export namespace Prisma {
     expectedDurationMinutes?: NullableIntFieldUpdateOperationsInput | number | null
     version?: StringFieldUpdateOperationsInput | string
     published?: BoolFieldUpdateOperationsInput | boolean
+    authorId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
