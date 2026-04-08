@@ -12,7 +12,7 @@ import {
 import type { ClassStatus } from '@pixel-mentor/shared';
 
 import { useClassStore } from '@/features/class-management/stores/class.store';
-import { useAuthStore } from '@/features/auth/stores/auth.store';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useAudio } from '@/contexts/AudioContext';
 import { useAlert } from '@/hooks/useConfirmationDialogs';
 import { ClassLessonList } from '@/features/class-management/components/ClassLessonList';
@@ -37,7 +37,7 @@ export function ClassEditorPage() {
   const navigate = useNavigate();
   const { playClick, playSelect, playToastSuccess } = useAudio();
   const alert = useAlert();
-  const { user } = useAuthStore(useShallow((state) => ({ user: state.user })));
+  const { user } = useAuth();
 
   const {
     currentClass,

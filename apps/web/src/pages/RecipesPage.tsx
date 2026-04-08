@@ -4,7 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { IconPlus, IconFilter, IconSearch, IconBook, IconArrowLeft } from '@tabler/icons-react';
 
 import { useRecipeStore } from '@/features/recipe-management/stores/recipe.store';
-import { useAuthStore } from '@/features/auth/stores/auth.store';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useAudio } from '@/contexts/AudioContext';
 import { useConfirm } from '@/hooks/useConfirmationDialogs';
 import { RecipeCard } from '@/features/recipe-management/components/RecipeCard';
@@ -16,7 +16,7 @@ export function RecipesPage() {
   const navigate = useNavigate();
   const { playClick } = useAudio();
   const confirm = useConfirm();
-  const { user } = useAuthStore(useShallow((state) => ({ user: state.user })));
+  const { user } = useAuth();
 
   const { recipes, isLoading, error, fetchRecipes, deleteRecipe, clearError } = useRecipeStore(
     useShallow((state) => ({

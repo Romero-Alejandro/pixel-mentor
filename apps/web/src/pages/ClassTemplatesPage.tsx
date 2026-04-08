@@ -4,7 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { IconPlus, IconTemplate, IconBook, IconArrowRight } from '@tabler/icons-react';
 
 import { useClassStore } from '@/features/class-management/stores/class.store';
-import { useAuthStore } from '@/features/auth/stores/auth.store';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useAudio } from '@/contexts/AudioContext';
 import { usePrompt } from '@/hooks/useConfirmationDialogs';
 import { Button, Card, Spinner, Input } from '@/components/ui';
@@ -13,7 +13,7 @@ export function ClassTemplatesPage() {
   const navigate = useNavigate();
   const { playClick, playSelect } = useAudio();
   const prompt = usePrompt();
-  const { user } = useAuthStore(useShallow((state) => ({ user: state.user })));
+  const { user } = useAuth();
 
   const { templates, isLoading, error, fetchTemplates, createTemplate, createClassFromTemplate } =
     useClassStore(

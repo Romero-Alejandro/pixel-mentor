@@ -8,7 +8,7 @@ import { Button, Input, Card } from '@/components/ui';
 
 export function RegisterForm() {
   const navigate = useNavigate();
-  const { register, isLoading, error, clearError } = useAuth();
+  const { register, error, clearError, isRegistering } = useAuth();
 
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
@@ -44,7 +44,7 @@ export function RegisterForm() {
     }
 
     try {
-      await register(email, password, name, 'STUDENT', username);
+      await register({ email, password, name, username });
       navigate('/dashboard');
     } catch {}
   };
@@ -128,8 +128,8 @@ export function RegisterForm() {
             autoComplete="new-password"
           />
 
-          <Button type="submit" disabled={isLoading} className="w-full mt-2">
-            {isLoading ? 'Creando cuenta...' : 'Crear Cuenta'}
+          <Button type="submit" disabled={isRegistering} className="w-full mt-2">
+            {isRegistering ? 'Creando cuenta...' : 'Crear Cuenta'}
           </Button>
         </form>
       </Card>

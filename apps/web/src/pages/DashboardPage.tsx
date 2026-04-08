@@ -9,7 +9,7 @@ import {
   IconListDetails,
 } from '@tabler/icons-react';
 
-import { useAuthStore } from '@/features/auth/stores/auth.store';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useGamificationStore } from '@/features/gamification/stores/gamification.store';
 import { Spinner } from '@/components/ui';
 import { CompactGamificationHeader } from '@/features/gamification/components/CompactGamificationHeader';
@@ -32,9 +32,7 @@ export function DashboardPage() {
   const { playClick, playClickSecondary, playSelect, playStreakMaintained, playModalOpen } =
     useAudio();
 
-  const { user, logout } = useAuthStore(
-    useShallow((state) => ({ user: state.user, logout: state.logout })),
-  );
+  const { user, logout } = useAuth();
 
   const { profile, fetchProfile, particleTrigger, recordActivity } = useGamificationStore(
     useShallow((state) => ({
@@ -46,7 +44,7 @@ export function DashboardPage() {
   );
 
   const prevParticleTrigger = useRef(particleTrigger);
-  const { classes, sessions, achievements, isLoading } = useDashboardData(user);
+  const { classes, sessions, achievements, isLoading } = useDashboardData(user ?? null);
   const [activeTab, setActiveTab] = useState<DashboardTab>(DASHBOARD_TABS.STREAK);
 
   const isTeacher = user?.role === 'TEACHER' || user?.role === 'ADMIN';

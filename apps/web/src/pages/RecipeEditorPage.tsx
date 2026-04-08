@@ -15,7 +15,7 @@ import {
 import type { RecipeStep } from '@pixel-mentor/shared';
 
 import { useRecipeStore } from '@/features/recipe-management/stores/recipe.store';
-import { useAuthStore } from '@/features/auth/stores/auth.store';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useAudio } from '@/contexts/AudioContext';
 import { useAlert, useConfirm } from '@/hooks/useConfirmationDialogs';
 import { Button, Card, Spinner, Input, Textarea, Badge } from '@/components/ui';
@@ -85,7 +85,7 @@ export function RecipeEditorPage() {
   const { playClick, playToastSuccess } = useAudio();
   const alert = useAlert();
   const confirm = useConfirm();
-  const { user } = useAuthStore(useShallow((state) => ({ user: state.user })));
+  const { user } = useAuth();
 
   const {
     currentRecipe,

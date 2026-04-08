@@ -10,7 +10,7 @@ import { useAudio } from '@/contexts/AudioContext';
 export function LoginForm() {
   const { playFocus, playClick, playClickSecondary } = useAudio();
   const navigate = useNavigate();
-  const { login, isLoading, error, clearError } = useAuth();
+  const { login, error, clearError, isLoggingIn } = useAuth();
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -20,7 +20,7 @@ export function LoginForm() {
     playClick();
     clearError();
     try {
-      await login(identifier, password);
+      await login({ identifier, password });
       navigate('/dashboard');
     } catch {}
   };
@@ -71,8 +71,8 @@ export function LoginForm() {
             className="border-4 rounded-2xl font-semibold"
           />
 
-          <Button type="submit" disabled={isLoading} className="w-full mt-4 text-xl" size="lg">
-            {isLoading ? (
+          <Button type="submit" disabled={isLoggingIn} className="w-full mt-4 text-xl" size="lg">
+            {isLoggingIn ? (
               <>
                 <Spinner size="sm" className="mr-2" />
                 Entrando...

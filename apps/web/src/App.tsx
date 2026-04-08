@@ -1,7 +1,8 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
 
-import { useAuthStore, useAuthRedirect } from './features/auth/stores/auth.store';
+import { useAuth } from './features/auth/hooks/useAuth';
+import { useAuthRedirect } from './features/auth/stores/auth.store';
 import { useGamificationSSE } from './features/gamification/hooks/useGamificationSSE';
 import { ErrorBoundary, Spinner } from './components/ui';
 import { LoginPage } from './pages/LoginPage';
@@ -19,17 +20,17 @@ import { GamificationTestPage } from './pages/GamificationTestPage';
 import { LongTextTestPage } from './pages/LongTextTestPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isHydrated, isAuthenticated, isValidating } = useAuthStore();
+  const { isAuthenticated, isLoading } = useAuth();
   const { saveRedirectPath } = useAuthRedirect();
   const location = useLocation();
 
   useEffect(() => {
-    if (isHydrated && !isValidating && !isAuthenticated) {
+    if (!isLoading && !isAuthenticated) {
       saveRedirectPath(location.pathname);
     }
-  }, [isHydrated, isValidating, isAuthenticated, location.pathname, saveRedirectPath]);
+  }, [isLoading, isAuthenticated, location.pathname, saveRedirectPath]);
 
-  if (!isHydrated || isValidating) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#f0f9ff]">
         <div className="text-center">
@@ -48,7 +49,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { isHydrated, isAuthenticated, isValidating } = useAuthStore();
+  const { isAuthenticated, isLoading } = useAuth();
   const { getRedirectPath, clearRedirect } = useAuthRedirect();
 
   const redirectPath = getRedirectPath();
@@ -58,12 +59,12 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
-    if (isHydrated && !isValidating && isAuthenticated && isSafePath) {
+    if (!isLoading && isAuthenticated && isSafePath) {
       clearRedirect();
     }
-  }, [isHydrated, isValidating, isAuthenticated, isSafePath, clearRedirect]);
+  }, [isLoading, isAuthenticated, isSafePath, clearRedirect]);
 
-  if (!isHydrated || isValidating) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#f0f9ff]">
         <div className="text-center">
@@ -85,9 +86,9 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 }
 
 function TeacherRoute({ children }: { children: React.ReactNode }) {
-  const { isHydrated, isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
-  if (!isHydrated || !isAuthenticated) {
+  if (isLoading || !isAuthenticated) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#f0f9ff]">
         <div className="text-center">
@@ -106,7 +107,7 @@ function TeacherRoute({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated } = useAuth();
   useGamificationSSE(isAuthenticated);
 
   return (

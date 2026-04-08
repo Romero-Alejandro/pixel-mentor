@@ -6,6 +6,7 @@
  * The TTS endpoint is publicly accessible in E2E mode (no auth required).
  */
 import { useEffect } from 'react';
+
 import { useVoice } from '@/features/voice/hooks/useVoice';
 import { useVoiceSettings } from '@/features/voice/hooks/useVoiceSettings';
 import { useVoiceSettingsSync } from '@/features/lesson/hooks/useClassOrchestrator';
@@ -74,15 +75,15 @@ export function LongTextTestPage() {
         <Button onClick={handleSpeak} disabled={isSpeaking} variant="primary">
           {isSpeaking ? 'Reproduciendo...' : 'Iniciar TTS'}
         </Button>
-        {isSpeaking && (
+        {isSpeaking ? (
           <Button onClick={handleStop} variant="secondary">
             Detener
           </Button>
-        )}
+        ) : null}
       </div>
 
       {/* TTS status indicators required by tests */}
-      {isSpeaking && (
+      {isSpeaking ? (
         <div className="mb-4">
           <span
             role="status"
@@ -95,7 +96,7 @@ export function LongTextTestPage() {
             Tu tutor está hablando
           </span>
         </div>
-      )}
+      ) : null}
 
       <div className="bg-white rounded-3xl border border-sky-100 shadow-md p-6 max-h-[70vh] overflow-y-auto">
         <ConcentrationPanel

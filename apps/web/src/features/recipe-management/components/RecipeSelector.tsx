@@ -14,7 +14,7 @@ import { useShallow } from 'zustand/react/shallow';
 import type { Recipe } from '@pixel-mentor/shared';
 
 import { useRecipeStore } from '@/features/recipe-management/stores/recipe.store';
-import { useAuthStore } from '@/features/auth/stores/auth.store';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useAudio } from '@/contexts/AudioContext';
 import { Button, Spinner, Badge } from '@/components/ui';
 
@@ -39,7 +39,7 @@ const STATUS_VARIANTS = {
 export function RecipeSelector({ isOpen, onClose, onSelect }: RecipeSelectorProps) {
   const { playClick } = useAudio();
   const navigate = useNavigate();
-  const { user } = useAuthStore(useShallow((state) => ({ user: state.user })));
+  const { user } = useAuth();
   const portalRef = useRef<HTMLElement | null>(null);
 
   // Create portal container on mount

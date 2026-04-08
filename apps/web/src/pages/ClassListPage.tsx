@@ -5,7 +5,7 @@ import { IconPlus, IconFilter, IconBook, IconArrowLeft } from '@tabler/icons-rea
 import type { ClassStatus } from '@pixel-mentor/shared';
 
 import { useClassStore } from '@/features/class-management/stores/class.store';
-import { useAuthStore } from '@/features/auth/stores/auth.store';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useAudio } from '@/contexts/AudioContext';
 import { useAlert, useConfirm } from '@/hooks/useConfirmationDialogs';
 import { ClassCard } from '@/features/class-management/components/ClassCard';
@@ -30,7 +30,7 @@ export function ClassListPage() {
   const { playClick, playSelect } = useAudio();
   const alert = useAlert();
   const confirm = useConfirm();
-  const { user } = useAuthStore(useShallow((state) => ({ user: state.user })));
+  const { user } = useAuth();
   const { classes, isLoading, error, fetchClasses, createClass, deleteClass } = useClassStore(
     useShallow((state) => ({
       classes: state.classes,

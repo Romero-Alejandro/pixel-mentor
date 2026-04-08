@@ -12,7 +12,7 @@ import {
   IconSearch,
 } from '@tabler/icons-react';
 
-import { useAuthStore } from '@/features/auth/stores/auth.store';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 import { api } from '@/services/api';
 import { Button, Spinner, Input } from '@/components/ui';
 
@@ -58,7 +58,7 @@ const ROLE_CONFIG: Record<
 };
 
 export function AdminUsersPage() {
-  const { user: currentUser } = useAuthStore();
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<UserItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
