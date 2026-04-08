@@ -54,6 +54,7 @@ export interface Recipe {
   readonly version: string;
   readonly published: boolean;
   readonly moduleId?: string;
+  readonly authorId: string;
   readonly createdAt: Date;
   readonly updatedAt: Date;
   readonly steps: readonly RecipeStep[];
@@ -88,6 +89,7 @@ export function createRecipe(parameters: {
   version?: string;
   published?: boolean;
   moduleId?: string;
+  authorId: string;
   steps?: RecipeStep[];
 }): Recipe {
   return {
@@ -99,6 +101,7 @@ export function createRecipe(parameters: {
     version: parameters.version ?? '1.0.0',
     published: parameters.published ?? false,
     moduleId: parameters.moduleId,
+    authorId: parameters.authorId,
     steps: Object.freeze([...(parameters.steps ?? [])]),
     createdAt: new Date(),
     updatedAt: new Date(),

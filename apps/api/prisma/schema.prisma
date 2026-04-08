@@ -102,21 +102,24 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  sessions        Session[]
-  apiKeys         ApiKey[]
-  attempts        ActivityAttempt[]
-  progressEntries UserProgress[]
-  competencies    CompetencyMastery[]
-  events          EventLog[]
-  consent         ParentalConsent?
+  sessions         Session[]
+  apiKeys          ApiKey[]
+  attempts         ActivityAttempt[]
+  progressEntries  UserProgress[]
+  competencies     CompetencyMastery[]
+  events           EventLog[]
+  consent          ParentalConsent?
   userGamification UserGamification?
-  userBadges      UserBadge[]
-  dailyActivities DailyActivity[]
-  refreshTokens   RefreshToken[]
+  userBadges       UserBadge[]
+  dailyActivities  DailyActivity[]
+  refreshTokens    RefreshToken[]
 
   // Class relations
-  createdClasses   Class[]        @relation("ClassAuthor")
-  classTemplates   ClassTemplate[]
+  createdClasses Class[]         @relation("ClassAuthor")
+  classTemplates ClassTemplate[]
+
+  // Recipe relations
+  recipes Recipe[]
 
   @@index([email])
   @@index([username])
@@ -194,10 +197,12 @@ model Recipe {
   version                 String   @default("1.0.0") @db.VarChar(20)
   published               Boolean  @default(false)
   moduleId                String?
+  authorId                String
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
 
   module          Module?           @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  author          User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
   steps           RecipeStep[]
   concepts        Concept[]
   tags            RecipeTag[]
@@ -206,10 +211,11 @@ model Recipe {
   sessions        Session[]
 
   // Class relations
-  classLessons          ClassLesson[]
-  classVersionLessons  ClassVersionLesson[]
+  classLessons        ClassLesson[]
+  classVersionLessons ClassVersionLesson[]
 
   @@index([published, moduleId])
+  @@index([authorId])
   @@map("recipes")
 }
 
@@ -583,19 +589,19 @@ model EventLog {
 // ==================== GAMIFICATION MODELS ====================
 
 model UserGamification {
-  id              String   @id @default(uuid())
-  userId          String   @unique
-  totalXP         Int      @default(0)
-  currentStreak   Int      @default(0)
-  longestStreak   Int      @default(0)
-  lastActivityAt  DateTime?
-  level           Int      @default(1)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  badges  UserBadge[]
-  
+  id             String    @id @default(uuid())
+  userId         String    @unique
+  totalXP        Int       @default(0)
+  currentStreak  Int       @default(0)
+  longestStreak  Int       @default(0)
+  lastActivityAt DateTime?
+  level          Int       @default(1)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badges UserBadge[]
+
   @@index([userId])
   @@map("user_gamification")
 }
@@ -610,9 +616,9 @@ model Badge {
   rules       Json
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
-  
+
   users UserBadge[]
-  
+
   @@map("badges")
 }
 
@@ -622,11 +628,11 @@ model UserBadge {
   badgeId            String
   userGamificationId String
   earnedAt           DateTime @default(now())
-  
-  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  badge             Badge           @relation(fields: [badgeId], references: [id], onDelete: Cascade)
-  userGamification  UserGamification @relation(fields: [userGamificationId], references: [id], onDelete: Cascade)
-  
+
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge            Badge            @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  userGamification UserGamification @relation(fields: [userGamificationId], references: [id], onDelete: Cascade)
+
   @@unique([userId, badgeId])
   @@index([userId])
   @@index([badgeId])
@@ -635,15 +641,15 @@ model UserBadge {
 }
 
 model LevelConfig {
-  id          String   @id @default(uuid())
-  level       Int      @unique
+  id          String  @id @default(uuid())
+  level       Int     @unique
   title       String
   description String?
   minXP       Int
   icon        String
-  
+
   createdAt DateTime @default(now())
-  
+
   @@map("level_configs")
 }
 
@@ -662,16 +668,16 @@ model DailyActivity {
 
 // Refresh token for JWT rotation and revocation
 model RefreshToken {
-  id          String   @id @default(uuid())
-  userId      String
-  tokenHash   String   @unique @db.VarChar(255)
-  expiresAt   DateTime
-  revoked     Boolean  @default(false)
-  revokedAt   DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique @db.VarChar(255)
+  expiresAt DateTime
+  revoked   Boolean   @default(false)
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, revoked])
   @@index([tokenHash])
@@ -689,9 +695,9 @@ model ClassTemplate {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  tutorId     String
-  tutor       User     @relation(fields: [tutorId], references: [id], onDelete: Cascade)
-  classes     Class[]
+  tutorId String
+  tutor   User    @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+  classes Class[]
 
   @@index([tutorId])
   @@map("class_templates")
@@ -699,28 +705,28 @@ model ClassTemplate {
 
 // The mutable class entity being edited by the tutor
 model Class {
-  id                String   @id @default(cuid())
-  title             String   @db.VarChar(255)
-  description       String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id          String   @id @default(cuid())
+  title       String   @db.VarChar(255)
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  tutorId           String
-  tutor             User     @relation("ClassAuthor", fields: [tutorId], references: [id], onDelete: Cascade)
+  tutorId String
+  tutor   User   @relation("ClassAuthor", fields: [tutorId], references: [id], onDelete: Cascade)
 
-  classTemplateId   String?  @map("class_template_id")
-  classTemplate    ClassTemplate? @relation(fields: [classTemplateId], references: [id], onDelete: SetNull)
+  classTemplateId String?        @map("class_template_id")
+  classTemplate   ClassTemplate? @relation(fields: [classTemplateId], references: [id], onDelete: SetNull)
 
   // Current version tracking
-  currentVersionId String?  @map("current_version_id")
-  versions          ClassVersion[]
+  currentVersionId String?        @map("current_version_id")
+  versions         ClassVersion[]
 
   // Status and versioning
-  status            ClassStatus @default(DRAFT)
-  version           Int        @default(0)
+  status  ClassStatus @default(DRAFT)
+  version Int         @default(0)
 
   // Lessons in the current draft
-  lessons           ClassLesson[]
+  lessons ClassLesson[]
 
   @@index([tutorId])
   @@index([status])
@@ -729,17 +735,17 @@ model Class {
 
 // Individual lesson within a class (mutable draft)
 model ClassLesson {
-  id          String   @id @default(cuid())
-  classId     String
-  class       Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  id      String @id @default(cuid())
+  classId String
+  class   Class  @relation(fields: [classId], references: [id], onDelete: Cascade)
 
-  recipeId    String
-  recipe      Recipe   @relation(fields: [recipeId], references: [id], onDelete: Restrict)
+  recipeId String
+  recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Restrict)
 
-  order       Int      @db.SmallInt
+  order Int @db.SmallInt
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([classId, order])
   @@index([classId])
@@ -749,21 +755,21 @@ model ClassLesson {
 
 // An immutable, published version of a class
 model ClassVersion {
-  id          String    @id @default(cuid())
-  classId     String    @map("class_id")
-  class       Class     @relation(fields: [classId], references: [id], onDelete: Cascade)
+  id      String @id @default(cuid())
+  classId String @map("class_id")
+  class   Class  @relation(fields: [classId], references: [id], onDelete: Cascade)
 
   version     String    @default("0.0.1") @db.VarChar(20)
   publishedAt DateTime? @default(now())
   isPublished Boolean   @default(false)
 
-  title       String    @db.VarChar(255)
+  title       String      @db.VarChar(255)
   description String?
-  slug        String    @db.VarChar(255)
+  slug        String      @db.VarChar(255)
   status      ClassStatus @default(PUBLISHED)
 
   // Lessons snapshot for this version
-  lessons     ClassVersionLesson[]
+  lessons ClassVersionLesson[]
 
   @@unique([classId, version])
   @@index([classId])
@@ -773,21 +779,21 @@ model ClassVersion {
 
 // Individual lesson snapshot for a published class version
 model ClassVersionLesson {
-  id              String        @id @default(cuid())
-  classVersionId  String        @map("class_version_id")
-  classVersion    ClassVersion  @relation(fields: [classVersionId], references: [id], onDelete: Cascade)
+  id             String       @id @default(cuid())
+  classVersionId String       @map("class_version_id")
+  classVersion   ClassVersion @relation(fields: [classVersionId], references: [id], onDelete: Cascade)
 
-  recipeId        String?
-  recipe          Recipe?       @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+  recipeId String?
+  recipe   Recipe? @relation(fields: [recipeId], references: [id], onDelete: SetNull)
 
-  order           Int           @db.SmallInt
-  title           String        @db.VarChar(255)
-  duration        Int?          @db.SmallInt // minutes
+  order    Int    @db.SmallInt
+  title    String @db.VarChar(255)
+  duration Int?   @db.SmallInt // minutes
 
   // Snapshot of recipe content at publish time
-  recipeSnapshot  Json? // Snapshot of recipe title, description at publish time
+  recipeSnapshot Json? // Snapshot of recipe title, description at publish time
 
-  createdAt       DateTime      @default(now())
+  createdAt DateTime @default(now())
 
   @@unique([classVersionId, order])
   @@index([classVersionId])

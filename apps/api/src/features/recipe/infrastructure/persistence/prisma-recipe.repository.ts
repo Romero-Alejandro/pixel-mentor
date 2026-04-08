@@ -48,6 +48,7 @@ export class PrismaRecipeRepository implements RecipeRepository {
         version: recipe.version,
         published: recipe.published,
         moduleId: recipe.moduleId,
+        authorId: recipe.authorId,
       },
     });
     return this.mapRecipe(raw);
@@ -154,6 +155,7 @@ export class PrismaRecipeRepository implements RecipeRepository {
       version: raw.version as string,
       published: raw.published as boolean,
       moduleId: raw.moduleId as string | undefined,
+      authorId: raw.authorId as string,
       steps: [],
       tags: [],
       attachments: [],

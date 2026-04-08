@@ -32,6 +32,7 @@ const createMockRecipe = (overrides: Partial<Recipe> = {}): Recipe => ({
   version: '1.0.0',
   published: false,
   moduleId: undefined,
+  authorId: USER_ID,
   createdAt: new Date('2024-01-01'),
   updatedAt: new Date('2024-01-01'),
   steps: [],

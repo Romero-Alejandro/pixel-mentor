@@ -172,13 +172,14 @@ export class RecipeService {
     return newAtom.id;
   }
 
-  // TODO: Implement actual ownership check when Recipe entity includes createdBy/tutorId
-  private async canManageRecipe(recipeId: string, _userId: string): Promise<boolean> {
+  /**
+   * Check if a user can manage a recipe (update/delete)
+   * Only the recipe author can manage their recipes
+   */
+  private async canManageRecipe(recipeId: string, userId: string): Promise<boolean> {
     const recipe = await this.recipeRepository.findById(recipeId);
     if (!recipe) return false;
-    // For now, allow any logged in user to modify until createdBy is added to Recipe entity
-    // In future, check: return recipe.createdBy === userId || user.role === 'ADMIN';
-    return true;
+    return recipe.authorId === userId;
   }
 
   /**
@@ -211,8 +212,9 @@ export class RecipeService {
 
   /**
    * Create a new recipe
+   * The creating user becomes the author
    */
-  async createRecipe(data: CreateRecipeInput, _userId: string): Promise<Recipe> {
+  async createRecipe(data: CreateRecipeInput, userId: string): Promise<Recipe> {
     // Validate: title is required
     if (!data.title || data.title.trim().length === 0) {
       throw new RecipeValidationError('Recipe title is required');
@@ -224,7 +226,7 @@ export class RecipeService {
     // Set version to 1.0.0 for new recipes
     const version = '1.0.0';
 
-    // Create recipe (without steps)
+    // Create recipe (without steps) - the user becomes the author
     const recipe = await this.recipeRepository.create({
       id: crypto.randomUUID(),
       canonicalId,
@@ -234,13 +236,14 @@ export class RecipeService {
       version,
       published: data.published || false,
       moduleId: data.moduleId || undefined,
+      authorId: userId,
     });
 
     // Add steps if provided, using addStep to ensure Atom generation
     if (data.steps && data.steps.length > 0) {
       for (let i = 0; i < data.steps.length; i++) {
         const stepInput = data.steps[i];
-        await this.addStep(recipe.id, { ...stepInput, order: stepInput.order ?? i }, _userId);
+        await this.addStep(recipe.id, { ...stepInput, order: stepInput.order ?? i }, userId);
       }
     }
 
@@ -266,12 +269,18 @@ export class RecipeService {
   async updateRecipe(
     id: string,
     data: UpdateRecipeInput,
-    _userId: string,
+    userId: string,
     _isAdmin: boolean = false,
   ): Promise<Recipe> {
     const recipe = await this.recipeRepository.findById(id);
     if (!recipe) {
       throw new RecipeNotFoundError(id);
+    }
+
+    // Check ownership
+    const canManage = await this.canManageRecipe(id, userId);
+    if (!canManage) {
+      throw new RecipeOwnershipError(id, userId);
     }
 
     // Increment version on any change
@@ -305,11 +314,18 @@ export class RecipeService {
 
   /**
    * Delete a recipe (soft delete via published flag)
+   * Only the owner can delete their recipe
    */
-  async deleteRecipe(id: string, _userId: string, _isAdmin: boolean = false): Promise<void> {
+  async deleteRecipe(id: string, userId: string, _isAdmin: boolean = false): Promise<void> {
     const recipe = await this.recipeRepository.findById(id);
     if (!recipe) {
       throw new RecipeNotFoundError(id);
+    }
+
+    // Check ownership
+    const canManage = await this.canManageRecipe(id, userId);
+    if (!canManage) {
+      throw new RecipeOwnershipError(id, userId);
     }
 
     // Soft delete: unpublish the recipe
@@ -432,42 +448,47 @@ export class RecipeService {
 
   /**
    * Delete a step
+   * Efficiently fetches the step directly, checks ownership, then deletes.
    */
-  async deleteStep(stepId: string, _userId: string): Promise<void> {
-    // Find the step and verify recipe ownership
-    const allRecipes = await this.recipeRepository.findAll();
+  async deleteStep(stepId: string, userId: string): Promise<void> {
+    // 1. Fetch step directly by ID (no N+1 query)
+    const step = await this.recipeRepository.findStepById(stepId);
 
-    let foundRecipeId: string | null = null;
-
-    for (const recipe of allRecipes) {
-      const recipeSteps = await this.recipeRepository.findStepsByRecipeId(recipe.id);
-      const step = recipeSteps.find((s) => s.id === stepId);
-      if (step) {
-        foundRecipeId = recipe.id;
-        break;
-      }
-    }
-
-    if (!foundRecipeId) {
+    if (!step) {
       throw new StepNotFoundError(stepId);
     }
 
-    // Check recipe exists
-    const recipe = await this.recipeRepository.findById(foundRecipeId);
+    // 2. Fetch the recipe using recipeId from the step
+    const recipe = await this.recipeRepository.findById(step.recipeId);
+
     if (!recipe) {
-      throw new RecipeNotFoundError(foundRecipeId);
+      throw new RecipeNotFoundError(step.recipeId);
     }
 
+    // 3. Check ownership - only the recipe author can delete steps
+    const canManage = await this.canManageRecipe(recipe.id, userId);
+    if (!canManage) {
+      throw new RecipeOwnershipError(recipe.id, userId);
+    }
+
+    // 4. Delete the step
     await this.recipeRepository.deleteStep(stepId);
   }
 
   /**
    * Reorder steps within a recipe
+   * Only the owner can reorder steps
    */
-  async reorderSteps(recipeId: string, stepIds: string[], _userId: string): Promise<void> {
+  async reorderSteps(recipeId: string, stepIds: string[], userId: string): Promise<void> {
     const recipe = await this.recipeRepository.findById(recipeId);
     if (!recipe) {
       throw new RecipeNotFoundError(recipeId);
+    }
+
+    // Check ownership
+    const canManage = await this.canManageRecipe(recipeId, userId);
+    if (!canManage) {
+      throw new RecipeOwnershipError(recipeId, userId);
     }
 
     // Verify all steps belong to this recipe
