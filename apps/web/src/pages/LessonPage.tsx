@@ -71,10 +71,10 @@ export function LessonPage() {
   }, [orchestrator.questionText]);
 
   useEffect(() => {
-    if (orchestrator.feedback && orchestrator.uiState === UI_STATES.FEEDBACK) {
+    if (orchestrator.feedback) {
       setActivityCorrect(orchestrator.feedback.isCorrect);
     }
-  }, [orchestrator.feedback, orchestrator.uiState]);
+  }, [orchestrator.feedback]);
 
   const orchestratorRef = useRef(orchestrator);
   useEffect(() => {

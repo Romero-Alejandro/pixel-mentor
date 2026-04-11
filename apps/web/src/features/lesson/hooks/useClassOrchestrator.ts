@@ -257,6 +257,12 @@ export function useClassOrchestrator() {
         message: msg,
         xpAwarded: isCorrect ? xpPerQuestion : undefined,
       });
+
+      // Si veníamos de una actividad de opción múltiple, esperamos 2 segundos para mostrar las animaciones de acierto/error
+      if (uiState === 'activity') {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+
       setUIState('feedback');
 
       // Just speak - auto-advance after speaking
