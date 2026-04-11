@@ -557,6 +557,7 @@ export function useClassOrchestrator() {
       // The frontend's auto-advance logic will handle transitioning to the first step
       // No need to manually send 'continuar' - that was causing double advancement
       processResponse(startResult);
+      if (isMountedRef.current) setIsProcessing(false);
 
       return Ok(undefined);
     } catch (e) {
@@ -612,6 +613,7 @@ export function useClassOrchestrator() {
         console.error('[ClassOrchestrator] Speak error:', e),
       );
       processResponse(startResult as LessonResponse);
+      if (isMountedRef.current) setIsProcessing(false);
     } catch (e) {
       console.error('[resetSession] Failed:', e);
       if (isMountedRef.current) setIsProcessing(false);
