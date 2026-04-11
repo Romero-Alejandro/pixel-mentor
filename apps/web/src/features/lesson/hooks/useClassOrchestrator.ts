@@ -365,8 +365,11 @@ export function useClassOrchestrator() {
         isInteractingRefAfter: isInteractingRef.current,
       });
 
-      // Only process if there's actual content - prevents infinite loops
-      if (next.voiceText && next.pedagogicalState) {
+      // Only process if there's actual content or if the lesson is completed - prevents infinite loops
+      if (
+        (next.voiceText || next.sessionCompleted || next.pedagogicalState === 'COMPLETED') &&
+        next.pedagogicalState
+      ) {
         processResponse(next);
       } else {
         logger.warn('[useClassOrchestrator] Empty response, stopping auto-advance');
