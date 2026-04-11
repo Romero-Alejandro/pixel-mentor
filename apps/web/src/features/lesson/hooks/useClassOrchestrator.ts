@@ -259,9 +259,14 @@ export function useClassOrchestrator() {
       });
       setUIState('feedback');
 
-      // Just speak - NO auto-advance
+      // Just speak - auto-advance after speaking
       await speak(voiceText || msg, _voiceSettings);
-      // Wait for user input or backend push - NO timer
+      const next = await doInteract('__auto__'); // Auto-advance after feedback is spoken
+
+      // Process the next step from auto-advance
+      if (next && next.pedagogicalState && !(next as any)._blocked) {
+        processResponse(next);
+      }
       return;
     }
 
