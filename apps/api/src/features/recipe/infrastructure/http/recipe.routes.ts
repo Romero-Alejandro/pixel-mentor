@@ -152,6 +152,8 @@ export function createRecipeRouter(
                 feedback: chunk.feedback,
                 isCorrect: chunk.isCorrect,
                 autoAdvance: chunk.autoAdvance,
+                xpEarned: chunk.xpEarned,
+                accuracy: chunk.accuracy,
               })}\n\n`,
             );
 

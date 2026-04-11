@@ -1991,6 +1991,21 @@ export class OrchestrateRecipeUseCase {
           steps,
           skippedActivities,
         );
+
+        let xpEarned: number | undefined;
+        let accuracyData: InteractRecipeOutput['accuracy'] = undefined;
+        if (session.studentId) {
+          const accuracy = await this.calculateAccuracy(
+            session.studentId,
+            steps,
+            skippedActivities,
+          );
+          const { calculateXPFromAccuracy } =
+            await import('@/features/gamification/application/strategies/xp-reward.strategy.js');
+          xpEarned = calculateXPFromAccuracy(accuracy.accuracyPercent);
+          accuracyData = accuracy;
+        }
+
         yield {
           type: 'end',
           reason: 'completed',
@@ -1998,6 +2013,8 @@ export class OrchestrateRecipeUseCase {
           sessionCompleted: true,
           staticContent: this.extractStaticContent(currentStep),
           lessonProgress: { currentStep: currentIdx, totalSteps: steps.length },
+          xpEarned,
+          accuracy: accuracyData,
         };
         return;
       }
@@ -2453,6 +2470,17 @@ export class OrchestrateRecipeUseCase {
       await persist();
     }
 
+    // Calculate accuracy and XP for completed lessons
+    let xpEarned: number | undefined;
+    let accuracyData: InteractRecipeOutput['accuracy'] = undefined;
+    if (willComplete && session.studentId) {
+      const accuracy = await this.calculateAccuracy(session.studentId, steps, skippedActivities);
+      const { calculateXPFromAccuracy } =
+        await import('@/features/gamification/application/strategies/xp-reward.strategy.js');
+      xpEarned = calculateXPFromAccuracy(accuracy.accuracyPercent);
+      accuracyData = accuracy;
+    }
+
     yield {
       type: 'end',
       reason: 'completed',
@@ -2461,6 +2489,8 @@ export class OrchestrateRecipeUseCase {
       staticContent: this.extractStaticContent(steps[nextIdx] ?? currentStep),
       lessonProgress: { currentStep: nextIdx, totalSteps: steps.length },
       autoAdvance: !this.requiresStudentInput(currentStep.stepType),
+      xpEarned,
+      accuracy: accuracyData,
     };
   }
   catch(_error: unknown) {

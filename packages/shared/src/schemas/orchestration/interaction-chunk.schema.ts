@@ -5,6 +5,7 @@ import {
   StaticContentSchema,
   LessonProgressSchema,
 } from './start-recipe.schema.js';
+import { AccuracySchema } from './interact.schema.js';
 
 // ==================== Interaction Chunk ====================
 
@@ -20,6 +21,8 @@ export const InteractionChunkSchema = z.discriminatedUnion('type', [
     feedback: z.string().optional(),
     isCorrect: z.boolean().optional(),
     autoAdvance: z.boolean().optional(),
+    xpEarned: z.number().optional(),
+    accuracy: AccuracySchema.optional(),
   }),
 ]);
 
