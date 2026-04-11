@@ -1465,9 +1465,8 @@ export class OrchestrateRecipeUseCase {
               : 'EVALUATE_INCORRECT';
           nextState = this.applyStateTransition('ACTIVITY_WAIT', event);
         }
-      } else if (stepType === 'activity') {
+      } else if (stepType === 'activity' || stepType === 'exam') {
         // Use deterministic comparison for activity steps (MCQ)
-        // ── Actividad MCQ: comparación directa (sin LLM) ─────────────────
         const as = script as ActivityScript;
         const norm = studentInput.trim().toLowerCase();
         const correct = as.options.find((o) => o.isCorrect);
@@ -1828,7 +1827,7 @@ export class OrchestrateRecipeUseCase {
         '[interactStream] ACTIVITY_WAIT - processing answer',
       );
 
-      if (stepType === 'activity') {
+      if (stepType === 'activity' || stepType === 'exam') {
         // MCQ: deterministic comparison (NO LLM)
         const as = script as ActivityScript;
         const norm = studentInput.trim().toLowerCase();
@@ -2249,7 +2248,7 @@ export class OrchestrateRecipeUseCase {
               ? 'ACTIVITY_SKIP_OFFER'
               : 'EVALUATION';
         }
-      } else if (stepType === 'activity') {
+      } else if (stepType === 'activity' || stepType === 'exam') {
         const as = script as ActivityScript;
         const norm = studentInput.trim().toLowerCase();
         const correct = as.options.find((o) => o.isCorrect);
