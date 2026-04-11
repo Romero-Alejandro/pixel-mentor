@@ -33,52 +33,62 @@ const INITIAL_STATE = {
 };
 
 export function useLessonState() {
-  const [uiState, setUIState] = useState<UIState>(INITIAL_STATE.uiState);
-  const [currentStep, setCurrentStep] = useState(INITIAL_STATE.currentStep);
-  const [totalSteps, setTotalSteps] = useState(INITIAL_STATE.totalSteps);
-  const [contentText, setContentText] = useState(INITIAL_STATE.contentText);
-  const [questionText, setQuestionText] = useState(INITIAL_STATE.questionText);
-  const [options, setOptions] = useState<Option[]>(INITIAL_STATE.options);
-  const [feedbackData, setFeedbackData] = useState<FeedbackData | null>(INITIAL_STATE.feedbackData);
-  const [isProcessing, setIsProcessing] = useState(INITIAL_STATE.isProcessing);
-  const [questionResults, setQuestionResults] = useState<QuestionResult[]>(
-    INITIAL_STATE.questionResults,
-  );
+  const [state, setState] = useState(INITIAL_STATE);
+
+  const updateState = useCallback((updates: Partial<typeof INITIAL_STATE>) => {
+    setState((prev) => ({ ...prev, ...updates }));
+  }, []);
 
   const resetState = useCallback(() => {
-    setUIState(INITIAL_STATE.uiState);
-    setCurrentStep(INITIAL_STATE.currentStep);
-    setTotalSteps(INITIAL_STATE.totalSteps);
-    setContentText(INITIAL_STATE.contentText);
-    setQuestionText(INITIAL_STATE.questionText);
-    setOptions(INITIAL_STATE.options);
-    setFeedbackData(INITIAL_STATE.feedbackData);
-    setIsProcessing(INITIAL_STATE.isProcessing);
-    setQuestionResults(INITIAL_STATE.questionResults);
+    setState(INITIAL_STATE);
   }, []);
 
   const addQuestionResult = useCallback((question: string, isCorrect: boolean) => {
-    setQuestionResults((prev) => [...prev, { question, isCorrect }]);
+    setState((prev) => ({
+      ...prev,
+      questionResults: [...prev.questionResults, { question, isCorrect }],
+    }));
   }, []);
 
+  // Compatibilidad hacia atrás (hasta refactorizar orquestador por completo)
+  const setUIState = useCallback((val: UIState) => updateState({ uiState: val }), [updateState]);
+  const setCurrentStep = useCallback(
+    (val: number) => updateState({ currentStep: val }),
+    [updateState],
+  );
+  const setTotalSteps = useCallback(
+    (val: number) => updateState({ totalSteps: val }),
+    [updateState],
+  );
+  const setContentText = useCallback(
+    (val: string) => updateState({ contentText: val }),
+    [updateState],
+  );
+  const setQuestionText = useCallback(
+    (val: string) => updateState({ questionText: val }),
+    [updateState],
+  );
+  const setOptions = useCallback((val: Option[]) => updateState({ options: val }), [updateState]);
+  const setFeedbackData = useCallback(
+    (val: FeedbackData | null) => updateState({ feedbackData: val }),
+    [updateState],
+  );
+  const setIsProcessing = useCallback(
+    (val: boolean) => updateState({ isProcessing: val }),
+    [updateState],
+  );
+
   return {
-    uiState,
+    ...state,
+    updateState,
     setUIState,
-    currentStep,
     setCurrentStep,
-    totalSteps,
     setTotalSteps,
-    contentText,
     setContentText,
-    questionText,
     setQuestionText,
-    options,
     setOptions,
-    feedbackData,
     setFeedbackData,
-    isProcessing,
     setIsProcessing,
-    questionResults,
     addQuestionResult,
     resetState,
   };

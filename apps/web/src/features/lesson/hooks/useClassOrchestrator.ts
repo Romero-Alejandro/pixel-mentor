@@ -364,7 +364,6 @@ export function useClassOrchestrator() {
         processResponse(next);
       } else {
         logger.warn('[useClassOrchestrator] Empty response, stopping auto-advance');
-        isInteractingRef.current = false; // Reset flag to allow future interactions
       }
       return;
     }
@@ -374,7 +373,6 @@ export function useClassOrchestrator() {
       logger.log('[useClassOrchestrator] No content, not auto-advancing', {
         isInteractingRefBefore: isInteractingRef.current,
       });
-      isInteractingRef.current = false; // Reset flag
       logger.log('[useClassOrchestrator] After reset', {
         isInteractingRef: isInteractingRef.current,
       });
@@ -571,7 +569,9 @@ export function useClassOrchestrator() {
     setIsProcessing(true);
     try {
       const res = await doInteract(answer);
-      processResponse(res);
+      if (res && !(res as any)._blocked) {
+        processResponse(res);
+      }
     } finally {
       if (isMountedRef.current) setIsProcessing(false);
     }

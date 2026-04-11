@@ -76,10 +76,15 @@ export function LessonPage() {
     }
   }, [orchestrator.feedback, orchestrator.uiState]);
 
+  const orchestratorRef = useRef(orchestrator);
+  useEffect(() => {
+    orchestratorRef.current = orchestrator;
+  }, [orchestrator]);
+
   useEffect(() => {
     return () => {
-      orchestrator.stopSpeaking();
-      orchestrator.reset();
+      orchestratorRef.current.stopSpeaking();
+      orchestratorRef.current.reset();
     };
   }, []);
 
