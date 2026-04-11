@@ -77,8 +77,19 @@ export function RecipeCard({ recipe, onEdit, onDelete, onClick }: RecipeCardProp
           {recipe.expectedDurationMinutes ? (
             <div className="flex items-center gap-1.5 text-slate-500 text-sm">
               <IconClock className="w-4 h-4" />
-              <span>{recipe.expectedDurationMinutes} min</span>
+              <span>{typeof recipe.expectedDurationMinutes === 'object' ? '' : recipe.expectedDurationMinutes} min</span>
             </div>
+          ) : null}
+          <div className="flex items-center gap-1.5 text-slate-500 text-sm">
+            <IconList className="w-4 h-4" />
+            <span>
+              {stepCount} paso{stepCount !== 1 ? 's' : ''}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 text-slate-500 text-sm">
+            <span className="font-mono">v{typeof recipe.version === 'object' ? '' : recipe.version}</span>
+          </div>
+        </div>
           ) : null}
           <div className="flex items-center gap-1.5 text-slate-500 text-sm">
             <IconList className="w-4 h-4" />
