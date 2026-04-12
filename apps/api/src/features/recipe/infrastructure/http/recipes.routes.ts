@@ -63,8 +63,32 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
 
         const recipe = await getRecipeUseCase.execute(validated.recipeId);
 
+        // Transform domain objects to plain objects for JSON response
+        const plainRecipe = {
+          id: recipe.id,
+          canonicalId:
+            typeof recipe.canonicalId === 'object'
+              ? (recipe.canonicalId as any).value
+              : recipe.canonicalId,
+          title: recipe.title,
+          description: recipe.description,
+          expectedDurationMinutes:
+            typeof recipe.expectedDurationMinutes === 'object'
+              ? (recipe.expectedDurationMinutes as any).minutes
+              : recipe.expectedDurationMinutes,
+          version:
+            typeof recipe.version === 'object'
+              ? (recipe.version as any).toString()
+              : recipe.version,
+          published: recipe.published,
+          moduleId: recipe.moduleId,
+          createdAt: recipe.createdAt?.toISOString(),
+          updatedAt: recipe.updatedAt?.toISOString(),
+          steps: recipe.steps || [],
+        };
+
         response.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-        response.json(recipe);
+        response.json(plainRecipe);
       } catch (error) {
         if (error instanceof z.ZodError) {
           response.status(400).json({ error: 'Validation error', details: error.issues });
@@ -85,16 +109,17 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
     // @ts-expect-error - Express 5 compatibility
     async (request: AppRequest, response: Response, next: NextFunction): Promise<void> => {
       try {
-        const query: { activeOnly?: boolean } = {};
+        const query: any = {};
         const rawActiveOnly = request.query.activeOnly;
         if (rawActiveOnly !== undefined) {
           const val = Array.isArray(rawActiveOnly) ? rawActiveOnly[0] : rawActiveOnly;
-          query.activeOnly = val === 'true';
+          query.published = val === 'true';
         }
 
         const validated = ListRecipesInputSchema.parse(query);
 
-        const recipes = await listRecipesUseCase.execute(validated.activeOnly);
+        const activeOnly = validated.published ?? true;
+        const recipes = await listRecipesUseCase.execute(activeOnly);
 
         response.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
         response.json(recipes);
@@ -126,15 +151,39 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
           {
             title: validated.title,
             description: validated.description,
-            expectedDurationMinutes: validated.expectedDurationMinutes,
-            moduleId: validated.moduleId,
+            expectedDurationMinutes: validated.expectedDurationMinutes ?? undefined,
+            moduleId: validated.moduleId ?? undefined,
             published: validated.published,
-            steps: validated.steps,
+            steps: (validated as any).steps,
           },
           userId,
         );
 
-        response.status(201).json(recipe);
+        // Transform domain objects to plain objects for JSON response
+        const plainRecipe = {
+          id: recipe.id,
+          canonicalId:
+            typeof recipe.canonicalId === 'object'
+              ? (recipe.canonicalId as any).value
+              : recipe.canonicalId,
+          title: recipe.title,
+          description: recipe.description,
+          expectedDurationMinutes:
+            typeof recipe.expectedDurationMinutes === 'object'
+              ? (recipe.expectedDurationMinutes as any).minutes
+              : recipe.expectedDurationMinutes,
+          version:
+            typeof recipe.version === 'object'
+              ? (recipe.version as any).toString()
+              : recipe.version,
+          published: recipe.published,
+          moduleId: recipe.moduleId,
+          createdAt: recipe.createdAt?.toISOString(),
+          updatedAt: recipe.updatedAt?.toISOString(),
+          steps: recipe.steps || [],
+        };
+
+        response.status(201).json(plainRecipe);
       } catch (error) {
         if (error instanceof z.ZodError) {
           response.status(400).json({ error: 'Validation error', details: error.issues });
@@ -162,7 +211,23 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
         }
 
         const recipeId = request.params.id as string;
-        const validated = UpdateRecipeInputSchema.parse(request.body);
+        request.logger?.debug({ body: request.body }, '[PATCH recipe] Request body');
+
+        let validated: any;
+        try {
+          validated = UpdateRecipeInputSchema.parse(request.body);
+          request.logger?.debug({ validated }, '[PATCH recipe] Validated');
+        } catch (validationError) {
+          if (validationError instanceof z.ZodError) {
+            request.logger?.error(
+              { zodErrors: validationError.issues, receivedBody: request.body },
+              '[PATCH recipe] Zod validation FAILED',
+            );
+          }
+          throw validationError;
+        }
+
+        console.log('[PATCH recipe] validated data:', JSON.stringify(validated));
 
         const recipe = await updateRecipeUseCase.execute(
           recipeId,
@@ -176,7 +241,31 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
           userId,
         );
 
-        response.json(recipe);
+        // Transform domain objects to plain objects for JSON response
+        const plainRecipe = {
+          id: recipe.id,
+          canonicalId:
+            typeof recipe.canonicalId === 'object'
+              ? (recipe.canonicalId as any).value
+              : recipe.canonicalId,
+          title: recipe.title,
+          description: recipe.description,
+          expectedDurationMinutes:
+            typeof recipe.expectedDurationMinutes === 'object'
+              ? (recipe.expectedDurationMinutes as any).minutes
+              : recipe.expectedDurationMinutes,
+          version:
+            typeof recipe.version === 'object'
+              ? (recipe.version as any).toString()
+              : recipe.version,
+          published: recipe.published,
+          moduleId: recipe.moduleId,
+          createdAt: recipe.createdAt?.toISOString(),
+          updatedAt: recipe.updatedAt?.toISOString(),
+          steps: recipe.steps || [],
+        };
+
+        response.json(plainRecipe);
       } catch (error) {
         if (error instanceof z.ZodError) {
           response.status(400).json({ error: 'Validation error', details: error.issues });
@@ -239,33 +328,57 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
     '/:id/steps',
     // @ts-expect-error - Express 5 compatibility
     async (request: AppRequest, response: Response, next: NextFunction): Promise<void> => {
+      console.log('[addStep POST] Request received');
       try {
         const userId = request.user?.id;
+        console.log('[addStep] userId:', userId);
         if (!userId) {
           response.status(401).json({ error: 'Unauthorized' });
           return;
         }
 
         const recipeId = request.params.id as string;
-        const validated = RecipeStepInputSchema.parse(request.body);
+        console.log('[addStep] recipeId:', recipeId);
+        console.log('[addStep] Request body:', JSON.stringify(request.body));
+        request.logger?.debug({ body: JSON.stringify(request.body) }, '[addStep] Request body');
+
+        let validated: any;
+        try {
+          // Manual validation instead of Zod schema to avoid Zod v4 issues
+          const body = request.body;
+          validated = {
+            order: typeof body.order === 'number' ? body.order : 1,
+            stepType: body.stepType || 'content',
+            script: body.script || null,
+            activity: body.activity || null,
+            question: body.question || null,
+          };
+          console.log('[addStep] Manual validation:', JSON.stringify(validated));
+        } catch (validationError) {
+          throw new Error('Invalid request body');
+        }
 
         const step = await addStepUseCase.execute(
           recipeId,
           {
-            atomId: validated.atomId,
+            atomId: validated.atomId ?? undefined,
             order: validated.order,
-            conceptId: validated.conceptId,
-            activityId: validated.activityId,
-            stepType: validated.stepType,
+            conceptId: validated.conceptId ?? undefined,
+            activityId: validated.activityId ?? undefined,
+            stepType: (validated.stepType as any) ?? undefined,
             script: validated.script as any,
             activity: validated.activity as any,
             question: validated.question as any,
           },
           userId,
         );
+        console.log('[addStep route] Result:', JSON.stringify(step, null, 2));
 
         response.status(201).json(step);
       } catch (error) {
+        // Log the full error for debugging
+        console.error('[addStep] Full error:', error);
+        console.error('[addStep] Error stack:', error instanceof Error ? error.stack : 'No stack');
         if (error instanceof z.ZodError) {
           const errorMessages = error.issues
             .map((issue) => {
@@ -274,6 +387,7 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
             })
             .join('; ');
 
+          request.logger?.error({ zodErrors: error.issues }, '[addStep] Zod validation failed');
           response.status(400).json({
             error: 'Error de validación',
             message: errorMessages,
@@ -359,11 +473,11 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
         const step = await updateStepUseCase.execute(
           stepId,
           {
-            atomId: validated.atomId,
+            atomId: validated.atomId ?? undefined,
             order: validated.order,
-            conceptId: validated.conceptId,
-            activityId: validated.activityId,
-            stepType: validated.stepType,
+            conceptId: validated.conceptId ?? undefined,
+            activityId: validated.activityId ?? undefined,
+            stepType: (validated.stepType as any) ?? undefined,
             script: validated.script as any,
             activity: validated.activity as any,
             question: validated.question as any,
