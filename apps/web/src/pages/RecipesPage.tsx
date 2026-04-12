@@ -18,16 +18,18 @@ export function RecipesPage() {
   const confirm = useConfirm();
   const { user } = useAuth();
 
-  const { recipes, isLoading, error, fetchRecipes, deleteRecipe, clearError } = useRecipeStore(
-    useShallow((state) => ({
-      recipes: state.recipes,
-      isLoading: state.isLoading,
-      error: state.error,
-      fetchRecipes: state.fetchRecipes,
-      deleteRecipe: state.deleteRecipe,
-      clearError: state.clearError,
-    })),
-  );
+  const { recipes, isLoading, error, fetchRecipes, deleteRecipe, updateRecipe, clearError } =
+    useRecipeStore(
+      useShallow((state) => ({
+        recipes: state.recipes,
+        isLoading: state.isLoading,
+        error: state.error,
+        fetchRecipes: state.fetchRecipes,
+        deleteRecipe: state.deleteRecipe,
+        updateRecipe: state.updateRecipe,
+        clearError: state.clearError,
+      })),
+    );
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
@@ -88,6 +90,24 @@ export function RecipesPage() {
     ) {
       try {
         await deleteRecipe(recipeId);
+      } catch {
+        // Error handled in store
+      }
+    }
+  };
+
+  const handlePublishRecipe = async (recipeId: string) => {
+    playClick();
+    const recipe = recipes.find((r) => r.id === recipeId);
+    if (
+      await confirm({
+        title: 'Confirmar publicación',
+        message: `¿Estás seguro de que quieres publicar el borrador "${recipe?.title}"? Una vez publicado estará visible.`,
+        variant: 'info',
+      })
+    ) {
+      try {
+        await updateRecipe(recipeId, { published: true });
       } catch {
         // Error handled in store
       }
@@ -235,6 +255,7 @@ export function RecipesPage() {
                 onEdit={handleEditRecipe}
                 onDelete={handleDeleteRecipe}
                 onClick={handleRecipeClick}
+                onPublish={handlePublishRecipe}
               />
             ))}
           </div>

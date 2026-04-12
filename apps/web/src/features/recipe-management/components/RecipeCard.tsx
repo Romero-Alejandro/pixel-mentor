@@ -9,6 +9,7 @@ interface RecipeCardProps {
   onEdit: (recipeId: string) => void;
   onDelete: (recipeId: string) => void;
   onClick?: (recipeId: string) => void;
+  onPublish?: (recipeId: string) => void;
 }
 
 const STATUS_LABELS = {
@@ -21,7 +22,7 @@ const STATUS_VARIANTS = {
   published: 'success' as const,
 };
 
-export function RecipeCard({ recipe, onEdit, onDelete, onClick }: RecipeCardProps) {
+export function RecipeCard({ recipe, onEdit, onDelete, onClick, onPublish }: RecipeCardProps) {
   const { playClick } = useAudio();
 
   const handleEdit = (e: React.MouseEvent) => {
@@ -34,6 +35,12 @@ export function RecipeCard({ recipe, onEdit, onDelete, onClick }: RecipeCardProp
     e.stopPropagation();
     playClick();
     onDelete(recipe.id);
+  };
+
+  const handlePublish = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    playClick();
+    if (onPublish) onPublish(recipe.id);
   };
 
   const handleClick = () => {
@@ -100,6 +107,12 @@ export function RecipeCard({ recipe, onEdit, onDelete, onClick }: RecipeCardProp
 
         {/* Actions */}
         <div className="flex items-center gap-2 pt-3 border-t border-slate-100">
+          {!recipe.published && onPublish ? (
+            <Button onClick={handlePublish} variant="success" size="sm" className="flex-1">
+              <IconCheck className="w-4 h-4 mr-1.5" />
+              Publicar
+            </Button>
+          ) : null}
           <Button onClick={handleEdit} variant="secondary" size="sm" className="flex-1">
             <IconEdit className="w-4 h-4 mr-1.5" />
             Editar
