@@ -445,7 +445,7 @@ export function RecipeEditorPage() {
         await updateRecipe(tid, { title: draft.title, description: draft.description });
       }
       if (!tid) return;
-      const startOrder = localSteps.length + 1;
+      const startOrder = (currentRecipe?.steps?.length || 0) + 1;
       console.log('[AI Apply] Starting to add steps:', {
         startOrder,
         stepsCount: draft.steps.length,
@@ -784,7 +784,7 @@ export function RecipeEditorPage() {
         onClose={() => setStepEditor({ isOpen: false, step: null })}
         onSave={handleSaveStep}
         step={stepEditor.step ?? undefined}
-        order={stepEditor.step ? stepEditor.step.order : localSteps.length + 1}
+        order={stepEditor.step ? stepEditor.step.order : (currentRecipe?.steps?.length || 0) + 1}
       />
 
       {showDeleteConfirm ? (
