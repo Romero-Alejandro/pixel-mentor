@@ -253,6 +253,13 @@ export function RecipeEditorPage() {
     })),
   );
 
+  const [form, setForm] = useState({
+    title: '',
+    description: '',
+    expectedDuration: '',
+    published: false,
+  });
+  const [isSaving, setIsSaving] = useState(false);
   const [stepEditor, setStepEditor] = useState<{ isOpen: boolean; step: RecipeStep | null }>({
     isOpen: false,
     step: null,
