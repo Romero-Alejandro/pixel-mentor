@@ -2,7 +2,6 @@ import { IconClock, IconList, IconEdit, IconTrash, IconCheck } from '@tabler/ico
 import type { Recipe } from '@pixel-mentor/shared';
 
 import { Card, Badge, Button } from '@/components/ui';
-import { useAudio } from '@/contexts/AudioContext';
 
 interface RecipeCardProps {
   recipe: Recipe;
@@ -23,28 +22,26 @@ const STATUS_VARIANTS = {
 };
 
 export function RecipeCard({ recipe, onEdit, onDelete, onClick, onPublish }: RecipeCardProps) {
-  const { playClick } = useAudio();
-
   const handleEdit = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
-    playClick();
     onEdit(recipe.id);
   };
 
   const handleDelete = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
-    playClick();
     onDelete(recipe.id);
   };
 
   const handlePublish = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
-    playClick();
     if (onPublish) onPublish(recipe.id);
   };
 
-  const handleClick = () => {
-    playClick();
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
     onClick?.(recipe.id);
   };
 

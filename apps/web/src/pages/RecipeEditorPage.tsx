@@ -300,7 +300,8 @@ export function RecipeEditorPage() {
     setForm((prev) => ({ ...prev, published: !prev.published }));
   };
 
-  const handleSave = async () => {
+  const handleSave = async (forcePublish?: boolean) => {
+    const isPublishing = forcePublish ?? form.published;
     if (!form.title.trim()) {
       await alert({
         title: 'Campo requerido',
@@ -315,7 +316,7 @@ export function RecipeEditorPage() {
         title: form.title.trim(),
         description: form.description.trim() || undefined,
         expectedDurationMinutes: form.expectedDuration ? Number(form.expectedDuration) : undefined,
-        published: form.published, // Lee el estado actualizado directamente
+        published: isPublishing,
       };
 
       if (isNewRecipe) {
@@ -323,6 +324,10 @@ export function RecipeEditorPage() {
         navigate(`/units/${res.id}/edit`, { replace: true });
       } else if (recipeId) {
         await updateRecipe(recipeId, payload);
+      }
+
+      if (forcePublish && !form.published) {
+        setForm((prev) => ({ ...prev, published: true }));
       }
     } catch (err: any) {
       await alert({ title: 'Error', message: err.message || 'Error al guardar', variant: 'error' });
@@ -497,7 +502,12 @@ export function RecipeEditorPage() {
                 <IconTrash className="w-4 h-4" />
               </Button>
             ) : null}
-            <Button onClick={handleSave} variant="primary" isLoading={isSaving}>
+            {!form.published && !isNewRecipe ? (
+              <Button onClick={() => handleSave(true)} variant="success" isLoading={isSaving}>
+                <IconCheck className="w-5 h-5 mr-2" /> Publicar
+              </Button>
+            ) : null}
+            <Button onClick={() => handleSave()} variant="primary" isLoading={isSaving}>
               <IconCheck className="w-5 h-5 mr-2" /> Guardar
             </Button>
           </div>
