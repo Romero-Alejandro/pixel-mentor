@@ -5,7 +5,6 @@ import { IconPlus, IconFilter, IconSearch, IconBook, IconArrowLeft } from '@tabl
 
 import { useRecipeStore } from '@/features/recipe-management/stores/recipe.store';
 import { useAuth } from '@/features/auth/hooks/useAuth';
-import { useAudio } from '@/contexts/AudioContext';
 import { useConfirm } from '@/hooks/useConfirmationDialogs';
 import { RecipeCard } from '@/features/recipe-management/components/RecipeCard';
 import { Button, Card, Spinner, Input } from '@/components/ui';
@@ -14,7 +13,6 @@ type FilterStatus = 'all' | 'my-drafts' | 'my-published';
 
 export function RecipesPage() {
   const navigate = useNavigate();
-  const { playClick } = useAudio();
   const confirm = useConfirm();
   const { user } = useAuth();
 
@@ -69,17 +67,14 @@ export function RecipesPage() {
   });
 
   const handleCreateRecipe = () => {
-    playClick();
     navigate('/units/new/edit');
   };
 
   const handleEditRecipe = (recipeId: string) => {
-    playClick();
     navigate(`/units/${recipeId}/edit`);
   };
 
   const handleDeleteRecipe = async (recipeId: string) => {
-    playClick();
     const recipe = recipes.find((r) => r.id === recipeId);
     if (
       await confirm({
@@ -97,7 +92,6 @@ export function RecipesPage() {
   };
 
   const handlePublishRecipe = async (recipeId: string) => {
-    playClick();
     const recipe = recipes.find((r) => r.id === recipeId);
     if (
       await confirm({
@@ -119,7 +113,6 @@ export function RecipesPage() {
   };
 
   const handleFilterChange = (status: FilterStatus) => {
-    playClick();
     setFilterStatus(status);
   };
 
