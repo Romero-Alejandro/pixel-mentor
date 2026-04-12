@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import {
@@ -11,6 +11,8 @@ import {
   IconCheck,
   IconList,
   IconSparkles,
+  IconDeviceFloppy,
+  IconSend,
 } from '@tabler/icons-react';
 import type { RecipeStep } from '@pixel-mentor/shared';
 
@@ -223,7 +225,7 @@ export function RecipeEditorPage() {
   const { user } = useAuth();
 
   const isNewRecipe = !recipeId || recipeId === 'new';
-  const isTeacher = useMemo(() => user?.role === 'TEACHER' || user?.role === 'ADMIN', [user]);
+  const isTeacher = user?.role === 'TEACHER' || user?.role === 'ADMIN';
 
   const {
     currentRecipe,
@@ -296,12 +298,25 @@ export function RecipeEditorPage() {
     }
   }, [currentRecipe, recipeId, isNewRecipe]);
 
-  const handleTogglePublished = () => {
-    setForm((prev) => ({ ...prev, published: !prev.published }));
+  const handleTogglePublished = async () => {
+    const newPublishedState = !form.published;
+    const action = newPublishedState ? 'publicar' : 'despublicar';
+
+    const confirmed = await confirm({
+      title: newPublishedState ? 'Publicar unidad' : 'Despublicar unidad',
+      message: newPublishedState
+        ? '¿Estás seguro de que quieres publicar esta unidad? Los estudiantes podrán verla.'
+        : '¿Estás seguro de que quieres despublicar esta unidad? Los estudiantes no podrán acceder a ella.',
+      variant: newPublishedState ? 'success' : 'warning',
+      confirmText: newPublishedState ? 'Publicar' : 'Despublicar',
+    });
+
+    if (confirmed) {
+      await handleSave(newPublishedState);
+    }
   };
 
-  const handleSave = async (forcePublish?: boolean) => {
-    const isPublishing = forcePublish ?? form.published;
+  const handleSave = async (publishedOverride?: boolean) => {
     if (!form.title.trim()) {
       await alert({
         title: 'Campo requerido',
@@ -310,13 +325,16 @@ export function RecipeEditorPage() {
       });
       return;
     }
+
+    const targetPublished = publishedOverride !== undefined ? publishedOverride : form.published;
+
     setIsSaving(true);
     try {
       const payload = {
         title: form.title.trim(),
         description: form.description.trim() || undefined,
         expectedDurationMinutes: form.expectedDuration ? Number(form.expectedDuration) : undefined,
-        published: isPublishing,
+        published: targetPublished,
       };
 
       if (isNewRecipe) {
@@ -326,8 +344,9 @@ export function RecipeEditorPage() {
         await updateRecipe(recipeId, payload);
       }
 
-      if (forcePublish && !form.published) {
-        setForm((prev) => ({ ...prev, published: true }));
+      // Sync local state with server response
+      if (publishedOverride !== undefined) {
+        setForm((prev) => ({ ...prev, published: publishedOverride }));
       }
     } catch (err: any) {
       await alert({ title: 'Error', message: err.message || 'Error al guardar', variant: 'error' });
@@ -399,29 +418,26 @@ export function RecipeEditorPage() {
     }
   };
 
-  const handleMoveStep = useCallback(
-    async (index: number, direction: 'up' | 'down') => {
-      if (!recipeId) return;
-      const targetIndex = direction === 'up' ? index - 1 : index + 1;
-      if (targetIndex < 0 || targetIndex >= localSteps.length) return;
+  const handleMoveStep = async (index: number, direction: 'up' | 'down') => {
+    if (!recipeId) return;
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= localSteps.length) return;
 
-      playClick();
-      const newSteps = [...localSteps];
-      [newSteps[index], newSteps[targetIndex]] = [newSteps[targetIndex], newSteps[index]];
-      setLocalSteps(newSteps);
+    playClick();
+    const newSteps = [...localSteps];
+    [newSteps[index], newSteps[targetIndex]] = [newSteps[targetIndex], newSteps[index]];
+    setLocalSteps(newSteps);
 
-      try {
-        await reorderSteps(
-          recipeId,
-          newSteps.map((s) => s.id),
-        );
-      } catch (err) {
-        setLocalSteps(localSteps); // Revert
-        logger.error('Reorder error', err);
-      }
-    },
-    [recipeId, localSteps, reorderSteps, playClick],
-  );
+    try {
+      await reorderSteps(
+        recipeId,
+        newSteps.map((s) => s.id),
+      );
+    } catch (err) {
+      setLocalSteps(localSteps); // Revert
+      logger.error('Reorder error', err);
+    }
+  };
 
   const handleAIGenerated = async (draft: any) => {
     try {
@@ -495,21 +511,42 @@ export function RecipeEditorPage() {
           </div>
           <div className="flex items-center gap-3">
             <Button onClick={() => setIsAIGeneratorOpen(true)} variant="secondary">
-              <IconSparkles className="w-5 h-5 mr-2" /> IA
+              <IconSparkles className="w-5 h-5" /> IA
             </Button>
-            {!isNewRecipe ? (
+            {!isNewRecipe && (
               <Button onClick={() => setShowDeleteConfirm(true)} variant="danger" size="sm">
                 <IconTrash className="w-4 h-4" />
               </Button>
-            ) : null}
-            {!form.published && !isNewRecipe ? (
-              <Button onClick={() => handleSave(true)} variant="success" isLoading={isSaving}>
-                <IconCheck className="w-5 h-5 mr-2" /> Publicar
+            )}
+            <div className="flex items-center gap-2">
+              {form.published ? (
+                <Button
+                  onClick={handleTogglePublished}
+                  variant="warning"
+                  isLoading={isSaving}
+                  disabled={isSaving}
+                >
+                  <IconCheck className="w-5 h-5" /> Despublicar
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleTogglePublished}
+                  variant="success"
+                  isLoading={isSaving}
+                  disabled={isSaving}
+                >
+                  <IconSend className="w-5 h-5" /> Publicar
+                </Button>
+              )}
+              <Button
+                onClick={() => handleSave()}
+                variant="primary"
+                isLoading={isSaving}
+                disabled={isSaving}
+              >
+                <IconDeviceFloppy className="w-5 h-5" /> Guardar
               </Button>
-            ) : null}
-            <Button onClick={() => handleSave()} variant="primary" isLoading={isSaving}>
-              <IconCheck className="w-5 h-5 mr-2" /> Guardar
-            </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -530,25 +567,13 @@ export function RecipeEditorPage() {
                 placeholder="Descripción..."
                 className="min-h-[120px]"
               />
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <Input
                   type="number"
                   value={form.expectedDuration}
                   onChange={(e) => setForm({ ...form, expectedDuration: e.target.value })}
                   placeholder="Minutos"
                 />
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleTogglePublished();
-                  }}
-                  className={`flex items-center justify-center gap-3 px-4 py-2 rounded-xl border-2 transition-all ${form.published ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-500'}`}
-                >
-                  <span className="pointer-events-none font-bold">
-                    {form.published ? 'Publicada' : 'Borrador'}
-                  </span>
-                </button>
               </div>
             </div>
           </Card>
