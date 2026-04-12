@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { IconX } from '@tabler/icons-react';
 
@@ -29,7 +29,7 @@ export function Modal({
   size = 'md',
   closeOnBackdrop = true,
 }: ModalProps) {
-  const portalRef = useRef<HTMLElement | null>(null);
+  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
 
   // Create portal container on mount
   useEffect(() => {
@@ -39,7 +39,7 @@ export function Modal({
       container.id = 'modal-portal';
       document.body.appendChild(container);
     }
-    portalRef.current = container;
+    setPortalContainer(container);
   }, []);
 
   // Lock body scroll when modal is open
@@ -62,7 +62,7 @@ export function Modal({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen || !portalRef.current) return null;
+  if (!isOpen || !portalContainer) return null;
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -97,6 +97,6 @@ export function Modal({
         {footer ? <div className="p-6 border-t-4 border-sky-200 shrink-0">{footer}</div> : null}
       </div>
     </div>,
-    portalRef.current,
+    portalContainer,
   );
 }
