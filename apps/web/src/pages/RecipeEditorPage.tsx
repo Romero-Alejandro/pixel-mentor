@@ -253,14 +253,6 @@ export function RecipeEditorPage() {
     })),
   );
 
-  const [form, setForm] = useState({
-    title: '',
-    description: '',
-    expectedDuration: '',
-    published: false,
-  });
-  const [isSaving, setIsSaving] = useState(false);
-  const [localSteps, setLocalSteps] = useState<RecipeStep[]>([]);
   const [stepEditor, setStepEditor] = useState<{ isOpen: boolean; step: RecipeStep | null }>({
     isOpen: false,
     step: null,
@@ -278,7 +270,6 @@ export function RecipeEditorPage() {
     if (isNewRecipe) {
       if (initializedRecipeId.current !== 'new') {
         setForm({ title: '', description: '', expectedDuration: '', published: false });
-        setLocalSteps([]);
         initializedRecipeId.current = 'new';
       }
     } else if (currentRecipe && currentRecipe.id === recipeId) {
@@ -292,7 +283,6 @@ export function RecipeEditorPage() {
           expectedDuration: durationValue,
           published: !!currentRecipe.published,
         });
-        setLocalSteps((currentRecipe.steps ?? []).filter((s) => s?.id));
         initializedRecipeId.current = recipeId;
       }
     }
@@ -388,7 +378,8 @@ export function RecipeEditorPage() {
       } else {
         await addStep(recipeId, payload);
       }
-      setLocalSteps(useRecipeStore.getState().currentRecipe?.steps ?? []);
+      // Refresh from store to ensure we have the latest data
+      await fetchRecipe(recipeId);
       setStepEditor({ isOpen: false, step: null });
       playToastSuccess();
     } catch (err: any) {
@@ -404,13 +395,13 @@ export function RecipeEditorPage() {
     if (!recipeId) return;
     const confirmed = await confirm({
       title: 'Eliminar paso',
-      message: '¿Estás seguro?',
+      message: '¿Estás seguro? Esta acción no se puede deshacer.',
       variant: 'danger',
     });
     if (confirmed) {
       try {
         await deleteStep(recipeId, stepId);
-        setLocalSteps(useRecipeStore.getState().currentRecipe?.steps ?? []);
+        await fetchRecipe(recipeId);
         playToastSuccess();
       } catch (err) {
         logger.error('Delete step error', err);
@@ -421,21 +412,18 @@ export function RecipeEditorPage() {
   const handleMoveStep = async (index: number, direction: 'up' | 'down') => {
     if (!recipeId) return;
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= localSteps.length) return;
+    if (targetIndex < 0 || targetIndex >= (currentRecipe?.steps?.length || 0)) return;
 
     playClick();
-    const newSteps = [...localSteps];
-    [newSteps[index], newSteps[targetIndex]] = [newSteps[targetIndex], newSteps[index]];
-    setLocalSteps(newSteps);
+    const newOrder = currentRecipe?.steps?.map((s) => s.id) || [];
+    [newOrder[index], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[index]];
 
     try {
-      await reorderSteps(
-        recipeId,
-        newSteps.map((s) => s.id),
-      );
+      await reorderSteps(recipeId, newOrder);
+      await fetchRecipe(recipeId);
     } catch (err) {
-      setLocalSteps(localSteps); // Revert
       logger.error('Reorder error', err);
+      // No need to manually revert - fetchRecipe will restore correct order
     }
   };
 
@@ -554,109 +542,232 @@ export function RecipeEditorPage() {
       <main className="max-w-7xl mx-auto px-4 py-8 grid gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
           <Card variant="mission" className="p-6">
-            <h2 className="text-xl font-black mb-4">Información</h2>
+            <h2 className="text-xl font-black mb-4">Información de la Unidad</h2>
             <div className="space-y-4">
-              <Input
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                placeholder="Título *"
-              />
-              <Textarea
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                placeholder="Descripción..."
-                className="min-h-[120px]"
-              />
-              <div className="grid grid-cols-1 gap-4">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Título *</label>
                 <Input
-                  type="number"
-                  value={form.expectedDuration}
-                  onChange={(e) => setForm({ ...form, expectedDuration: e.target.value })}
-                  placeholder="Minutos"
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  placeholder="Ej: Introducción a la fotografía"
+                  className="text-lg"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Descripción</label>
+                <Textarea
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  placeholder="Describe qué aprenderán los estudiantes en esta unidad..."
+                  className="min-h-[120px] resize-y"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-sky-700 mb-2">
+                    Duración estimada (minutos)
+                  </label>
+                  <Input
+                    type="number"
+                    value={form.expectedDuration}
+                    onChange={(e) => setForm({ ...form, expectedDuration: e.target.value })}
+                    placeholder="Ej: 45"
+                    min="1"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Estado</label>
+                  <div className="h-full flex items-center">
+                    <div
+                      className={`w-full px-4 py-3 rounded-xl border-2 font-bold text-center transition-all ${
+                        form.published
+                          ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                          : 'bg-slate-50 border-slate-200 text-slate-600'
+                      }`}
+                    >
+                      {form.published ? '📢 Publicada' : '📝 Borrador'}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </Card>
 
           <Card variant="mission" className="p-6">
-            <h2 className="text-xl font-black mb-4 flex items-center gap-2">
-              <IconList className="text-sky-500" /> Pasos ({localSteps.length})
-            </h2>
-            <div className="space-y-3">
-              {localSteps.map((step, index) => (
-                <div
-                  key={step.id}
-                  className="flex items-start gap-3 p-4 bg-slate-50 rounded-xl border-2 border-slate-200 hover:border-sky-300 transition-all"
-                >
-                  <div className="flex flex-col gap-1">
-                    <button
-                      onClick={() => handleMoveStep(index, 'up')}
-                      disabled={index === 0}
-                      className="p-1 hover:text-sky-500 disabled:opacity-30"
-                    >
-                      <IconArrowUp className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleMoveStep(index, 'down')}
-                      disabled={index === localSteps.length - 1}
-                      className="p-1 hover:text-sky-500 disabled:opacity-30"
-                    >
-                      <IconArrowDown className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <div className="w-8 h-8 flex items-center justify-center bg-sky-100 rounded-full font-bold text-sky-600">
-                    {index + 1}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-xs font-medium border ${STEP_TYPE_COLORS[step.stepType as StepType] || STEP_TYPE_COLORS.content}`}
-                      >
-                        {STEP_TYPE_LABELS[step.stepType as StepType] || 'Contenido'}
-                      </span>
-                    </div>
-                    <p className="text-sm text-slate-600 truncate">{getDisplayTitle(step)}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setStepEditor({ isOpen: true, step })}
-                      className="p-2 hover:text-amber-600"
-                    >
-                      <IconEdit className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteStep(step.id)}
-                      className="p-2 hover:text-rose-600"
-                    >
-                      <IconTrash className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-              <Button
-                onClick={() => setStepEditor({ isOpen: true, step: null })}
-                variant="secondary"
-                className="w-full mt-4"
-              >
-                <IconPlus className="w-5 h-5 mr-2" /> Añadir Paso
-              </Button>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-black flex items-center gap-2">
+                <IconList className="text-sky-500" /> Pasos de la Unidad
+              </h2>
+              <span className="text-sm font-bold text-sky-600 bg-sky-50 px-3 py-1 rounded-full">
+                {currentRecipe?.steps?.length || 0} paso
+                {currentRecipe?.steps?.length !== 1 ? 's' : ''}
+              </span>
             </div>
+
+            {!currentRecipe?.steps || currentRecipe.steps.length === 0 ? (
+              <div className="text-center py-12 bg-slate-50 rounded-xl border-2 border-dashed border-slate-300">
+                <IconList className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                <p className="text-slate-500 font-medium">No hay pasos aún</p>
+                <p className="text-sm text-slate-400 mt-1">Añade el primer paso para comenzar</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {currentRecipe.steps?.map((step, index) => (
+                  <div
+                    key={step.id}
+                    className="group flex items-start gap-3 p-4 bg-white rounded-xl border-2 border-slate-200 hover:border-sky-300 hover:shadow-md transition-all"
+                  >
+                    <div className="flex flex-col gap-1">
+                      <button
+                        onClick={() => handleMoveStep(index, 'up')}
+                        disabled={index === 0}
+                        className="p-1.5 rounded-lg hover:bg-sky-50 hover:text-sky-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        title="Mover arriba"
+                      >
+                        <IconArrowUp className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleMoveStep(index, 'down')}
+                        disabled={index === (currentRecipe?.steps?.length || 0) - 1}
+                        className="p-1.5 rounded-lg hover:bg-sky-50 hover:text-sky-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        title="Mover abajo"
+                      >
+                        <IconArrowDown className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="w-10 h-10 flex items-center justify-center bg-gradient-to-br from-sky-100 to-sky-200 rounded-full font-bold text-sky-700 shadow-sm">
+                      {index + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                        <span
+                          className={`px-2.5 py-1 rounded-full text-xs font-bold border ${
+                            STEP_TYPE_COLORS[step.stepType as StepType] || STEP_TYPE_COLORS.content
+                          }`}
+                        >
+                          {STEP_TYPE_LABELS[step.stepType as StepType] || 'Contenido'}
+                        </span>
+                      </div>
+                      <p className="text-sm text-slate-700 font-medium line-clamp-2">
+                        {getDisplayTitle(step)}
+                      </p>
+                      <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
+                        <span className="flex items-center gap-1">
+                          <IconCheck className="w-3 h-3" />
+                          Completado
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setStepEditor({ isOpen: true, step })}
+                        className="p-2 rounded-lg hover:bg-amber-50 hover:text-amber-600 transition-colors"
+                        title="Editar paso"
+                      >
+                        <IconEdit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteStep(step.id)}
+                        className="p-2 rounded-lg hover:bg-rose-50 hover:text-rose-600 transition-colors"
+                        title="Eliminar paso"
+                      >
+                        <IconTrash className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                <Button
+                  onClick={() => setStepEditor({ isOpen: true, step: null })}
+                  variant="secondary"
+                  className="w-full mt-4 py-3 border-2 border-dashed border-sky-300 hover:border-sky-400 hover:bg-sky-50/50"
+                >
+                  <IconPlus className="w-5 h-5 mr-2" /> Añadir Nuevo Paso
+                </Button>
+              </div>
+            )}
           </Card>
         </div>
 
         <div className="space-y-6">
           <Card variant="mission" className="p-6">
-            <h2 className="text-lg font-black mb-4">Resumen</h2>
-            <div className="space-y-3 text-sm font-medium text-slate-600">
-              <div className="flex justify-between">
-                <span>Pasos</span>
-                <span className="text-sky-600 font-black">{localSteps.length}</span>
+            <h2 className="text-lg font-black mb-4 flex items-center gap-2">
+              <IconList className="text-sky-500" /> Resumen
+            </h2>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-3 bg-sky-50 rounded-xl border border-sky-100">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-sky-100 rounded-full flex items-center justify-center">
+                    <IconList className="w-4 h-4 text-sky-600" />
+                  </div>
+                  <span className="font-medium text-slate-700">Total pasos</span>
+                </div>
+                <span className="text-2xl font-black text-sky-600">
+                  {currentRecipe?.steps?.length || 0}
+                </span>
               </div>
-              <div className="flex justify-between">
-                <span>Duración</span>
-                <span className="font-black">{form.expectedDuration || 0} min</span>
+
+              <div className="flex items-center justify-between p-3 bg-purple-50 rounded-xl border border-purple-100">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                    <IconCheck className="w-4 h-4 text-purple-600" />
+                  </div>
+                  <span className="font-medium text-slate-700">Estado</span>
+                </div>
+                <span
+                  className={`font-bold px-3 py-1 rounded-full text-sm ${
+                    form.published
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : 'bg-amber-100 text-amber-700'
+                  }`}
+                >
+                  {form.published ? 'Publicada' : 'Borrador'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-emerald-50 rounded-xl border border-emerald-100">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
+                    <IconDeviceFloppy className="w-4 h-4 text-emerald-600" />
+                  </div>
+                  <span className="font-medium text-slate-700">Duración</span>
+                </div>
+                <span className="text-2xl font-black text-emerald-600">
+                  {form.expectedDuration || '—'} min
+                </span>
+              </div>
+
+              <div className="pt-3 border-t border-slate-200">
+                <p className="text-xs text-slate-500 text-center">
+                  {isNewRecipe
+                    ? 'Guarda la unidad para poder añadir pasos'
+                    : form.published
+                      ? 'Los estudiantes pueden ver esta unidad'
+                      : 'Esta unidad no está visible para estudiantes'}
+                </p>
               </div>
             </div>
+          </Card>
+
+          <Card variant="mission" className="p-6">
+            <h2 className="text-lg font-black mb-4">Consejos</h2>
+            <ul className="space-y-2 text-sm text-slate-600">
+              <li className="flex items-start gap-2">
+                <span className="text-sky-500 mt-0.5">•</span>
+                <span>Organiza los pasos en orden lógico de aprendizaje</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-sky-500 mt-0.5">•</span>
+                <span>Publica solo cuando esté lista para los estudiantes</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-sky-500 mt-0.5">•</span>
+                <span>Usa la IA para generar contenido rápidamente</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-sky-500 mt-0.5">•</span>
+                <span>Revisa cada paso antes de publicar</span>
+              </li>
+            </ul>
           </Card>
         </div>
       </main>
