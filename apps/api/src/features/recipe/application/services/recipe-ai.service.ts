@@ -534,4 +534,50 @@ Devuelve SOLO JSON válido.`;
       list2: [{ text: 'Otro' }, { text: 'Más' }],
     };
   }
+
+  // ==================== SSE Streaming Method ====================
+
+  /**
+   * Generate recipe draft with SSE events
+   */
+  async generateRecipeDraftWithEvents(
+    input: GenerateRecipeDraftInput,
+    onStep: (step: GeneratedStep) => void,
+    onProgress: (progress: number) => void,
+    onError: (error: Error) => void,
+  ): Promise<void> {
+    const prompt = this.buildRecipeGenerationPrompt(input);
+    recipeAILogger.debug({ promptLength: prompt.length }, '[RecipeAI SSE] Calling AI');
+
+    try {
+      // Send initial progress
+      onProgress(10);
+
+      const response = await this.aiService.generateAnswer({
+        question: prompt,
+        context: '',
+        recipeTitle: 'Generador de Unidades Pedagógicas',
+      });
+
+      onProgress(50);
+
+      // Parse and sanitize the response
+      const draft = this.parseAIResponse(response.answer, input);
+
+      // Send each step as an SSE event
+      const totalSteps = draft.steps.length;
+      for (let i = 0; i < totalSteps; i++) {
+        const step = draft.steps[i];
+        onStep(step);
+        // Calculate progress: 50% to 90% based on steps
+        onProgress(50 + Math.round(((i + 1) / totalSteps) * 40));
+      }
+
+      recipeAILogger.debug({ responseLength: response.answer.length }, '[RecipeAI SSE] Complete');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      recipeAILogger.error({ err: errorMessage }, '[RecipeAI SSE] Error');
+      onError(error instanceof Error ? error : new Error(errorMessage));
+    }
+  }
 }

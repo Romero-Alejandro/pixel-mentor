@@ -35,8 +35,7 @@ export class AddStepUseCase {
     }
 
     const existingSteps = await this.recipeRepository.findStepsByRecipeId(recipeId);
-    const maxOrder =
-      existingSteps.length > 0 ? Math.max(...existingSteps.map((s) => s.order)) : -1;
+    const maxOrder = existingSteps.length > 0 ? Math.max(...existingSteps.map((s) => s.order)) : -1;
 
     const atomId = await this.ensureAtomForStep(
       stepData.stepType || 'content',
@@ -55,6 +54,8 @@ export class AddStepUseCase {
       conceptId: stepData.conceptId || undefined,
       activityId: stepData.activityId || undefined,
       script: stepData.script,
+      activityData: stepData.activity,
+      question: stepData.question,
       stepType: stepData.stepType || 'content',
     });
 
@@ -92,35 +93,54 @@ export class AddStepUseCase {
       case 'intro':
       case 'closure':
         content = script;
-        if (script?.content) atomTitle = (script.content as { text?: string }).text || atomTitle;
+        if (script?.content) {
+          const contentObj = script.content as { text?: string };
+          atomTitle = contentObj?.text?.substring(0, 80) || atomTitle;
+        }
         break;
       case 'activity':
         content = activity;
-        if (activity?.instruction)
-          atomTitle = (activity.instruction as { text?: string }).text || atomTitle;
+        if (activity?.instruction) {
+          const instructionObj = activity.instruction as { text?: string };
+          atomTitle = instructionObj?.text?.substring(0, 80) || atomTitle;
+        }
         break;
       case 'question':
         content = question;
-        if (question?.question)
-          atomTitle = (question.question as { text?: string }).text || atomTitle;
+        if (question?.question) {
+          const questionObj = question.question as { text?: string };
+          atomTitle = questionObj?.text?.substring(0, 80) || atomTitle;
+        }
         break;
     }
 
-    const newAtom = await this.atomRepository.create({
-      id: crypto.randomUUID(),
-      canonicalId: CanonicalId.sanitize(atomTitle) + '-' + crypto.randomUUID().slice(0, 8),
-      title: atomTitle.substring(0, 255),
-      description: `Auto-generated atom for ${stepType} step.`,
-      type: AtomType.MICROLECTURE,
-      ssmlChunks: undefined,
-      content: content ? { ...content, type: stepType } : undefined,
-      locale: 'es-AR',
-      difficulty: 1,
-      version: '1.0.0',
-      published: false,
-      durationSeconds: 0,
-    });
+    // Ensure canonicalId is <= 100 chars (DB limit)
+    const sanitized = CanonicalId.sanitize(atomTitle).substring(0, 80);
+    const canonicalId = sanitized + '-' + crypto.randomUUID().slice(0, 8);
 
-    return newAtom.id;
+    // Build complete content object for the atom
+    const atomContent = content ? { type: stepType, ...content } : { type: stepType };
+
+    try {
+      const newAtom = await this.atomRepository.create({
+        id: crypto.randomUUID(),
+        canonicalId: canonicalId,
+        title: atomTitle.substring(0, 255),
+        description: `Auto-generated atom for ${stepType} step.`,
+        type: AtomType.MICROLECTURE,
+        ssmlChunks: undefined,
+        content: atomContent,
+        locale: 'es-AR',
+        difficulty: 1,
+        version: '1.0.0',
+        published: false,
+        durationSeconds: 0,
+      });
+
+      return newAtom.id;
+    } catch (err) {
+      console.error('[AddStepUseCase] Error creating atom:', err);
+      throw err;
+    }
   }
 }

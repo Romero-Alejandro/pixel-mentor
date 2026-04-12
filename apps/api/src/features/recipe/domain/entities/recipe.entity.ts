@@ -58,6 +58,8 @@ export interface RecipeStep {
   readonly conceptId?: string;
   readonly activityId?: string;
   readonly script?: StepScript;
+  readonly activityData?: StepScript;
+  readonly question?: StepScript;
   readonly stepType?: StepType;
 }
 

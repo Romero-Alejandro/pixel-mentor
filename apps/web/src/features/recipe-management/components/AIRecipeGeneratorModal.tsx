@@ -62,6 +62,8 @@ export function AIRecipeGeneratorModal({
     { id: crypto.randomUUID(), text: '' },
   ]);
   const [generatedDraft, setGeneratedDraft] = useState<GeneratedRecipeDraft | null>(null);
+  const [generatedSteps, setGeneratedSteps] = useState<any[]>([]); // For SSE streaming
+  const [generationProgress, setGenerationProgress] = useState(0); // 0-100
   const [step, setStep] = useState<'form' | 'preview'>('form');
   const [hasOpened, setHasOpened] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -84,6 +86,8 @@ export function AIRecipeGeneratorModal({
       { id: crypto.randomUUID(), text: '' },
     ]);
     setGeneratedDraft(null);
+    setGeneratedSteps([]);
+    setGenerationProgress(0);
     setStep('form');
     onClose();
   };
@@ -105,27 +109,75 @@ export function AIRecipeGeneratorModal({
     }
 
     setIsGenerating(true);
-    try {
-      const response = await apiClient.post('/api/ai/generate-recipe', {
-        topic: topic.trim(),
-        targetAgeMin,
-        targetAgeMax,
-        objectives: validObjectives,
-      });
+    setGeneratedSteps([]); // Reset for streaming
 
-      const draft = response.data;
-      setGeneratedDraft(draft);
-      setStep('preview');
-    } catch (err) {
-      console.error('Error generating recipe:', err);
-      await alert({
+    // Build SSE URL
+    const params = new URLSearchParams({
+      topic: topic.trim(),
+      targetAgeMin: String(targetAgeMin),
+      targetAgeMax: String(targetAgeMax),
+      objectives: validObjectives.map((obj) => obj.text.trim()).join(','),
+    });
+
+    const eventSource = new EventSource(`/api/ai/generate-recipe/stream?${params}`);
+
+    // Track steps and progress
+    const steps: any[] = [];
+    let progress = 0;
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+
+        switch (event.type) {
+          case 'step':
+            steps.push(data);
+            setGeneratedSteps([...steps]);
+            break;
+          case 'progress':
+            progress = data.progress || 0;
+            setGenerationProgress(progress);
+            break;
+          case 'complete':
+            // Convert steps to draft format
+            const draft = {
+              title: `${topic.trim()} - Unidad IA`,
+              description: `Unidad educativa sobre ${topic.trim()}`,
+              expectedDurationMinutes: 30,
+              steps: steps,
+              qualityValidation: { passed: true, errors: [], warnings: [] },
+            };
+            setGeneratedDraft(draft);
+            setStep('preview');
+            eventSource.close();
+            setIsGenerating(false);
+            break;
+          case 'error':
+            console.error('SSE Error:', data);
+            alert({
+              title: 'Error',
+              message: data.message || 'Error al generar la unidad',
+              variant: 'error',
+            });
+            eventSource.close();
+            setIsGenerating(false);
+            break;
+        }
+      } catch (e) {
+        console.error('Parse error:', e);
+      }
+    };
+
+    eventSource.onerror = (err) => {
+      console.error('EventSource error:', err);
+      alert({
         title: 'Error',
-        message: 'Error al generar la unidad. Intenta de nuevo.',
+        message: 'Error de conexión. Intenta de nuevo.',
         variant: 'error',
       });
-    } finally {
+      eventSource.close();
       setIsGenerating(false);
-    }
+    };
   };
 
   const handleApply = async () => {
@@ -162,6 +214,39 @@ export function AIRecipeGeneratorModal({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
+          {/* Loading / Streaming State */}
+          {isGenerating && (
+            <div className="bg-violet-50 border-2 border-violet-200 rounded-xl p-4 mb-4">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-6 h-6 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+                <span className="font-bold text-violet-700">Generando unidad...</span>
+              </div>
+              {/* Progress bar */}
+              <div className="w-full bg-violet-200 rounded-full h-2 overflow-hidden">
+                <div
+                  className="bg-violet-500 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${generationProgress}%` }}
+                />
+              </div>
+              <p className="text-xs text-violet-600 mt-2">{generationProgress}% completado</p>
+              {/* Streaming steps preview */}
+              {generatedSteps.length > 0 && (
+                <div className="mt-3">
+                  <p className="text-xs font-medium text-violet-600">Pasos generados:</p>
+                  <div className="space-y-1 mt-1">
+                    {generatedSteps.map((s, i) => (
+                      <div key={i} className="flex items-center gap-2 text-xs text-violet-500">
+                        <span className="w-4 h-4 bg-violet-200 rounded-full flex items-center justify-center">
+                          {i + 1}
+                        </span>
+                        {s.title}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           {step === 'form' ? (
             <div className="space-y-6">
               {/* Topic */}
