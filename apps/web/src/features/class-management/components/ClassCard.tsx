@@ -1,13 +1,14 @@
-import { IconEdit, IconTrash, IconBook, IconClock } from '@tabler/icons-react';
+import { IconEdit, IconTrash, IconBook, IconClock, IconSend, IconX } from '@tabler/icons-react';
 import type { Class, ClassStatus } from '@pixel-mentor/shared';
 
-import { useAudio } from '@/contexts/AudioContext';
 import { Card, Button } from '@/components/ui';
 
 interface ClassCardProps {
   classItem: Class;
   onEdit: () => void;
   onDelete: () => void;
+  onPublish?: () => void;
+  onUnpublish?: () => void;
 }
 
 const STATUS_LABELS: Record<ClassStatus, string> = {
@@ -24,17 +25,29 @@ const STATUS_COLORS: Record<ClassStatus, string> = {
   ARCHIVED: 'bg-rose-100 text-rose-700 border-rose-300',
 };
 
-export function ClassCard({ classItem, onEdit, onDelete }: ClassCardProps) {
-  const { playClick, playFocus } = useAudio();
-
-  const handleEdit = () => {
-    playClick();
+export function ClassCard({ classItem, onEdit, onDelete, onPublish, onUnpublish }: ClassCardProps) {
+  const handleEdit = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     onEdit();
   };
 
-  const handleDelete = () => {
-    playFocus();
+  const handleDelete = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     onDelete();
+  };
+
+  const handlePublish = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onPublish) onPublish();
+  };
+
+  const handleUnpublish = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onUnpublish) onUnpublish();
   };
 
   const formatDate = (dateString?: string) => {
@@ -91,23 +104,45 @@ export function ClassCard({ classItem, onEdit, onDelete }: ClassCardProps) {
 
       {/* Actions */}
       <div className="flex items-center gap-2 mt-6 pt-4 border-t border-slate-100">
+        {classItem.status === 'PUBLISHED' && onUnpublish ? (
+          <Button
+            onClick={handleUnpublish}
+            variant="danger"
+            size="sm"
+            className="flex-1"
+            title="Despublicar clase"
+          >
+            <IconX className="w-4 h-4 mr-1.5" />
+            Despublicar
+          </Button>
+        ) : null}
+        {classItem.status === 'DRAFT' && onPublish ? (
+          <Button
+            onClick={handlePublish}
+            variant="success"
+            size="sm"
+            className="flex-1"
+            title="Publicar clase"
+          >
+            <IconSend className="w-4 h-4 mr-1.5" />
+            Publicar
+          </Button>
+        ) : null}
         <Button onClick={handleEdit} variant="secondary" size="sm" className="flex-1">
           <IconEdit className="w-4 h-4 mr-1.5" />
           Editar
         </Button>
-        <Button
-          onClick={handleDelete}
-          variant="danger"
-          size="sm"
-          disabled={classItem.status !== 'DRAFT'}
-          title={
-            classItem.status !== 'DRAFT'
-              ? 'Solo se pueden eliminar clases en estado borrador'
-              : undefined
-          }
-        >
-          <IconTrash className="w-4 h-4" />
-        </Button>
+        {classItem.status === 'DRAFT' ? (
+          <Button
+            onClick={handleDelete}
+            variant="danger"
+            size="sm"
+            className="px-3"
+            title="Eliminar borrador"
+          >
+            <IconTrash className="w-4 h-4" />
+          </Button>
+        ) : null}
       </div>
 
       {/* Hover overlay effect */}

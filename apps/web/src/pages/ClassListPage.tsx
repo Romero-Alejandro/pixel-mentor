@@ -31,7 +31,16 @@ export function ClassListPage() {
   const alert = useAlert();
   const confirm = useConfirm();
   const { user } = useAuth();
-  const { classes, isLoading, error, fetchClasses, createClass, deleteClass } = useClassStore(
+  const {
+    classes,
+    isLoading,
+    error,
+    fetchClasses,
+    createClass,
+    deleteClass,
+    publishClass,
+    unpublishClass,
+  } = useClassStore(
     useShallow((state) => ({
       classes: state.classes,
       isLoading: state.isLoading,
@@ -39,6 +48,8 @@ export function ClassListPage() {
       fetchClasses: state.fetchClasses,
       createClass: state.createClass,
       deleteClass: state.deleteClass,
+      publishClass: state.publishClass,
+      unpublishClass: state.unpublishClass,
     })),
   );
 
@@ -132,6 +143,60 @@ export function ClassListPage() {
           variant: 'error',
         });
       }
+    }
+  };
+
+  const handlePublishClass = async (classId: string) => {
+    const classItem = classes.find((c) => c.id === classId);
+    if (!classItem) return;
+
+    if (
+      !(await confirm({
+        title: 'Publicar clase',
+        message: `¿Estás seguro de que quieres publicar la clase "${classItem.title}"? Una vez publicada será visible para los estudiantes.`,
+        variant: 'info',
+      }))
+    ) {
+      return;
+    }
+
+    try {
+      await publishClass(classId);
+    } catch (error: unknown) {
+      await alert({
+        title: 'Error',
+        message:
+          (error as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+          'Error al publicar la clase. Verifica que tenga al menos una lección con unidad.',
+        variant: 'error',
+      });
+    }
+  };
+
+  const handleUnpublishClass = async (classId: string) => {
+    const classItem = classes.find((c) => c.id === classId);
+    if (!classItem) return;
+
+    if (
+      !(await confirm({
+        title: 'Despublicar clase',
+        message: `¿Estás seguro de que quieres despublicar la clase "${classItem.title}"? Los estudiantes ya no podrán verla.`,
+        variant: 'warning',
+      }))
+    ) {
+      return;
+    }
+
+    try {
+      await unpublishClass(classId);
+    } catch (error: unknown) {
+      await alert({
+        title: 'Error',
+        message:
+          (error as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+          'Error al despublicar la clase',
+        variant: 'error',
+      });
     }
   };
 
@@ -286,6 +351,8 @@ export function ClassListPage() {
                 classItem={cls}
                 onEdit={() => handleEditClass(cls.id)}
                 onDelete={() => handleDeleteClass(cls.id, cls.status)}
+                onPublish={() => handlePublishClass(cls.id)}
+                onUnpublish={() => handleUnpublishClass(cls.id)}
               />
             ))}
           </div>
