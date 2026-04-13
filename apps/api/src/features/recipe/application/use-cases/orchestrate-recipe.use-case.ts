@@ -930,8 +930,16 @@ export class OrchestrateRecipeUseCase {
 
     const existing = await this.sessionRepo.findByStudentAndRecipe(studentId, recipeId);
 
-    // Case 1: Active session exists → resume it
-    if (existing && !isTerminalStatus(existing.status)) {
+    // Check if this is a fresh reset: ACTIVE + AWAITING_START + step 0 = treat as terminal
+    // (status becomes ACTIVE after resetSession use case calls updateStatus)
+    const isFreshReset =
+      existing &&
+      existing.status === 'ACTIVE' &&
+      existing.stateCheckpoint.currentState === 'AWAITING_START' &&
+      (existing.stateCheckpoint.currentStepIndex ?? 0) === 0;
+
+    // Case 1: Active session exists (and not a fresh reset) → resume it
+    if (existing && !isTerminalStatus(existing.status) && !isFreshReset) {
       const idx = existing.stateCheckpoint.currentStepIndex ?? 0;
       const needsToStart = existing.stateCheckpoint.currentState === 'AWAITING_START';
       const resumeMsg = needsToStart
@@ -959,8 +967,8 @@ export class OrchestrateRecipeUseCase {
       };
     }
 
-    // Case 2: Completed/Escalated session exists → reuse it (reset instead of creating new)
-    if (existing && isTerminalStatus(existing.status)) {
+    // Case 2: Completed/Escalated session exists OR fresh reset → reuse it (reset instead of creating new)
+    if (existing && (isTerminalStatus(existing.status) || isFreshReset)) {
       // Delete old interactions to clean up DB
       await this.interactionRepo.deleteBySession(existing.id);
       // Reset the session to initial state and set to ACTIVE
