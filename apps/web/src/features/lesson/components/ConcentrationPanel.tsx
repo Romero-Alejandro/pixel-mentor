@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, memo, useMemo } from 'react';
 import { IconRepeat, IconPlayerPlayFilled } from '@tabler/icons-react';
+import { cn } from '@/utils/cn';
 
 interface TextSectionProps {
   words: string[];
@@ -10,29 +11,33 @@ interface TextSectionProps {
   activeWordClassName: string;
 }
 
-function TextSection({
-  words,
-  visibleCount,
-  activeIndex,
-  containerClassName,
-  wordClassName,
-  activeWordClassName,
-}: TextSectionProps) {
-  if (visibleCount === 0) return null;
+const TextSection = memo(
+  ({
+    words,
+    visibleCount,
+    activeIndex,
+    containerClassName,
+    wordClassName,
+    activeWordClassName,
+  }: TextSectionProps) => {
+    if (visibleCount === 0 || words.length === 0) return null;
 
-  return (
-    <span className={containerClassName}>
-      {words.slice(0, visibleCount).map((word, idx) => (
-        <span
-          key={`${word}-${idx}`}
-          className={`${wordClassName} ${idx === activeIndex ? activeWordClassName : ''}`}
-        >
-          {word}{' '}
-        </span>
-      ))}
-    </span>
-  );
-}
+    return (
+      <span className={containerClassName}>
+        {words.slice(0, visibleCount).map((word, idx) => (
+          <span
+            key={`${word}-${idx}`}
+            className={cn(wordClassName, idx === activeIndex && activeWordClassName)}
+          >
+            {word}{' '}
+          </span>
+        ))}
+      </span>
+    );
+  },
+);
+
+TextSection.displayName = 'TextSection';
 
 interface ConcentrationPanelProps {
   fullVoiceText: string;
@@ -57,23 +62,34 @@ export function ConcentrationPanel({
 }: ConcentrationPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const transitionWords = transitionText.trim().split(/\s+/).filter(Boolean);
-  const contentWords = contentText.trim().split(/\s+/).filter(Boolean);
-  const closureWords = closureText.trim().split(/\s+/).filter(Boolean);
+  // Memorizar la división de palabras para no recalcularla en cada frame de audio
+  const { transitionWords, contentWords, closureWords, tLen, cLen, lLen } = useMemo(() => {
+    const t = transitionText.trim().split(/\s+/).filter(Boolean);
+    const c = contentText.trim().split(/\s+/).filter(Boolean);
+    const l = closureText.trim().split(/\s+/).filter(Boolean);
+    return {
+      transitionWords: t,
+      contentWords: c,
+      closureWords: l,
+      tLen: t.length,
+      cLen: c.length,
+      lLen: l.length,
+    };
+  }, [transitionText, contentText, closureText]);
 
+  // Auto-scroll suave
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      scrollRef.current.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
     }
   }, [currentWordIndex]);
 
-  const tLen = transitionWords.length;
-  const cLen = contentWords.length;
-  const lLen = closureWords.length;
-
-  // When audio is playing, show text progressively based on currentWordIndex.
-  // When NOT playing (streaming or before playback), show all received text.
-  const showAllContent = !isSpeaking || isSynced;
+  // Always show full content - don't wait for audio to finish
+  // The text should be visible immediately when it arrives
+  const showAllContent = true;
 
   const visibleT = showAllContent ? tLen : Math.min(currentWordIndex, tLen);
   const visibleC = showAllContent ? cLen : Math.max(0, Math.min(currentWordIndex - tLen, cLen));
@@ -89,7 +105,7 @@ export function ConcentrationPanel({
     <div className="flex-1 flex flex-col items-center p-6 sm:p-8 gap-6 w-full h-full min-h-0 animate-bounce-in">
       <div
         ref={scrollRef}
-        className="bg-white rounded-[2.5rem] border-4 border-sky-100 shadow-[0_8px_0_0_#e0f2fe] p-6 sm:p-10 w-full flex-1 min-h-0 max-h-[40vh] sm:max-h-[50vh] lg:max-h-[55vh] overflow-y-auto scroll-smooth custom-scrollbar"
+        className="bg-white rounded-[2.5rem] border-4 border-sky-100 shadow-[0_8px_0_0_#e0f2fe] p-6 sm:p-10 w-full flex-1 min-h-0 max-h-[40vh] sm:max-h-[50vh] lg:max-h-[55vh] overflow-y-auto custom-scrollbar"
       >
         <div className="text-2xl sm:text-3xl leading-relaxed tracking-tight">
           <TextSection
@@ -100,7 +116,6 @@ export function ConcentrationPanel({
             wordClassName="transition-colors duration-200"
             activeWordClassName="bg-sky-100 text-sky-800 rounded-xl px-2 py-0.5 shadow-sm"
           />
-
           <TextSection
             words={contentWords}
             visibleCount={visibleC}
@@ -109,7 +124,6 @@ export function ConcentrationPanel({
             wordClassName="transition-colors duration-200"
             activeWordClassName="bg-amber-100 text-amber-900 rounded-xl px-2 py-0.5 shadow-sm"
           />
-
           <TextSection
             words={closureWords}
             visibleCount={visibleL}

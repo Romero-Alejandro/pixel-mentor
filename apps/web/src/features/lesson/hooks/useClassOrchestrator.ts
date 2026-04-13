@@ -1,24 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import type { EventSourceMessage } from '@microsoft/fetch-event-source';
-import type { StartRecipeOutput } from '@pixel-mentor/shared';
-
 import { useLessonState } from './useLessonState';
 import { useChatStream } from './useChatStream';
-
 import { api, streamInteractWithRecipe, type PedagogicalState } from '@/services/api';
-import { logger } from '@/utils/logger';
 import { useVoice, type VoiceSettings } from '@/features/voice/hooks/useVoice';
 import { useLessonStore } from '@/features/lesson/stores/lesson.store';
 
 export type Result<T, E = Error> = { ok: true; value: T } | { ok: false; error: E };
-
-export function Ok<T>(value: T): Result<T, never> {
-  return { ok: true, value };
-}
-export function Err<E>(error: E): Result<never, E> {
-  return { ok: false, error };
-}
 
 interface LessonResponse {
   voiceText?: string;
@@ -27,7 +16,6 @@ interface LessonResponse {
   feedback?: string;
   sessionCompleted?: boolean;
   lessonProgress?: { currentStep: number; totalSteps: number };
-  // autoAdvance removed - frontend determines auto-advance from pedagogicalState
   staticContent?: {
     script?: {
       transition?: string | { text: string };
@@ -41,17 +29,8 @@ interface LessonResponse {
       options?: Array<{ text: string; isCorrect: boolean }>;
     };
   };
-  // Gamification data
   xpEarned?: number;
-  accuracy?: {
-    correctFirstAttempts: number;
-    correctLastAttempts: number;
-    totalActivities: number;
-    skippedActivities: number;
-    accuracyPercent: number;
-    allCorrectOnFirstAttempt: boolean;
-    tier: 'perfect' | 'high' | 'medium' | 'low';
-  };
+  accuracy?: any;
 }
 
 let _voiceSettings: VoiceSettings = {};
@@ -62,20 +41,16 @@ export function useVoiceSettingsSync(settings: VoiceSettings): void {
   }, [settings]);
 }
 
+// Helper seguro para extraer texto de las respuestas anidadas de la IA
+const extractText = (val: unknown): string => {
+  if (typeof val === 'string') return val;
+  if (val && typeof val === 'object' && 'text' in val)
+    return String((val as { text: unknown }).text);
+  return '';
+};
+
 export function useClassOrchestrator() {
-  const {
-    setSessionId,
-    setCurrentState,
-    setIsSpeaking: syncStore,
-    setError,
-    setIsStreaming: setStoreStreaming,
-    setStreamError,
-    clearStream,
-    setIsRepeat,
-    setXpEarned,
-    setAccuracy,
-    isStreaming,
-  } = useLessonStore(
+  const store = useLessonStore(
     useShallow((state) => ({
       setSessionId: state.setSessionId,
       setCurrentState: state.setCurrentState,
@@ -88,6 +63,7 @@ export function useClassOrchestrator() {
       setXpEarned: state.setXpEarned,
       setAccuracy: state.setAccuracy,
       isStreaming: state.isStreaming,
+      reset: state.reset,
     })),
   );
 
@@ -98,28 +74,7 @@ export function useClassOrchestrator() {
     isSpeaking,
     getCurrentAudioElement: getAudio,
   } = useVoice();
-
-  const {
-    uiState,
-    currentStep,
-    totalSteps,
-    contentText,
-    questionText,
-    options,
-    feedbackData,
-    isProcessing,
-    setUIState,
-    setCurrentStep,
-    setTotalSteps,
-    setContentText,
-    setQuestionText,
-    setOptions,
-    setFeedbackData,
-    setIsProcessing,
-    resetState,
-    questionResults,
-    addQuestionResult,
-  } = useLessonState();
+  const lessonState = useLessonState();
 
   const [transitionText, setTransitionText] = useState('');
   const [closureText, setClosureText] = useState('');
@@ -127,533 +82,284 @@ export function useClassOrchestrator() {
 
   const sessionIdRef = useRef<string | null>(null);
   const lessonIdRef = useRef<string | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const contentRef = useRef('');
   const abortControllerRef = useRef<AbortController | null>(null);
-  const isMountedRef = useRef(true);
-  const wasStreamingRef = useRef(false);
-  const isInteractingRef = useRef(false); // Guard against concurrent doInteract calls
-  const contentStepsRef = useRef<
-    Array<{
-      stepIndex: number;
-      stepType: string;
-      staticContent: {
-        stepType: string;
-        script?: { transition: string; content: string; examples: string[]; closure: string };
-        activity?: {
-          instruction: string;
-          options?: Array<{ text: string; isCorrect: boolean }>;
-          feedback: { correct: string; incorrect: string };
-        };
-      };
-    }>
-  >([]);
-  const contentStepIndexRef = useRef(0); // Current index in contentStepsRef
+  const isInteractingRef = useRef(false);
 
-  useEffect(() => {
-    syncStore(isSpeaking);
-  }, [isSpeaking, syncStore]);
-
-  function cleanup() {
-    if (timerRef.current) clearTimeout(timerRef.current);
+  const cleanup = useCallback(() => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
-    isInteractingRef.current = false; // Reset guard so new interactions can start
+    isInteractingRef.current = false;
     stopStream();
-  }
+    voiceStop();
+  }, [stopStream, voiceStop]);
 
   useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-      cleanup();
-    };
-  }, []);
+    store.setIsSpeaking(isSpeaking);
+  }, [isSpeaking, store]);
 
-  async function processResponse(raw: LessonResponse): Promise<void> {
-    logger.log('[useClassOrchestrator] processResponse called', {
-      pedagogicalState: (raw as any).pedagogicalState,
-      voiceText: (raw as any).voiceText?.substring(0, 50),
-      autoAdvance: (raw as any).autoAdvance,
-      staticContent: (raw as any).staticContent?.stepType,
-    });
+  useEffect(() => {
+    return cleanup;
+  }, [cleanup]);
 
-    const {
-      voiceText = '',
-      pedagogicalState = 'EXPLANATION',
-      staticContent,
-      isCorrect,
-      feedback,
-      sessionCompleted,
-      lessonProgress,
-      // autoAdvance now computed from pedagogicalState (see below)
-      xpEarned,
-      accuracy,
-    } = raw;
+  const doInteract = useCallback(
+    async (input: string, retries = 3): Promise<LessonResponse | null> => {
+      if (isInteractingRef.current) return null; // Evitar colisiones
 
-    // DEBUG: Log raw response
-    logger.log('[useClassOrchestrator] processResponse INPUT', {
-      raw_pedagogicalState: raw.pedagogicalState,
-      raw_sessionCompleted: raw.sessionCompleted,
-      voiceText: voiceText?.substring(0, 50),
-    });
+      const sid = sessionIdRef.current;
+      if (!sid) throw new Error('Sesión no activa');
 
-    // AUTO-ADVANCE LOGIC: Simple and deterministic
-    // - Content states (EXPLANATION, CLARIFYING, etc.): auto-advance
-    // - Interactive states (ACTIVITY_WAIT, QUESTION, EVALUATION): wait for user
-    // - AWAITING_START: wait for user confirmation
-    const state = pedagogicalState as string;
-    const needsUserInput =
-      state === 'ACTIVITY_WAIT' ||
-      state === 'QUESTION' ||
-      state === 'EVALUATION' ||
-      state === 'AWAITING_START'; // AWAITING_START needs user confirmation
-    const canAutoAdvance = !needsUserInput && !sessionCompleted;
+      isInteractingRef.current = true;
 
-    // DEBUG: Log computed values
-    logger.log('[useClassOrchestrator] processResponse COMPUTED', {
-      state,
-      needsUserInput,
-      sessionCompleted,
-      canAutoAdvance,
-    });
-
-    // Simply update state and speak - NO business logic
-    // The backend drives the flow via pedagogicalState
-    if (lessonProgress) {
-      setCurrentStep(lessonProgress.currentStep);
-      setTotalSteps(lessonProgress.totalSteps);
-    }
-    setCurrentState(pedagogicalState);
-
-    if (pedagogicalState === 'COMPLETED' || sessionCompleted) {
-      // Store gamification data
-      if (xpEarned !== undefined) {
-        setXpEarned(xpEarned);
-      }
-      if (accuracy) {
-        setAccuracy(accuracy);
-      }
-      setUIState('completed');
-      speak(voiceText || '¡Misión cumplida!', _voiceSettings).catch((e) =>
-        console.error('[ClassOrchestrator] Speak error:', e),
-      );
-      return;
-    }
-
-    // EVALUATION: Show feedback but WAIT for backend to drive next transition
-    // NO auto-advance - backend sends next pedagogicalState when ready
-    if (pedagogicalState === 'EVALUATION') {
-      const msg = feedback || (isCorrect ? '¡Muy bien!' : '¡Sigue intentando!');
-      // Calculate proportional XP per question
-      const totalActivities = accuracy?.totalActivities || totalSteps || 1;
-      const xpPerQuestion = Math.round((xpEarned ?? 50) / totalActivities);
-      // Record this question's result
-      addQuestionResult(questionText, !!isCorrect);
-      setFeedbackData({
-        isCorrect: !!isCorrect,
-        message: msg,
-        xpAwarded: isCorrect ? xpPerQuestion : undefined,
-      });
-
-      // Si veníamos de una actividad de opción múltiple, esperamos 2 segundos para mostrar las animaciones de acierto/error
-      if (uiState === 'activity') {
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-      }
-
-      setUIState('feedback');
-
-      // Just speak - auto-advance after speaking
-      await speak(voiceText || msg, _voiceSettings);
-      const next = await doInteract('__auto__'); // Auto-advance after feedback is spoken
-
-      // Process the next step from auto-advance
-      if (next && next.pedagogicalState && !(next as any)._blocked) {
-        processResponse(next);
-      }
-      return;
-    }
-
-    const activity = staticContent?.activity;
-    const hasOptions = Array.isArray(activity?.options) && activity.options.length > 0;
-
-    // Helper to extract text from string or {text: string} object
-    const extractText = (val: unknown): string => {
-      if (typeof val === 'string') return val;
-      if (
-        val &&
-        typeof val === 'object' &&
-        'text' in val &&
-        typeof (val as { text: unknown }).text === 'string'
-      ) {
-        return (val as { text: string }).text;
-      }
-      return '';
-    };
-
-    if (pedagogicalState === 'ACTIVITY_WAIT') {
-      setQuestionText(extractText(activity?.instruction));
-      setOptions(
-        hasOptions
-          ? activity!.options!.map((o, i) => ({
-              id: `opt-${i}`,
-              text: o.text,
-              isCorrect: o.isCorrect,
-            }))
-          : [],
-      );
-      setFeedbackData(null);
-      setUIState(hasOptions ? 'activity' : 'question');
-
-      // Update text fields for activity steps too
-      if (staticContent?.script) {
-        setTransitionText(extractText(staticContent.script.transition));
-        setContentText(extractText(staticContent.script.content));
-        setClosureText(extractText(staticContent.script.closure));
-      }
-
-      speak(voiceText || extractText(activity?.instruction) || '', _voiceSettings).catch((e) =>
-        console.error('[ClassOrchestrator] Speak error:', e),
-      );
-      return;
-    }
-
-    // Update text fields from staticContent when available
-    if (staticContent?.script) {
-      setTransitionText(extractText(staticContent.script.transition));
-      setContentText(extractText(staticContent.script.content));
-      setClosureText(extractText(staticContent.script.closure));
-    } else if (!wasStreamingRef.current) {
-      setTransitionText('');
-      setContentText(voiceText);
-      setClosureText('');
-    }
-
-    setFullVoiceText(voiceText);
-    contentRef.current = voiceText;
-    setFeedbackData(null);
-    setUIState('concentration');
-
-    // Speak the content and wait for completion
-    await speak(voiceText, _voiceSettings);
-
-    // AUTO-ADVANCE: Only if there's actual content to show
-    // If voiceText is empty, we're at the end of the lesson - don't auto-advance
-    const hasContent = voiceText && voiceText.trim().length > 0;
-    const canAdvance = canAutoAdvance && hasContent;
-
-    logger.log('[useClassOrchestrator] Before auto-advance check', {
-      canAutoAdvance,
-      canAdvance,
-      hasContent,
-      state,
-      voiceTextLen: voiceText?.length,
-    });
-
-    if (canAdvance) {
-      logger.log('[useClassOrchestrator] AUTO-ADVANCE TRIGGERED', {
-        state,
-        canAdvance,
-      });
-      const next = await doInteract('__auto__');
-      logger.log('[useClassOrchestrator] doInteract returned', {
-        nextState: next.pedagogicalState,
-        nextSessionCompleted: next.sessionCompleted,
-        hasContent: next.voiceText?.length,
-        isInteractingRefAfter: isInteractingRef.current,
-      });
-
-      // Only process if there's actual content or if the lesson is completed - prevents infinite loops
-      if (
-        (next.voiceText || next.sessionCompleted || next.pedagogicalState === 'COMPLETED') &&
-        next.pedagogicalState
-      ) {
-        processResponse(next);
-      } else {
-        logger.warn('[useClassOrchestrator] Empty response, stopping auto-advance');
-      }
-      return;
-    }
-
-    // No content or can't advance - just wait
-    if (!hasContent) {
-      logger.log('[useClassOrchestrator] No content, not auto-advancing', {
-        isInteractingRefBefore: isInteractingRef.current,
-      });
-      logger.log('[useClassOrchestrator] After reset', {
-        isInteractingRef: isInteractingRef.current,
-      });
-    }
-
-    // AWAITING_START: One-time trigger to start the lesson (first interaction only)
-    // After this, the lesson flows automatically via canAutoAdvance
-    if (pedagogicalState === 'AWAITING_START' && !sessionCompleted) {
-      logger.log('[useClassOrchestrator] AWAITING_START TRIGGERED', {
-        state,
-        sessionCompleted,
-      });
-      const next = await doInteract('listo');
-      logger.log('[useClassOrchestrator] doInteract returned', {
-        nextState: next.pedagogicalState,
-        nextSessionCompleted: next.sessionCompleted,
-      });
-      processResponse(next);
-    }
-  }
-
-  async function doInteract(input: string, retries = 3): Promise<LessonResponse> {
-    logger.log('[useClassOrchestrator] doInteract called', { input, isProcessing, retries });
-
-    // Guard against concurrent calls (SSE error + onerror both firing)
-    if (isInteractingRef.current) {
-      logger.warn('[useClassOrchestrator] doInteract BLOCKED - already processing');
-      // Return a sentinel that processResponse recognizes to skip timer setup
-      return { _blocked: true } as unknown as LessonResponse;
-    }
-    isInteractingRef.current = true;
-
-    const sid = sessionIdRef.current;
-    if (!sid) {
-      isInteractingRef.current = false;
-      logger.error('[useClassOrchestrator] doInteract: No sessionId');
-      throw new Error('Sesión no activa');
-    }
-
-    // Helper function to make the API call with retry logic
-    async function callAPI(): Promise<LessonResponse> {
-      if (import.meta.env.VITE_ENABLE_STREAMING === 'true') {
-        logger.log('[useClassOrchestrator] doInteract: Streaming ENABLED, using fetchEventSource', {
-          sid,
-          input,
-        });
-        try {
-          let fullText = '';
-          wasStreamingRef.current = true;
-          setStoreStreaming(true);
-          setStreamError(null);
-          clearStream();
-          setContentText('');
-
-          // Promise-based resolution: resolves when stream ends, rejects on error
-          let resolveStream: (value: LessonResponse) => void;
-          let rejectStream: (reason: unknown) => void;
-          const streamPromise = new Promise<LessonResponse>((resolve, reject) => {
-            resolveStream = resolve;
-            rejectStream = reject;
-          });
-
-          abortControllerRef.current = streamInteractWithRecipe(sid!, input, {
-            onMessage: (event: EventSourceMessage) => {
-              if (!isMountedRef.current) return;
-              try {
-                // Log raw event for debugging
-                logger.log('[useClassOrchestrator] SSE event received', {
-                  eventType: event.event,
-                  dataPreview: event.data?.substring(0, 100),
-                });
-
-                const data = JSON.parse(event.data);
-
-                // Check the EVENT TYPE (event.event), not data.type
-                if (event.event === 'end') {
-                  logger.log('[useClassOrchestrator] END event received', {
-                    pedagogicalState: data.pedagogicalState,
-                    staticContent: data.staticContent?.stepType,
-                    accumulatedText: fullText.length,
-                  });
-                  // Combine accumulated chunks with end event data
-                  resolveStream({
-                    ...data,
-                    voiceText: fullText,
-                  } as LessonResponse);
-                  return;
-                }
-
-                // Handle 'chunk' event for streaming text
-                if (event.event === 'chunk') {
-                  fullText += data.text || '';
-                  setContentText(fullText);
-                  return;
-                }
-
-                // Handle 'error' event
-                if (event.event === 'error') {
-                  logger.error('[useClassOrchestrator] SSE error event', { data });
-                  rejectStream(new Error(data.message || 'Stream error'));
-                  return;
-                }
-              } catch (e) {
-                logger.error('[useClassOrchestrator] SSE parse error', { e, data: event.data });
-                rejectStream(e);
-              }
-            },
-            onError: (error: Error) => {
-              logger.error('[useClassOrchestrator] SSE onError', { error: error.message });
-              if (error.message?.includes('429') || error.message?.includes('Too Many Requests')) {
-                logger.warn('[useClassOrchestrator] Rate limited (429), will retry...');
-                rejectStream(error);
-              } else {
-                rejectStream(error);
-              }
-            },
-            onClose: () => {
-              logger.log('[useClassOrchestrator] Stream closed');
-            },
-          });
-
-          // IMPORTANT: Reset flag when stream completes successfully
-          // The stream promise resolves when 'end' event is received
-          const result = await streamPromise;
-          isInteractingRef.current = false; // Reset flag after successful stream
-          logger.log('[useClassOrchestrator] Stream completed, flag reset', {
-            isInteractingRef: isInteractingRef.current,
-          });
-          return result;
-        } catch (error) {
-          const err = error as any;
-          // Check if it's a 429 error and we have retries left
-          if (retries > 0 && (err?.response?.status === 429 || err?.message?.includes('429'))) {
-            const backoffMs = Math.pow(2, 3 - retries) * 1000; // 1s, 2s, 4s
-            logger.warn(`[useClassOrchestrator] Rate limited, retrying in ${backoffMs}ms...`);
-            await new Promise((r) => setTimeout(r, backoffMs));
-            return doInteract(input, retries - 1);
-          }
-          console.error(
-            '[ClassOrchestrator] Failed to setup streaming, falling back to POST:',
-            error,
-          );
-          isInteractingRef.current = false;
-          return (await api.interactWithRecipe(sid!, input)) as LessonResponse;
-        }
-      }
       try {
-        return (await api.interactWithRecipe(sid!, input)) as LessonResponse;
+        if (import.meta.env.VITE_ENABLE_STREAMING === 'true') {
+          let fullText = '';
+          store.setIsStreaming(true);
+          store.setStreamError(null);
+          store.clearStream();
+          lessonState.setContentText('');
+
+          return await new Promise<LessonResponse>((resolve, reject) => {
+            const controller = streamInteractWithRecipe(sid, input, {
+              onMessage: (event: EventSourceMessage) => {
+                if (event.event === 'end') {
+                  try {
+                    const data = JSON.parse(event.data);
+                    resolve({ ...data, voiceText: fullText });
+                  } catch (e) {
+                    reject(new Error('Error parsing stream end data'));
+                  }
+                } else if (event.event === 'chunk') {
+                  try {
+                    const data = JSON.parse(event.data);
+                    fullText += data.text || '';
+                    lessonState.setContentText(fullText);
+                  } catch (e) {
+                    // Ignorar chunks mal formados silenciosamente para no romper el stream
+                  }
+                }
+              },
+              onError: reject,
+              onClose: () => {
+                isInteractingRef.current = false;
+                store.setIsStreaming(false);
+              },
+            });
+            abortControllerRef.current = controller;
+          });
+        }
+
+        return (await api.interactWithRecipe(sid, input)) as LessonResponse;
+      } catch (err: any) {
+        if (retries > 0 && err?.message?.includes('429')) {
+          await new Promise((r) => setTimeout(r, 1000));
+          isInteractingRef.current = false; // Liberar lock antes de reintentar
+          return doInteract(input, retries - 1);
+        }
+        throw err;
       } finally {
         isInteractingRef.current = false;
       }
-    }
+    },
+    [store, lessonState],
+  );
 
-    return await callAPI();
-  }
+  const processResponse = useCallback(
+    async (raw: LessonResponse | null, isFirstCall = true): Promise<void> => {
+      if (!raw) return;
 
-  async function startClass(lessonId: string): Promise<Result<void, Error>> {
-    logger.log('[useClassOrchestrator] startClass called', { lessonId });
-    logger.debug('[useClassOrchestrator] Stack trace');
-    cleanup();
-    abortControllerRef.current = new AbortController();
-    setIsProcessing(true);
-    lessonIdRef.current = lessonId;
-
-    try {
-      const startResult = await api.startRecipe(lessonId);
-
-      sessionIdRef.current = startResult.sessionId;
-      setSessionId(startResult.sessionId);
-      setIsRepeat(startResult.isRepeat === true);
-
-      if (!isMountedRef.current) return Ok(undefined);
-
-      // Store content steps for reference (progress bar, etc.)
-      const contentSteps: StartRecipeOutput['contentSteps'] = startResult.contentSteps ?? [];
-      contentStepsRef.current = contentSteps as typeof contentStepsRef.current;
-      contentStepIndexRef.current = 0;
-
-      // Simply process the start result - the backend returns AWAITING_START
-      // The frontend's auto-advance logic will handle transitioning to the first step
-      // No need to manually send 'continuar' - that was causing double advancement
-      processResponse(startResult);
-      if (isMountedRef.current) setIsProcessing(false);
-
-      return Ok(undefined);
-    } catch (e) {
-      if (isMountedRef.current) setIsProcessing(false);
-      return Err(e instanceof Error ? e : new Error('Failed to start lesson'));
-    }
-  }
-
-  async function submitAnswer(answer: string) {
-    if (!sessionIdRef.current || isProcessing) return;
-    setIsProcessing(true);
-    try {
-      const res = await doInteract(answer);
-      if (res && !(res as any)._blocked) {
-        processResponse(res);
+      // Solo limpiar estado previo en la primera llamada (inicio de lección), no en auto-avance
+      // Esto evita que datos de sesiones anteriores contaminen la nueva sesión
+      if (isFirstCall) {
+        lessonState.setContentText('');
+        lessonState.setQuestionText('');
+        lessonState.setOptions([]);
+        lessonState.setFeedbackData(null);
       }
-    } finally {
-      if (isMountedRef.current) setIsProcessing(false);
-    }
-  }
 
-  function reset() {
-    cleanup();
-    sessionIdRef.current = null;
-    contentRef.current = '';
-    resetState();
-    setSessionId(null);
-    setCurrentState('AWAITING_START');
-    setError(null);
-    clearStream();
-  }
+      const {
+        voiceText = '',
+        pedagogicalState = 'EXPLANATION',
+        staticContent,
+        isCorrect,
+        feedback,
+        sessionCompleted,
+        lessonProgress,
+        xpEarned,
+        accuracy,
+      } = raw;
 
-  async function resetSession() {
-    const sid = sessionIdRef.current;
-    const lid = lessonIdRef.current;
-    if (!sid || !lid) return;
+      if (lessonProgress) {
+        lessonState.setCurrentStep(lessonProgress.currentStep);
+        lessonState.setTotalSteps(lessonProgress.totalSteps);
+      }
 
-    try {
-      await api.resetSession(sid);
-      // After resetting, restart the lesson
-      cleanup();
-      abortControllerRef.current = new AbortController();
-      setIsProcessing(true);
+      store.setCurrentState(pedagogicalState);
 
-      const startResult = await api.startRecipe(lid);
-      sessionIdRef.current = startResult.sessionId;
-      setSessionId(startResult.sessionId);
-      setIsRepeat(startResult.isRepeat === true);
+      // --- 1. Estado Completado ---
+      if (pedagogicalState === 'COMPLETED' || sessionCompleted) {
+        if (xpEarned !== undefined) store.setXpEarned(xpEarned);
+        if (accuracy !== undefined) store.setAccuracy(accuracy);
+        lessonState.setUIState('completed');
+        await speak(voiceText || '¡Misión cumplida!', _voiceSettings);
+        return;
+      }
 
-      if (!isMountedRef.current) return;
+      // --- 2. Estado Evaluación (Feedback de respuesta) ---
+      if (pedagogicalState === 'EVALUATION') {
+        const msg = feedback || (isCorrect ? '¡Muy bien!' : '¡Sigue intentando!');
+        lessonState.addQuestionResult(lessonState.questionText, !!isCorrect);
+        lessonState.setFeedbackData({ isCorrect: !!isCorrect, message: msg });
 
-      // Same logic as startClass: process startResult directly without
-      // redundant doInteract('comenzar') call that causes step repetition
-      speak(startResult.voiceText || '¡Bienvenido!', _voiceSettings).catch((e) =>
-        console.error('[ClassOrchestrator] Speak error:', e),
+        if (lessonState.uiState === 'activity') {
+          await new Promise((r) => setTimeout(r, 2000)); // Pausa dramática para ver respuesta correcta
+        }
+
+        lessonState.setUIState('feedback');
+        await speak(voiceText || msg, _voiceSettings);
+
+        // Auto-avanzar después del feedback
+        const next = await doInteract('__auto__');
+        if (next) processResponse(next, false);
+        return;
+      }
+
+      // --- 3. Estado Actividad / Pregunta ---
+      const activity = staticContent?.activity;
+      if (pedagogicalState === 'ACTIVITY_WAIT') {
+        lessonState.setQuestionText(extractText(activity?.instruction));
+        lessonState.setOptions(
+          activity?.options?.map((o, i) => ({
+            id: `opt-${i}`,
+            text: o.text,
+            isCorrect: o.isCorrect,
+          })) || [],
+        );
+        lessonState.setFeedbackData(null);
+        lessonState.setUIState(activity?.options ? 'activity' : 'question');
+        await speak(voiceText || extractText(activity?.instruction) || '', _voiceSettings);
+        return;
+      }
+
+      // --- 4. Estado Contenido (Explicación) ---
+      // Solo mostrar contenido si NO es un estado que requiere input del usuario
+      const statesRequiringInput = ['AWAITING_START', 'ACTIVITY_WAIT', 'QUESTION', 'EVALUATION'];
+      if (!statesRequiringInput.includes(pedagogicalState)) {
+        if (staticContent?.script) {
+          setTransitionText(extractText(staticContent.script.transition));
+          lessonState.setContentText(extractText(staticContent.script.content));
+          setClosureText(extractText(staticContent.script.closure));
+        } else {
+          lessonState.setContentText(voiceText);
+        }
+
+        setFullVoiceText(voiceText);
+        contentRef.current = voiceText;
+        lessonState.setFeedbackData(null);
+        console.log(
+          '[DEBUG] Setting uiState to concentration, pedagogicalState:',
+          pedagogicalState,
+        );
+        lessonState.setUIState('concentration');
+
+        await speak(voiceText, _voiceSettings);
+      } else {
+        console.log(
+          '[DEBUG] Skipping concentration state, pedagogicalState requires input:',
+          pedagogicalState,
+        );
+        // Para estados que requieren input, no llamamos a speak aquí - el auto-avance lo manejará
+      }
+
+      // --- 5. Auto-avance condicional ---
+      const needsUserInput = ['ACTIVITY_WAIT', 'QUESTION', 'EVALUATION', 'AWAITING_START'].includes(
+        pedagogicalState,
       );
-      processResponse(startResult as LessonResponse);
-      if (isMountedRef.current) setIsProcessing(false);
-    } catch (e) {
-      console.error('[resetSession] Failed:', e);
-      if (isMountedRef.current) setIsProcessing(false);
-    }
-  }
+      const canAutoAdvance = !needsUserInput && !sessionCompleted;
 
-  function speakContent() {
-    if (contentRef.current) speak(contentRef.current, _voiceSettings).catch(() => {});
-  }
+      if (canAutoAdvance && voiceText.trim()) {
+        const next = await doInteract('__auto__');
+        if (next) await processResponse(next, false);
+      } else if (pedagogicalState === 'AWAITING_START') {
+        const next = await doInteract('listo');
+        if (next) await processResponse(next, false);
+      }
+    },
+    [store, lessonState, speak, doInteract],
+  );
+
+  const startClass = useCallback(
+    async (lessonId: string): Promise<Result<void, Error>> => {
+      cleanup();
+      lessonState.setIsProcessing(true);
+      lessonIdRef.current = lessonId;
+
+      try {
+        const result = await api.startRecipe(lessonId);
+        sessionIdRef.current = result.sessionId;
+        store.setSessionId(result.sessionId);
+        store.setIsRepeat(!!result.isRepeat);
+
+        await processResponse(result as LessonResponse, true);
+        return { ok: true, value: undefined };
+      } catch (e) {
+        return { ok: false, error: e as Error };
+      } finally {
+        lessonState.setIsProcessing(false);
+      }
+    },
+    [cleanup, lessonState, store, processResponse],
+  );
 
   return {
-    uiState,
-    currentStep,
-    totalSteps,
-    contentText,
+    ...lessonState,
     transitionText,
     closureText,
     fullVoiceText,
-    questionText,
-    options,
-    feedback: feedbackData,
-    isProcessing,
-    isSpeaking,
-    isStreaming, // Add streaming flag
-    questionResults,
     startClass,
-    submitAnswer,
-    speakContent,
+    submitAnswer: async (ans: string) => {
+      lessonState.setIsProcessing(true);
+      try {
+        const res = await doInteract(ans);
+        if (res) await processResponse(res, false);
+      } finally {
+        lessonState.setIsProcessing(false);
+      }
+    },
+    speakContent: () => contentRef.current && speak(contentRef.current, _voiceSettings),
+    reset: async () => {
+      // Detener todos los streams de audio primero
+      voiceStop();
+      stopStream();
+
+      // Llamar al backend para reiniciar la sesión
+      if (sessionIdRef.current) {
+        try {
+          await api.resetSession(sessionIdRef.current);
+        } catch (error) {
+          console.error('[LESSON_RESET] Backend reset failed:', error);
+        }
+      }
+
+      // Cleanup completo
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+
+      // IMPORTANTE: Resetear el flag de interacción para permitir nuevas interacciones
+      isInteractingRef.current = false;
+
+      // Resetear store y state
+      sessionIdRef.current = null;
+      lessonState.resetState();
+      // Forzar uiState a 'idle' explícitamente para mostrar la vista inicial correcta
+      lessonState.setUIState('idle');
+      store.reset();
+    },
     stopSpeaking: voiceStop,
-    reset,
-    resetSession,
     getCurrentAudioElement: getAudio,
   };
 }
