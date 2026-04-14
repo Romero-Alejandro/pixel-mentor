@@ -1,7 +1,7 @@
-import { prisma } from '@/database/client.js';
-
 import type { Atom, AtomOption } from '../../domain/entities/atom.entity.js';
 import type { AtomRepository } from '../../domain/ports/atom.repository.port.js';
+
+import { prisma } from '@/database/client.js';
 
 export class PrismaAtomRepository implements AtomRepository {
   async findById(id: string): Promise<Atom | null> {

@@ -1,6 +1,9 @@
 import type { RecipeRepository } from '../../domain/ports/recipe.repository.port.js';
-import { RecipeNotFoundError, RecipeOwnershipError } from '@/shared/errors/domain-errors.js';
-import { RecipeValidationError } from '@/shared/errors/domain-errors.js';
+import {
+  RecipeNotFoundError,
+  RecipeOwnershipError,
+  RecipeValidationError,
+} from '@/shared/errors/domain-errors.js';
 import { CanonicalId } from '../../domain/valueObjects/canonical-id.vo.js';
 import { ExpectedDuration } from '../../domain/valueObjects/expected-duration.vo.js';
 import type { Recipe } from '../../domain/entities/recipe.entity.js';
@@ -17,6 +20,7 @@ export class UpdateRecipeUseCase {
   constructor(private recipeRepository: RecipeRepository) {}
 
   async execute(id: string, data: UpdateRecipeInput, userId: string): Promise<Recipe> {
+    console.log('[UpdateRecipeUseCase] execute called with:', { id, data, userId });
     const recipe = await this.recipeRepository.findById(id);
     if (!recipe) {
       throw new RecipeNotFoundError(id);
@@ -45,7 +49,7 @@ export class UpdateRecipeUseCase {
       updateData.description = data.description.trim();
     }
 
-    if (data.expectedDurationMinutes !== undefined) {
+    if (data.expectedDurationMinutes !== undefined && data.expectedDurationMinutes !== null) {
       updateData.expectedDurationMinutes = ExpectedDuration.create(
         data.expectedDurationMinutes,
       ).minutes;

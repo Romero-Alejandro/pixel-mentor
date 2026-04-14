@@ -1,5 +1,4 @@
 import { prisma } from '@/database/client';
-
 import type {
   AdvisoryLockId,
   AdvisoryLockManager,
@@ -63,7 +62,9 @@ export class PostgresAdvisoryLockManager implements AdvisoryLockManager {
     const lockValue = lockIdToBigInt(lockId);
 
     try {
-      const result = await prisma.$queryRaw<[{ lock_status: boolean }]>`SELECT pg_advisory_lock_status(${lockValue}) as lock_status`;
+      const result = await prisma.$queryRaw<
+        [{ lock_status: boolean }]
+      >`SELECT pg_advisory_lock_status(${lockValue}) as lock_status`;
       return result[0]?.lock_status ?? false;
     } catch {
       return false;

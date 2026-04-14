@@ -13,6 +13,12 @@ import {
   calculateXPFromAccuracy,
   getPerformanceTier,
 } from '../../application/strategies/xp-reward.strategy';
+import type {
+  IUserGamificationRepository,
+  IBadgeRepository,
+  GamificationProfile,
+} from '../../domain/ports/gamification.ports';
+
 import { getEventBus } from '@/shared/events/event-bus.port';
 import { GameDomainEvents } from '@/shared/events/game-events.port';
 import type {
@@ -20,11 +26,6 @@ import type {
   ActivityAttemptPayload,
   DailyLoginPayload,
 } from '@/shared/events/game-events.port';
-import type {
-  IUserGamificationRepository,
-  IBadgeRepository,
-  GamificationProfile,
-} from '../../domain/ports/gamification.ports';
 import type { GetSessionUseCase } from '@/features/session/application/use-cases/get-session.use-case';
 import type { GetRecipeUseCase } from '@/features/recipe/application/use-cases/get-recipe.use-case';
 import type { PrismaClient } from '@/database/client.js';

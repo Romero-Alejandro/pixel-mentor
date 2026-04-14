@@ -4,6 +4,7 @@
 
 import type { IClassRepository } from '../../domain/ports/class.repository.port';
 import type { ClassEntity, ClassStatus } from '../../domain/entities/class.entity';
+
 import { prisma } from '@/database/client.js';
 
 function mapPrismaToClassEntity(prismaClass: {
@@ -92,7 +93,9 @@ export class PrismaClassRepository implements IClassRepository {
         include: {
           lessons: {
             orderBy: { order: 'asc' },
-            include: { recipe: { select: { id: true, title: true, expectedDurationMinutes: true } } },
+            include: {
+              recipe: { select: { id: true, title: true, expectedDurationMinutes: true } },
+            },
           },
         },
         orderBy: { updatedAt: 'desc' },
@@ -105,7 +108,9 @@ export class PrismaClassRepository implements IClassRepository {
     return { classes: classes.map(mapPrismaToClassEntity), total };
   }
 
-  async create(classData: Omit<ClassEntity, 'id' | 'createdAt' | 'updatedAt'>): Promise<ClassEntity> {
+  async create(
+    classData: Omit<ClassEntity, 'id' | 'createdAt' | 'updatedAt'>,
+  ): Promise<ClassEntity> {
     const created = await prisma.class.create({
       data: {
         title: classData.title,
@@ -130,8 +135,10 @@ export class PrismaClassRepository implements IClassRepository {
     if (classData.title !== undefined) updateData.title = classData.title;
     if (classData.description !== undefined) updateData.description = classData.description;
     if (classData.tutorId !== undefined) updateData.tutorId = classData.tutorId;
-    if (classData.classTemplateId !== undefined) updateData.classTemplateId = classData.classTemplateId;
-    if (classData.currentVersionId !== undefined) updateData.currentVersionId = classData.currentVersionId;
+    if (classData.classTemplateId !== undefined)
+      updateData.classTemplateId = classData.classTemplateId;
+    if (classData.currentVersionId !== undefined)
+      updateData.currentVersionId = classData.currentVersionId;
     if (classData.status !== undefined) updateData.status = classData.status;
     if (classData.version !== undefined) updateData.version = classData.version;
 

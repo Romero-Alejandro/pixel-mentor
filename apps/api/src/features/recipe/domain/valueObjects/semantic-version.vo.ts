@@ -62,9 +62,7 @@ export class SemanticVersion {
 
   equals(other: SemanticVersion): boolean {
     return (
-      this.#major === other.#major &&
-      this.#minor === other.#minor &&
-      this.#patch === other.#patch
+      this.#major === other.#major && this.#minor === other.#minor && this.#patch === other.#patch
     );
   }
 }

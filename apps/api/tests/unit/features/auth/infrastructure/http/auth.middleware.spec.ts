@@ -7,7 +7,6 @@ jest.mock('@/shared/config/index.js', () => ({
   },
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { config } = require('@/shared/config/index.js');
 
 import {

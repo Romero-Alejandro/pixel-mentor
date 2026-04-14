@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+
 import type { ITokenService } from '@/features/auth/domain/ports/token.service.port.js';
 import { config } from '@/shared/config/index.js';
 

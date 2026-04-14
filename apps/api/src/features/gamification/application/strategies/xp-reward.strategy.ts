@@ -69,7 +69,8 @@ export function getPerformanceTier(accuracyPercent: number): string {
  */
 export class LessonCompletionStrategy implements IRewardStrategy {
   readonly name = 'LessonCompletionStrategy';
-  readonly description = 'Awards XP for completing lessons based on accuracy with first-attempt bonus (first time only)';
+  readonly description =
+    'Awards XP for completing lessons based on accuracy with first-attempt bonus (first time only)';
 
   async canApply(context: RewardContext): Promise<boolean> {
     if (context.event.type !== GameDomainEvents.LESSON_COMPLETED) {

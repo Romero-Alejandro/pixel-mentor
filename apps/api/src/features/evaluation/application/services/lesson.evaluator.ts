@@ -475,11 +475,11 @@ export class LessonEvaluatorUseCase {
 export function createLessonEvaluator(llmClient: ILLMClient): LessonEvaluatorUseCase {
   // Note: This factory uses dynamic imports to avoid circular dependencies
   // In production, prefer dependency injection via the container
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
+
   const {
     SafePromptBuilder,
   } = require('@/features/prompt/application/services/safe-prompt-builder.service');
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
+
   const { SchemaValidator } = require('@/shared/errors/schema-validation.error');
 
   return new LessonEvaluatorUseCase(llmClient, new SafePromptBuilder(), new SchemaValidator());

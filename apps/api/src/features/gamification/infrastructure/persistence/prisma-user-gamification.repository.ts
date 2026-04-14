@@ -4,12 +4,13 @@
  * Implements IUserGamificationRepository using Prisma ORM.
  */
 
-import { prisma } from '@/database/client.js';
 import { LevelService } from '../../application/services/level.service';
 import type {
   IUserGamificationRepository,
   GamificationProfile,
 } from '../../domain/ports/gamification.ports';
+
+import { prisma } from '@/database/client.js';
 
 export class PrismaUserGamificationRepository implements IUserGamificationRepository {
   private levelService: LevelService;
@@ -137,9 +138,7 @@ export class PrismaUserGamificationRepository implements IUserGamificationReposi
     });
   }
 
-  async getProfileStats(
-    userId: string,
-  ): Promise<{
+  async getProfileStats(userId: string): Promise<{
     currentStreak: number;
     level: number;
     totalXP: number;

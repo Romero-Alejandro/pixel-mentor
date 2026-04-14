@@ -1,11 +1,14 @@
 /**
  * Input Event Mapper Service
- * 
+ *
  * Maps user input and classification results to pedagogical events.
  * This is the ONLY place where input -> event mapping happens.
  */
 
-import type { PedagogicalState, StateEventType } from '../features/evaluation/domain/entities/pedagogical-state-machine.js';
+import type {
+  PedagogicalState,
+  StateEventType,
+} from '../features/evaluation/domain/entities/pedagogical-state-machine.js';
 
 export interface ClassificationResult {
   intent: 'question' | 'statement' | 'navigation' | 'clarification';
@@ -46,20 +49,10 @@ export class InputEventMapperService {
   ];
 
   // Retry keywords
-  private readonly RETRY_KEYWORDS = [
-    'repetir',
-    'otra vez',
-    'again',
-    'retry',
-  ];
+  private readonly RETRY_KEYWORDS = ['repetir', 'otra vez', 'again', 'retry'];
 
   // Skip keywords
-  private readonly SKIP_KEYWORDS = [
-    'saltar',
-    'skip',
-    'pasar',
-    'siguiente',
-  ];
+  private readonly SKIP_KEYWORDS = ['saltar', 'skip', 'pasar', 'siguiente'];
 
   /**
    * Map user input to a pedagogical event
@@ -116,7 +109,7 @@ export class InputEventMapperService {
    */
   private handleAwaitingStart(input: string): { event: StateEventType } | null {
     const isReady = this.READY_KEYWORDS.some((keyword: string) => input.includes(keyword));
-    
+
     if (isReady) {
       return { event: 'START_CLASS' };
     }

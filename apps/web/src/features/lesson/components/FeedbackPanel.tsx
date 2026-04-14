@@ -1,10 +1,8 @@
 import { useEffect } from 'react';
 import { IconStarFilled, IconAlertTriangleFilled, IconBolt } from '@tabler/icons-react';
-
 import { useAudio } from '@/contexts/AudioContext';
 import { SpriteAudioEvent } from '@/audio/types/audio-events';
 import { Spinner } from '@/components/ui';
-import { logger } from '@/utils/logger';
 
 interface FeedbackPanelProps {
   fb: { isCorrect: boolean; message: string; encouragement?: string; xpAwarded?: number };
@@ -14,12 +12,6 @@ interface FeedbackPanelProps {
 
 export function FeedbackPanel({ fb, nextLessonText, isStreaming }: FeedbackPanelProps) {
   const { playSprite } = useAudio();
-
-  logger.log('[FeedbackPanel] Render:', {
-    nextLessonTextLength: nextLessonText?.length ?? 0,
-    fbMessage: fb.message,
-    isStreaming,
-  });
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -35,7 +27,6 @@ export function FeedbackPanel({ fb, nextLessonText, isStreaming }: FeedbackPanel
       }, 150);
       return () => clearTimeout(timeout);
     }
-    // No sound for incorrect answers (positive-only policy)
   }, [fb.isCorrect, playSprite]);
 
   return (
@@ -76,7 +67,6 @@ export function FeedbackPanel({ fb, nextLessonText, isStreaming }: FeedbackPanel
         </div>
       </div>
 
-      {/* Show next lesson content if streaming */}
       {nextLessonText ? (
         <div className="max-w-xl w-full bg-slate-50 border-4 border-slate-200 rounded-[2.5rem] p-6 shadow-[0_8px_0_0_#e2e8f0]">
           <h4 className="text-lg font-bold text-sky-600 mb-3 flex items-center justify-center gap-2">
@@ -89,12 +79,14 @@ export function FeedbackPanel({ fb, nextLessonText, isStreaming }: FeedbackPanel
         </div>
       ) : null}
 
-      <div className="mt-6 flex items-center gap-3 bg-slate-100 border-4 border-slate-200 px-6 py-4 rounded-2xl shadow-inner">
-        <Spinner size="sm" className="text-slate-400" />
-        <span className="text-sm font-black text-slate-500 uppercase tracking-widest">
-          {isStreaming ? 'Generando...' : 'Continuando...'}
-        </span>
-      </div>
+      {isStreaming ? (
+        <div className="mt-6 flex items-center gap-3 bg-slate-100 border-4 border-slate-200 px-6 py-4 rounded-2xl shadow-inner">
+          <Spinner size="sm" className="text-slate-400" />
+          <span className="text-sm font-black text-slate-500 uppercase tracking-widest">
+            Generando...
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -1,5 +1,4 @@
 import { prisma } from '@/database/client';
-
 import type { RecipeTag } from '@/features/recipe/domain/entities/recipe-tag.entity';
 import type { RecipeTagRepository } from '@/features/recipe/domain/ports/recipe-tag.repository.port';
 

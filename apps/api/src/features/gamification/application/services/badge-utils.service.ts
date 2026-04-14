@@ -4,8 +4,6 @@
 
 import type { BadgeRequirementType, BadgeProgress } from '../../domain/entities/badge.types';
 
-
-
 /**
  * Check if a badge requirement type is valid.
  */

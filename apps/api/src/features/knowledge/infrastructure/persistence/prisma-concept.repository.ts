@@ -1,7 +1,7 @@
-import { prisma } from '@/database/client.js';
-
 import type { Concept } from '../../domain/entities/concept.entity.js';
 import type { ConceptRepository } from '../../domain/ports/concept.repository.port.js';
+
+import { prisma } from '@/database/client.js';
 
 export class PrismaConceptRepository implements ConceptRepository {
   async findById(id: string): Promise<Concept | null> {

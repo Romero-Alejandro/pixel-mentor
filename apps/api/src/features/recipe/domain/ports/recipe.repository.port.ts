@@ -1,4 +1,5 @@
 import type { Recipe, RecipeStep } from '../entities/recipe.entity';
+
 import type { Concept } from '@/features/knowledge/domain/entities/concept.entity';
 import type { Activity } from '@/features/activity/domain/entities/activity.entity';
 

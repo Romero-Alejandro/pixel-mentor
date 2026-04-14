@@ -1,7 +1,7 @@
-import { prisma } from '@/database/client.js';
-
 import type { Activity } from '../../domain/entities/activity.entity.js';
 import type { ActivityRepository } from '../../domain/ports/activity.repository.port.js';
+
+import { prisma } from '@/database/client.js';
 
 export class PrismaActivityRepository implements ActivityRepository {
   async findById(id: string): Promise<Activity | null> {

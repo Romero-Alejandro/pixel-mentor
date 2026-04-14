@@ -1,4 +1,5 @@
 import argon2 from 'argon2';
+
 import type { IHashingService } from '@/features/auth/domain/ports/hashing.service.port.js';
 
 /**

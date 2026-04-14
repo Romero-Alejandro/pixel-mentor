@@ -9,7 +9,10 @@
 
 import { ProgressService } from '@/features/progress/domain/services/progress.service';
 import type { ProgressRepository } from '@/features/progress/domain/ports/progress.repository.port';
-import type { UserProgress, ProgressStatus } from '@/features/progress/domain/entities/user-progress.entity';
+import type {
+  UserProgress,
+  ProgressStatus,
+} from '@/features/progress/domain/entities/user-progress.entity';
 
 // Mock factories
 const createMockUserProgress = (overrides: Partial<UserProgress> = {}): UserProgress => ({

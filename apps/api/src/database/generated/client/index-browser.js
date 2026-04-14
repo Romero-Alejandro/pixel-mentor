@@ -201,6 +201,8 @@ exports.Prisma.RecipeStepScalarFieldEnum = {
   conceptId: 'conceptId',
   activityId: 'activityId',
   script: 'script',
+  activityData: 'activityData',
+  question: 'question',
   stepType: 'stepType'
 };
 

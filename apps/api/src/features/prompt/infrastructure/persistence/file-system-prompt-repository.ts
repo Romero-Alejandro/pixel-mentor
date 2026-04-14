@@ -2,7 +2,10 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import type { PromptRepository, PromptParams } from '@/features/recipe/domain/ports/prompt.repository.port.js';
+import type {
+  PromptRepository,
+  PromptParams,
+} from '@/features/recipe/domain/ports/prompt.repository.port.js';
 import type { PedagogicalState } from '@/features/evaluation/domain/entities/pedagogical-state-machine.js';
 
 type StateTemplateMap = Record<PedagogicalState, string>;

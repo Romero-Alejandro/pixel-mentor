@@ -1,5 +1,4 @@
 import { prisma } from '@/database/client';
-
 import type { Interaction } from '@/features/session/domain/entities/interaction.entity';
 import type { AIResponse } from '@/features/recipe/domain/ports/ai-service.port';
 import type { InteractionRepository } from '@/features/session/domain/ports/interaction.repository.port';

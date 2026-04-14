@@ -12478,6 +12478,8 @@ export namespace Prisma {
     conceptId: number
     activityId: number
     script: number
+    activityData: number
+    question: number
     stepType: number
     _all: number
   }
@@ -12526,6 +12528,8 @@ export namespace Prisma {
     conceptId?: true
     activityId?: true
     script?: true
+    activityData?: true
+    question?: true
     stepType?: true
     _all?: true
   }
@@ -12627,6 +12631,8 @@ export namespace Prisma {
     conceptId: string | null
     activityId: string | null
     script: JsonValue | null
+    activityData: JsonValue | null
+    question: JsonValue | null
     stepType: string | null
     _count: RecipeStepCountAggregateOutputType | null
     _avg: RecipeStepAvgAggregateOutputType | null
@@ -12660,6 +12666,8 @@ export namespace Prisma {
     conceptId?: boolean
     activityId?: boolean
     script?: boolean
+    activityData?: boolean
+    question?: boolean
     stepType?: boolean
     recipe?: boolean | RecipeDefaultArgs<ExtArgs>
     atom?: boolean | AtomDefaultArgs<ExtArgs>
@@ -12678,6 +12686,8 @@ export namespace Prisma {
     conceptId?: boolean
     activityId?: boolean
     script?: boolean
+    activityData?: boolean
+    question?: boolean
     stepType?: boolean
     recipe?: boolean | RecipeDefaultArgs<ExtArgs>
     atom?: boolean | AtomDefaultArgs<ExtArgs>
@@ -12696,6 +12706,8 @@ export namespace Prisma {
     conceptId?: boolean
     activityId?: boolean
     script?: boolean
+    activityData?: boolean
+    question?: boolean
     stepType?: boolean
     recipe?: boolean | RecipeDefaultArgs<ExtArgs>
     atom?: boolean | AtomDefaultArgs<ExtArgs>
@@ -12714,10 +12726,12 @@ export namespace Prisma {
     conceptId?: boolean
     activityId?: boolean
     script?: boolean
+    activityData?: boolean
+    question?: boolean
     stepType?: boolean
   }
 
-  export type RecipeStepOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "recipeId" | "atomId" | "order" | "condition" | "onCondition" | "createdAt" | "conceptId" | "activityId" | "script" | "stepType", ExtArgs["result"]["recipeStep"]>
+  export type RecipeStepOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "recipeId" | "atomId" | "order" | "condition" | "onCondition" | "createdAt" | "conceptId" | "activityId" | "script" | "activityData" | "question" | "stepType", ExtArgs["result"]["recipeStep"]>
   export type RecipeStepInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     recipe?: boolean | RecipeDefaultArgs<ExtArgs>
     atom?: boolean | AtomDefaultArgs<ExtArgs>
@@ -12756,6 +12770,8 @@ export namespace Prisma {
       conceptId: string | null
       activityId: string | null
       script: Prisma.JsonValue | null
+      activityData: Prisma.JsonValue | null
+      question: Prisma.JsonValue | null
       stepType: string | null
     }, ExtArgs["result"]["recipeStep"]>
     composites: {}
@@ -13194,6 +13210,8 @@ export namespace Prisma {
     readonly conceptId: FieldRef<"RecipeStep", 'String'>
     readonly activityId: FieldRef<"RecipeStep", 'String'>
     readonly script: FieldRef<"RecipeStep", 'Json'>
+    readonly activityData: FieldRef<"RecipeStep", 'Json'>
+    readonly question: FieldRef<"RecipeStep", 'Json'>
     readonly stepType: FieldRef<"RecipeStep", 'String'>
   }
     
@@ -46888,6 +46906,8 @@ export namespace Prisma {
     conceptId: 'conceptId',
     activityId: 'activityId',
     script: 'script',
+    activityData: 'activityData',
+    question: 'question',
     stepType: 'stepType'
   };
 
@@ -48077,6 +48097,8 @@ export namespace Prisma {
     conceptId?: StringNullableFilter<"RecipeStep"> | string | null
     activityId?: StringNullableFilter<"RecipeStep"> | string | null
     script?: JsonNullableFilter<"RecipeStep">
+    activityData?: JsonNullableFilter<"RecipeStep">
+    question?: JsonNullableFilter<"RecipeStep">
     stepType?: StringNullableFilter<"RecipeStep"> | string | null
     recipe?: XOR<RecipeScalarRelationFilter, RecipeWhereInput>
     atom?: XOR<AtomScalarRelationFilter, AtomWhereInput>
@@ -48095,6 +48117,8 @@ export namespace Prisma {
     conceptId?: SortOrderInput | SortOrder
     activityId?: SortOrderInput | SortOrder
     script?: SortOrderInput | SortOrder
+    activityData?: SortOrderInput | SortOrder
+    question?: SortOrderInput | SortOrder
     stepType?: SortOrderInput | SortOrder
     recipe?: RecipeOrderByWithRelationInput
     atom?: AtomOrderByWithRelationInput
@@ -48117,6 +48141,8 @@ export namespace Prisma {
     conceptId?: StringNullableFilter<"RecipeStep"> | string | null
     activityId?: StringNullableFilter<"RecipeStep"> | string | null
     script?: JsonNullableFilter<"RecipeStep">
+    activityData?: JsonNullableFilter<"RecipeStep">
+    question?: JsonNullableFilter<"RecipeStep">
     stepType?: StringNullableFilter<"RecipeStep"> | string | null
     recipe?: XOR<RecipeScalarRelationFilter, RecipeWhereInput>
     atom?: XOR<AtomScalarRelationFilter, AtomWhereInput>
@@ -48135,6 +48161,8 @@ export namespace Prisma {
     conceptId?: SortOrderInput | SortOrder
     activityId?: SortOrderInput | SortOrder
     script?: SortOrderInput | SortOrder
+    activityData?: SortOrderInput | SortOrder
+    question?: SortOrderInput | SortOrder
     stepType?: SortOrderInput | SortOrder
     _count?: RecipeStepCountOrderByAggregateInput
     _avg?: RecipeStepAvgOrderByAggregateInput
@@ -48157,6 +48185,8 @@ export namespace Prisma {
     conceptId?: StringNullableWithAggregatesFilter<"RecipeStep"> | string | null
     activityId?: StringNullableWithAggregatesFilter<"RecipeStep"> | string | null
     script?: JsonNullableWithAggregatesFilter<"RecipeStep">
+    activityData?: JsonNullableWithAggregatesFilter<"RecipeStep">
+    question?: JsonNullableWithAggregatesFilter<"RecipeStep">
     stepType?: StringNullableWithAggregatesFilter<"RecipeStep"> | string | null
   }
 
@@ -50880,6 +50910,8 @@ export namespace Prisma {
     onCondition?: string | null
     createdAt?: Date | string
     script?: NullableJsonNullValueInput | InputJsonValue
+    activityData?: NullableJsonNullValueInput | InputJsonValue
+    question?: NullableJsonNullValueInput | InputJsonValue
     stepType?: string | null
     recipe: RecipeCreateNestedOneWithoutStepsInput
     atom: AtomCreateNestedOneWithoutRecipeStepsInput
@@ -50898,6 +50930,8 @@ export namespace Prisma {
     conceptId?: string | null
     activityId?: string | null
     script?: NullableJsonNullValueInput | InputJsonValue
+    activityData?: NullableJsonNullValueInput | InputJsonValue
+    question?: NullableJsonNullValueInput | InputJsonValue
     stepType?: string | null
   }
 
@@ -50908,6 +50942,8 @@ export namespace Prisma {
     onCondition?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     script?: NullableJsonNullValueInput | InputJsonValue
+    activityData?: NullableJsonNullValueInput | InputJsonValue
+    question?: NullableJsonNullValueInput | InputJsonValue
     stepType?: NullableStringFieldUpdateOperationsInput | string | null
     recipe?: RecipeUpdateOneRequiredWithoutStepsNestedInput
     atom?: AtomUpdateOneRequiredWithoutRecipeStepsNestedInput
@@ -50926,6 +50962,8 @@ export namespace Prisma {
     conceptId?: NullableStringFieldUpdateOperationsInput | string | null
     activityId?: NullableStringFieldUpdateOperationsInput | string | null
     script?: NullableJsonNullValueInput | InputJsonValue
+    activityData?: NullableJsonNullValueInput | InputJsonValue
+    question?: NullableJsonNullValueInput | InputJsonValue
     stepType?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
@@ -50940,6 +50978,8 @@ export namespace Prisma {
     conceptId?: string | null
     activityId?: string | null
     script?: NullableJsonNullValueInput | InputJsonValue
+    activityData?: NullableJsonNullValueInput | InputJsonValue
+    question?: NullableJsonNullValueInput | InputJsonValue
     stepType?: string | null
   }
 
@@ -50950,6 +50990,8 @@ export namespace Prisma {
     onCondition?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     script?: NullableJsonNullValueInput | InputJsonValue
+    activityData?: NullableJsonNullValueInput | InputJsonValue
+    question?: NullableJsonNullValueInput | InputJsonValue
     stepType?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
@@ -50964,6 +51006,8 @@ export namespace Prisma {
     conceptId?: NullableStringFieldUpdateOperationsInput | string | null
     activityId?: NullableStringFieldUpdateOperationsInput | string | null
     script?: NullableJsonNullValueInput | InputJsonValue
+    activityData?: NullableJsonNullValueInput | InputJsonValue
+    question?: NullableJsonNullValueInput | InputJsonValue
     stepType?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
@@ -53946,6 +53990,8 @@ export namespace Prisma {
     conceptId?: SortOrder
     activityId?: SortOrder
     script?: SortOrder
+    activityData?: SortOrder
+    question?: SortOrder
     stepType?: SortOrder
   }
 
@@ -60117,6 +60163,8 @@ export namespace Prisma {
     onCondition?: string | null
     createdAt?: Date | string
     script?: NullableJsonNullValueInput | InputJsonValue
+    activityData?: NullableJsonNullValueInput | InputJsonValue
+    question?: NullableJsonNullValueInput | InputJsonValue
     stepType?: string | null
     atom: AtomCreateNestedOneWithoutRecipeStepsInput
     concept?: ConceptCreateNestedOneWithoutRecipeStepsInput
@@ -60133,6 +60181,8 @@ export namespace Prisma {
     conceptId?: string | null
     activityId?: string | null
     script?: NullableJsonNullValueInput | InputJsonValue
+    activityData?: NullableJsonNullValueInput | InputJsonValue
+    question?: NullableJsonNullValueInput | InputJsonValue
     stepType?: string | null
   }
 
@@ -60486,6 +60536,8 @@ export namespace Prisma {
     conceptId?: StringNullableFilter<"RecipeStep"> | string | null
     activityId?: StringNullableFilter<"RecipeStep"> | string | null
     script?: JsonNullableFilter<"RecipeStep">
+    activityData?: JsonNullableFilter<"RecipeStep">
+    question?: JsonNullableFilter<"RecipeStep">
     stepType?: StringNullableFilter<"RecipeStep"> | string | null
   }
 
@@ -61094,6 +61146,8 @@ export namespace Prisma {
     onCondition?: string | null
     createdAt?: Date | string
     script?: NullableJsonNullValueInput | InputJsonValue
+    activityData?: NullableJsonNullValueInput | InputJsonValue
+    question?: NullableJsonNullValueInput | InputJsonValue
     stepType?: string | null
     recipe: RecipeCreateNestedOneWithoutStepsInput
     atom: AtomCreateNestedOneWithoutRecipeStepsInput
@@ -61110,6 +61164,8 @@ export namespace Prisma {
     createdAt?: Date | string
     activityId?: string | null
     script?: NullableJsonNullValueInput | InputJsonValue
+    activityData?: NullableJsonNullValueInput | InputJsonValue
+    question?: NullableJsonNullValueInput | InputJsonValue
     stepType?: string | null
   }
 
@@ -61263,6 +61319,8 @@ export namespace Prisma {
     onCondition?: string | null
     createdAt?: Date | string
     script?: NullableJsonNullValueInput | InputJsonValue
+    activityData?: NullableJsonNullValueInput | InputJsonValue
+    question?: NullableJsonNullValueInput | InputJsonValue
     stepType?: string | null
     recipe: RecipeCreateNestedOneWithoutStepsInput
     atom: AtomCreateNestedOneWithoutRecipeStepsInput
@@ -61279,6 +61337,8 @@ export namespace Prisma {
     createdAt?: Date | string
     conceptId?: string | null
     script?: NullableJsonNullValueInput | InputJsonValue
+    activityData?: NullableJsonNullValueInput | InputJsonValue
+    question?: NullableJsonNullValueInput | InputJsonValue
     stepType?: string | null
   }
 
@@ -61386,6 +61446,8 @@ export namespace Prisma {
     onCondition?: string | null
     createdAt?: Date | string
     script?: NullableJsonNullValueInput | InputJsonValue
+    activityData?: NullableJsonNullValueInput | InputJsonValue
+    question?: NullableJsonNullValueInput | InputJsonValue
     stepType?: string | null
     recipe: RecipeCreateNestedOneWithoutStepsInput
     concept?: ConceptCreateNestedOneWithoutRecipeStepsInput
@@ -61402,6 +61464,8 @@ export namespace Prisma {
     conceptId?: string | null
     activityId?: string | null
     script?: NullableJsonNullValueInput | InputJsonValue
+    activityData?: NullableJsonNullValueInput | InputJsonValue
+    question?: NullableJsonNullValueInput | InputJsonValue
     stepType?: string | null
   }
 
@@ -66551,6 +66615,8 @@ export namespace Prisma {
     conceptId?: string | null
     activityId?: string | null
     script?: NullableJsonNullValueInput | InputJsonValue
+    activityData?: NullableJsonNullValueInput | InputJsonValue
+    question?: NullableJsonNullValueInput | InputJsonValue
     stepType?: string | null
   }
 
@@ -66630,6 +66696,8 @@ export namespace Prisma {
     onCondition?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     script?: NullableJsonNullValueInput | InputJsonValue
+    activityData?: NullableJsonNullValueInput | InputJsonValue
+    question?: NullableJsonNullValueInput | InputJsonValue
     stepType?: NullableStringFieldUpdateOperationsInput | string | null
     atom?: AtomUpdateOneRequiredWithoutRecipeStepsNestedInput
     concept?: ConceptUpdateOneWithoutRecipeStepsNestedInput
@@ -66646,6 +66714,8 @@ export namespace Prisma {
     conceptId?: NullableStringFieldUpdateOperationsInput | string | null
     activityId?: NullableStringFieldUpdateOperationsInput | string | null
     script?: NullableJsonNullValueInput | InputJsonValue
+    activityData?: NullableJsonNullValueInput | InputJsonValue
+    question?: NullableJsonNullValueInput | InputJsonValue
     stepType?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
@@ -66659,6 +66729,8 @@ export namespace Prisma {
     conceptId?: NullableStringFieldUpdateOperationsInput | string | null
     activityId?: NullableStringFieldUpdateOperationsInput | string | null
     script?: NullableJsonNullValueInput | InputJsonValue
+    activityData?: NullableJsonNullValueInput | InputJsonValue
+    question?: NullableJsonNullValueInput | InputJsonValue
     stepType?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
@@ -66900,6 +66972,8 @@ export namespace Prisma {
     createdAt?: Date | string
     activityId?: string | null
     script?: NullableJsonNullValueInput | InputJsonValue
+    activityData?: NullableJsonNullValueInput | InputJsonValue
+    question?: NullableJsonNullValueInput | InputJsonValue
     stepType?: string | null
   }
 
@@ -66945,6 +67019,8 @@ export namespace Prisma {
     onCondition?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     script?: NullableJsonNullValueInput | InputJsonValue
+    activityData?: NullableJsonNullValueInput | InputJsonValue
+    question?: NullableJsonNullValueInput | InputJsonValue
     stepType?: NullableStringFieldUpdateOperationsInput | string | null
     recipe?: RecipeUpdateOneRequiredWithoutStepsNestedInput
     atom?: AtomUpdateOneRequiredWithoutRecipeStepsNestedInput
@@ -66961,6 +67037,8 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     activityId?: NullableStringFieldUpdateOperationsInput | string | null
     script?: NullableJsonNullValueInput | InputJsonValue
+    activityData?: NullableJsonNullValueInput | InputJsonValue
+    question?: NullableJsonNullValueInput | InputJsonValue
     stepType?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
@@ -66974,6 +67052,8 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     activityId?: NullableStringFieldUpdateOperationsInput | string | null
     script?: NullableJsonNullValueInput | InputJsonValue
+    activityData?: NullableJsonNullValueInput | InputJsonValue
+    question?: NullableJsonNullValueInput | InputJsonValue
     stepType?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
@@ -66987,6 +67067,8 @@ export namespace Prisma {
     createdAt?: Date | string
     conceptId?: string | null
     script?: NullableJsonNullValueInput | InputJsonValue
+    activityData?: NullableJsonNullValueInput | InputJsonValue
+    question?: NullableJsonNullValueInput | InputJsonValue
     stepType?: string | null
   }
 
@@ -66997,6 +67079,8 @@ export namespace Prisma {
     onCondition?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     script?: NullableJsonNullValueInput | InputJsonValue
+    activityData?: NullableJsonNullValueInput | InputJsonValue
+    question?: NullableJsonNullValueInput | InputJsonValue
     stepType?: NullableStringFieldUpdateOperationsInput | string | null
     recipe?: RecipeUpdateOneRequiredWithoutStepsNestedInput
     atom?: AtomUpdateOneRequiredWithoutRecipeStepsNestedInput
@@ -67013,6 +67097,8 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     conceptId?: NullableStringFieldUpdateOperationsInput | string | null
     script?: NullableJsonNullValueInput | InputJsonValue
+    activityData?: NullableJsonNullValueInput | InputJsonValue
+    question?: NullableJsonNullValueInput | InputJsonValue
     stepType?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
@@ -67026,6 +67112,8 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     conceptId?: NullableStringFieldUpdateOperationsInput | string | null
     script?: NullableJsonNullValueInput | InputJsonValue
+    activityData?: NullableJsonNullValueInput | InputJsonValue
+    question?: NullableJsonNullValueInput | InputJsonValue
     stepType?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
@@ -67049,6 +67137,8 @@ export namespace Prisma {
     conceptId?: string | null
     activityId?: string | null
     script?: NullableJsonNullValueInput | InputJsonValue
+    activityData?: NullableJsonNullValueInput | InputJsonValue
+    question?: NullableJsonNullValueInput | InputJsonValue
     stepType?: string | null
   }
 
@@ -67140,6 +67230,8 @@ export namespace Prisma {
     onCondition?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     script?: NullableJsonNullValueInput | InputJsonValue
+    activityData?: NullableJsonNullValueInput | InputJsonValue
+    question?: NullableJsonNullValueInput | InputJsonValue
     stepType?: NullableStringFieldUpdateOperationsInput | string | null
     recipe?: RecipeUpdateOneRequiredWithoutStepsNestedInput
     concept?: ConceptUpdateOneWithoutRecipeStepsNestedInput
@@ -67156,6 +67248,8 @@ export namespace Prisma {
     conceptId?: NullableStringFieldUpdateOperationsInput | string | null
     activityId?: NullableStringFieldUpdateOperationsInput | string | null
     script?: NullableJsonNullValueInput | InputJsonValue
+    activityData?: NullableJsonNullValueInput | InputJsonValue
+    question?: NullableJsonNullValueInput | InputJsonValue
     stepType?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
@@ -67169,6 +67263,8 @@ export namespace Prisma {
     conceptId?: NullableStringFieldUpdateOperationsInput | string | null
     activityId?: NullableStringFieldUpdateOperationsInput | string | null
     script?: NullableJsonNullValueInput | InputJsonValue
+    activityData?: NullableJsonNullValueInput | InputJsonValue
+    question?: NullableJsonNullValueInput | InputJsonValue
     stepType?: NullableStringFieldUpdateOperationsInput | string | null
   }
 

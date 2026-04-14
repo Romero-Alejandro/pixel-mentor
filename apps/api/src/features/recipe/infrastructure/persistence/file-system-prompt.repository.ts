@@ -2,7 +2,10 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import type { PromptRepository, PromptParams } from '@/features/recipe/domain/ports/prompt.repository.port';
+import type {
+  PromptRepository,
+  PromptParams,
+} from '@/features/recipe/domain/ports/prompt.repository.port';
 import type { PedagogicalState } from '@/features/evaluation/domain/entities/pedagogical-state-machine';
 
 type StateTemplateMap = Record<PedagogicalState, string>;
@@ -76,10 +79,12 @@ export class FileSystemPromptRepository implements PromptRepository {
 
     if (params.ragContext && Array.isArray(params.ragContext)) {
       let ragText = '';
-      params.ragContext.forEach((item: { chunk?: { chunkText: string }; text?: string }, idx: number) => {
-        const chunkText = item.chunk?.chunkText || item.text || '';
-        ragText += `${idx + 1}. ${chunkText}\n`;
-      });
+      params.ragContext.forEach(
+        (item: { chunk?: { chunkText: string }; text?: string }, idx: number) => {
+          const chunkText = item.chunk?.chunkText || item.text || '';
+          ragText += `${idx + 1}. ${chunkText}\n`;
+        },
+      );
       rendered = rendered.replace(
         /\{% if ragContext %}.*?\{% endif %\}/gs,
         ragText.trim() ? `\nContexto relevante recuperado:\n${ragText}` : '',

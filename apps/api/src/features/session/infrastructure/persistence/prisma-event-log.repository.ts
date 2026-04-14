@@ -1,5 +1,4 @@
 import { prisma } from '@/database/client';
-
 import type { EventLog, EventType } from '@/features/session/domain/entities/event-log.entity';
 import type { EventLogRepository } from '@/features/session/domain/ports/event-log.repository.port';
 

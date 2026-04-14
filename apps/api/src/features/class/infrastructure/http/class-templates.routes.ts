@@ -12,7 +12,10 @@ import type {
   UpdateTemplateInput,
   CreateClassFromTemplateInput,
 } from '@/features/class/application/services/class-template.service';
-import { TemplateNotFoundError, TemplateOwnershipError } from '@/features/class/application/services/class-template.service';
+import {
+  TemplateNotFoundError,
+  TemplateOwnershipError,
+} from '@/features/class/application/services/class-template.service';
 import { GetClassParamsSchema, DeleteClassParamsSchema } from '@/shared/dto/index';
 
 const ClassTemplateCreateSchema = z.object({

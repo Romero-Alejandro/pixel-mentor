@@ -1,5 +1,6 @@
-import { prisma } from '@/database/client.js';
 import { createHash } from 'node:crypto';
+
+import { prisma } from '@/database/client.js';
 
 /**
  * Prisma-based refresh token repository.

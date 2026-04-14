@@ -25,7 +25,9 @@ export class AddStepUseCase {
   ) {}
 
   async execute(recipeId: string, stepData: AddStepInput, userId: string): Promise<RecipeStep> {
+    console.log('[AddStepUseCase] Step 1: Starting execute for recipe:', recipeId);
     const recipe = await this.recipeRepository.findById(recipeId);
+    console.log('[AddStepUseCase] Step 2: Recipe found:', recipe ? 'yes' : 'no');
     if (!recipe) {
       throw new RecipeNotFoundError(recipeId);
     }
@@ -34,16 +36,29 @@ export class AddStepUseCase {
       throw new RecipeOwnershipError(recipeId, userId);
     }
 
+    console.log('[AddStepUseCase] Step 3: Checking existing steps');
     const existingSteps = await this.recipeRepository.findStepsByRecipeId(recipeId);
     const maxOrder = existingSteps.length > 0 ? Math.max(...existingSteps.map((s) => s.order)) : -1;
+    console.log('[AddStepUseCase] Step 4: maxOrder:', maxOrder);
 
+    console.log(
+      '[AddStepUseCase] Step 5: Creating atom for stepType:',
+      stepData.stepType || 'content',
+    );
     const atomId = await this.ensureAtomForStep(
       stepData.stepType || 'content',
       stepData.script,
       stepData.activity,
       stepData.question,
     );
+    console.log('[AddStepUseCase] Step 6: Atom created with id:', atomId);
 
+    console.log(
+      '[AddStepUseCase] Step 7: Creating step with atomId:',
+      atomId,
+      'order:',
+      stepData.order ?? maxOrder + 1,
+    );
     const step = await this.recipeRepository.createStep({
       id: crypto.randomUUID(),
       recipeId,
@@ -58,6 +73,7 @@ export class AddStepUseCase {
       question: stepData.question,
       stepType: stepData.stepType || 'content',
     });
+    console.log('[AddStepUseCase] Step 8: Step created successfully:', step.id);
 
     return step;
   }

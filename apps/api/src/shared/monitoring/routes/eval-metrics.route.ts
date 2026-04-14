@@ -10,7 +10,11 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import { z } from 'zod';
 
-import { getMetricsStore, resetMetricsStore, getMetricsSummary } from '@/shared/monitoring/eval-metrics';
+import {
+  getMetricsStore,
+  resetMetricsStore,
+  getMetricsSummary,
+} from '@/shared/monitoring/eval-metrics';
 import type { IUserRepository as UserRepository } from '@/features/auth/domain/ports/user.repository.port.js';
 import type { VerifyTokenUseCase } from '@/features/auth/application/use-cases/verify-token.use-case.js';
 

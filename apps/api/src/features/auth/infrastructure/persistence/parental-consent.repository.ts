@@ -1,7 +1,9 @@
 import { prisma } from '@/database/client.js';
 import { handlePrismaError } from '@/database/error-handler.js';
-
-import type { ConsentStatus, ParentalConsent } from '@/features/auth/domain/entities/parental-consent.entity.js';
+import type {
+  ConsentStatus,
+  ParentalConsent,
+} from '@/features/auth/domain/entities/parental-consent.entity.js';
 import type { IParentalConsentRepository } from '@/features/auth/domain/ports/parental-consent.repository.port.js';
 
 type PrismaConsent = NonNullable<Awaited<ReturnType<typeof prisma.parentalConsent.findUnique>>>;

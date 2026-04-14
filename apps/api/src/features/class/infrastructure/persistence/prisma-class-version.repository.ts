@@ -2,9 +2,10 @@
  * Prisma-based ClassVersion Repository.
  */
 
-import { prisma, type Prisma } from '@/database/client.js';
 import type { IClassVersionRepository } from '../../domain/ports/class.repository.port';
 import type { ClassVersionEntity } from '../../domain/entities/class.entity';
+
+import { prisma, type Prisma } from '@/database/client.js';
 
 function toClassVersionEntity(prismaVersion: {
   id: string;

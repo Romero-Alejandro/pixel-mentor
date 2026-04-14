@@ -1,5 +1,4 @@
 import type { AIService } from '@/features/recipe/domain/ports/ai-service.port.js';
-
 import { PrismaClassRepository } from '@/features/class/infrastructure/persistence/prisma-class.repository.js';
 import { PrismaClassLessonRepository } from '@/features/class/infrastructure/persistence/prisma-class-lesson.repository.js';
 import { PrismaClassVersionRepository } from '@/features/class/infrastructure/persistence/prisma-class-version.repository.js';

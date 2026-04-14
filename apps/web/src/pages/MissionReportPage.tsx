@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   IconTrophy,
   IconStar,
@@ -23,59 +23,90 @@ interface ReportData {
   conceptsMastered: string[];
 }
 
+interface LocationState {
+  report?: ReportData;
+  sessionId?: string;
+}
+
 const FALLBACK_CONCEPTS = ['Variables', 'Ciclos', 'Lógica Condicional'];
-const REPORT_ITEM_STAGGER_DELAY_MS = 200;
+const CONFETTI_COLORS = ['#fbbf24', '#f59e0b', '#ec4899', '#3b82f6'];
 
 function Confetti() {
-  const particles = Array.from({ length: 50 }).map((_, i) => {
-    const colors = ['#fbbf24', '#f59e0b', '#ec4899', '#3b82f6'];
-    const randomColor = colors[Math.floor(Math.random() * colors.length)];
-    return (
-      <div
-        key={i}
-        className="absolute w-3 h-3 rounded-full"
-        style={{
-          left: `${Math.random() * 100}%`,
-          backgroundColor: randomColor,
-          animation: `confetti-fall ${2 + Math.random() * 2}s linear forwards`,
-          animationDelay: `${Math.random()}s`,
-        }}
-      />
-    );
-  });
-  return <div className="fixed inset-0 pointer-events-none overflow-hidden z-50">{particles}</div>;
+  const particles = useMemo(
+    () =>
+      Array.from({ length: 50 }).map((_, i) => ({
+        id: i,
+        left: `${Math.random() * 100}%`,
+        color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+        duration: `${2 + Math.random() * 2}s`,
+        delay: `${Math.random()}s`,
+      })),
+    [],
+  );
+
+  return (
+    <div className="fixed inset-0 pointer-events-none overflow-hidden z-50">
+      {particles.map((p) => (
+        <div
+          key={p.id}
+          className="absolute w-3 h-3 rounded-full"
+          style={{
+            left: p.left,
+            backgroundColor: p.color,
+            animation: `confetti-fall ${p.duration} linear forwards`,
+            animationDelay: p.delay,
+          }}
+        />
+      ))}
+    </div>
+  );
 }
 
 export function MissionReportPage() {
+  const navigate = useNavigate();
   const location = useLocation();
-  const { report: initialReport, sessionId } = location.state || {};
+  const state = location.state as LocationState | null;
 
-  const [report, setReport] = useState<ReportData | undefined>(initialReport);
-  const [isLoading, setIsLoading] = useState(!initialReport && !!sessionId);
-  const [showConfetti, setShowConfetti] = useState(true);
-  const [showContinue, setShowContinue] = useState(false);
+  const [report, setReport] = useState<ReportData | undefined>(state?.report);
+  const [isLoading, setIsLoading] = useState(!state?.report && !!state?.sessionId);
+  const [uiState, setUiState] = useState({ confetti: true, continue: false });
 
   const displayXP = useAnimatedNumber(report?.xpEarned || 0, 1500, 500);
 
-  useEffect(() => {
-    if (!initialReport && sessionId) {
-      api
-        .getMissionReport(sessionId)
-        .then((data) => setReport(data as ReportData))
-        .finally(() => setIsLoading(false));
+  const fetchReport = useCallback(async (id: string) => {
+    try {
+      const data = await api.getMissionReport(id);
+      setReport(data as ReportData);
+    } finally {
+      setIsLoading(false);
     }
-  }, [initialReport, sessionId]);
+  }, []);
+
+  useEffect(() => {
+    if (!state?.report && state?.sessionId) {
+      fetchReport(state.sessionId);
+    }
+  }, [state, fetchReport]);
 
   useEffect(() => {
     if (!report) return;
-    const confettiTimer = setTimeout(() => setShowConfetti(false), 4000);
-    const continueTimer = setTimeout(() => setShowContinue(true), 2500);
+
+    const confettiTimer = setTimeout(
+      () => setUiState((prev) => ({ ...prev, confetti: false })),
+      4000,
+    );
+    const continueTimer = setTimeout(
+      () => setUiState((prev) => ({ ...prev, continue: true })),
+      2500,
+    );
 
     return () => {
       clearTimeout(confettiTimer);
       clearTimeout(continueTimer);
     };
   }, [report]);
+
+  const handleReturn = () => navigate('/dashboard');
 
   if (isLoading) {
     return (
@@ -92,11 +123,11 @@ export function MissionReportPage() {
     );
   }
 
-  const conceptsMastered = report?.conceptsMastered ?? FALLBACK_CONCEPTS;
+  const concepts = report?.conceptsMastered ?? FALLBACK_CONCEPTS;
 
   return (
     <div className="min-h-screen bg-[#f0f9ff] flex items-center justify-center p-6 relative overflow-hidden">
-      {showConfetti ? <Confetti /> : null}
+      {uiState.confetti ? <Confetti /> : null}
 
       <div className="absolute top-0 left-0 w-64 h-64 bg-amber-200 rounded-full blur-3xl opacity-50 -translate-x-1/2 -translate-y-1/2" />
       <div className="absolute bottom-0 right-0 w-64 h-64 bg-emerald-200 rounded-full blur-3xl opacity-50 translate-x-1/2 translate-y-1/2" />
@@ -115,7 +146,7 @@ export function MissionReportPage() {
 
         <Card
           variant="mission"
-          className="bg-white/95 backdrop-blur-sm border-4 border-amber-300 shadow-[0_8px_0_0_#fcd34d]"
+          className="bg-white/95 backdrop-blur-sm border-4 border-amber-300 shadow-[0_8px_0_0_#fcd34d] p-6"
         >
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div className="p-4 bg-amber-50 border-4 border-amber-200 rounded-2xl flex flex-col items-center justify-center text-center">
@@ -152,7 +183,7 @@ export function MissionReportPage() {
                   {report.levelTitle || `Nivel ${report.currentLevel}`}
                 </span>
               </div>
-              <div className="w-14 h-14 bg-purple-200 rounded-full flex items-center justify-center border-4 border-purple-300 shadow-sm">
+              <div className="w-14 h-14 bg-purple-200 rounded-full flex items-center justify-center border-4 border-purple-300">
                 <span className="text-2xl font-black text-purple-700">{report.currentLevel}</span>
               </div>
             </div>
@@ -167,8 +198,8 @@ export function MissionReportPage() {
                 {report.newBadges.map((badge, idx) => (
                   <div
                     key={badge.code}
-                    className="flex items-center gap-2 bg-amber-100 border-2 border-amber-300 text-amber-900 px-3 py-1.5 rounded-full font-bold text-sm animate-bounce-in shadow-sm"
-                    style={{ animationDelay: `${idx * REPORT_ITEM_STAGGER_DELAY_MS}ms` }}
+                    className="flex items-center gap-2 bg-amber-100 border-2 border-amber-300 text-amber-900 px-3 py-1.5 rounded-full font-bold text-sm animate-bounce-in"
+                    style={{ animationDelay: `${idx * 200}ms` }}
                   >
                     <IconStar className="w-4 h-4 fill-amber-500 text-amber-500" />
                     <span>{badge.name}</span>
@@ -183,10 +214,10 @@ export function MissionReportPage() {
               <IconBooks className="w-4 h-4" /> Conceptos Dominados
             </h3>
             <div className="flex flex-wrap gap-2">
-              {conceptsMastered.map((concept) => (
+              {concepts.map((concept) => (
                 <div
                   key={concept}
-                  className="bg-emerald-100 border-2 border-emerald-300 text-emerald-800 px-3 py-1.5 rounded-full font-bold text-sm shadow-sm flex items-center gap-1.5"
+                  className="bg-emerald-100 border-2 border-emerald-300 text-emerald-800 px-3 py-1.5 rounded-full font-bold text-sm flex items-center gap-1.5"
                 >
                   <IconChevronRight className="w-4 h-4 text-emerald-500" stroke={3} /> {concept}
                 </div>
@@ -195,16 +226,15 @@ export function MissionReportPage() {
           </div>
 
           <div
-            className={`transition-all duration-500 ${showContinue ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}
+            className={`transition-all duration-500 ${uiState.continue ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}
           >
-            <Link to="/dashboard" className="block w-full outline-none">
-              <Button
-                size="lg"
-                className="w-full text-xl py-4 bg-sky-500 border-4 border-sky-600 shadow-[0_6px_0_0_#0284c7] hover:bg-sky-400 hover:shadow-[0_8px_0_0_#0284c7] hover:-translate-y-1 active:translate-y-1 active:shadow-none transition-all text-white font-black"
-              >
-                <IconMap className="w-6 h-6 mr-2" stroke={3} /> Volver al Mapa
-              </Button>
-            </Link>
+            <Button
+              onClick={handleReturn}
+              size="lg"
+              className="w-full text-xl py-4 bg-sky-500 border-4 border-sky-600 shadow-[0_6px_0_0_#0284c7] hover:bg-sky-400 hover:shadow-[0_8px_0_0_#0284c7] hover:-translate-y-1 active:translate-y-1 active:shadow-none transition-all text-white font-black"
+            >
+              <IconMap className="w-6 h-6 mr-2" stroke={3} /> Volver al Mapa
+            </Button>
           </div>
         </Card>
       </div>

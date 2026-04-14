@@ -1,5 +1,4 @@
 import { prisma } from '@/database/client.js';
-
 import type { ApiKey } from '@/features/auth/domain/entities/api-key.entity.js';
 import type { IApiKeyRepository } from '@/features/auth/domain/ports/api-key.repository.port.js';
 import { ApiKeyNotFoundError } from '@/features/auth/domain/ports/api-key.repository.port.js';

@@ -28,11 +28,7 @@ export interface ValidationErrorResponse extends ErrorResponse {
 /**
  * Sends an error response to the client
  */
-export function sendErrorResponse(
-  res: Response,
-  error: unknown,
-  logger?: Logger,
-): void {
+export function sendErrorResponse(res: Response, error: unknown, logger?: Logger): void {
   // Handle Zod validation errors
   if (isZodError(error)) {
     const fieldErrors = extractZodErrors(error);

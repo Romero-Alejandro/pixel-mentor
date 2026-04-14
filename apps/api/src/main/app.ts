@@ -23,6 +23,7 @@ import {
   createClassAISuggestionsRouter,
 } from '@/features/class/infrastructure/http/class-ai.routes.js';
 import { createClassTemplateRouter } from '@/features/class/infrastructure/http/class-templates.routes.js';
+import { createRecipeAIRouter } from '@/features/recipe/infrastructure/http/recipe-ai.routes.js';
 import { createAdminRouter } from '@/shared/http/admin.routes.js';
 import { createLLMGovernanceRouter } from '@/shared/http/llm-governance.routes.js';
 
@@ -249,6 +250,14 @@ export function createApp(deps: AppDependencies): Express {
 
   // Gamification SSE events stream (protected, requires auth)
   app.use('/api/gamification', protectedMiddleware, createGamificationEventsRouter(logger));
+
+  // Recipe AI routes (protected, requires TEACHER or ADMIN role)
+  const aiMiddleware = [protectedMiddleware, requireRole('TEACHER', 'ADMIN')] as const;
+  app.use(
+    '/api/ai',
+    ...aiMiddleware,
+    createRecipeAIRouter({ recipeAIService: recipe.recipeAIService }),
+  );
 
   // Class routes (protected, requires TEACHER or ADMIN role)
   const classMiddleware = [protectedMiddleware, requireRole('TEACHER', 'ADMIN')] as const;

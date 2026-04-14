@@ -1,7 +1,7 @@
-import { prisma } from '@/database/client.js';
-
 import type { UserProgress } from '../../domain/entities/user-progress.entity.js';
 import type { ProgressRepository } from '../../domain/ports/progress.repository.port.js';
+
+import { prisma } from '@/database/client.js';
 
 export class PrismaProgressRepository implements ProgressRepository {
   async findByUserId(userId: string): Promise<UserProgress[]> {

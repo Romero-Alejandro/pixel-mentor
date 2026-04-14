@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { IconArrowLeft, IconAlertOctagon } from '@tabler/icons-react';
+import { useShallow } from 'zustand/react/shallow';
 
 import { useGamificationStore } from '@/features/gamification/stores/gamification.store';
 import { useAudio } from '@/contexts/AudioContext';
@@ -29,13 +30,19 @@ export function LessonPage() {
   const { particleTrigger } = useGamificationStore();
   const { playSprite } = useAudio();
 
-  // Zustand 5 Shallow selector is ideal here if we mapped it, but individual hooks are fine
-  const isRepeat = useLessonStore((state) => state.isRepeat);
-  const xpEarned = useLessonStore((state) => state.xpEarned);
-  const accuracy = useLessonStore((state) => state.accuracy);
+  // 1. Selectores de Zustand unificados y con shallow
+  const { isRepeat, xpEarned, accuracy, isSpeaking, isStreaming } = useLessonStore(
+    useShallow((state) => ({
+      isRepeat: state.isRepeat,
+      xpEarned: state.xpEarned,
+      accuracy: state.accuracy,
+      isSpeaking: state.isSpeaking,
+      isStreaming: state.isStreaming,
+    })),
+  );
 
+  // 2. Efecto de audio (XP Gain) aislado
   const prevParticleTrigger = useRef(particleTrigger);
-
   useEffect(() => {
     if (particleTrigger > prevParticleTrigger.current) {
       playSprite(SpriteAudioEvent.XPGain);
@@ -49,10 +56,21 @@ export function LessonPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activityCorrect, setActivityCorrect] = useState<boolean | null>(null);
 
-  const { isStarting, error, retryCount, retry } = useAutoStart(
+  const { isStarting, error, retryCount, retry, resetStarted } = useAutoStart(
     lessonId || null,
     orchestrator.startClass,
   );
+
+  // Handler de reinicio con manejo de race condition
+  const handleRestart = useCallback(async () => {
+    // 1. Resetear todo (estado local, store, etc) - ahora esperamos a que termine
+    await orchestrator.reset();
+
+    // 2. Permitir que autoStart pueda funcionar de nuevo
+    resetStarted();
+
+    // NO llamar startClass aquí - useAutoStart se encargará de iniciar
+  }, [orchestrator, resetStarted]);
 
   const textSync = useTextSync({
     fullText: orchestrator.fullVoiceText,
@@ -60,7 +78,7 @@ export function LessonPage() {
     playbackRate: voiceSettings.speakingRate,
   });
 
-  // Limpiar selecciones previas al cambiar la pregunta
+  // 3. Reset de la UI al cambiar la pregunta
   const prevQ = useRef<string>('');
   useEffect(() => {
     if (orchestrator.questionText !== prevQ.current) {
@@ -70,38 +88,42 @@ export function LessonPage() {
     }
   }, [orchestrator.questionText]);
 
+  // 4. Actualización del feedback de la actividad
   useEffect(() => {
-    if (orchestrator.feedback) {
-      setActivityCorrect(orchestrator.feedback.isCorrect);
+    if (orchestrator.feedbackData) {
+      setActivityCorrect(orchestrator.feedbackData.isCorrect);
     }
-  }, [orchestrator.feedback]);
+  }, [orchestrator.feedbackData]);
 
-  const orchestratorRef = useRef(orchestrator);
-  useEffect(() => {
-    orchestratorRef.current = orchestrator;
-  }, [orchestrator]);
-
+  // 5. Cleanup de la clase (Evita que el audio o procesos sigan vivos si navega atrás)
   useEffect(() => {
     return () => {
-      orchestratorRef.current.stopSpeaking();
-      orchestratorRef.current.reset();
+      orchestrator.stopSpeaking();
+      orchestrator.reset();
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Dependencia vacía para que solo corra en mount/unmount real.
 
-  function handleMCQ(text: string, id: string) {
-    setSelectedId(id);
-    orchestrator.submitAnswer(text);
-  }
+  // 6. Funciones memorizadas para no re-crearlas en cada render
+  const handleMCQ = useCallback(
+    (text: string, id: string) => {
+      setSelectedId(id);
+      orchestrator.submitAnswer(text);
+    },
+    [orchestrator],
+  );
 
-  function handleRestart() {
-    orchestrator.reset();
-    if (lessonId) orchestrator.startClass(lessonId);
-  }
+  const handleRepeatContent = useCallback(() => {
+    textSync.reset();
+    orchestrator.speakContent();
+  }, [textSync, orchestrator]);
 
   const isIdle = orchestrator.uiState === UI_STATES.IDLE;
   const isLoading = isStarting && !orchestrator.contentText && !error;
 
-  function renderPanel() {
+  // 7. Panel activo memorizado para evitar que toda la página parpadee
+  //    al recibir cada chunk de streaming
+  const activePanel = useMemo(() => {
     switch (orchestrator.uiState) {
       case UI_STATES.CONCENTRATION:
         return (
@@ -112,11 +134,8 @@ export function LessonPage() {
             closureText={orchestrator.closureText}
             currentWordIndex={textSync.currentWordIndex}
             isSynced={textSync.isSynced}
-            isSpeaking={orchestrator.isSpeaking}
-            onRepeat={() => {
-              textSync.reset();
-              orchestrator.speakContent();
-            }}
+            isSpeaking={isSpeaking}
+            onRepeat={handleRepeatContent}
           />
         );
       case UI_STATES.QUESTION:
@@ -139,11 +158,11 @@ export function LessonPage() {
           />
         );
       case UI_STATES.FEEDBACK:
-        return orchestrator.feedback ? (
+        return orchestrator.feedbackData ? (
           <FeedbackPanel
-            fb={orchestrator.feedback}
+            fb={orchestrator.feedbackData}
             nextLessonText={orchestrator.contentText}
-            isStreaming={orchestrator.isStreaming}
+            isStreaming={isStreaming}
           />
         ) : null;
       case UI_STATES.COMPLETED:
@@ -159,7 +178,30 @@ export function LessonPage() {
       default:
         return null;
     }
-  }
+  }, [
+    orchestrator.uiState,
+    orchestrator.fullVoiceText,
+    orchestrator.transitionText,
+    orchestrator.contentText,
+    orchestrator.closureText,
+    orchestrator.questionText,
+    orchestrator.isProcessing,
+    orchestrator.options,
+    orchestrator.feedbackData,
+    orchestrator.questionResults,
+    textSync.currentWordIndex,
+    textSync.isSynced,
+    isSpeaking,
+    isStreaming,
+    handleMCQ,
+    selectedId,
+    activityCorrect,
+    handleRestart,
+    handleRepeatContent,
+    isRepeat,
+    xpEarned,
+    accuracy,
+  ]);
 
   if (error && isIdle) {
     return (
@@ -170,14 +212,14 @@ export function LessonPage() {
           </div>
           <h2 className="text-2xl font-black text-slate-800 mb-2">¡Oh no! Conexión perdida</h2>
           <p className="text-slate-600 font-medium mb-6">{error}</p>
-          <Button onClick={retry} variant="primary" className="w-full mb-4">
+          <Button onClick={retry} variant="primary" className="w-full mb-4 py-6 rounded-2xl">
             Reintentar conexión ({retryCount}/3)
           </Button>
           <Link
             to="/dashboard"
             className="inline-flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-sky-600 transition-colors outline-none"
           >
-            <IconArrowLeft className="w-4 h-4" /> Volver al mapa
+            <IconArrowLeft className="w-4 h-4" stroke={3} /> Volver al mapa
           </Link>
         </div>
       </div>
@@ -218,7 +260,7 @@ export function LessonPage() {
         voiceSettings={voiceSettings}
         updateSettings={updateSettings}
         speakContent={orchestrator.speakContent}
-        onReset={orchestrator.resetSession}
+        onReset={handleRestart}
       />
 
       <main
@@ -229,7 +271,7 @@ export function LessonPage() {
         >
           <div className="relative group">
             <div
-              className={`absolute inset-0 bg-sky-400/20 blur-3xl rounded-full transition-opacity duration-700 ${orchestrator.isSpeaking ? 'opacity-100' : 'opacity-0'}`}
+              className={`absolute inset-0 bg-sky-400/20 blur-3xl rounded-full transition-opacity duration-700 ${isSpeaking ? 'opacity-100 scale-110' : 'opacity-0 scale-100'}`}
             />
             <Mascot
               className={isIdle ? 'w-72 h-72 sm:w-96 sm:h-96' : 'w-56 h-56 sm:w-72 sm:h-72'}
@@ -241,7 +283,7 @@ export function LessonPage() {
           className={`flex flex-col transition-all duration-700 ease-out ${isIdle ? 'w-full max-w-lg' : 'w-full lg:w-7/12 bg-white/95 backdrop-blur-md rounded-[3rem] border-4 border-white shadow-[0_8px_32px_rgba(56,189,248,0.15)] min-h-[550px] overflow-y-auto relative'}`}
         >
           <div className="flex-1 flex flex-col w-full h-full animate-in fade-in slide-in-from-bottom-8 duration-500">
-            {renderPanel()}
+            {activePanel}
           </div>
         </section>
       </main>

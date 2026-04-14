@@ -1,7 +1,7 @@
-import { prisma } from '@/database/client.js';
-
 import type { KnowledgeChunk } from '../../domain/entities/knowledge-chunk.entity.js';
 import type { KnowledgeChunkRepository } from '../../domain/ports/knowledge-chunk.repository.port.js';
+
+import { prisma } from '@/database/client.js';
 
 export class PrismaKnowledgeChunkRepository implements KnowledgeChunkRepository {
   async findByAtomId(atomId: string): Promise<KnowledgeChunk[]> {

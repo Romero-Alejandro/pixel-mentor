@@ -24,7 +24,10 @@ import {
   ClassValidationError,
   LessonNotFoundError,
 } from '@/features/class/application/services/class.service.js';
-import type { ClassEntity, ClassLessonEntity } from '@/features/class/domain/entities/class.entity.js';
+import type {
+  ClassEntity,
+  ClassLessonEntity,
+} from '@/features/class/domain/entities/class.entity.js';
 
 // Mock factories for entities
 const createMockClass = (overrides: Partial<ClassEntity> = {}): ClassEntity => ({

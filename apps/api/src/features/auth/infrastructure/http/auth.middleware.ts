@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
-import { config } from '@/shared/config/index.js';
 
+import { config } from '@/shared/config/index.js';
 import type { IUserRepository } from '@/features/auth/domain/ports/user.repository.port.js';
 import type { VerifyTokenUseCase } from '@/features/auth/application/use-cases/verify-token.use-case.js';
 import { TokenInvalidError, TokenExpiredError } from '@/features/auth/domain/auth.errors.js';

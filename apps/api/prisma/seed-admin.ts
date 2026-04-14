@@ -21,7 +21,7 @@
 
 import argon2 from 'argon2';
 
-import { PrismaClient } from '../src/infrastructure/adapters/database/client.js';
+import { PrismaClient } from '../src/database/client.js';
 
 const prisma = new PrismaClient();
 

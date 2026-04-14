@@ -1,5 +1,5 @@
 import { OrchestrateRecipeUseCase } from '../orchestrate-recipe.use-case';
-import { randomUUID } from 'crypto';
+import { randomUUID } from 'node:crypto';
 import type { PedagogicalState } from '@/features/evaluation/domain/entities/pedagogical-state-machine';
 import type { Session } from '@/features/session/domain/entities/session.entity'; // Corrected import for Session type
 
@@ -300,9 +300,9 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
       const testSessionId = randomUUID(); // Unique session ID for this test
 
       // Mock randomUUID to return testSessionId for session ID generation
-      jest.spyOn(require('crypto'), 'randomUUID').mockReturnValue(testSessionId);
+      jest.spyOn(require('node:crypto'), 'randomUUID').mockReturnValue(testSessionId);
 
-      let sessionState: Session = {
+      const sessionState: Session = {
         id: testSessionId,
         studentId: studentId,
         recipeId: recipeId,
@@ -468,7 +468,7 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
       const testSessionId = randomUUID();
 
       // --- Session State Management for this test ---
-      let sessionState: Session = {
+      const sessionState: Session = {
         id: testSessionId,
         studentId: studentId,
         recipeId: recipeId,
@@ -998,7 +998,7 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
       ];
       mockRecipeRepo.findStepsByRecipeId.mockResolvedValue(nonStandardSteps);
 
-      let sessionState: Session = {
+      const sessionState: Session = {
         id: testSessionId,
         studentId,
         recipeId,

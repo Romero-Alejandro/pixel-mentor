@@ -2,10 +2,7 @@
 // Domain
 export * from './domain/entities/index.js';
 // Only export unique items from ports to avoid duplicates
-export type {
-  RecipeRepository,
-  RecipeStepWithContent,
-} from './domain/ports/index.js';
+export type { RecipeRepository, RecipeStepWithContent } from './domain/ports/index.js';
 export {
   RecipeNotFoundError,
   RecipeInactiveError,

@@ -1,7 +1,7 @@
-import { prisma } from '@/database/client.js';
-
 import type { ActivityAttempt } from '../../domain/entities/activity-attempt.entity.js';
 import type { ActivityAttemptRepository } from '../../domain/ports/activity-attempt.repository.port.js';
+
+import { prisma } from '@/database/client.js';
 
 export class PrismaActivityAttemptRepository implements ActivityAttemptRepository {
   async findByUserIdAndAtomId(userId: string, atomId: string): Promise<ActivityAttempt[]> {

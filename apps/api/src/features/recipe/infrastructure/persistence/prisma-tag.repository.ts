@@ -1,5 +1,4 @@
 import { prisma } from '@/database/client';
-
 import type { Tag } from '@/features/recipe/domain/entities/tag.entity';
 import type { TagRepository } from '@/features/recipe/domain/ports/tag.repository.port';
 

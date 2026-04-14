@@ -61,6 +61,7 @@ export function ConcentrationPanel({
   fullVoiceText,
 }: ConcentrationPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  // Note: isStreaming prop available via ConcentrationPanelProps for future use
 
   // Memorizar la división de palabras para no recalcularla en cada frame de audio
   const { transitionWords, contentWords, closureWords, tLen, cLen, lLen } = useMemo(() => {
@@ -87,8 +88,8 @@ export function ConcentrationPanel({
     }
   }, [currentWordIndex]);
 
-  // Always show full content - don't wait for audio to finish
-  // The text should be visible immediately when it arrives
+  // Always show full text content - users should be able to read while listening
+  // The current word tracking (activeT, activeC, activeL) still works for karaoke highlight
   const showAllContent = true;
 
   const visibleT = showAllContent ? tLen : Math.min(currentWordIndex, tLen);
@@ -97,9 +98,12 @@ export function ConcentrationPanel({
     ? lLen
     : Math.max(0, Math.min(currentWordIndex - tLen - cLen, lLen));
 
-  const activeT = showAllContent ? -1 : currentWordIndex - 1;
-  const activeC = showAllContent ? -1 : currentWordIndex - 1 - tLen;
-  const activeL = showAllContent ? -1 : currentWordIndex - 1 - tLen - cLen;
+  // Active word index for karaoke highlight - only disable when showAllContent is false
+  const activeT = showAllContent ? currentWordIndex - 1 : currentWordIndex - 1;
+  const activeC = showAllContent ? currentWordIndex - 1 - tLen : currentWordIndex - 1 - tLen;
+  const activeL = showAllContent
+    ? currentWordIndex - 1 - tLen - cLen
+    : currentWordIndex - 1 - tLen - cLen;
 
   return (
     <div className="flex-1 flex flex-col items-center p-6 sm:p-8 gap-6 w-full h-full min-h-0 animate-bounce-in">

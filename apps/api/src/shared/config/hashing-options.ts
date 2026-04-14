@@ -30,6 +30,4 @@ export const DEFAULT_HASH_OPTIONS = HASHING_OPTIONS;
  * Verify options - used when verifying existing hashes
  * Must include the type to match how hashes were created
  */
-export const VERIFY_HASH_OPTIONS = {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-} as any;
+export const VERIFY_HASH_OPTIONS = {} as any;

@@ -1,168 +1,180 @@
 import { z } from 'zod';
 
-// ============ Text Objects ============
+import { StepScriptSchema } from './step-script.schema.js';
+import { ActivityContentSchema } from './activity-content.schema.js';
+import { QuestionSchema } from './question.schema.js';
 
-// Allow both string and { text: string } for backward compatibility
-const TextObjectSchema = z.union([z.string(), z.object({ text: z.string() })]).optional();
+// ==================== Recipe Step Input ====================
 
-const RichTextSchema = z
-  .union([
-    z.string(), // Allow plain string for backward compatibility
-    z.object({
-      text: z.string().min(1),
-    }),
-  ])
-  .optional();
-
-const TextChunkSchema = z
-  .union([
-    z.string(), // Allow plain string for backward compatibility
-    z.object({
-      text: z.string().min(1),
-      pauseAfter: z.number().int().min(0).default(0),
-    }),
-  ])
-  .optional();
-
-const TextExampleSchema = z
-  .union([
-    z.string(), // Allow plain string for backward compatibility
-    z.object({
-      text: z.string().min(1),
-    }),
-  ])
-  .optional();
-
-// ============ Script Content ============
-
-// For backward compatibility, allow any record
-export const ScriptContentSchema = z.record(z.unknown()).optional();
-
-// Keep the strict version for future use
-export const ScriptContentSchemaStrict = z
+export const RecipeStepInputSchema = z
   .object({
-    transition: TextObjectSchema,
-    content: RichTextSchema,
-    chunks: z.array(TextChunkSchema).optional(),
-    examples: z.array(TextExampleSchema).optional(),
-    closure: TextObjectSchema,
+    atomId: z
+      .string()
+      .regex(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)
+      .optional(),
+    order: z.number().int().min(0).optional(),
+    conceptId: z
+      .string()
+      .regex(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)
+      .optional(),
+    activityId: z
+      .string()
+      .regex(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)
+      .optional(),
+    stepType: z.enum(['content', 'activity', 'question', 'intro', 'closure']).default('content'),
+    script: StepScriptSchema.optional(),
+    activity: ActivityContentSchema.optional(),
+    question: QuestionSchema.optional(),
   })
-  .optional();
+  .refine(
+    (data) => {
+      // Helper to check if instruction/question is valid (string or object with text)
+      const hasValidInstruction = (instruction: unknown): boolean => {
+        if (typeof instruction === 'string') return instruction.length > 0;
+        if (typeof instruction === 'object' && instruction !== null) {
+          const obj = instruction as { text?: string };
+          return typeof obj.text === 'string' && obj.text.length > 0;
+        }
+        return false;
+      };
 
-// ============ Activity Content ============
+      // If stepType is 'content', must have script
+      if (data.stepType === 'content' && !data.script) {
+        return false;
+      }
+      // If stepType is 'activity', must have activity OR script with kind='activity'
+      if (data.stepType === 'activity') {
+        const hasActivity = data.activity && hasValidInstruction(data.activity.instruction);
+        const hasScriptActivity =
+          data.script &&
+          typeof data.script === 'object' &&
+          (data.script as any).kind === 'activity' &&
+          hasValidInstruction((data.script as any).instruction);
+        if (!hasActivity && !hasScriptActivity) {
+          return false;
+        }
+      }
+      // If stepType is 'question', must have question OR script with kind='question'
+      if (data.stepType === 'question') {
+        // Check question.content for string or object format
+        const hasQuestionContent = (q: unknown): boolean => {
+          if (typeof q === 'string') return q.length > 0;
+          if (typeof q === 'object' && q !== null) {
+            const obj = q as { text?: string };
+            return typeof obj.text === 'string' && obj.text.length > 0;
+          }
+          return false;
+        };
+        const hasQuestion = data.question && hasQuestionContent(data.question.question);
+        const hasScriptQuestion =
+          data.script &&
+          typeof data.script === 'object' &&
+          (data.script as any).kind === 'question' &&
+          hasQuestionContent((data.script as any).question);
+        if (!hasQuestion && !hasScriptQuestion) {
+          return false;
+        }
+      }
+      // If stepType is 'intro' or 'closure', must have script
+      if ((data.stepType === 'intro' || data.stepType === 'closure') && !data.script) {
+        return false;
+      }
+      return true;
+    },
+    { message: 'Invalid step content for the specified stepType' },
+  );
 
-// For backward compatibility, allow any record
-export const ActivityOptionSchema = z.record(z.unknown()).nullable().optional();
-export const ActivityFeedbackSchema = z.record(z.unknown()).optional();
-export const ActivityContentSchema = z.record(z.unknown()).optional();
+export type RecipeStepInput = z.infer<typeof RecipeStepInputSchema>;
 
-// ============ Question Content ============
+// ==================== Recipe Step Output ====================
 
-export const QuestionFeedbackSchema = z.record(z.unknown()).optional();
-export const QuestionSchema = z.record(z.unknown()).optional();
-
-// ============ Condition ============
-
-export const ConditionSchema = z.record(z.unknown()).nullable().optional();
-
-// ============ Static Content (Union for step type) ============
-
-export const StaticContentSchema = z.object({
-  stepType: z.enum(['content', 'activity', 'question', 'intro', 'closure']),
-  script: ScriptContentSchema.optional(),
-  activity: ActivityContentSchema.optional(),
-  question: QuestionSchema.optional(),
-});
-
-// ============ Recipe Step ============
-
-export const RecipeStepSchema = z.object({
+export const RecipeStepOutputSchema = z.object({
   id: z.string().uuid(),
   recipeId: z.string().uuid(),
-  atomId: z.string().uuid().nullable().optional(),
-  order: z.number().int().nonnegative(),
-  condition: ConditionSchema,
-  onCondition: z.string().nullable().optional(),
-  createdAt: z.string().datetime().optional(),
-  conceptId: z.string().uuid().nullable().optional(),
-  activityId: z.string().uuid().nullable().optional(),
-  stepType: z.enum(['content', 'activity', 'question', 'intro', 'closure']).nullable().optional(),
-  script: ScriptContentSchema.nullable().optional(),
-  activity: ActivityContentSchema.nullable().optional(),
-  question: QuestionSchema.nullable().optional(),
+  atomId: z.string().uuid().nullable(),
+  order: z.number().int(),
+  condition: z.unknown().nullable(),
+  onCondition: z.string().nullable(),
+  createdAt: z.string().datetime(),
+  conceptId: z.string().uuid().nullable(),
+  activityId: z.string().uuid().nullable(),
+  script: StepScriptSchema.nullable(),
+  stepType: z.string().nullable(),
 });
 
-export const RecipeStepInputSchema = RecipeStepSchema.omit({
-  id: true,
-  recipeId: true,
-  createdAt: true,
+export type RecipeStepOutput = z.infer<typeof RecipeStepOutputSchema>;
+
+// ==================== Recipe Output ====================
+
+export const RecipeOutputSchema = z.object({
+  id: z.string().uuid(),
+  canonicalId: z.string(),
+  title: z.string(),
+  description: z.string().nullable(),
+  expectedDurationMinutes: z.number().int().nullable(),
+  version: z.string(),
+  published: z.boolean(),
+  moduleId: z.string().uuid().nullable(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+  steps: z.array(RecipeStepOutputSchema),
 });
 
-// ============ Recipe ============
+export type RecipeOutput = z.infer<typeof RecipeOutputSchema>;
+
+// ==================== Create Recipe Input ====================
 
 export const CreateRecipeInputSchema = z.object({
   title: z.string().min(1).max(255),
   description: z.string().max(1000).optional(),
-  expectedDurationMinutes: z.number().int().min(1).optional(),
-  moduleId: z.string().uuid().nullable().optional(),
+  expectedDurationMinutes: z.number().int().min(1).max(480).optional(),
+  moduleId: z
+    .string()
+    .regex(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)
+    .optional(),
   published: z.boolean().optional().default(false),
+  steps: z.array(RecipeStepInputSchema).optional(),
 });
 
-export const UpdateRecipeInputSchema = CreateRecipeInputSchema.partial();
+export type CreateRecipeInput = z.infer<typeof CreateRecipeInputSchema>;
+
+// ==================== Update Recipe Input ====================
+
+export const UpdateRecipeInputSchema = z.object({
+  title: z.string().min(1).max(255).optional(),
+  description: z.string().max(1000).optional(),
+  expectedDurationMinutes: z.number().int().min(1).max(480).optional(),
+  moduleId: z
+    .string()
+    .regex(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)
+    .optional(),
+  published: z.boolean().optional(),
+});
+
+export type UpdateRecipeInput = z.infer<typeof UpdateRecipeInputSchema>;
+
+// ==================== Reorder Steps Input ====================
 
 export const ReorderStepsInputSchema = z.object({
-  stepIds: z.array(z.string().uuid()),
+  stepIds: z.array(z.string()).min(1),
 });
+
+export type ReorderStepsInput = z.infer<typeof ReorderStepsInputSchema>;
+
+// ==================== Get Recipe Input ====================
 
 export const GetRecipeInputSchema = z.object({
-  recipeId: z.string().uuid(),
+  recipeId: z
+    .string()
+    .regex(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/),
 });
+
+export type GetRecipeInput = z.infer<typeof GetRecipeInputSchema>;
+
+// ==================== List Recipes Input ====================
 
 export const ListRecipesInputSchema = z.object({
-  published: z.boolean().optional(),
-  tagIds: z.array(z.string().uuid()).optional(),
+  activeOnly: z.boolean().optional().default(true),
 });
 
-export const RecipeTagSchema = z.object({
-  id: z.string().uuid(),
-  name: z.string().min(1),
-});
-
-export const RecipeSchema = z.object({
-  id: z.string().uuid(),
-  canonicalId: z.string().uuid(),
-  title: z.string().min(1),
-  description: z.string().nullable().optional(),
-  expectedDurationMinutes: z.number().int().nullable().optional(),
-  version: z.string(),
-  published: z.boolean(),
-  moduleId: z.string().uuid().nullable().optional(),
-  createdAt: z.string().datetime().optional(),
-  updatedAt: z.string().datetime().optional(),
-  steps: z.array(RecipeStepSchema).optional(),
-  tags: z.array(RecipeTagSchema).optional(),
-});
-
-// ============ Type Inferences ============
-
-export type TextObject = z.infer<typeof TextObjectSchema>;
-export type RichText = z.infer<typeof RichTextSchema>;
-export type TextChunk = z.infer<typeof TextChunkSchema>;
-export type TextExample = z.infer<typeof TextExampleSchema>;
-export type ScriptContent = z.infer<typeof ScriptContentSchema>;
-export type ActivityOption = z.infer<typeof ActivityOptionSchema>;
-export type ActivityFeedback = z.infer<typeof ActivityFeedbackSchema>;
-export type ActivityContent = z.infer<typeof ActivityContentSchema>;
-export type QuestionFeedback = z.infer<typeof QuestionFeedbackSchema>;
-export type Question = z.infer<typeof QuestionSchema>;
-export type Condition = z.infer<typeof ConditionSchema>;
-export type StaticContent = z.infer<typeof StaticContentSchema>;
-export type RecipeStep = z.infer<typeof RecipeStepSchema>;
-export type RecipeStepInput = z.infer<typeof RecipeStepInputSchema>;
-export type Recipe = z.infer<typeof RecipeSchema>;
-export type CreateRecipeInput = z.infer<typeof CreateRecipeInputSchema>;
-export type UpdateRecipeInput = z.infer<typeof UpdateRecipeInputSchema>;
-export type ReorderStepsInput = z.infer<typeof ReorderStepsInputSchema>;
-export type GetRecipeInput = z.infer<typeof GetRecipeInputSchema>;
 export type ListRecipesInput = z.infer<typeof ListRecipesInputSchema>;
-export type RecipeTag = z.infer<typeof RecipeTagSchema>;

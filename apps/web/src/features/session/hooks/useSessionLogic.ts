@@ -115,16 +115,24 @@ export function useSessionLogic(sessionId: string | undefined, voiceSettings: Vo
   }
 
   async function handleReset() {
-    if (!sessionId || isProcessing) return;
+    console.log('[RESET] handleReset started', { sessionId, isProcessing });
+    if (!sessionId || isProcessing) {
+      console.log('[RESET] blocked by guard', { sessionId, isProcessing });
+      return;
+    }
+    console.log('[RESET] showing confirm dialog...');
     if (
       !(await confirm({
         title: 'Confirmar reinicio',
         message: '¿Confirmar reinicio de sesión? Los datos se perderán.',
         variant: 'danger',
       }))
-    )
+    ) {
+      console.log('[RESET] user cancelled');
       return;
+    }
 
+    console.log('[RESET] calling API...');
     setIsProcessing(true);
     stopSpeaking();
 

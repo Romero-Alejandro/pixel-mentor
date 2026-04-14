@@ -3,7 +3,11 @@ import { randomUUID } from 'node:crypto';
 import type { RecipeRepository } from '@/features/recipe/domain/ports/recipe.repository.port';
 import { RecipeNotFoundError } from '@/features/recipe/domain/ports/recipe.repository.port';
 import type { SessionRepository } from '@/features/session/domain/ports/session.repository.port';
-import { isTerminalStatus, startSession, createSession } from '@/features/session/domain/entities/session.entity';
+import {
+  isTerminalStatus,
+  startSession,
+  createSession,
+} from '@/features/session/domain/entities/session.entity';
 
 export class StartRecipeUseCase {
   constructor(

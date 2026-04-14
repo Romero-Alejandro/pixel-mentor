@@ -3,10 +3,10 @@ import { z } from 'zod';
 
 import type { AuthRequest } from '@/features/auth/infrastructure/http/auth.middleware';
 // Re-export use cases from original location for backward compatibility
-import { GetSessionUseCase } from '@/features/session/application/use-cases/get-session.use-case';
-import { ListSessionsUseCase } from '@/features/session/application/use-cases/list-sessions.use-case';
-import { ResetSessionUseCase } from '@/features/session/application/use-cases/reset-session.use-case';
-import { CompleteSessionUseCase } from '@/features/session/application/use-cases/complete-session.use-case';
+import type { GetSessionUseCase } from '@/features/session/application/use-cases/get-session.use-case';
+import type { ListSessionsUseCase } from '@/features/session/application/use-cases/list-sessions.use-case';
+import type { ResetSessionUseCase } from '@/features/session/application/use-cases/reset-session.use-case';
+import type { CompleteSessionUseCase } from '@/features/session/application/use-cases/complete-session.use-case';
 
 export interface AppRequest extends AuthRequest {}
 

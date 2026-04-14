@@ -13,7 +13,7 @@ import type {
   LoginUseCase,
   RefreshTokenUseCase,
 } from '@/features/auth/application/use-cases/index.js';
-import { AuthError } from '@/features/auth/domain/auth.errors.js';
+import type { AuthError } from '@/features/auth/domain/auth.errors.js';
 
 const RegisterBodySchema = z.object({
   email: z.string().email(),

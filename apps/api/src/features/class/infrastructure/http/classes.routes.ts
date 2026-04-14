@@ -488,7 +488,11 @@ export function createClassRouter(deps: ClassRouterDependencies): Router {
       }
 
       const { sessionId } = await startRecipeUseCase.execute(firstLesson.recipeId, userId);
-      res.status(200).json({ sessionId, recipeId: firstLesson.recipeId, title: firstLesson.recipe?.title ?? null });
+      res.status(200).json({
+        sessionId,
+        recipeId: firstLesson.recipeId,
+        title: firstLesson.recipe?.title ?? null,
+      });
     } catch (error) {
       if (error instanceof ClassNotFoundError) {
         res.status(404).json({ error: error.message });

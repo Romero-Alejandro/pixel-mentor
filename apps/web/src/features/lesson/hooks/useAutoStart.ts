@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 
 export interface AutoStartConfig {
   maxRetries?: number;
@@ -23,16 +23,16 @@ export function useAutoStart(
   const isMountedRef = useRef(true);
   const hasStartedRef = useRef(false);
 
-  function getBackoffDelay(attempt: number): number {
-    return Math.min(baseDelayMs * Math.pow(2, attempt), maxDelayMs);
-  }
-
-  function cleanup() {
+  const cleanup = useCallback(() => {
     if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
     if (abortControllerRef.current) abortControllerRef.current.abort();
-  }
+  }, []);
 
-  function startWithRetry() {
+  const getBackoffDelay = (attempt: number): number => {
+    return Math.min(baseDelayMs * Math.pow(2, attempt), maxDelayMs);
+  };
+
+  const startWithRetry = useCallback(() => {
     if (!lessonId || hasStartedRef.current || !isMountedRef.current) return;
 
     cleanup();
@@ -43,12 +43,12 @@ export function useAutoStart(
     setIsStarting(true);
     setError(null);
 
-    async function attempt(attemptNumber: number) {
+    const attempt = async (attemptNumber: number) => {
       if (!isMountedRef.current || signal.aborted) return;
 
       try {
         setIsStarting(true);
-        const result = await onStartClass(lessonId!);
+        const result = await onStartClass(lessonId);
 
         if (!result.ok) throw result.error || new Error('Falla en el inicio');
 
@@ -74,15 +74,23 @@ export function useAutoStart(
           setIsStarting(false);
         }
       }
-    }
+    };
 
     attempt(0);
-  }
+  }, [lessonId, maxRetries, onStartClass, cleanup, baseDelayMs, maxDelayMs]);
 
-  function retry() {
+  const resetStarted = useCallback(() => {
+    hasStartedRef.current = false;
+    setIsStarting(false);
+    setError(null);
+    // Importante: También iniciar automáticamente después de reset
+    startWithRetry();
+  }, [startWithRetry]);
+
+  const retry = useCallback(() => {
     hasStartedRef.current = false;
     startWithRetry();
-  }
+  }, [startWithRetry]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -93,7 +101,7 @@ export function useAutoStart(
       isMountedRef.current = false;
       cleanup();
     };
-  }, [lessonId, autoStart]);
+  }, [lessonId, autoStart, startWithRetry, cleanup]);
 
-  return { isStarting, error, retryCount, retry };
+  return { isStarting, error, retryCount, retry, resetStarted };
 }

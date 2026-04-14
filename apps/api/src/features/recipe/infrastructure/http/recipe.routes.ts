@@ -1,9 +1,9 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import { z } from 'zod';
-import pino from 'pino';
+import type pino from 'pino';
+
 import { createLogger } from '@/shared/logger/logger.js';
 import { config } from '@/shared/config/index.js';
-
 import type { AuthRequest } from '@/features/auth/infrastructure/http/auth.middleware';
 import {
   StartRecipeInputSchema,
@@ -11,8 +11,8 @@ import {
   QuestionAnswerInputSchema,
 } from '@/shared/dto';
 // Re-export use cases from original location for backward compatibility
-import { OrchestrateRecipeUseCase } from '@/features/recipe/application/use-cases/orchestrate-recipe.use-case';
-import { QuestionAnsweringUseCase } from '@/features/recipe/application/use-cases/question-answering.use-case';
+import type { OrchestrateRecipeUseCase } from '@/features/recipe/application/use-cases/orchestrate-recipe.use-case';
+import type { QuestionAnsweringUseCase } from '@/features/recipe/application/use-cases/question-answering.use-case';
 import {
   llmGovernanceMiddleware,
   recordLLMUsage,

@@ -88,7 +88,8 @@ export class ClassAIService {
         type: 'structure',
         priority: 'high',
         title: 'Add more lessons',
-        description: 'A well-structured class typically has at least 3 lessons to cover topics thoroughly.',
+        description:
+          'A well-structured class typically has at least 3 lessons to cover topics thoroughly.',
         suggestion: `Consider breaking down your content into ${3 - lessons.length} more lesson(s) to create a more comprehensive learning experience.`,
       });
     }
@@ -101,7 +102,8 @@ export class ClassAIService {
           priority: 'low',
           title: 'Vary lesson structure',
           description: 'Consider adding more lessons to create a richer learning experience.',
-          suggestion: 'Consider varying lesson lengths - some can be shorter introductions while others can be deeper dives.',
+          suggestion:
+            'Consider varying lesson lengths - some can be shorter introductions while others can be deeper dives.',
         });
       }
     }
@@ -112,7 +114,8 @@ export class ClassAIService {
         priority: 'medium',
         title: 'Enhance class description',
         description: 'A good description helps students understand what they will learn.',
-        suggestion: 'Add a detailed description (at least 100 characters) explaining the class outcomes and what students will gain.',
+        suggestion:
+          'Add a detailed description (at least 100 characters) explaining the class outcomes and what students will gain.',
       });
     }
 
@@ -122,7 +125,8 @@ export class ClassAIService {
         priority: 'low',
         title: 'Consider creating a new version',
         description: 'Published classes can be updated by creating new versions.',
-        suggestion: 'If content needs updates, consider creating a new version to maintain version history.',
+        suggestion:
+          'If content needs updates, consider creating a new version to maintain version history.',
       });
     }
 

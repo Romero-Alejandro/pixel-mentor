@@ -1,10 +1,12 @@
-import type { AssetAttachment } from '@/shared/entities/asset-attachment';
-import type { UserProgress } from '@/features/progress/domain/entities/user-progress.entity';
-import type { Concept } from '@/features/knowledge/domain/entities/concept.entity';
-import type { Tag } from './tag.entity.js';
 import { CanonicalId } from '../valueObjects/canonical-id.vo.js';
 import { SemanticVersion } from '../valueObjects/semantic-version.vo.js';
 import { ExpectedDuration } from '../valueObjects/expected-duration.vo.js';
+
+import type { Tag } from './tag.entity.js';
+
+import type { AssetAttachment } from '@/shared/entities/asset-attachment';
+import type { UserProgress } from '@/features/progress/domain/entities/user-progress.entity';
+import type { Concept } from '@/features/knowledge/domain/entities/concept.entity';
 
 export type RecipeStatus = 'draft' | 'published' | 'archived';
 

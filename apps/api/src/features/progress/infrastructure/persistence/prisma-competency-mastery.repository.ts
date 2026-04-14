@@ -1,7 +1,7 @@
-import { prisma } from '@/database/client.js';
-
 import type { CompetencyMastery } from '../../domain/entities/competency-mastery.entity.js';
 import type { CompetencyMasteryRepository } from '../../domain/ports/competency-mastery.repository.port.js';
+
+import { prisma } from '@/database/client.js';
 
 export class PrismaCompetencyMasteryRepository implements CompetencyMasteryRepository {
   async findById(id: string): Promise<CompetencyMastery | null> {

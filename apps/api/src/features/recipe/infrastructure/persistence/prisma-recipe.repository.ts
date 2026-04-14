@@ -1,5 +1,4 @@
 import { prisma } from '@/database/client';
-
 import type { Recipe, RecipeStep } from '@/features/recipe/domain/entities/recipe.entity';
 import type {
   RecipeRepository,
@@ -127,6 +126,7 @@ export class PrismaRecipeRepository implements RecipeRepository {
   }
 
   async createStep(step: Omit<RecipeStep, 'createdAt'>): Promise<RecipeStep> {
+    console.log('[createStep] Input:', JSON.stringify(step, null, 2));
     const raw = await prisma.recipeStep.create({
       data: {
         recipeId: step.recipeId,
@@ -136,10 +136,13 @@ export class PrismaRecipeRepository implements RecipeRepository {
         onCondition: step.onCondition,
         stepType: step.stepType,
         script: step.script as never,
+        activityData: (step as any).activityData as never,
+        question: (step as any).question as never,
         conceptId: step.conceptId,
         activityId: step.activityId,
       },
     });
+    console.log('[createStep] Created:', JSON.stringify(raw, null, 2));
     return this.mapRecipeStep(raw);
   }
 

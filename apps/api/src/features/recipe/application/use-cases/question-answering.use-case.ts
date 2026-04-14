@@ -21,7 +21,9 @@ export class QuestionAnsweringUseCase {
         queryText: params.question,
         k: 3,
       });
-      ragContext = chunks.chunks.map((c: { chunk: { chunkText: string } }) => c.chunk.chunkText).join('\n');
+      ragContext = chunks.chunks
+        .map((c: { chunk: { chunkText: string } }) => c.chunk.chunkText)
+        .join('\n');
     }
 
     const response = await this.aiService.generateAnswer({

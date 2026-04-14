@@ -79,6 +79,8 @@ interface RecipeState {
   clearError: () => void;
 }
 
+import { RecipeSchema } from '@pixel-mentor/shared';
+
 export const useRecipeStore = create<RecipeState>()(
   persist(
     (set, _get) => ({

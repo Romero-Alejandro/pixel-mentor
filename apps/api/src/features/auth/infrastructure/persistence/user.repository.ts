@@ -1,6 +1,5 @@
 import { prisma } from '@/database/client.js';
 import { handlePrismaError } from '@/database/error-handler.js';
-
 import type { User, UserRole } from '@/features/auth/domain/entities/user.entity.js';
 import { DEFAULT_COHORT } from '@/features/auth/domain/entities/user.entity.js';
 import type {

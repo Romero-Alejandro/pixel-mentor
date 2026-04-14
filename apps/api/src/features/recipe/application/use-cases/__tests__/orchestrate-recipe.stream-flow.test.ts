@@ -1,5 +1,5 @@
 import { OrchestrateRecipeUseCase } from '../orchestrate-recipe.use-case';
-import { randomUUID } from 'crypto';
+import { randomUUID } from 'node:crypto';
 
 // Mock logger
 jest.mock('@/shared/logger/logger.js', () => ({
@@ -246,10 +246,10 @@ describe('OrchestrateRecipeUseCase - Streaming Flow Tests', () => {
 
     // Spy on randomUUID to return the same testSessionId whenever called during session creation
     const randomUUIDSpy = jest
-      .spyOn(require('crypto'), 'randomUUID')
+      .spyOn(require('node:crypto'), 'randomUUID')
       .mockReturnValue(testSessionId);
 
-    let sessionState: any = {
+    const sessionState: any = {
       id: testSessionId,
       studentId,
       recipeId,

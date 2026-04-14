@@ -1,10 +1,5 @@
 // Express request extensions
-export type {
-  AppRequest,
-  AppRequestHandler,
-  AnyHandler,
-  RouteHandler,
-} from './express.d.js';
+export type { AppRequest, AppRequestHandler, AnyHandler, RouteHandler } from './express.d.js';
 
 // Common type aliases
 export type {

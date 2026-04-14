@@ -2,6 +2,7 @@ import type {
   LevelConfig,
   ILevelConfigRepository,
 } from '../../domain/ports/level-config.repository.port';
+
 import { prisma } from '@/database/client.js';
 
 export class PrismaLevelConfigRepository implements ILevelConfigRepository {

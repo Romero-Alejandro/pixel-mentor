@@ -1,5 +1,4 @@
 import type { PedagogicalState } from '@/features/evaluation/domain/entities/pedagogical-state-machine';
-
 import {
   validateSessionTransition,
   type ValidatedSessionStatus,

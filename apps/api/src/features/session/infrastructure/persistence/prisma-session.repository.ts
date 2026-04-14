@@ -1,8 +1,11 @@
 import type { Prisma } from '@/database/client';
 import { prisma } from '@/database/client';
 import { handlePrismaError } from '@/database/error-handler';
-
-import type { Session, SessionStatus, SessionCheckpoint } from '@/features/session/domain/entities/session.entity';
+import type {
+  Session,
+  SessionStatus,
+  SessionCheckpoint,
+} from '@/features/session/domain/entities/session.entity';
 import type { SessionRepository } from '@/features/session/domain/ports/session.repository.port';
 import {
   SessionNotFoundError,

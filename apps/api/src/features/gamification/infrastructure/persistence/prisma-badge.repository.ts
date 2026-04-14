@@ -1,6 +1,7 @@
-import { prisma } from '@/database/client.js';
 import type { IBadgeRepository, BadgeDefinition } from '../../domain/ports/gamification.ports';
 import type { BadgeRequirement } from '../../domain/entities/badge.types';
+
+import { prisma } from '@/database/client.js';
 
 function parseRules(raw: unknown): BadgeRequirement {
   const r = raw as Record<string, unknown> | null;

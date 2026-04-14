@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useCallback, useMemo, memo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import {
@@ -8,11 +8,10 @@ import {
   IconArrowUp,
   IconArrowDown,
   IconEdit,
-  IconCheck,
   IconList,
   IconSparkles,
   IconDeviceFloppy,
-  IconSend,
+  IconRocket,
 } from '@tabler/icons-react';
 import type { RecipeStep } from '@pixel-mentor/shared';
 
@@ -25,35 +24,7 @@ import { StepEditor } from '@/features/recipe-management/components/StepEditor';
 import { AIRecipeGeneratorModal } from '@/features/recipe-management/components/AIRecipeGeneratorModal';
 import { logger } from '@/utils/logger';
 
-// --- Types & Constants ---
-
-type StepType = 'content' | 'activity' | 'question' | 'intro' | 'closure';
-
-const STEP_TYPE_LABELS: Record<StepType, string> = {
-  content: 'Contenido',
-  activity: 'Actividad',
-  question: 'Pregunta',
-  intro: 'Intro',
-  closure: 'Cierre',
-};
-
-const STEP_TYPE_COLORS: Record<StepType, string> = {
-  content: 'bg-sky-100 text-sky-700 border-sky-200',
-  activity: 'bg-purple-100 text-purple-700 border-purple-200',
-  question: 'bg-amber-100 text-amber-700 border-amber-200',
-  intro: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-  closure: 'bg-rose-100 text-rose-700 border-rose-200',
-};
-
-interface StepFormData {
-  order: number;
-  stepType: StepType;
-  script?: Record<string, unknown>;
-  activity?: Record<string, unknown>;
-  question?: Record<string, unknown>;
-}
-
-// --- Logic Helpers (SRP) ---
+// --- Helpers de Lógica ---
 
 const extractText = (obj: unknown): string => {
   if (typeof obj === 'string') return obj;
@@ -64,169 +35,135 @@ const extractText = (obj: unknown): string => {
   return '';
 };
 
-const formatStepScript = (
-  stepType: string,
-  script: Record<string, unknown> | undefined,
-): Record<string, unknown> | undefined => {
-  if (!script) return undefined;
-  if (stepType === 'activity' || stepType === 'question') return { ...script };
+const renderSafe = (val: any) => (val && typeof val === 'object' ? '' : String(val ?? ''));
 
-  const contentValue = script.content;
-  const contentText = typeof contentValue === 'string' ? contentValue : extractText(contentValue);
-
-  return {
-    transition:
-      typeof script.transition === 'string' ? { text: script.transition } : script.transition,
-    content:
-      typeof contentValue === 'string'
-        ? { text: contentText, chunks: [{ text: contentText, pauseAfter: 500 }] }
-        : contentValue,
-    examples: Array.isArray(script.examples)
-      ? script.examples.map((e) => (typeof e === 'string' ? { text: e } : e))
-      : [{ text: '' }],
-    closure: typeof script.closure === 'string' ? { text: script.closure } : script.closure,
-  };
-};
-
-const transformAIScript = (
-  stepType: string,
-  script: Record<string, unknown>,
-): Record<string, unknown> => {
+const transformAIScript = (stepType: string, script: any): Record<string, unknown> => {
   const getT = (val: any) => extractText(val);
 
-  // Handle intro and closure step types - they use the full StepContent structure
-  if (stepType === 'intro' || stepType === 'closure') {
-    const s = script as any;
-
-    // Sanitize chunks to ensure they match the schema (text: string, pauseAfter: number)
-    const sanitizeChunks = (chunks: unknown): Array<{ text: string; pauseAfter: number }> => {
-      if (!Array.isArray(chunks)) {
-        return [{ text: getT(s.content) || 'Contenido', pauseAfter: 500 }];
-      }
-      return chunks.map((chunk: any) => ({
-        text: getT(chunk?.text) || 'Contenido',
-        pauseAfter: typeof chunk?.pauseAfter === 'number' ? chunk.pauseAfter : 500,
-      }));
-    };
-
-    const contentValue = s.content;
-    const contentText = getT(contentValue);
-
-    return {
-      transition: s.transition ? { text: getT(s.transition) || '¡Vamos!' } : { text: '¡Vamos!' },
-      content: {
-        text: contentText || 'Contenido',
-        chunks: contentValue?.chunks
-          ? sanitizeChunks(contentValue.chunks)
-          : [{ text: contentText || 'Contenido', pauseAfter: 500 }],
-      },
-      examples: Array.isArray(s.examples)
-        ? s.examples.map((e: any) => ({ text: getT(e) || 'Ejemplo' }))
-        : [],
-      closure: s.closure ? { text: getT(s.closure) || '¡Muy bien!' } : { text: '¡Muy bien!' },
-    };
-  }
+  // 🛠️ FIX DE RAÍZ: Estructura base requerida por el esquema Zod del backend
+  const baseFields = {
+    transition: { text: getT(script.transition) || '¡Vamos!' },
+    content: {
+      text: getT(script.content) || 'Contenido',
+      chunks: script.content?.chunks || [
+        { text: getT(script.content) || 'Contenido', pauseAfter: 500 },
+      ],
+    },
+    examples: Array.isArray(script.examples)
+      ? script.examples.map((e: any) => ({ text: getT(e) }))
+      : [],
+    closure: { text: getT(script.closure) || '¡Muy bien!' },
+  };
 
   if (stepType === 'activity') {
-    // Sanitize options to ensure isCorrect is boolean
-    const options = (script as any).options;
-    const sanitizedOptions = Array.isArray(options)
-      ? options.map((opt: any) => ({
-          text: getT(opt?.text) || 'Opción',
-          isCorrect: typeof opt?.isCorrect === 'boolean' ? opt.isCorrect : false,
-        }))
-      : [
-          { text: 'Opción A', isCorrect: true },
-          { text: 'Opción B', isCorrect: false },
-        ];
-
-    // Ensure at least one correct option
-    if (!sanitizedOptions.some((o: any) => o.isCorrect)) {
-      sanitizedOptions[0].isCorrect = true;
-    }
-
-    // Sanitize feedback
-    const feedback = (script as any).feedback || {};
     return {
+      ...baseFields,
       kind: 'activity',
-      instruction: { text: getT((script as any).instruction) || 'Realiza la actividad' },
-      options: sanitizedOptions,
+      instruction: { text: getT(script.instruction) || 'Realiza la actividad' },
+      options: (script.options || []).map((o: any) => ({
+        text: getT(o.text || o),
+        isCorrect: typeof o.isCorrect === 'boolean' ? o.isCorrect : false,
+      })),
       feedback: {
-        correct: getT(feedback?.correct) || '¡Muy bien!',
-        incorrect: getT(feedback?.incorrect) || 'Intenta de nuevo',
+        correct: getT(script.feedback?.correct) || '¡Excelente!',
+        incorrect: getT(script.feedback?.incorrect) || 'Intenta de nuevo',
       },
     };
   }
 
   if (stepType === 'question') {
-    const feedback = (script as any).feedback || {};
     return {
+      ...baseFields,
       kind: 'question',
-      question: { text: getT((script as any).question) || '¿Qué aprendiste?' },
-      expectedAnswer: getT((script as any).expectedAnswer) || 'Una respuesta',
+      question: { text: getT(script.question) || '¿Qué aprendiste?' },
+      expectedAnswer: getT(script.expectedAnswer) || 'Una respuesta',
       feedback: {
-        correct: getT(feedback?.correct) || '¡Correcto!',
-        incorrect: getT(feedback?.incorrect) || 'Pista: piensa en lo que aprendimos',
+        correct: getT(script.feedback?.correct) || '¡Correcto!',
+        incorrect: getT(script.feedback?.incorrect) || 'Pista: revisa lo aprendido',
       },
     };
   }
 
-  // content step type - also needs chunk sanitization
-  const s = script as any;
-  const contentText = getT(s.content);
-  const contentValue = s.content;
-
-  // Reuse the chunk sanitization logic
-  const sanitizeChunksForContent = (
-    chunks: unknown,
-    fallbackText: string,
-  ): Array<{ text: string; pauseAfter: number }> => {
-    if (!Array.isArray(chunks)) {
-      return [{ text: fallbackText, pauseAfter: 500 }];
-    }
-    return chunks.map((chunk: any) => ({
-      text: getT(chunk?.text) || fallbackText,
-      pauseAfter: typeof chunk?.pauseAfter === 'number' ? chunk.pauseAfter : 500,
-    }));
-  };
-
-  const sanitizedExamples = Array.isArray(s.examples)
-    ? s.examples.map((e: any) => ({ text: getT(e) || 'Ejemplo' }))
-    : [{ text: 'Ejemplo' }];
-
-  return {
-    transition: { text: getT(s.transition) || '¡Vamos a aprender!' },
-    content: {
-      text: contentText || 'Contenido',
-      chunks: contentValue?.chunks
-        ? sanitizeChunksForContent(contentValue.chunks, contentText || 'Contenido')
-        : [{ text: contentText || 'Contenido', pauseAfter: 500 }],
-    },
-    examples: sanitizedExamples,
-    closure: { text: getT(s.closure) || '¡Muy bien!' },
-  };
+  return baseFields;
 };
 
-const getDisplayTitle = (step: RecipeStep): string => {
-  const s = step as any;
-  const target = s.script?.content || s.activity?.instruction || s.question?.question || s.title;
-  const text = typeof target === 'string' ? target : extractText(target);
-  return text ? text.slice(0, 50) + (text.length > 50 ? '...' : '') : `Paso ${step.order}`;
-};
+// --- Sub-componente de Paso (Memorizado) ---
 
-// --- Main Component ---
+const StepItem = memo(({ step, index, isLast, onMove, onEdit, onDelete }: any) => {
+  const title = extractText(
+    (step as any).script?.content ||
+      (step as any).activity?.instruction ||
+      (step as any).question?.question,
+  );
+
+  const colors: Record<string, string> = {
+    content: 'bg-sky-100 text-sky-700 border-sky-200',
+    activity: 'bg-purple-100 text-purple-700 border-purple-200',
+    question: 'bg-amber-100 text-amber-700 border-amber-200',
+    intro: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+    closure: 'bg-rose-100 text-rose-700 border-rose-200',
+  };
+
+  return (
+    <div className="group flex items-start gap-3 p-4 bg-white rounded-xl border-2 border-slate-200 hover:border-sky-300 hover:shadow-md transition-all">
+      <div className="flex flex-col gap-1">
+        <button
+          onClick={() => onMove(index, 'up')}
+          disabled={index === 0}
+          className="p-1.5 rounded-lg hover:bg-sky-50 disabled:opacity-30"
+        >
+          <IconArrowUp size={16} />
+        </button>
+        <button
+          onClick={() => onMove(index, 'down')}
+          disabled={isLast}
+          className="p-1.5 rounded-lg hover:bg-sky-50 disabled:opacity-30"
+        >
+          <IconArrowDown size={16} />
+        </button>
+      </div>
+      <div className="w-10 h-10 flex items-center justify-center bg-gradient-to-br from-sky-100 to-sky-200 rounded-full font-bold text-sky-700 shadow-sm shrink-0">
+        {index + 1}
+      </div>
+      <div className="flex-1 min-w-0">
+        <Badge
+          className={`rounded-full px-2.5 py-1 text-xs font-bold border ${colors[step.stepType] || colors.content}`}
+        >
+          {step.stepType.toUpperCase()}
+        </Badge>
+        <p className="text-sm text-slate-700 font-medium line-clamp-2 mt-1">
+          {title || `Paso ${step.order}`}
+        </p>
+      </div>
+      <div className="flex gap-1">
+        <button
+          onClick={() => onEdit(step)}
+          className="p-2 rounded-lg hover:bg-amber-50 text-amber-600"
+        >
+          <IconEdit size={18} />
+        </button>
+        <button
+          onClick={() => onDelete(step.id)}
+          className="p-2 rounded-lg hover:bg-rose-50 text-rose-600"
+        >
+          <IconTrash size={18} />
+        </button>
+      </div>
+    </div>
+  );
+});
+StepItem.displayName = 'StepItem';
+
+// --- Componente Principal ---
 
 export function RecipeEditorPage() {
-  const { recipeId } = useParams<{ recipeId: string }>();
+  const { recipeId } = useParams();
   const navigate = useNavigate();
   const { playClick, playToastSuccess } = useAudio();
   const alert = useAlert();
   const confirm = useConfirm();
-  const { user } = useAuth();
 
-  const isNewRecipe = !recipeId || recipeId === 'new';
-  const isTeacher = user?.role === 'TEACHER' || user?.role === 'ADMIN';
-
+  const isNew = !recipeId || recipeId === 'new';
   const {
     currentRecipe,
     isLoading,
@@ -239,17 +176,17 @@ export function RecipeEditorPage() {
     deleteStep,
     reorderSteps,
   } = useRecipeStore(
-    useShallow((state) => ({
-      currentRecipe: state.currentRecipe,
-      isLoading: state.isLoading,
-      fetchRecipe: state.fetchRecipe,
-      createRecipe: state.createRecipe,
-      updateRecipe: state.updateRecipe,
-      deleteRecipe: state.deleteRecipe,
-      addStep: state.addStep,
-      updateStep: state.updateStep,
-      deleteStep: state.deleteStep,
-      reorderSteps: state.reorderSteps,
+    useShallow((s) => ({
+      currentRecipe: s.currentRecipe,
+      isLoading: s.isLoading,
+      fetchRecipe: s.fetchRecipe,
+      createRecipe: s.createRecipe,
+      updateRecipe: s.updateRecipe,
+      deleteRecipe: s.deleteRecipe,
+      addStep: s.addStep,
+      updateStep: s.updateStep,
+      deleteStep: s.deleteStep,
+      reorderSteps: s.reorderSteps,
     })),
   );
 
@@ -266,226 +203,140 @@ export function RecipeEditorPage() {
   });
   const [isAIGeneratorOpen, setIsAIGeneratorOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const initializedRecipeId = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!isNewRecipe && recipeId && isTeacher) fetchRecipe(recipeId);
-  }, [recipeId, isTeacher, isNewRecipe, fetchRecipe]);
+    if (!isNew && recipeId) fetchRecipe(recipeId);
+  }, [recipeId, isNew, fetchRecipe]);
 
-  // 1. Inicialización del formulario (solo cuando cambia la receta activa)
   useEffect(() => {
-    if (isNewRecipe) {
-      if (initializedRecipeId.current !== 'new') {
-        setForm({ title: '', description: '', expectedDuration: '', published: false });
-        initializedRecipeId.current = 'new';
-      }
-    } else if (currentRecipe && currentRecipe.id === recipeId) {
-      if (initializedRecipeId.current !== recipeId) {
-        const duration = currentRecipe.expectedDurationMinutes;
-        const durationValue = typeof duration === 'number' ? duration.toString() : '';
-
-        setForm({
-          title: currentRecipe.title,
-          description: currentRecipe.description ?? '',
-          expectedDuration: durationValue,
-          published: !!currentRecipe.published,
-        });
-        initializedRecipeId.current = recipeId;
-      }
-    }
-  }, [currentRecipe, recipeId, isNewRecipe]);
-
-  const handleTogglePublished = async () => {
-    const newPublishedState = !form.published;
-    const action = newPublishedState ? 'publicar' : 'despublicar';
-
-    const confirmed = await confirm({
-      title: newPublishedState ? 'Publicar unidad' : 'Despublicar unidad',
-      message: newPublishedState
-        ? '¿Estás seguro de que quieres publicar esta unidad? Los estudiantes podrán verla.'
-        : '¿Estás seguro de que quieres despublicar esta unidad? Los estudiantes no podrán acceder a ella.',
-      variant: newPublishedState ? 'success' : 'warning',
-      confirmText: newPublishedState ? 'Publicar' : 'Despublicar',
-    });
-
-    if (confirmed) {
-      await handleSave(newPublishedState);
-    }
-  };
-
-  const handleSave = async (publishedOverride?: boolean) => {
-    if (!form.title.trim()) {
-      await alert({
-        title: 'Campo requerido',
-        message: 'El título es requerido',
-        variant: 'warning',
+    if (isNew) setForm({ title: '', description: '', expectedDuration: '', published: false });
+    else if (currentRecipe?.id === recipeId) {
+      setForm({
+        title: currentRecipe.title,
+        description: currentRecipe.description ?? '',
+        expectedDuration: renderSafe(currentRecipe.expectedDurationMinutes),
+        published: !!currentRecipe.published,
       });
-      return;
     }
+  }, [currentRecipe, recipeId, isNew]);
 
-    const targetPublished = publishedOverride !== undefined ? publishedOverride : form.published;
-
-    setIsSaving(true);
-    try {
-      const payload = {
-        title: form.title.trim(),
-        description: form.description.trim() || undefined,
-        expectedDurationMinutes: form.expectedDuration ? Number(form.expectedDuration) : undefined,
-        published: targetPublished,
-      };
-
-      if (isNewRecipe) {
-        const res = await createRecipe(payload);
-        navigate(`/units/${res.id}/edit`, { replace: true });
-      } else if (recipeId) {
-        await updateRecipe(recipeId, payload);
-      }
-
-      // Sync local state with server response
-      if (publishedOverride !== undefined) {
-        setForm((prev) => ({ ...prev, published: publishedOverride }));
-      }
-    } catch (err: any) {
-      await alert({ title: 'Error', message: err.message || 'Error al guardar', variant: 'error' });
-    } finally {
-      setIsSaving(false);
+  const handleSave = useCallback(
+    async (publish?: boolean) => {
+      if (!form.title.trim()) return alert({ title: 'Atención', message: 'Falta el título ✏️' });
+      setIsSaving(true);
       try {
+        const payload = {
+          title: form.title.trim(),
+          description: form.description.trim() || undefined,
+          expectedDurationMinutes: form.expectedDuration
+            ? Number(form.expectedDuration)
+            : undefined,
+          published: publish ?? form.published,
+        };
+        if (isNew) {
+          const res = await createRecipe(payload);
+          navigate(`/units/${res.id}/edit`, { replace: true });
+        } else if (recipeId) await updateRecipe(recipeId, payload);
+        if (publish !== undefined) setForm((f) => ({ ...f, published: publish }));
         playToastSuccess();
-      } catch (audioErr) {
-        console.warn('[handleSave] Audio error:', audioErr);
+      } catch (e) {
+        logger.error(e);
+      } finally {
+        setIsSaving(false);
       }
-    }
-  };
+    },
+    [form, isNew, recipeId, createRecipe, updateRecipe, navigate, alert, playToastSuccess],
+  );
 
-  const handleDeleteRecipe = async () => {
-    if (!recipeId || isNewRecipe) return;
+  const handleSaveStep = async (stepData: any) => {
+    if (!recipeId || isNew)
+      return alert({ title: '¡Espera!', message: 'Guarda primero la unidad ✨' });
     try {
-      await deleteRecipe(recipeId);
-      playToastSuccess();
-      navigate('/units');
-    } catch (err) {
-      logger.error('Delete recipe error', err);
-    }
-  };
-
-  const handleSaveStep = async (stepData: StepFormData) => {
-    if (!recipeId || isNewRecipe) {
-      await alert({
-        title: 'Atención',
-        message: 'Guarda la unidad antes de añadir pasos.',
-        variant: 'warning',
-      });
-      return;
-    }
-    try {
-      const script = formatStepScript(stepData.stepType, stepData.script);
-      const payload = { ...stepData, script };
-      if (stepEditor.step) {
-        await updateStep(recipeId, stepEditor.step.id, payload);
-      } else {
-        await addStep(recipeId, payload);
-      }
-      // Refresh from store to ensure we have the latest data
+      if (stepEditor.step) await updateStep(recipeId, stepEditor.step.id, stepData);
+      else await addStep(recipeId, stepData);
       await fetchRecipe(recipeId);
       setStepEditor({ isOpen: false, step: null });
       playToastSuccess();
-    } catch (err: any) {
-      await alert({
-        title: 'Error',
-        message: err.message || 'Error al guardar paso',
-        variant: 'error',
-      });
-    }
-  };
-
-  const handleDeleteStep = async (stepId: string) => {
-    if (!recipeId) return;
-    const confirmed = await confirm({
-      title: 'Eliminar paso',
-      message: '¿Estás seguro? Esta acción no se puede deshacer.',
-      variant: 'danger',
-    });
-    if (confirmed) {
-      try {
-        await deleteStep(recipeId, stepId);
-        await fetchRecipe(recipeId);
-        playToastSuccess();
-      } catch (err) {
-        logger.error('Delete step error', err);
-      }
-    }
-  };
-
-  const handleMoveStep = async (index: number, direction: 'up' | 'down') => {
-    if (!recipeId) return;
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= (currentRecipe?.steps?.length || 0)) return;
-
-    playClick();
-    const newOrder = currentRecipe?.steps?.map((s) => s.id) || [];
-    [newOrder[index], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[index]];
-
-    try {
-      await reorderSteps(recipeId, newOrder);
-      await fetchRecipe(recipeId);
-    } catch (err) {
-      logger.error('Reorder error', err);
-      // No need to manually revert - fetchRecipe will restore correct order
+    } catch (e) {
+      logger.error(e);
     }
   };
 
   const handleAIGenerated = async (draft: any) => {
     try {
-      let tid = recipeId;
-      if (isNewRecipe) {
+      let id = recipeId;
+      if (isNew) {
         const res = await createRecipe({ ...draft, published: false });
-        tid = res.id;
-        navigate(`/units/${tid}/edit`, { replace: true });
-      } else if (tid) {
-        await updateRecipe(tid, { title: draft.title, description: draft.description });
+        id = res.id;
+        navigate(`/units/${id}/edit`, { replace: true });
+      } else if (id) await updateRecipe(id, { title: draft.title, description: draft.description });
+
+      if (!id) return;
+      for (const step of draft.steps) {
+        await addStep(id, {
+          order: (currentRecipe?.steps?.length || 0) + 1,
+          stepType: step.stepType,
+          script: transformAIScript(step.stepType, step.script),
+        });
       }
-      if (!tid) return;
-      const startOrder = (currentRecipe?.steps?.length || 0) + 1;
-      console.log('[AI Apply] Starting to add steps:', {
-        startOrder,
-        stepsCount: draft.steps.length,
-      });
-      for (let i = 0; i < draft.steps.length; i++) {
-        const stepPayload = {
-          order: startOrder + i,
-          stepType: draft.steps[i].stepType,
-          script: transformAIScript(draft.steps[i].stepType, draft.steps[i].script),
-        };
-        console.log(`[AI Apply] Step ${i + 1}:`, JSON.stringify(stepPayload, null, 2));
-        await addStep(tid, stepPayload);
-      }
-      await fetchRecipe(tid);
+      await fetchRecipe(id);
       playToastSuccess();
-    } catch (err) {
-      logger.error('AI Draft error', err);
+    } catch (e) {
+      logger.error(e);
     }
   };
 
-  if (!isTeacher)
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-sky-50 to-indigo-50 flex items-center justify-center">
-        <Card variant="mission" className="max-w-md text-center p-8">
-          <IconList className="w-16 h-16 text-sky-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-black text-slate-800">Acceso restringido</h2>
-        </Card>
-      </div>
-    );
+  const stepList = useMemo(
+    () =>
+      (currentRecipe?.steps || []).map((s, i) => (
+        <StepItem
+          key={s.id}
+          step={s}
+          index={i}
+          isLast={i === (currentRecipe?.steps?.length || 0) - 1}
+          onMove={async (idx: number, dir: any) => {
+            const ids = (currentRecipe?.steps || []).map((st) => st.id);
+            const target = dir === 'up' ? idx - 1 : idx + 1;
+            [ids[idx], ids[target]] = [ids[target], ids[idx]];
+            if (recipeId) {
+              await reorderSteps(recipeId, ids);
+              await fetchRecipe(recipeId);
+              playClick();
+            }
+          }}
+          onEdit={(st: any) => setStepEditor({ isOpen: true, step: st })}
+          onDelete={async (sid: string) => {
+            if (await confirm({ title: '¿Eliminar paso?', variant: 'danger' })) {
+              if (recipeId) {
+                await deleteStep(recipeId, sid);
+                await fetchRecipe(recipeId);
+                playToastSuccess();
+              }
+            }
+          }}
+        />
+      )),
+    [
+      currentRecipe?.steps,
+      recipeId,
+      reorderSteps,
+      fetchRecipe,
+      confirm,
+      deleteStep,
+      playToastSuccess,
+      playClick,
+    ],
+  );
 
-  if (isLoading && !isNewRecipe && !currentRecipe)
+  if (isLoading && !isNew && !currentRecipe)
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-        <Spinner size="lg" className="text-sky-500" />
-        <p className="font-black text-sky-600 animate-pulse">Cargando...</p>
+      <div className="p-20 text-center">
+        <Spinner size="lg" />
       </div>
     );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen bg-gradient-to-br from-sky-50 to-indigo-50">
       <header className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b-4 border-sky-200 p-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -493,55 +344,33 @@ export function RecipeEditorPage() {
               onClick={() => navigate('/units')}
               className="p-2 hover:bg-sky-50 rounded-xl transition-colors"
             >
-              <IconArrowLeft className="w-6 h-6 text-sky-500" />
+              <IconArrowLeft className="text-sky-500" />
             </button>
             <h1 className="text-2xl font-black text-sky-700">
-              {isNewRecipe ? 'Nueva Unidad' : 'Editar Unidad'}
+              {isNew ? 'Nueva Unidad' : 'Editar Unidad'}
             </h1>
-            {currentRecipe ? (
-              <Badge variant={form.published ? 'success' : 'warning'}>
-                {form.published ? 'Publicada' : 'Borrador'}
-              </Badge>
-            ) : null}
+            <Badge variant={form.published ? 'success' : 'warning'}>
+              {form.published ? 'Publicada' : 'Borrador'}
+            </Badge>
           </div>
           <div className="flex items-center gap-3">
             <Button onClick={() => setIsAIGeneratorOpen(true)} variant="secondary">
-              <IconSparkles className="w-5 h-5" /> IA
+              <IconSparkles size={20} /> IA
             </Button>
-            {!isNewRecipe && (
+            {!isNew ? (
               <Button onClick={() => setShowDeleteConfirm(true)} variant="danger" size="sm">
-                <IconTrash className="w-4 h-4" />
+                <IconTrash size={20} />
               </Button>
-            )}
-            <div className="flex items-center gap-2">
-              {form.published ? (
-                <Button
-                  onClick={handleTogglePublished}
-                  variant="warning"
-                  isLoading={isSaving}
-                  disabled={isSaving}
-                >
-                  <IconCheck className="w-5 h-5" /> Despublicar
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleTogglePublished}
-                  variant="success"
-                  isLoading={isSaving}
-                  disabled={isSaving}
-                >
-                  <IconSend className="w-5 h-5" /> Publicar
-                </Button>
-              )}
-              <Button
-                onClick={() => handleSave()}
-                variant="primary"
-                isLoading={isSaving}
-                disabled={isSaving}
-              >
-                <IconDeviceFloppy className="w-5 h-5" /> Guardar
-              </Button>
-            </div>
+            ) : null}
+            <Button
+              onClick={() => handleSave(!form.published)}
+              variant={form.published ? 'warning' : 'success'}
+            >
+              {form.published ? 'Despublicar' : 'Publicar'}
+            </Button>
+            <Button onClick={() => handleSave()} variant="primary" isLoading={isSaving}>
+              <IconDeviceFloppy size={20} /> Guardar
+            </Button>
           </div>
         </div>
       </header>
@@ -556,7 +385,7 @@ export function RecipeEditorPage() {
                 <Input
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  placeholder="Ej: Introducción a la fotografía"
+                  placeholder="Ej: Los Dinosaurios 🦖"
                   className="text-lg"
                 />
               </div>
@@ -565,218 +394,64 @@ export function RecipeEditorPage() {
                 <Textarea
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  placeholder="Describe qué aprenderán los estudiantes en esta unidad..."
-                  className="min-h-[120px] resize-y"
+                  placeholder="¿Qué vamos a aprender hoy?"
+                  className="min-h-[120px]"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-bold text-sky-700 mb-2">
-                    Duración estimada (minutos)
-                  </label>
-                  <Input
-                    type="number"
-                    value={form.expectedDuration}
-                    onChange={(e) => setForm({ ...form, expectedDuration: e.target.value })}
-                    placeholder="Ej: 45"
-                    min="1"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Estado</label>
-                  <div className="h-full flex items-center">
-                    <div
-                      className={`w-full px-4 py-3 rounded-xl border-2 font-bold text-center transition-all ${
-                        form.published
-                          ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
-                          : 'bg-slate-50 border-slate-200 text-slate-600'
-                      }`}
-                    >
-                      {form.published ? '📢 Publicada' : '📝 Borrador'}
-                    </div>
-                  </div>
-                </div>
+              <div className="w-1/2">
+                <label className="block text-sm font-bold text-sky-700 mb-2">
+                  Duración (minutos)
+                </label>
+                <Input
+                  type="number"
+                  value={form.expectedDuration}
+                  onChange={(e) => setForm({ ...form, expectedDuration: e.target.value })}
+                  placeholder="45"
+                />
               </div>
             </div>
           </Card>
 
           <Card variant="mission" className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-black flex items-center gap-2">
-                <IconList className="text-sky-500" /> Pasos de la Unidad
-              </h2>
-              <span className="text-sm font-bold text-sky-600 bg-sky-50 px-3 py-1 rounded-full">
-                {currentRecipe?.steps?.length || 0} paso
-                {currentRecipe?.steps?.length !== 1 ? 's' : ''}
-              </span>
-            </div>
-
-            {!currentRecipe?.steps || currentRecipe.steps.length === 0 ? (
-              <div className="text-center py-12 bg-slate-50 rounded-xl border-2 border-dashed border-slate-300">
-                <IconList className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                <p className="text-slate-500 font-medium">No hay pasos aún</p>
-                <p className="text-sm text-slate-400 mt-1">Añade el primer paso para comenzar</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {currentRecipe.steps?.map((step, index) => (
-                  <div
-                    key={step.id}
-                    className="group flex items-start gap-3 p-4 bg-white rounded-xl border-2 border-slate-200 hover:border-sky-300 hover:shadow-md transition-all"
-                  >
-                    <div className="flex flex-col gap-1">
-                      <button
-                        onClick={() => handleMoveStep(index, 'up')}
-                        disabled={index === 0}
-                        className="p-1.5 rounded-lg hover:bg-sky-50 hover:text-sky-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                        title="Mover arriba"
-                      >
-                        <IconArrowUp className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleMoveStep(index, 'down')}
-                        disabled={index === (currentRecipe?.steps?.length || 0) - 1}
-                        className="p-1.5 rounded-lg hover:bg-sky-50 hover:text-sky-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                        title="Mover abajo"
-                      >
-                        <IconArrowDown className="w-4 h-4" />
-                      </button>
-                    </div>
-                    <div className="w-10 h-10 flex items-center justify-center bg-gradient-to-br from-sky-100 to-sky-200 rounded-full font-bold text-sky-700 shadow-sm">
-                      {index + 1}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                        <span
-                          className={`px-2.5 py-1 rounded-full text-xs font-bold border ${
-                            STEP_TYPE_COLORS[step.stepType as StepType] || STEP_TYPE_COLORS.content
-                          }`}
-                        >
-                          {STEP_TYPE_LABELS[step.stepType as StepType] || 'Contenido'}
-                        </span>
-                      </div>
-                      <p className="text-sm text-slate-700 font-medium line-clamp-2">
-                        {getDisplayTitle(step)}
-                      </p>
-                      <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
-                        <span className="flex items-center gap-1">
-                          <IconCheck className="w-3 h-3" />
-                          Completado
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setStepEditor({ isOpen: true, step })}
-                        className="p-2 rounded-lg hover:bg-amber-50 hover:text-amber-600 transition-colors"
-                        title="Editar paso"
-                      >
-                        <IconEdit className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteStep(step.id)}
-                        className="p-2 rounded-lg hover:bg-rose-50 hover:text-rose-600 transition-colors"
-                        title="Eliminar paso"
-                      >
-                        <IconTrash className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-                <Button
-                  onClick={() => setStepEditor({ isOpen: true, step: null })}
-                  variant="secondary"
-                  className="w-full mt-4 py-3 border-2 border-dashed border-sky-300 hover:border-sky-400 hover:bg-sky-50/50"
-                >
-                  <IconPlus className="w-5 h-5 mr-2" /> Añadir Nuevo Paso
-                </Button>
-              </div>
-            )}
-          </Card>
-        </div>
-
-        <div className="space-y-6">
-          <Card variant="mission" className="p-6">
-            <h2 className="text-lg font-black mb-4 flex items-center gap-2">
-              <IconList className="text-sky-500" /> Resumen
+            <h2 className="text-xl font-black mb-6 flex items-center gap-2">
+              <IconList className="text-sky-500" /> Pasos de la Unidad
             </h2>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-sky-50 rounded-xl border border-sky-100">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-sky-100 rounded-full flex items-center justify-center">
-                    <IconList className="w-4 h-4 text-sky-600" />
-                  </div>
-                  <span className="font-medium text-slate-700">Total pasos</span>
+            <div className="space-y-3">
+              {currentRecipe?.steps?.length === 0 ? (
+                <div className="text-center py-12 border-2 border-dashed border-slate-300 rounded-xl">
+                  <p className="text-slate-400 font-medium">Aún no hay pasos. ¡Añade el primero!</p>
                 </div>
-                <span className="text-2xl font-black text-sky-600">
-                  {currentRecipe?.steps?.length || 0}
-                </span>
-              </div>
+              ) : (
+                stepList
+              )}
+              <Button
+                onClick={() => setStepEditor({ isOpen: true, step: null })}
+                variant="secondary"
+                className="w-full mt-4 py-3 border-2 border-dashed border-sky-300 rounded-xl font-bold"
+              >
+                <IconPlus className="mr-2" /> Añadir Nuevo Paso
+              </Button>
+            </div>
+          </Card>
+        </div>
 
-              <div className="flex items-center justify-between p-3 bg-purple-50 rounded-xl border border-purple-100">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                    <IconCheck className="w-4 h-4 text-purple-600" />
-                  </div>
-                  <span className="font-medium text-slate-700">Estado</span>
-                </div>
-                <span
-                  className={`font-bold px-3 py-1 rounded-full text-sm ${
-                    form.published
-                      ? 'bg-emerald-100 text-emerald-700'
-                      : 'bg-amber-100 text-amber-700'
-                  }`}
-                >
-                  {form.published ? 'Publicada' : 'Borrador'}
-                </span>
+        <aside className="space-y-6">
+          <Card variant="mission" className="p-6 bg-white/50 border-sky-100">
+            <h2 className="text-lg font-black mb-4 flex items-center gap-2">
+              <IconRocket className="text-sky-500" /> Resumen
+            </h2>
+            <div className="space-y-4 font-bold text-slate-600">
+              <div className="flex justify-between">
+                <span>Pasos:</span>
+                <span className="text-sky-600">{currentRecipe?.steps?.length || 0}</span>
               </div>
-
-              <div className="flex items-center justify-between p-3 bg-emerald-50 rounded-xl border border-emerald-100">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
-                    <IconDeviceFloppy className="w-4 h-4 text-emerald-600" />
-                  </div>
-                  <span className="font-medium text-slate-700">Duración</span>
-                </div>
-                <span className="text-2xl font-black text-emerald-600">
-                  {form.expectedDuration || '—'} min
-                </span>
-              </div>
-
-              <div className="pt-3 border-t border-slate-200">
-                <p className="text-xs text-slate-500 text-center">
-                  {isNewRecipe
-                    ? 'Guarda la unidad para poder añadir pasos'
-                    : form.published
-                      ? 'Los estudiantes pueden ver esta unidad'
-                      : 'Esta unidad no está visible para estudiantes'}
-                </p>
+              <div className="flex justify-between">
+                <span>Tiempo:</span>
+                <span className="text-sky-600">{form.expectedDuration || 0} min</span>
               </div>
             </div>
           </Card>
-
-          <Card variant="mission" className="p-6">
-            <h2 className="text-lg font-black mb-4">Consejos</h2>
-            <ul className="space-y-2 text-sm text-slate-600">
-              <li className="flex items-start gap-2">
-                <span className="text-sky-500 mt-0.5">•</span>
-                <span>Organiza los pasos en orden lógico de aprendizaje</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-sky-500 mt-0.5">•</span>
-                <span>Publica solo cuando esté lista para los estudiantes</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-sky-500 mt-0.5">•</span>
-                <span>Usa la IA para generar contenido rápidamente</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-sky-500 mt-0.5">•</span>
-                <span>Revisa cada paso antes de publicar</span>
-              </li>
-            </ul>
-          </Card>
-        </div>
+        </aside>
       </main>
 
       <StepEditor
@@ -786,33 +461,39 @@ export function RecipeEditorPage() {
         step={stepEditor.step ?? undefined}
         order={stepEditor.step ? stepEditor.step.order : (currentRecipe?.steps?.length || 0) + 1}
       />
-
-      {showDeleteConfirm ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-[2rem] p-6 max-w-sm w-full shadow-2xl">
-            <h2 className="text-xl font-black mb-4">¿Eliminar unidad?</h2>
-            <p className="text-slate-600 mb-6">Esta acción no se puede deshacer.</p>
-            <div className="flex gap-3">
-              <Button
-                onClick={() => setShowDeleteConfirm(false)}
-                variant="secondary"
-                className="flex-1"
-              >
-                Cancelar
-              </Button>
-              <Button onClick={handleDeleteRecipe} variant="danger" className="flex-1">
-                Eliminar
-              </Button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
       <AIRecipeGeneratorModal
         isOpen={isAIGeneratorOpen}
         onClose={() => setIsAIGeneratorOpen(false)}
         onGenerated={handleAIGenerated}
       />
+
+      {showDeleteConfirm ? (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/50 backdrop-blur-sm">
+          <Card className="max-w-sm w-full p-8 rounded-[2rem] text-center shadow-2xl bg-white">
+            <IconTrash className="w-16 h-16 text-rose-400 mx-auto mb-4" />
+            <h2 className="text-2xl font-black mb-2">¿Borrar unidad?</h2>
+            <div className="flex gap-3 mt-8">
+              <Button
+                onClick={() => setShowDeleteConfirm(false)}
+                variant="secondary"
+                className="flex-1"
+              >
+                No
+              </Button>
+              <Button
+                onClick={() => {
+                  deleteRecipe(recipeId!);
+                  navigate('/units');
+                }}
+                variant="danger"
+                className="flex-1"
+              >
+                Sí, borrar
+              </Button>
+            </div>
+          </Card>
+        </div>
+      ) : null}
     </div>
   );
 }

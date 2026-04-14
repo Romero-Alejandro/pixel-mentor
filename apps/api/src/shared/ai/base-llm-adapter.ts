@@ -2,7 +2,10 @@ import type pino from 'pino';
 import type { z } from 'zod';
 
 import type { PedagogicalState } from '@/features/evaluation/domain/entities/pedagogical-state-machine.js';
-import type { PromptRepository, PromptParams } from '@/features/recipe/domain/ports/prompt.repository.port.js';
+import type {
+  PromptRepository,
+  PromptParams,
+} from '@/features/recipe/domain/ports/prompt.repository.port.js';
 import type { GenerateResponseParams as DomainGenerateResponseParams } from '@/features/recipe/domain/ports/ai-service.port.js';
 import { cleanJsonResponse } from '@/shared/utils/ai-utils';
 

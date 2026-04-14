@@ -17,7 +17,10 @@ import { z } from 'zod';
 
 import type { AdminUserService } from '@/features/auth/application/services/admin-user.service.js';
 import type { AuthError } from '@/features/auth/domain/auth.errors.js';
-import { UserAlreadyExistsError, UserNotFoundError } from '@/features/auth/domain/ports/user.repository.port.js';
+import {
+  UserAlreadyExistsError,
+  UserNotFoundError,
+} from '@/features/auth/domain/ports/user.repository.port.js';
 import { DeleteUserParamsSchema, GetUserParamsSchema } from '@/shared/dto/index.js';
 
 // ==================== Schemas ====================

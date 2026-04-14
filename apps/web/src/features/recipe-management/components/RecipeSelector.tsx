@@ -1,15 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo, useCallback, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import {
-  IconX,
-  IconPlus,
-  IconSearch,
-  IconClock,
-  IconList,
-  IconCheck,
-  IconRefresh,
-} from '@tabler/icons-react';
+import { IconX, IconPlus, IconSearch, IconClock, IconList, IconRefresh } from '@tabler/icons-react';
 import { useShallow } from 'zustand/react/shallow';
 import type { Recipe } from '@pixel-mentor/shared';
 
@@ -26,14 +18,15 @@ interface RecipeSelectorProps {
 
 type FilterTab = 'all' | 'my-recipes' | 'published';
 
-const STATUS_LABELS = {
-  draft: 'Borrador',
-  published: 'Publicada',
-} as const;
+const FILTER_MAPPING: Record<FilterTab, 'my' | 'published' | undefined> = {
+  all: undefined,
+  'my-recipes': 'my',
+  published: 'published',
+};
 
-const STATUS_VARIANTS = {
-  draft: 'warning' as const,
-  published: 'success' as const,
+const renderSafe = (value: unknown): string => {
+  if (value === null || value === undefined || typeof value === 'object') return '';
+  return String(value);
 };
 
 export function RecipeSelector({ isOpen, onClose, onSelect }: RecipeSelectorProps) {
@@ -42,7 +35,6 @@ export function RecipeSelector({ isOpen, onClose, onSelect }: RecipeSelectorProp
   const { user } = useAuth();
   const portalRef = useRef<HTMLElement | null>(null);
 
-  // Create portal container on mount
   useEffect(() => {
     let container = document.getElementById('recipe-selector-portal');
     if (!container) {
@@ -68,43 +60,42 @@ export function RecipeSelector({ isOpen, onClose, onSelect }: RecipeSelectorProp
 
   useEffect(() => {
     if (isOpen && isTeacher) {
-      let status: 'my' | 'published' | undefined;
-      if (filterTab === 'my-recipes') {
-        status = 'my';
-      } else if (filterTab === 'published') {
-        status = 'published';
-      }
+      const status = FILTER_MAPPING[filterTab];
       fetchRecipes(status ? { status } : undefined);
     }
   }, [isOpen, filterTab, isTeacher, fetchRecipes]);
 
-  const filteredRecipes = recipes.filter((recipe) => {
-    const matchesSearch =
-      !searchQuery ||
-      recipe.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      recipe.description?.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredRecipes = useMemo(() => {
+    return recipes.filter((recipe) => {
+      const normalizedTitle = recipe.title?.toLowerCase() || '';
+      const normalizedDesc = recipe.description?.toLowerCase() || '';
+      const query = searchQuery.toLowerCase();
 
-    let matchesTab = true;
-    if (filterTab === 'published') {
-      matchesTab = recipe.published;
-    } else if (filterTab === 'my-recipes') {
-      matchesTab = !recipe.published;
-    }
+      const matchesSearch =
+        !searchQuery || normalizedTitle.includes(query) || normalizedDesc.includes(query);
 
-    return matchesSearch && matchesTab;
-  });
+      let matchesTab = true;
+      if (filterTab === 'published') matchesTab = recipe.published;
+      else if (filterTab === 'my-recipes') matchesTab = !recipe.published;
 
-  const handleSelect = (recipeId: string) => {
-    playClick();
-    onSelect(recipeId);
-    onClose();
-  };
+      return matchesSearch && matchesTab;
+    });
+  }, [recipes, searchQuery, filterTab]);
 
-  const handleCreateNew = () => {
+  const handleSelect = useCallback(
+    (recipeId: string) => {
+      playClick();
+      onSelect(recipeId);
+      onClose();
+    },
+    [playClick, onSelect, onClose],
+  );
+
+  const handleCreateNew = useCallback(() => {
     playClick();
     onClose();
     navigate('/units/new/edit');
-  };
+  }, [playClick, onClose, navigate]);
 
   const handleTabChange = (tab: FilterTab) => {
     playClick();
@@ -114,168 +105,135 @@ export function RecipeSelector({ isOpen, onClose, onSelect }: RecipeSelectorProp
   if (!isOpen || !portalRef.current) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose} />
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 animate-in fade-in duration-200">
+      <div className="absolute inset-0 bg-sky-900/40 backdrop-blur-md" onClick={onClose} />
 
-      {/* Modal */}
-      <div className="relative w-full max-w-2xl bg-white rounded-[2rem] shadow-2xl max-h-[90vh] overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b-4 border-sky-200">
-          <h2 className="text-xl font-black text-slate-800">Seleccionar Unidad</h2>
+      <div className="relative w-full max-w-2xl bg-white rounded-[2.5rem] shadow-gummy border-8 border-sky-100 max-h-[85vh] overflow-hidden flex flex-col">
+        <header className="flex items-center justify-between p-6 bg-sky-50/50 border-b-4 border-sky-100">
+          <div>
+            <h2 className="text-2xl font-black text-sky-800 tracking-tight">Elegir Unidad</h2>
+            <p className="text-xs font-bold text-sky-400 uppercase tracking-widest">
+              Aventura de aprendizaje
+            </p>
+          </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => fetchRecipes()}
-              className="p-2 rounded-xl hover:bg-slate-100 transition-colors"
-              title="Actualizar recetas"
+              className="p-3 rounded-2xl bg-white border-2 border-sky-200 hover:bg-sky-100 transition-all active:scale-95"
             >
-              <IconRefresh className="w-6 h-6 text-slate-400" />
+              <IconRefresh className="w-6 h-6 text-sky-500" />
             </button>
             <button
               onClick={onClose}
-              className="p-2 rounded-xl hover:bg-slate-100 transition-colors"
+              className="p-3 rounded-2xl bg-white border-2 border-rose-200 hover:bg-rose-100 transition-all active:scale-95"
             >
-              <IconX className="w-6 h-6 text-slate-400" />
+              <IconX className="w-6 h-6 text-rose-500" />
             </button>
           </div>
+        </header>
+
+        <div className="p-6 space-y-4">
+          <div className="relative">
+            <IconSearch className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-sky-300" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="¿Qué quieres enseñar hoy?"
+              className="w-full pl-12 pr-4 py-4 bg-sky-50/50 border-4 border-sky-100 rounded-[1.5rem] text-lg font-bold text-sky-900 placeholder:text-sky-200 focus:border-sky-300 outline-none transition-all"
+            />
+          </div>
+
+          <nav className="flex gap-2">
+            {(['all', 'my-recipes', 'published'] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => handleTabChange(tab)}
+                className={`flex-1 py-3 rounded-2xl font-black text-sm transition-all active:scale-95 ${
+                  filterTab === tab
+                    ? 'bg-sky-500 text-white shadow-gummy-sm'
+                    : 'bg-white text-sky-400 border-2 border-sky-100 hover:bg-sky-50'
+                }`}
+              >
+                {tab === 'all' ? '✨ Todas' : null}
+                {tab === 'my-recipes' ? '📝 Borradores' : null}
+                {tab === 'published' ? '🎯 Listas' : null}
+              </button>
+            ))}
+          </nav>
         </div>
 
-        {/* Search & Filters */}
-        <div className="p-4 border-b border-slate-100">
-          <div className="flex gap-3 mb-4">
-            <div className="flex-1 relative">
-              <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar recetas..."
-                className="w-full pl-10 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-base focus:border-sky-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-100"
-              />
-            </div>
-          </div>
-
-          {/* Tabs */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => handleTabChange('all')}
-              className={`px-4 py-2 rounded-xl font-bold text-sm transition-all ${
-                filterTab === 'all'
-                  ? 'bg-sky-400 text-white'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              Todas
-            </button>
-            <button
-              onClick={() => handleTabChange('my-recipes')}
-              className={`px-4 py-2 rounded-xl font-bold text-sm transition-all ${
-                filterTab === 'my-recipes'
-                  ? 'bg-sky-400 text-white'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              Mis Unidades
-            </button>
-            <button
-              onClick={() => handleTabChange('published')}
-              className={`px-4 py-2 rounded-xl font-bold text-sm transition-all ${
-                filterTab === 'published'
-                  ? 'bg-sky-400 text-white'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              Publicadas
-            </button>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-3 custom-scrollbar">
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-8">
-              <Spinner size="lg" className="text-sky-500 mb-4" />
-              <p className="text-slate-500 font-medium">Cargando recetas...</p>
+            <div className="flex flex-col items-center justify-center py-12">
+              <Spinner size="lg" className="text-sky-400" />
+              <p className="mt-4 font-black text-sky-300">Buscando tesoros...</p>
             </div>
           ) : filteredRecipes.length === 0 ? (
-            <div className="text-center py-8">
-              <IconSearch className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-              <p className="text-slate-500 font-medium">
-                {searchQuery ? 'No se encontraron recetas' : 'No hay recetas disponibles'}
+            <div className="text-center py-12 bg-slate-50 rounded-[2rem] border-4 border-dashed border-slate-200">
+              <p className="font-bold text-slate-400 italic">
+                ¡Vaya! No encontramos nada por aquí.
               </p>
-              <Button onClick={handleCreateNew} variant="primary" className="mt-4">
-                <IconPlus className="w-5 h-5 mr-2" />
-                Crear Nueva Unidad
-              </Button>
             </div>
           ) : (
-            <div className="space-y-3">
-              {filteredRecipes.map((recipe) => (
-                <RecipeSelectorCard key={recipe.id} recipe={recipe} onSelect={handleSelect} />
-              ))}
-            </div>
+            filteredRecipes.map((recipe) => (
+              <RecipeSelectorCard key={recipe.id} recipe={recipe} onSelect={handleSelect} />
+            ))
           )}
         </div>
 
-        {/* Footer */}
-        <div className="p-4 border-t-4 border-sky-200">
-          <Button onClick={handleCreateNew} variant="secondary" className="w-full">
-            <IconPlus className="w-5 h-5 mr-2" />
+        <footer className="p-6 bg-slate-50 border-t-4 border-slate-100">
+          <Button
+            onClick={handleCreateNew}
+            variant="primary"
+            className="w-full py-6 rounded-2xl text-xl shadow-gummy"
+          >
+            <IconPlus className="w-6 h-6 mr-2" stroke={3} />
             Crear Nueva Unidad
           </Button>
-        </div>
+        </footer>
       </div>
     </div>,
     portalRef.current,
   );
 }
 
-interface RecipeSelectorCardProps {
-  recipe: Recipe;
-  onSelect: (recipeId: string) => void;
-}
+const RecipeSelectorCard = memo(
+  ({ recipe, onSelect }: { recipe: Recipe; onSelect: (id: string) => void }) => {
+    const stepCount = recipe.steps?.length ?? 0;
 
-function RecipeSelectorCard({ recipe, onSelect }: RecipeSelectorCardProps) {
-  const truncatedDescription = recipe.description
-    ? recipe.description.length > 80
-      ? `${recipe.description.slice(0, 80)}...`
-      : recipe.description
-    : '';
+    return (
+      <div
+        className="p-5 bg-white rounded-[1.5rem] border-4 border-sky-50 hover:border-sky-200 hover:bg-sky-50/30 cursor-pointer transition-all active:scale-[0.98] group"
+        onClick={() => onSelect(recipe.id)}
+      >
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-black text-sky-900 truncate">{renderSafe(recipe.title)}</h3>
+          <Badge variant={recipe.published ? 'success' : 'warning'} className="rounded-full px-3">
+            {recipe.published ? 'Publicada' : 'Borrador'}
+          </Badge>
+        </div>
 
-  const stepCount = recipe.steps?.length ?? 0;
+        <p className="text-sm font-medium text-slate-400 line-clamp-1 mb-3">
+          {renderSafe(recipe.description) || '¡Dale una descripción a esta unidad!'}
+        </p>
 
-  return (
-    <div
-      className="p-4 bg-slate-50 rounded-xl border-2 border-slate-200 hover:border-sky-300 hover:bg-sky-50 cursor-pointer transition-all group"
-      onClick={() => onSelect(recipe.id)}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-bold text-slate-800 truncate">{recipe.title}</h3>
-            <Badge variant={recipe.published ? STATUS_VARIANTS.published : STATUS_VARIANTS.draft}>
-              {recipe.published ? <IconCheck className="w-3 h-3 mr-1" /> : null}
-              {recipe.published ? STATUS_LABELS.published : STATUS_LABELS.draft}
-            </Badge>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-sky-100/50 rounded-full text-[10px] font-black text-sky-600 uppercase">
+            <IconClock className="w-3 h-3" stroke={3} />
+            {renderSafe(recipe.expectedDurationMinutes)} MIN
           </div>
-          {truncatedDescription ? (
-            <p className="text-sm text-slate-500 truncate mb-2">{truncatedDescription}</p>
-          ) : null}
-          <div className="flex items-center gap-3 text-xs text-slate-400">
-            {recipe.expectedDurationMinutes ? (
-              <span className="flex items-center gap-1">
-                <IconClock className="w-3 h-3" />
-                {recipe.expectedDurationMinutes} min
-              </span>
-            ) : null}
-            <span className="flex items-center gap-1">
-              <IconList className="w-3 h-3" />
-              {stepCount} paso{stepCount !== 1 ? 's' : ''}
-            </span>
-            <span className="font-mono">v{recipe.version}</span>
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-purple-100/50 rounded-full text-[10px] font-black text-purple-600 uppercase">
+            <IconList className="w-3 h-3" stroke={3} />
+            {stepCount} PASOS
+          </div>
+          <div className="ml-auto text-[10px] font-black text-slate-300 font-mono">
+            V{renderSafe(recipe.version)}
           </div>
         </div>
       </div>
-    </div>
-  );
-}
+    );
+  },
+);
+
+RecipeSelectorCard.displayName = 'RecipeSelectorCard';

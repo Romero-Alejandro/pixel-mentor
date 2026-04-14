@@ -1,6 +1,6 @@
 /**
  * AI Recipe SSE Streaming Tests
- * 
+ *
  * Tests for the SSE endpoint and streaming functionality.
  * Uses CommonJS require since Jest is configured for CommonJS.
  */
@@ -10,7 +10,7 @@ const { z } = require('zod');
 describe('AI Recipe SSE Endpoint', () => {
   const baseUrl = '/api/ai';
   const streamEndpoint = '/generate-recipe/stream';
-  
+
   describe('Endpoint Configuration', () => {
     it('should have correct base path', () => {
       expect(baseUrl).toBe('/api/ai');
@@ -131,7 +131,9 @@ describe('GeneratedStepSchema', () => {
       closure: z.union([z.string(), z.object({ text: z.string() })]).optional(),
       instruction: z.union([z.string(), z.object({ text: z.string() })]).optional(),
       options: z.array(z.object({ text: z.string(), isCorrect: z.boolean() })).optional(),
-      feedback: z.object({ correct: z.string().optional(), incorrect: z.string().optional() }).optional(),
+      feedback: z
+        .object({ correct: z.string().optional(), incorrect: z.string().optional() })
+        .optional(),
       question: z.union([z.string(), z.object({ text: z.string() })]).optional(),
       expectedAnswer: z.string().optional(),
       hint: z.union([z.string(), z.object({ text: z.string() })]).optional(),

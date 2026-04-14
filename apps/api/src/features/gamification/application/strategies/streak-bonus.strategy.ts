@@ -32,7 +32,8 @@ export const HIGH_STREAK_THRESHOLD = 30;
  */
 export class StreakBonusStrategy implements IRewardStrategy {
   readonly name = 'StreakBonusStrategy';
-  readonly description = 'Awards bonus XP for maintaining streaks (5+ days = +10 XP, 30+ days = +25 XP)';
+  readonly description =
+    'Awards bonus XP for maintaining streaks (5+ days = +10 XP, 30+ days = +25 XP)';
 
   async canApply(context: RewardContext): Promise<boolean> {
     if (context.event.type !== GameDomainEvents.DAILY_LOGIN) {

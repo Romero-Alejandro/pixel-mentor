@@ -296,8 +296,13 @@ export const api = {
       published?: boolean;
     },
   ) => {
+    console.log('[API updateRecipe] Request:', { recipeId, data });
     const { data: res } = await apiClient.patch(`/api/recipes/${recipeId}`, data);
-    return RecipeSchema.parse(res);
+    console.log('[API updateRecipe] Response:', res);
+    console.log('[API updateRecipe] Parsing with RecipeSchema...');
+    const parsed = RecipeSchema.parse(res);
+    console.log('[API updateRecipe] Parsed successfully:', parsed);
+    return parsed;
   },
   deleteRecipe: async (recipeId: string) => {
     await apiClient.delete(`/api/recipes/${recipeId}`);
@@ -316,8 +321,17 @@ export const api = {
       question?: Record<string, unknown>;
     },
   ) => {
-    const { data } = await apiClient.post(`/api/recipes/${recipeId}/steps`, step);
-    return data as RecipeStep;
+    console.log('[API addStep] Sending request:', { recipeId, step: JSON.stringify(step) });
+    try {
+      const { data } = await apiClient.post(`/api/recipes/${recipeId}/steps`, step);
+      return data as RecipeStep;
+    } catch (err: any) {
+      console.error('[API addStep] Error response:', {
+        status: err.response?.status,
+        data: err.response?.data,
+      });
+      throw err;
+    }
   },
   updateStep: async (
     recipeId: string,

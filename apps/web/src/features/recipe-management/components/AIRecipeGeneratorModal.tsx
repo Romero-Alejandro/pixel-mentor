@@ -12,7 +12,7 @@ import {
 import { useAudio } from '@/contexts/AudioContext';
 import { useAlert } from '@/hooks/useConfirmationDialogs';
 import { Button, Input } from '@/components/ui';
-import { apiClient } from '@/services/api';
+import { getToken } from '@/services/api';
 
 interface GeneratedStep {
   order: number;
@@ -111,7 +111,8 @@ export function AIRecipeGeneratorModal({
     setIsGenerating(true);
     setGeneratedSteps([]); // Reset for streaming
 
-    // Build SSE URL
+    // Build SSE URL with token in query string (EventSource cannot send HTTP headers)
+    // This is the standard pattern for SSE in the codebase - same as useVoice.ts
     const params = new URLSearchParams({
       topic: topic.trim(),
       targetAgeMin: String(targetAgeMin),
@@ -119,64 +120,92 @@ export function AIRecipeGeneratorModal({
       objectives: validObjectives.map((obj) => obj.text.trim()).join(','),
     });
 
+    // Add auth token to URL - EventSource cannot send custom headers
+    const token = getToken();
+    if (token) {
+      params.set('token', token);
+    }
+
     const eventSource = new EventSource(`/api/ai/generate-recipe/stream?${params}`);
 
-    // Track steps and progress
-    const steps: any[] = [];
-    let progress = 0;
+    // Track steps and progress with local refs that persist across event calls
+    const receivedDataRef = { current: { steps: [] as any[], progress: 0, complete: false } };
 
-    eventSource.onmessage = (event) => {
+    // Handle step events
+    eventSource.addEventListener('step', (event: MessageEvent) => {
       try {
         const data = JSON.parse(event.data);
-
-        switch (event.type) {
-          case 'step':
-            steps.push(data);
-            setGeneratedSteps([...steps]);
-            break;
-          case 'progress':
-            progress = data.progress || 0;
-            setGenerationProgress(progress);
-            break;
-          case 'complete':
-            // Convert steps to draft format
-            const draft = {
-              title: `${topic.trim()} - Unidad IA`,
-              description: `Unidad educativa sobre ${topic.trim()}`,
-              expectedDurationMinutes: 30,
-              steps: steps,
-              qualityValidation: { passed: true, errors: [], warnings: [] },
-            };
-            setGeneratedDraft(draft);
-            setStep('preview');
-            eventSource.close();
-            setIsGenerating(false);
-            break;
-          case 'error':
-            console.error('SSE Error:', data);
-            alert({
-              title: 'Error',
-              message: data.message || 'Error al generar la unidad',
-              variant: 'error',
-            });
-            eventSource.close();
-            setIsGenerating(false);
-            break;
-        }
+        receivedDataRef.current.steps.push(data);
+        setGeneratedSteps([...receivedDataRef.current.steps]);
       } catch (e) {
-        console.error('Parse error:', e);
+        console.error('SSE step parse error:', e);
       }
-    };
+    });
 
-    eventSource.onerror = (err) => {
-      console.error('EventSource error:', err);
-      alert({
-        title: 'Error',
-        message: 'Error de conexión. Intenta de nuevo.',
-        variant: 'error',
-      });
+    // Handle progress events
+    eventSource.addEventListener('progress', (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data);
+        const progress = data.progress || 0;
+        receivedDataRef.current.progress = progress;
+        setGenerationProgress(progress);
+      } catch (e) {
+        console.error('SSE progress parse error:', e);
+      }
+    });
+
+    // Handle completion
+    eventSource.addEventListener('complete', () => {
+      try {
+        receivedDataRef.current.complete = true;
+        // Convert steps to draft format
+        const draft = {
+          title: `${topic.trim()} - Unidad IA`,
+          description: `Unidad educativa sobre ${topic.trim()}`,
+          expectedDurationMinutes: 30,
+          steps: receivedDataRef.current.steps,
+          qualityValidation: { passed: true, errors: [], warnings: [] },
+        };
+        setGeneratedDraft(draft);
+        setStep('preview');
+        eventSource.close();
+        setIsGenerating(false);
+      } catch (e) {
+        console.error('SSE complete parse error:', e);
+      }
+    });
+
+    // Handle error events
+    eventSource.addEventListener('error', (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.error('SSE Error:', data);
+        alert({
+          title: 'Error',
+          message: data.message || 'Error al generar la unidad',
+          variant: 'error',
+        });
+      } catch (e) {
+        console.error('SSE error parse error or connection closed:', e);
+      }
       eventSource.close();
       setIsGenerating(false);
+    });
+
+    // Handle connection errors (generic onerror)
+    // This fires when connection is lost, but it's normal after 'complete' event
+    eventSource.onerror = (err) => {
+      // Only treat as error if we haven't received any data
+      if (!receivedDataRef.current.steps.length && !receivedDataRef.current.progress && !receivedDataRef.current.complete) {
+        console.error('EventSource connection error:', err);
+        alert({
+          title: 'Error',
+          message: 'Error de conexión. Intenta de nuevo.',
+          variant: 'error',
+        });
+        setIsGenerating(false);
+      }
+      // Otherwise, it's expected - connection closed after stream ended
     };
   };
 

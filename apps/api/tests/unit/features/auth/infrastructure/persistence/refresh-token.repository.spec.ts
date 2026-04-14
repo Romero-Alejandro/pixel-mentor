@@ -13,7 +13,6 @@ jest.mock('@/database/client.js', () => ({
   },
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { prisma } = require('@/database/client.js');
 
 describe('PrismaRefreshTokenRepository', () => {

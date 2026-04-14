@@ -2,9 +2,10 @@
  * Prisma-based ClassLesson Repository.
  */
 
-import { prisma } from '@/database/client.js';
 import type { IClassLessonRepository } from '../../domain/ports/class.repository.port';
 import type { ClassLessonEntity } from '../../domain/entities/class.entity';
+
+import { prisma } from '@/database/client.js';
 
 function mapPrismaToClassLessonEntity(prismaLesson: {
   id: string;
@@ -36,7 +37,9 @@ export class PrismaClassLessonRepository implements IClassLessonRepository {
     return lessons.map(mapPrismaToClassLessonEntity);
   }
 
-  async create(lessonData: Omit<ClassLessonEntity, 'id' | 'createdAt' | 'updatedAt'>): Promise<ClassLessonEntity> {
+  async create(
+    lessonData: Omit<ClassLessonEntity, 'id' | 'createdAt' | 'updatedAt'>,
+  ): Promise<ClassLessonEntity> {
     const created = await prisma.classLesson.create({
       data: {
         classId: lessonData.classId,

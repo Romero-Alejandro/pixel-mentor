@@ -10,6 +10,7 @@
  */
 
 import { EventEmitter } from 'node:events';
+
 import {
   type PedagogicalState,
   type StateEventType,

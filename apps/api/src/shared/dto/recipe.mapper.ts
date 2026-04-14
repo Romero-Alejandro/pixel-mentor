@@ -1,43 +1,24 @@
-/**
- * Recipe DTO mappers for API responses.
- *
- * Converts internal domain types (with Value Objects) to API response types (with primitives).
- * This ensures JSON serialization works correctly without exposing internal Value Object classes.
- */
+import type { Recipe, RecipeStep } from '@/features/recipe/domain/entities/recipe.entity.js';
 
-import type { Recipe } from '@/features/recipe/domain/entities/recipe.entity.js';
-import type { RecipeStep } from '@/features/recipe/domain/entities/recipe.entity.js';
-
-/**
- * Helper to safely extract primitive value from a Value Object
- * Value Objects have getters like .value, .minutes that return the underlying primitive
- */
-function extractValue(obj: unknown, prop: string): unknown {
-  if (obj === null || obj === undefined) {
-    return null;
-  }
-
-  // Check if it's an object with a getter for the property
-  if (typeof obj === 'object' && prop in obj) {
-    const value = (obj as Record<string, unknown>)[prop];
-    // If it's a Value Object with a getter, call it
-    if (value && typeof value === 'object') {
-      if ('value' in value) {
-        return (value as { value: unknown }).value;
-      }
-      if ('minutes' in value) {
-        return (value as { minutes: unknown }).minutes;
-      }
-    }
-    return value;
-  }
-
-  return null;
+interface ValueObject<T> {
+  value?: T;
+  minutes?: T;
 }
 
-/**
- * Convert RecipeStep to a plain object with primitives
- */
+function isValueObject(obj: unknown): obj is ValueObject<unknown> {
+  return obj !== null && typeof obj === 'object' && ('value' in obj || 'minutes' in obj);
+}
+
+function extractPrimitive(obj: unknown, key: string): unknown {
+  if (!obj || typeof obj !== 'object') return null;
+  const target = (obj as Record<string, unknown>)[key];
+
+  if (isValueObject(target)) {
+    return target.minutes ?? target.value;
+  }
+  return target ?? null;
+}
+
 function mapRecipeStepToOutput(step: RecipeStep): Record<string, unknown> {
   return {
     id: step.id,
@@ -50,28 +31,24 @@ function mapRecipeStepToOutput(step: RecipeStep): Record<string, unknown> {
     conceptId: step.conceptId ?? null,
     activityId: step.activityId ?? null,
     script: step.script ?? null,
+    activity: (step as any).activity ?? null,
+    question: (step as any).question ?? null,
     stepType: step.stepType ?? null,
   };
 }
 
-/**
- * Convert Recipe to API output format with primitive values
- * Handles Value Objects properly by extracting their underlying values
- */
 export function mapRecipeToOutput(recipe: Recipe): Record<string, unknown> {
-  // Extract values from Value Objects using the getters
-  const canonicalId = extractValue(recipe, 'canonicalId') ?? '';
-  const expectedDurationMinutes = extractValue(recipe, 'expectedDurationMinutes') ?? null;
-  const version = extractValue(recipe, 'version') ?? '1.0.0';
+  const canonicalId = extractPrimitive(recipe, 'canonicalId');
+  const duration = extractPrimitive(recipe, 'expectedDurationMinutes');
+  const version = extractPrimitive(recipe, 'version');
 
   return {
     id: recipe.id,
-    canonicalId: String(canonicalId),
+    canonicalId: canonicalId ? String(canonicalId) : '',
     title: recipe.title,
     description: recipe.description ?? null,
-    expectedDurationMinutes:
-      expectedDurationMinutes !== null ? Number(expectedDurationMinutes) : null,
-    version: String(version),
+    expectedDurationMinutes: duration !== null ? Number(duration) : null,
+    version: version ? String(version) : '1.0.0',
     published: recipe.published,
     moduleId: recipe.moduleId ?? null,
     authorId: recipe.authorId,
@@ -85,9 +62,6 @@ export function mapRecipeToOutput(recipe: Recipe): Record<string, unknown> {
   };
 }
 
-/**
- * Convert array of Recipes to API output format
- */
 export function mapRecipesToOutput(recipes: Recipe[]): Record<string, unknown>[] {
   return recipes.map(mapRecipeToOutput);
 }

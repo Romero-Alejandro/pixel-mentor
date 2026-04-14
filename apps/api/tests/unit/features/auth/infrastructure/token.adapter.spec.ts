@@ -10,18 +10,15 @@ jest.mock('@/shared/config/index.js', () => ({
   },
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const {
   JwtAccessTokenService,
   JwtRefreshTokenService,
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
 } = require('@/features/auth/infrastructure/token.adapter.js');
 
 const TEST_JWT_SECRET = 'test-jwt-secret-that-is-at-least-32-characters-long';
 const TEST_JWT_REFRESH_SECRET = 'test-refresh-secret-that-is-at-least-32-chars';
 
 describe('JwtAccessTokenService', () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let service: any;
 
   beforeEach(() => {
@@ -135,7 +132,6 @@ describe('JwtAccessTokenService', () => {
 });
 
 describe('JwtRefreshTokenService', () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let service: any;
 
   beforeEach(() => {
@@ -238,7 +234,6 @@ describe('JwtRefreshTokenService', () => {
         },
       }));
 
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const {
         JwtRefreshTokenService: FallbackService,
       } = require('@/features/auth/infrastructure/token.adapter.js');

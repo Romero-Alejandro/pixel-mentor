@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback, useMemo, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   IconTrash,
@@ -7,27 +7,93 @@ import {
   IconPlus,
   IconClock,
   IconEdit,
-  IconX,
-  IconCheck,
   IconExternalLink,
   IconList,
   IconSearch,
 } from '@tabler/icons-react';
 import { useShallow } from 'zustand/react/shallow';
-import type { ClassLesson, Recipe } from '@pixel-mentor/shared';
+import type { ClassLesson } from '@pixel-mentor/shared';
 
 import { useAudio } from '@/contexts/AudioContext';
 import { useRecipeStore } from '@/features/recipe-management/stores/recipe.store';
 import { Button, Badge, Card, Modal } from '@/components/ui';
 import { RecipeSelector } from '@/features/recipe-management/components';
+import { logger } from '@/utils/logger';
 
-interface ClassLessonListProps {
-  lessons: ClassLesson[];
-  onAddLesson: (recipeId: string) => void;
-  onRemoveLesson: (lessonId: string) => void;
-  onReorder: (lessonIds: string[]) => void;
-  onEditLesson?: (lessonId: string, data: { recipeId: string }) => void;
-}
+// Helper de seguridad definitivo
+const renderSafe = (val: any): string => {
+  if (!val || (typeof val === 'object' && !Array.isArray(val))) return '';
+  return String(val);
+};
+
+const LessonCard = memo(
+  ({ lesson, index, isLast, onMoveUp, onMoveDown, onEdit, onDelete }: any) => (
+    <Card
+      variant="mission"
+      className="group border-8 border-white bg-white shadow-gummy shadow-sky-100/50 hover:border-sky-200 transition-all p-5"
+    >
+      <div className="flex items-center gap-5">
+        <div className="flex flex-col gap-1">
+          <button
+            onClick={() => onMoveUp(index)}
+            disabled={index === 0}
+            className="p-1 text-sky-200 hover:text-sky-500 disabled:opacity-10 transition-colors"
+          >
+            <IconArrowUp size={28} stroke={4} />
+          </button>
+          <button
+            onClick={() => onMoveDown(index)}
+            disabled={isLast}
+            className="p-1 text-sky-200 hover:text-sky-500 disabled:opacity-10 transition-colors"
+          >
+            <IconArrowDown size={28} stroke={4} />
+          </button>
+        </div>
+
+        <div className="w-14 h-14 bg-sky-100 rounded-[1.2rem] flex items-center justify-center font-black text-2xl text-sky-600 border-4 border-white shadow-md shrink-0">
+          {index + 1}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <h3 className="text-xl font-black text-sky-900 truncate mb-2">
+            {renderSafe(lesson.recipe?.title) || 'Unidad sin título'}
+          </h3>
+          <div className="flex gap-2">
+            {lesson.recipe?.expectedDurationMinutes ? (
+              <Badge variant="info" className="rounded-full border-2 border-sky-100 font-black">
+                <IconClock size={14} stroke={3} className="mr-1" />{' '}
+                {renderSafe(lesson.recipe.expectedDurationMinutes)} MIN
+              </Badge>
+            ) : null}
+            <Badge
+              variant={lesson.recipeId ? 'success' : 'warning'}
+              className="rounded-full border-2 border-white font-black uppercase text-[10px]"
+            >
+              {lesson.recipeId ? 'Lista' : 'Sin Unidad'}
+            </Badge>
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={() => onEdit(lesson)}
+            className="p-4 rounded-2xl bg-amber-50 text-amber-500 border-4 border-amber-100 hover:bg-amber-100 transition-all active:scale-90"
+          >
+            <IconEdit size={24} stroke={3} />
+          </button>
+          <button
+            onClick={() => onDelete(lesson)}
+            className="p-4 rounded-2xl bg-rose-50 text-rose-500 border-4 border-rose-100 hover:bg-rose-100 transition-all active:scale-90"
+          >
+            <IconTrash size={24} stroke={3} />
+          </button>
+        </div>
+      </div>
+    </Card>
+  ),
+);
+
+LessonCard.displayName = 'LessonCard';
 
 export function ClassLessonList({
   lessons,
@@ -35,404 +101,205 @@ export function ClassLessonList({
   onRemoveLesson,
   onReorder,
   onEditLesson,
-}: ClassLessonListProps) {
+}: any) {
   const { playClick } = useAudio();
   const navigate = useNavigate();
-
-  // Recipe store for fetching selected recipe details
-  const { recipes, fetchRecipes } = useRecipeStore(
-    useShallow((state) => ({
-      recipes: state.recipes,
-      fetchRecipes: state.fetchRecipes,
+  const { recipes, fetchRecipes, fetchRecipe } = useRecipeStore(
+    useShallow((s) => ({
+      recipes: s.recipes,
+      fetchRecipes: s.fetchRecipes,
+      fetchRecipe: s.fetchRecipe,
     })),
   );
 
-  // Recipe selector modal state
-  const [isRecipeSelectorOpen, setIsRecipeSelectorOpen] = useState(false);
+  const [ui, setUi] = useState({
+    selector: false,
+    edit: false,
+    del: false,
+    current: null as ClassLesson | null,
+    editId: '',
+  });
 
-  // Edit modal state
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editingLesson, setEditingLesson] = useState<ClassLesson | null>(null);
-  const [editRecipeId, setEditRecipeId] = useState('');
-
-  // Delete confirmation modal state
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [lessonToDelete, setLessonToDelete] = useState<ClassLesson | null>(null);
-
-  const handleMoveUp = (index: number) => {
-    if (index === 0) return;
-    playClick();
-    const newOrder = [...lessons];
-    [newOrder[index - 1], newOrder[index]] = [newOrder[index], newOrder[index - 1]];
-    onReorder(newOrder.map((l) => l.id));
-  };
-
-  const handleMoveDown = (index: number) => {
-    if (index === lessons.length - 1) return;
-    playClick();
-    const newOrder = [...lessons];
-    [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
-    onReorder(newOrder.map((l) => l.id));
-  };
-
-  const { fetchRecipe } = useRecipeStore(
-    useShallow((state) => ({
-      fetchRecipe: state.fetchRecipe,
-    })),
+  const handleMove = useCallback(
+    (idx: number, dir: 'up' | 'down') => {
+      playClick();
+      const newOrder = [...lessons];
+      const target = dir === 'up' ? idx - 1 : idx + 1;
+      [newOrder[idx], newOrder[target]] = [newOrder[target], newOrder[idx]];
+      onReorder(newOrder.map((l) => l.id));
+    },
+    [lessons, onReorder, playClick],
   );
 
-  const handleEditClick = async (lesson: ClassLesson) => {
+  const handleEditConfirm = useCallback(async () => {
+    if (!ui.current || !onEditLesson) return;
     playClick();
-    setEditingLesson(lesson);
-    setEditRecipeId(lesson.recipeId ?? '');
-    setIsEditModalOpen(true);
+    try {
+      await onEditLesson(ui.current.id, { recipeId: ui.editId });
+      setUi((p) => ({ ...p, edit: false, current: null }));
+    } catch (e) {
+      logger.error(e);
+    }
+  }, [ui.current, ui.editId, onEditLesson, playClick]);
 
-    // If lesson has a recipeId, fetch the recipe details for preview
-    if (lesson.recipeId) {
-      // Check if recipe is already in cache
-      const cachedRecipe = recipes.find((r) => r.id === lesson.recipeId);
-      if (!cachedRecipe) {
-        // Fetch recipe details if not in cache
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!ui.current) return;
+    playClick();
+    try {
+      await onRemoveLesson(ui.current.id);
+      setUi((p) => ({ ...p, del: false, current: null }));
+    } catch (e) {
+      logger.error(e);
+    }
+  }, [ui.current, onRemoveLesson, playClick]);
+
+  const openEdit = useCallback(
+    async (lesson: ClassLesson) => {
+      playClick();
+      setUi((prev) => ({ ...prev, edit: true, current: lesson, editId: lesson.recipeId ?? '' }));
+      if (lesson.recipeId && !recipes.find((r) => r.id === lesson.recipeId))
         await fetchRecipe(lesson.recipeId);
-      }
-    }
-    // Also fetch all recipes for the selector
-    fetchRecipes();
-  };
-
-  const handleOpenRecipeSelector = () => {
-    playClick();
-    setIsRecipeSelectorOpen(true);
-    fetchRecipes();
-  };
-
-  const handleSelectRecipe = (recipeId: string) => {
-    // If editing a lesson, update the edit state instead of creating new
-    if (isEditModalOpen && editingLesson) {
-      setEditRecipeId(recipeId);
-      setIsRecipeSelectorOpen(false);
-      return;
-    }
-    // Otherwise, create new lesson
-    onAddLesson(recipeId);
-    setIsRecipeSelectorOpen(false);
-  };
-
-  const handleClearRecipe = () => {
-    playClick();
-    setEditRecipeId('');
-  };
-
-  const handleViewRecipe = () => {
-    if (editRecipeId) {
-      navigate(`/units/${editRecipeId}/edit`);
-    }
-  };
-
-  // Get the selected recipe for preview
-  const selectedRecipe: Recipe | undefined = editRecipeId
-    ? recipes.find((r) => r.id === editRecipeId)
-    : undefined;
-
-  const handleCloseEditModal = () => {
-    setIsEditModalOpen(false);
-    setEditingLesson(null);
-    setEditRecipeId('');
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editingLesson || !onEditLesson) return;
-    playClick();
-    const updateData: { recipeId: string } = {
-      recipeId: editRecipeId.trim(),
-    };
-    await onEditLesson(editingLesson.id, updateData);
-    handleCloseEditModal();
-  };
-
-  const handleDeleteClick = (lesson: ClassLesson) => {
-    playClick();
-    setLessonToDelete(lesson);
-    setIsDeleteModalOpen(true);
-  };
-
-  const handleCloseDeleteModal = () => {
-    setIsDeleteModalOpen(false);
-    setLessonToDelete(null);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!lessonToDelete || !onRemoveLesson) return;
-    playClick();
-    await onRemoveLesson(lessonToDelete.id);
-    handleCloseDeleteModal();
-  };
-
-  // Recipe Selector Modal - always rendered so it works in empty state too
-  const recipeSelectorModal = (
-    <RecipeSelector
-      isOpen={isRecipeSelectorOpen}
-      onClose={() => setIsRecipeSelectorOpen(false)}
-      onSelect={handleSelectRecipe}
-    />
+      fetchRecipes();
+    },
+    [fetchRecipe, fetchRecipes, recipes, playClick],
   );
 
-  if (lessons.length === 0) {
-    return (
-      <>
-        <div className="text-center py-12">
-          {/* Empty state illustration */}
-          <div className="w-20 h-20 mx-auto mb-4 bg-sky-100 rounded-3xl flex items-center justify-center">
-            <IconList className="w-10 h-10 text-sky-500" />
-          </div>
-          <h3 className="text-lg font-bold text-slate-800 mb-2">Agrega tu primera lección</h3>
-          <p className="text-slate-500 mb-6 max-w-sm mx-auto">
-            Las lecciones usan{' '}
-            <span className="font-semibold text-sky-600">unidades de aprendizaje</span> como
-            contenido. Primero crea una unidad, luego asígnala a esta clase.
-          </p>
-
-          {/* Step indicators */}
-          <div className="flex items-center justify-center gap-3 mb-6 text-sm">
-            <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 text-emerald-700 rounded-xl border-2 border-emerald-200">
-              <IconCheck className="w-4 h-4" />
-              <span className="font-semibold">Crear clase</span>
-            </div>
-            <span className="text-slate-300">→</span>
-            <div className="flex items-center gap-2 px-3 py-2 bg-sky-50 text-sky-700 rounded-xl border-2 border-sky-300 animate-pulse">
-              <IconPlus className="w-4 h-4" />
-              <span className="font-semibold">Agregar lección</span>
-            </div>
-            <span className="text-slate-300">→</span>
-            <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 text-slate-400 rounded-xl border-2 border-slate-200">
-              <span className="font-semibold">Publicar</span>
-            </div>
-          </div>
-
-          <Button onClick={handleOpenRecipeSelector} variant="primary" size="lg">
-            <IconPlus className="w-5 h-5 mr-2" />
-            Seleccionar Unidad
-          </Button>
-        </div>
-        {recipeSelectorModal}
-      </>
-    );
-  }
+  const selectedRecipe = useMemo(
+    () => recipes.find((r) => r.id === ui.editId),
+    [recipes, ui.editId],
+  );
 
   return (
-    <div className="space-y-4">
-      {/* Lesson list */}
-      <div className="space-y-3">
-        {lessons.map((lesson, index) => (
-          <Card
-            key={lesson.id}
-            variant="mission"
-            className="group hover:border-sky-300 hover:shadow-gummy hover:shadow-sky-200 transition-all duration-200"
+    <div className="space-y-6">
+      {lessons.length === 0 ? (
+        <Card className="text-center py-16 border-8 border-dashed border-sky-100 bg-white/50 rounded-[3rem]">
+          <IconList size={48} className="text-sky-200 mx-auto mb-4" />
+          <h3 className="text-2xl font-black text-sky-800 mb-6">¡Agrega tu primera lección! ✨</h3>
+          <Button onClick={() => setUi((p) => ({ ...p, selector: true }))} size="lg">
+            Seleccionar Unidad
+          </Button>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {lessons.map((lesson: any, i: number) => (
+            <LessonCard
+              key={lesson.id}
+              lesson={lesson}
+              index={i}
+              isLast={i === lessons.length - 1}
+              onMoveUp={(idx: any) => handleMove(idx, 'up')}
+              onMoveDown={(idx: any) => handleMove(idx, 'down')}
+              onEdit={openEdit}
+              onDelete={(l: any) => setUi((p) => ({ ...p, del: true, current: l }))}
+            />
+          ))}
+          <button
+            onClick={() => setUi((p) => ({ ...p, selector: true }))}
+            className="w-full py-8 rounded-[2.5rem] border-8 border-dashed border-sky-100 text-sky-300 font-black text-xl hover:bg-sky-50 transition-all flex items-center justify-center gap-4 active:scale-95"
           >
-            <div className="flex items-start gap-4">
-              {/* Reorder controls */}
-              <div className="flex flex-col items-center gap-1 pt-1">
-                <button
-                  onClick={() => handleMoveUp(index)}
-                  disabled={index === 0}
-                  className="p-2 text-slate-400 hover:text-sky-500 hover:bg-sky-50 disabled:opacity-30 disabled:cursor-not-allowed rounded-lg transition-all"
-                  title="Mover arriba"
-                >
-                  <IconArrowUp className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => handleMoveDown(index)}
-                  disabled={index === lessons.length - 1}
-                  className="p-2 text-slate-400 hover:text-sky-500 hover:bg-sky-50 disabled:opacity-30 disabled:cursor-not-allowed rounded-lg transition-all"
-                  title="Mover abajo"
-                >
-                  <IconArrowDown className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Order number */}
-              <div className="w-10 h-10 flex items-center justify-center bg-sky-100 rounded-full text-base font-bold text-sky-600 shrink-0">
-                {index + 1}
-              </div>
-
-              {/* Lesson info */}
-              <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-bold text-slate-800 truncate mb-2">
-                  {lesson.recipe?.title ?? 'Sin receta'}
-                </h3>
-
-                {/* Badges */}
-                <div className="flex flex-wrap items-center gap-2">
-                  {/* Duration badge */}
-                  {lesson.recipe?.expectedDurationMinutes ? (
-                    <Badge variant="info" className="gap-1.5">
-                      <IconClock className="w-3 h-3" />
-                      <span>{lesson.recipe.expectedDurationMinutes} min</span>
-                    </Badge>
-                  ) : null}
-
-                  {/* Unit status badge */}
-                  {lesson.recipeId ? (
-                    <Badge variant="success" className="gap-1.5">
-                      <IconCheck className="w-3 h-3" />
-                      <span>Unidad</span>
-                    </Badge>
-                  ) : (
-                    <Badge variant="default" className="gap-1.5">
-                      <span>Sin unidad</span>
-                    </Badge>
-                  )}
-                </div>
-              </div>
-
-              {/* Action buttons */}
-              <div className="flex items-center gap-3 shrink-0">
-                <button
-                  onClick={() => handleEditClick(lesson)}
-                  className="p-2.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-all"
-                  title="Editar lección"
-                >
-                  <IconEdit className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => handleDeleteClick(lesson)}
-                  className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
-                  title="Eliminar lección"
-                >
-                  <IconTrash className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      {/* Add new lesson */}
-      <div
-        onClick={handleOpenRecipeSelector}
-        className="border-2 border-dashed border-sky-300 rounded-2xl p-6 text-center cursor-pointer hover:border-sky-400 hover:bg-sky-50 transition-all group"
-      >
-        <div className="flex items-center justify-center gap-3">
-          <div className="w-10 h-10 bg-sky-100 rounded-xl flex items-center justify-center group-hover:bg-sky-200 transition-colors">
-            <IconPlus className="w-5 h-5 text-sky-600" />
-          </div>
-          <div className="text-left">
-            <p className="font-bold text-sky-700">Agregar lección</p>
-            <p className="text-sm text-slate-500">Selecciona una unidad existente</p>
-          </div>
+            <IconPlus size={32} stroke={4} /> AGREGAR OTRA LECCIÓN
+          </button>
         </div>
-      </div>
+      )}
 
-      {/* Edit Modal */}
+      {/* --- Modales --- */}
+      <RecipeSelector
+        isOpen={ui.selector}
+        onClose={() => setUi((p) => ({ ...p, selector: false }))}
+        onSelect={(rid: any) => {
+          if (ui.edit) setUi((p) => ({ ...p, editId: rid, selector: false }));
+          else {
+            onAddLesson(rid);
+            setUi((p) => ({ ...p, selector: false }));
+          }
+        }}
+      />
+
+      {/* Modal de Edición */}
       <Modal
-        isOpen={isEditModalOpen ? !!editingLesson : false}
-        onClose={handleCloseEditModal}
-        title="Editar lección"
-        size="md"
+        isOpen={ui.edit}
+        title="Editar Lección ✏️"
+        onClose={() => setUi((p) => ({ ...p, edit: false }))}
         footer={
-          <div className="flex gap-3">
-            <Button onClick={handleCloseEditModal} variant="secondary" className="flex-1">
+          <div className="flex gap-4">
+            <Button
+              onClick={() => setUi((p) => ({ ...p, edit: false }))}
+              variant="secondary"
+              className="flex-1"
+            >
               Cancelar
             </Button>
-            <Button onClick={handleSaveEdit} variant="primary" className="flex-1">
-              Guardar cambios
+            <Button onClick={handleEditConfirm} variant="primary" className="flex-1">
+              Guardar ✨
             </Button>
           </div>
         }
       >
         <div className="space-y-6">
-          {/* Unit Selection */}
-          <div>
-            <label className="block text-sm font-bold text-slate-600 mb-2">Unidad</label>
-            {editRecipeId && selectedRecipe ? (
-              <div className="bg-sky-50 border-2 border-sky-200 rounded-xl p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-bold text-slate-800 truncate">{selectedRecipe.title}</h3>
-                      <Badge variant={selectedRecipe.published ? 'success' : 'warning'}>
-                        {selectedRecipe.published ? 'Publicada' : 'Borrador'}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-slate-500">
-                      {selectedRecipe.expectedDurationMinutes ? (
-                        <span className="flex items-center gap-1">
-                          <IconClock className="w-3 h-3" />
-                          {selectedRecipe.expectedDurationMinutes} min
-                        </span>
-                      ) : null}
-                      <span className="flex items-center gap-1">
-                        <IconList className="w-3 h-3" />
-                        {selectedRecipe.steps?.length ?? 0} paso
-                        {(selectedRecipe.steps?.length ?? 0) !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={handleViewRecipe}
-                      className="p-2 text-sky-600 hover:text-sky-700 hover:bg-white rounded-lg transition-all"
-                      title="Ver unidad"
-                    >
-                      <IconExternalLink className="w-5 h-5" />
-                    </button>
-                    <button
-                      onClick={handleClearRecipe}
-                      className="p-2 text-rose-500 hover:text-rose-600 hover:bg-white rounded-lg transition-all"
-                      title="Quitar unidad"
-                    >
-                      <IconX className="w-5 h-5" />
-                    </button>
-                  </div>
-                </div>
+          <label className="text-sm font-black text-sky-900 uppercase tracking-widest ml-2 block">
+            Unidad de Aprendizaje
+          </label>
+          {ui.editId && selectedRecipe ? (
+            <div className="bg-sky-50 border-8 border-white shadow-gummy shadow-sky-100 p-6 rounded-[2rem] flex justify-between items-center">
+              <div className="min-w-0 flex-1">
+                <h4 className="font-black text-sky-900 text-lg truncate">
+                  {renderSafe(selectedRecipe.title)}
+                </h4>
+                <p className="text-xs font-bold text-sky-400 uppercase mt-1">
+                  {selectedRecipe.steps?.length || 0} PASOS
+                </p>
               </div>
-            ) : (
               <div className="flex gap-2">
-                <Button onClick={handleOpenRecipeSelector} variant="secondary" className="flex-1">
-                  <IconSearch className="w-5 h-5 mr-2" />
-                  Seleccionar unidad
-                </Button>
+                <button
+                  onClick={() => setUi((p) => ({ ...p, selector: true }))}
+                  className="p-3 bg-white rounded-xl text-sky-500 border-4 border-sky-100"
+                >
+                  <IconSearch size={20} stroke={3} />
+                </button>
+                <button
+                  onClick={() => navigate(`/units/${ui.editId}/edit`)}
+                  className="p-3 bg-white rounded-xl text-emerald-500 border-4 border-emerald-100"
+                >
+                  <IconExternalLink size={20} stroke={3} />
+                </button>
               </div>
-            )}
-            {!editRecipeId ? (
-              <p className="text-xs text-slate-400 mt-2">
-                Asigna una unidad para habilitar la demo de esta lección
-              </p>
-            ) : null}
-          </div>
+            </div>
+          ) : (
+            <Button
+              onClick={() => setUi((p) => ({ ...p, selector: true }))}
+              variant="secondary"
+              className="w-full h-20 border-4 border-dashed rounded-[1.5rem] font-black"
+            >
+              <IconSearch size={24} className="mr-2" /> SELECCIONAR UNIDAD
+            </Button>
+          )}
         </div>
       </Modal>
 
-      {/* Recipe Selector Modal */}
-      {recipeSelectorModal}
-
-      {/* Delete Confirmation Modal */}
+      {/* Modal de Borrado */}
       <Modal
-        isOpen={isDeleteModalOpen ? !!lessonToDelete : false}
-        onClose={handleCloseDeleteModal}
-        title="Confirmar eliminación"
+        isOpen={ui.del}
+        title="🗑️ ¿Borrar lección?"
         size="sm"
+        onClose={() => setUi((p) => ({ ...p, del: false }))}
         footer={
           <div className="flex gap-3">
-            <Button onClick={handleCloseDeleteModal} variant="secondary" className="flex-1">
-              Cancelar
+            <Button
+              onClick={() => setUi((p) => ({ ...p, del: false }))}
+              variant="secondary"
+              className="flex-1"
+            >
+              No
             </Button>
-            <Button onClick={handleConfirmDelete} variant="danger" className="flex-1">
-              Eliminar
+            <Button onClick={handleDeleteConfirm} variant="danger" className="flex-1">
+              Sí, borrar
             </Button>
           </div>
         }
       >
-        <div className="space-y-4">
-          <p className="text-slate-600 font-medium">
-            ¿Estás seguro de que deseas eliminar la lección{' '}
-            <span className="font-bold text-slate-800">
-              "{lessonToDelete?.recipe?.title ?? 'esta lección'}"
-            </span>
-            ?
-          </p>
-          <p className="text-slate-500 text-sm">Esta acción no se puede deshacer.</p>
-        </div>
+        <p className="font-bold text-slate-500 text-center">
+          ¿Seguro que quieres quitar esta lección?
+        </p>
       </Modal>
     </div>
   );

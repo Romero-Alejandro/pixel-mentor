@@ -229,15 +229,17 @@ model RecipeStep {
   createdAt   DateTime @default(now())
 
   // New fields for static content
-  conceptId  String?
-  activityId String?
-  script     Json? // Complete step script (transition, content, examples, closure)
-  stepType   String? @default("content") // "content", "activity", "intro", "closure"
+  conceptId    String?
+  activityId   String?
+  script       Json? // Script content for content/intro/closure steps
+  activityData Json? // Activity content for activity steps (renamed to avoid conflict with relation)
+  question     Json? // Question content for question steps
+  stepType     String? @default("content") // "content", "activity", "question", "intro", "closure"
 
   recipe   Recipe    @relation(fields: [recipeId], references: [id], onDelete: Cascade)
   atom     Atom      @relation(fields: [atomId], references: [id], onDelete: Restrict)
   concept  Concept?  @relation(fields: [conceptId], references: [id], onDelete: SetNull)
-  activity Activity? @relation(fields: [activityId], references: [id], onDelete: SetNull)
+  activity Activity? @relation(fields: [activityId], references: [id], onDelete: SetNull, map: "recipe_steps_activity_fk")
 
   @@unique([recipeId, order])
   @@index([recipeId])

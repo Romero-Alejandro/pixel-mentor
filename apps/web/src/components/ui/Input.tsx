@@ -32,6 +32,18 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       [playMicro, props],
     );
 
+    let inputValue = props.value;
+    if (props.type === 'number') {
+      // Ensure value for type="number" input is either a number or an empty string
+      // Otherwise, React can complain about controlled vs uncontrolled component
+      // or "The specified value '[object Object]' cannot be parsed" error
+      if (typeof inputValue === 'string' && inputValue === '') {
+        inputValue = '';
+      } else if (typeof inputValue === 'string') {
+        inputValue = Number(inputValue);
+      }
+    }
+
     return (
       <div className="w-full">
         {label ? (
@@ -53,6 +65,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             className,
           )}
           {...props}
+          value={inputValue}
         />
         {error ? <p className="mt-1.5 text-sm text-red-500">{error}</p> : null}
         {helperText && !error ? (

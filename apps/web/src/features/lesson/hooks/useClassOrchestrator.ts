@@ -358,6 +358,12 @@ export function useClassOrchestrator() {
       // Forzar uiState a 'idle' explícitamente para mostrar la vista inicial correcta
       lessonState.setUIState('idle');
       store.reset();
+
+      // Limpiar el estado local del orquestador que no está en el store
+      setTransitionText('');
+      setClosureText('');
+      setFullVoiceText('');
+      contentRef.current = '';
     },
     stopSpeaking: voiceStop,
     getCurrentAudioElement: getAudio,

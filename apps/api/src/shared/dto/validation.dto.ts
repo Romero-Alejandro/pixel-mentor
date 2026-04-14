@@ -1,0 +1,48 @@
+export {
+  TTSStreamQuerySchema,
+  type TTSStreamQuery,
+  GetMissionReportParamsSchema,
+  type GetMissionReportParams,
+  GetUserParamsSchema,
+  type GetUserParams,
+  DeleteUserParamsSchema,
+  type DeleteUserParams,
+  CompleteSessionParamsSchema,
+  type CompleteSessionParams,
+  ReplaySessionParamsSchema,
+  type ReplaySessionParams,
+  SuggestImprovementsParamsSchema,
+  type SuggestImprovementsParams,
+  DeleteStepParamsSchema,
+  type DeleteStepParams,
+  GetClassParamsSchema,
+  type GetClassParams,
+  ListClassesOptionsSchema,
+  type ListClassesOptions,
+  RemoveLessonParamsSchema,
+  type RemoveLessonParams,
+  PublishClassParamsSchema,
+  type PublishClassParams,
+  UnpublishClassParamsSchema,
+  type UnpublishClassParams,
+  DeleteClassParamsSchema,
+  type DeleteClassParams,
+  GetRecipeParamsSchema,
+  type GetRecipeParams,
+  ListRecipesQuerySchema,
+  type ListRecipesQuery,
+} from '@pixel-mentor/shared/schemas/validation';
+
+export {
+  QuestionAnswerInputSchema,
+  type QuestionAnswerInput,
+  QuestionAnswerOutputSchema,
+  type QuestionAnswerOutput,
+} from '@pixel-mentor/shared/schemas/evaluation';
+
+export {
+  GetSessionInputSchema,
+  type GetSessionInput,
+  ListSessionsInputSchema,
+  type ListSessionsInput,
+} from '@pixel-mentor/shared/schemas/session';
