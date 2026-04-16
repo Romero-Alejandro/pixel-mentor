@@ -1939,19 +1939,14 @@ export class OrchestrateRecipeUseCase {
         return;
       } else if (stepType === 'question') {
         // QUESTION: response already generated above via generateResponseStream
-        // Need to handle at outer scope after variables are declared
-        orchestrateLogger.info('[QUESTION] Step type detected, will handle after scope');
+        // The main state machine at line 2308 will handle this
+        orchestrateLogger.info('[QUESTION] Step type detected, will handle in main state machine');
+        // Don't return here - let it fall through to main state machine
       }
     }
 
-    // Handle QUESTION after variables are declared
-    if (currentState === 'ACTIVITY_WAIT' && currentStep.stepType === 'question') {
-      const questionVoiceText = fullResponse || 'Gracias por tu respuesta. Continuemos.';
-      const questionNextState: PedagogicalState = 'EVALUATION';
-      // Override for final yield
-      voiceText = questionVoiceText;
-      nextState = questionNextState;
-    } else if (currentState === 'AWAITING_START') {
+    // Main state machine handles all states including QUESTION in ACTIVITY_WAIT
+    if (currentState === 'AWAITING_START') {
       // ── AWAITING_START fast path (no streaming needed) ──────────────────────
       const lower = studentInput.toLowerCase();
       orchestrateLogger.info(
