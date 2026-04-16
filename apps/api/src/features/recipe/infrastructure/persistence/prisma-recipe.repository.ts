@@ -1,4 +1,5 @@
 import { prisma } from '@/database/client';
+import { StepType as PrismaStepType } from '@/database/generated/client/index.js';
 import type { Recipe, RecipeStep } from '@/features/recipe/domain/entities/recipe.entity';
 import type {
   RecipeRepository,
@@ -134,7 +135,7 @@ export class PrismaRecipeRepository implements RecipeRepository {
         order: step.order,
         condition: step.condition as never,
         onCondition: step.onCondition,
-        stepType: step.stepType,
+        stepType: this.normalizeStepTypeForPrisma(step.stepType),
         script: step.script as never,
         activityData: (step as any).activityData as never,
         question: (step as any).question as never,
@@ -155,7 +156,7 @@ export class PrismaRecipeRepository implements RecipeRepository {
         condition: step.condition as never,
         onCondition: step.onCondition,
         script: step.script as never,
-        stepType: step.stepType,
+        stepType: this.normalizeStepTypeForPrisma(step.stepType),
         conceptId: step.conceptId,
         activityId: step.activityId,
       },
@@ -198,6 +199,27 @@ export class PrismaRecipeRepository implements RecipeRepository {
   }
 
   private mapRecipeStep(raw: Record<string, unknown>): RecipeStep {
+    // Normalize stepType: Prisma returns enum, we normalize to lowercase string
+    const rawStepType = raw.stepType as string | undefined;
+    let stepType: RecipeStep['stepType'];
+
+    if (!rawStepType) {
+      stepType = undefined;
+    } else if (
+      rawStepType === 'content' ||
+      rawStepType === 'activity' ||
+      rawStepType === 'question' ||
+      rawStepType === 'intro' ||
+      rawStepType === 'closure' ||
+      rawStepType === 'exam'
+    ) {
+      // Already a string (shouldn't happen but be safe)
+      stepType = rawStepType as RecipeStep['stepType'];
+    } else {
+      // Prisma enum (QUESTION, ACTIVITY, etc.) - convert to lowercase string
+      stepType = rawStepType.toLowerCase() as RecipeStep['stepType'];
+    }
+
     return {
       id: raw.id as string,
       recipeId: raw.recipeId as string,
@@ -209,13 +231,33 @@ export class PrismaRecipeRepository implements RecipeRepository {
       conceptId: raw.conceptId as string | undefined,
       activityId: raw.activityId as string | undefined,
       script: raw.script as Record<string, unknown> | undefined,
-      stepType: raw.stepType as
-        | 'content'
-        | 'activity'
-        | 'question'
-        | 'intro'
-        | 'closure'
-        | undefined,
+      stepType,
     };
+  }
+
+  // Helper: normalize stepType for writes TO Prisma (needs enum)
+  private normalizeStepTypeForPrisma(stepType: string | undefined): PrismaStepType | undefined {
+    if (!stepType) return undefined;
+    const upper = stepType.toUpperCase() as keyof typeof PrismaStepType;
+    if (upper in PrismaStepType) {
+      return PrismaStepType[upper];
+    }
+    // Fallback: try to match known types
+    switch (stepType.toLowerCase()) {
+      case 'content':
+        return PrismaStepType.CONTENT;
+      case 'activity':
+        return PrismaStepType.ACTIVITY;
+      case 'question':
+        return PrismaStepType.QUESTION;
+      case 'intro':
+        return PrismaStepType.INTRO;
+      case 'closure':
+        return PrismaStepType.CLOSURE;
+      case 'exam':
+        return PrismaStepType.EXAM;
+      default:
+        return undefined;
+    }
   }
 }
