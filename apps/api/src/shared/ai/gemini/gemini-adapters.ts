@@ -137,6 +137,8 @@ abstract class BaseGeminiClassifierAdapter extends BaseLLMAdapter {
         const cleanedText = cleanJsonResponse(result.response.text());
         const validation = schema.safeParse(JSON.parse(cleanedText));
         if (validation.success) return validation.data;
+        // Log what LLM returned for debugging
+        this.logger?.warn({ modelId, rawResponse: cleanedText.slice(0, 500) }, '[executeWithFallback] Schema validation failed');
         throw new Error('Schema validation failed');
       } catch (error: unknown) {
         lastError = error;
@@ -159,7 +161,8 @@ export class GeminiClassifierAdapter
 {
   async classify(payload: ClassificationPayload): Promise<QuestionClassification> {
     const history = payload.lastTurns.map((t) => `${t.role}: ${t.content}`).join('\n');
-    const prompt = `Clasifica el texto.\nHistorial:\n${history}\nTexto actual: "${payload.transcript}"`;
+    // Prompt mejor: specify JSON format explicitly
+    const prompt = `Clasifica la respuesta del estudiante.\n\nHistorial de la lección:\n${history}\n\nRespuesta del estudiante: "${payload.transcript}"\n\nResponde SOLO con JSON válido: {"intent": "answer"|"question"|"statement"|"greeting"|"other", "confidence": 0.0-1.0, "reasoning": "breve razón"}`;
     try {
       return await this.executeWithFallback(prompt, ClassificationSchema);
     } catch (error: unknown) {
