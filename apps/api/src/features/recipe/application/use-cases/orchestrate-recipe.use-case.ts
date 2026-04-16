@@ -365,7 +365,12 @@ export class OrchestrateRecipeUseCase {
 
     // ── Actividad / examen (opción múltiple) ──────────────────────────────
     // Always respect stepType — type guard is only for extracting data
-    if (stepType === 'activity' || stepType === 'exam') {
+    if (
+      stepType === 'activity' ||
+      stepType === 'exam' ||
+      stepType === 'ACTIVITY' ||
+      stepType === 'EXAM'
+    ) {
       const instructionText = isActivityScript(script)
         ? extractText((script as ActivityScript).instruction)
         : '';
