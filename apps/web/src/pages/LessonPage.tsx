@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { IconArrowLeft, IconAlertOctagon } from '@tabler/icons-react';
 import { useShallow } from 'zustand/react/shallow';
@@ -30,7 +30,6 @@ export function LessonPage() {
   const { particleTrigger } = useGamificationStore();
   const { playSprite } = useAudio();
 
-  // 1. Selectores de Zustand unificados y con shallow
   const { isRepeat, xpEarned, accuracy, isSpeaking, isStreaming } = useLessonStore(
     useShallow((state) => ({
       isRepeat: state.isRepeat,
@@ -41,7 +40,6 @@ export function LessonPage() {
     })),
   );
 
-  // 2. Efecto de audio (XP Gain) aislado
   const prevParticleTrigger = useRef(particleTrigger);
   useEffect(() => {
     if (particleTrigger > prevParticleTrigger.current) {
@@ -61,16 +59,10 @@ export function LessonPage() {
     orchestrator.startClass,
   );
 
-  // Handler de reinicio con manejo de race condition
-  const handleRestart = useCallback(async () => {
-    // 1. Resetear todo (estado local, store, etc) - ahora esperamos a que termine
+  const handleRestart = async () => {
     await orchestrator.reset();
-
-    // 2. Permitir que autoStart pueda funcionar de nuevo
     resetStarted();
-
-    // NO llamar startClass aquí - useAutoStart se encargará de iniciar
-  }, [orchestrator, resetStarted]);
+  };
 
   const textSync = useTextSync({
     fullText: orchestrator.fullVoiceText,
@@ -78,7 +70,6 @@ export function LessonPage() {
     playbackRate: voiceSettings.speakingRate,
   });
 
-  // 3. Reset de la UI al cambiar la pregunta
   const prevQ = useRef<string>('');
   useEffect(() => {
     if (orchestrator.questionText !== prevQ.current) {
@@ -88,42 +79,33 @@ export function LessonPage() {
     }
   }, [orchestrator.questionText]);
 
-  // 4. Actualización del feedback de la actividad
   useEffect(() => {
     if (orchestrator.feedbackData) {
       setActivityCorrect(orchestrator.feedbackData.isCorrect);
     }
   }, [orchestrator.feedbackData]);
 
-  // 5. Cleanup de la clase (Evita que el audio o procesos sigan vivos si navega atrás)
   useEffect(() => {
     return () => {
       orchestrator.stopSpeaking();
       orchestrator.reset();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Dependencia vacía para que solo corra en mount/unmount real.
+  }, []);
 
-  // 6. Funciones memorizadas para no re-crearlas en cada render
-  const handleMCQ = useCallback(
-    (text: string, id: string) => {
-      setSelectedId(id);
-      orchestrator.submitAnswer(text);
-    },
-    [orchestrator],
-  );
+  const handleMCQ = (text: string, id: string) => {
+    setSelectedId(id);
+    orchestrator.submitAnswer(text);
+  };
 
-  const handleRepeatContent = useCallback(() => {
+  const handleRepeatContent = () => {
     textSync.reset();
     orchestrator.speakContent();
-  }, [textSync, orchestrator]);
+  };
 
   const isIdle = orchestrator.uiState === UI_STATES.IDLE;
   const isLoading = isStarting && !orchestrator.contentText && !error;
 
-  // 7. Panel activo memorizado para evitar que toda la página parpadee
-  //    al recibir cada chunk de streaming
-  const activePanel = useMemo(() => {
+  const renderActivePanel = () => {
     switch (orchestrator.uiState) {
       case UI_STATES.CONCENTRATION:
         return (
@@ -178,30 +160,7 @@ export function LessonPage() {
       default:
         return null;
     }
-  }, [
-    orchestrator.uiState,
-    orchestrator.fullVoiceText,
-    orchestrator.transitionText,
-    orchestrator.contentText,
-    orchestrator.closureText,
-    orchestrator.questionText,
-    orchestrator.isProcessing,
-    orchestrator.options,
-    orchestrator.feedbackData,
-    orchestrator.questionResults,
-    textSync.currentWordIndex,
-    textSync.isSynced,
-    isSpeaking,
-    isStreaming,
-    handleMCQ,
-    selectedId,
-    activityCorrect,
-    handleRestart,
-    handleRepeatContent,
-    isRepeat,
-    xpEarned,
-    accuracy,
-  ]);
+  };
 
   if (error && isIdle) {
     return (
@@ -283,7 +242,7 @@ export function LessonPage() {
           className={`flex flex-col transition-all duration-700 ease-out ${isIdle ? 'w-full max-w-lg' : 'w-full lg:w-7/12 bg-white/95 backdrop-blur-md rounded-[3rem] border-4 border-white shadow-[0_8px_32px_rgba(56,189,248,0.15)] min-h-[550px] overflow-y-auto relative'}`}
         >
           <div className="flex-1 flex flex-col w-full h-full animate-in fade-in slide-in-from-bottom-8 duration-500">
-            {activePanel}
+            {renderActivePanel()}
           </div>
         </section>
       </main>
