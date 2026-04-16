@@ -64,22 +64,18 @@ async function bootstrap(): Promise<void> {
   // Log streaming configuration
   logger.info({ ENABLE_STREAMING: config.ENABLE_STREAMING }, 'Configuration loaded');
 
-
   // Create repos needed for AI service FIRST
   // These are created directly to avoid circular dependencies
-  const { FileSystemPromptRepository } = await import('@/features/recipe/infrastructure/persistence/file-system-prompt.repository.js');
-  const { PrismaKnowledgeChunkRepository } = await import('@/features/knowledge/infrastructure/persistence/prisma-knowledge-chunk.repository.js');
+  const { FileSystemPromptRepository } =
+    await import('@/features/recipe/infrastructure/persistence/file-system-prompt.repository.js');
+  const { PrismaKnowledgeChunkRepository } =
+    await import('@/features/knowledge/infrastructure/persistence/prisma-knowledge-chunk.repository.js');
   const promptRepo = new FileSystemPromptRepository();
   const knowledgeRepo = new PrismaKnowledgeChunkRepository();
 
   // Initialize the centralized AI service provider with promptRepo
   // This validates the provider config and creates all AI adapters once
-  const aiServices = initializeAIServices(
-    config,
-    promptRepo,
-    knowledgeRepo,
-    logger,
-  );
+  const aiServices = initializeAIServices(config, promptRepo, knowledgeRepo, logger);
 
   // Build the main container with all feature containers
   const container = buildContainer(config, logger, aiServices.aiModel);

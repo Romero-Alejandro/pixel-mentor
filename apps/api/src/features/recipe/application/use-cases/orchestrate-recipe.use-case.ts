@@ -1,13 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { StepType as PrismaStepType } from '@/database/generated/client/index.js';
 import { config } from '@/shared/config/index.js';
-
-/**
- * Alias for Prisma StepType enum to avoid conflict with domain StepType type.
- * This module compares stepType values from the database (PrismaStepType) against string literals
- * stored in step.script and incoming data.
- */
-const StepType = PrismaStepType;
 
 // Helper to extract text from string | {text: string} object
 type TextOrTextObject = string | { text: string };
@@ -200,7 +192,7 @@ export class OrchestrateRecipeUseCase {
     tier: 'perfect' | 'high' | 'medium' | 'low';
   }> {
     const activitySteps = steps.filter(
-      (s) => s.stepType === StepType.ACTIVITY || s.stepType === StepType.QUESTION,
+      (s) => s.stepType === 'activity' || s.stepType === 'question',
     );
     const totalActivities = activitySteps.length;
 
@@ -319,15 +311,17 @@ export class OrchestrateRecipeUseCase {
       };
     }
 
+    // Handle both lowercase strings and uppercase Prisma enum values for backward compatibility
+    const isContent = stepType === 'content' || stepType === 'CONTENT';
+    const isIntro = stepType === 'intro' || stepType === 'INTRO';
+    const isClosure = stepType === 'closure' || stepType === 'CLOSURE';
+    const isQuestion = stepType === 'question' || stepType === 'QUESTION';
+
     // ── Contenido / intro / closure ──────────────────────────────────────
-    if (
-      stepType === StepType.CONTENT ||
-      stepType === StepType.INTRO ||
-      stepType === StepType.CLOSURE
-    ) {
+    if (isContent || isIntro || isClosure) {
       const s = script as ContentScript;
       return {
-        stepType: stepType as 'content' | 'intro' | 'closure',
+        stepType: isContent ? 'content' : isIntro ? 'intro' : 'closure',
         script: {
           transition: s.transition ?? '',
           content: s.content ?? '',
@@ -339,7 +333,7 @@ export class OrchestrateRecipeUseCase {
 
     // ── Pregunta de comprensión (respuesta libre) ─────────────────────────
     // Always respect stepType — type guard is only for extracting data
-    if (stepType === StepType.QUESTION) {
+    if (isQuestion) {
       const questionText = isQuestionScript(script)
         ? extractText((script as QuestionScript).question)
         : '';
@@ -348,7 +342,7 @@ export class OrchestrateRecipeUseCase {
         : { correct: '', incorrect: '' };
       const hint = isQuestionScript(script) ? (script as QuestionScript).hint : undefined;
       return {
-        stepType: StepType.QUESTION, // Preserve original type for frontend routing
+        stepType: 'question', // Preserve original type for frontend routing
         script: {
           transition: extractText(
             isQuestionScript(script) ? (script as QuestionScript).transition : '',
@@ -371,7 +365,7 @@ export class OrchestrateRecipeUseCase {
 
     // ── Actividad / examen (opción múltiple) ──────────────────────────────
     // Always respect stepType — type guard is only for extracting data
-    if (stepType === StepType.ACTIVITY || stepType === StepType.EXAM) {
+    if (stepType === 'activity' || stepType === 'exam') {
       const instructionText = isActivityScript(script)
         ? extractText((script as ActivityScript).instruction)
         : '';
@@ -386,7 +380,7 @@ export class OrchestrateRecipeUseCase {
         ? (script as ActivityScript).feedback
         : { correct: '', incorrect: '' };
       return {
-        stepType: StepType.ACTIVITY,
+        stepType: 'activity',
         script: {
           transition: extractText(
             isActivityScript(script) ? (script as ActivityScript).transition : '',
@@ -409,7 +403,7 @@ export class OrchestrateRecipeUseCase {
     // Fallback
     const s = script as ContentScript;
     return {
-      stepType: StepType.CONTENT,
+      stepType: 'content',
       script: {
         transition: s.transition ?? '',
         content: s.content ?? '',
@@ -438,13 +432,10 @@ export class OrchestrateRecipeUseCase {
       return '';
     };
 
-    if (stepType === StepType.QUESTION && isQuestionScript(script)) {
+    if (stepType === 'question' && isQuestionScript(script)) {
       return [txt(script.transition), txt(script.question)].filter(Boolean).join(' ');
     }
-    if (
-      (stepType === StepType.ACTIVITY || stepType === StepType.EXAM) &&
-      isActivityScript(script)
-    ) {
+    if ((stepType === 'activity' || stepType === 'exam') && isActivityScript(script)) {
       return [txt(script.transition), txt(script.instruction)].filter(Boolean).join(' ');
     }
     const s = script as ContentScript;
@@ -509,15 +500,11 @@ export class OrchestrateRecipeUseCase {
   }
 
   private requiresStudentInput(stepType?: string | null): boolean {
-    // Accept both string literals and StepType enum values
-    return (
-      stepType === 'activity' ||
-      stepType === StepType.ACTIVITY ||
-      stepType === 'question' ||
-      stepType === StepType.QUESTION ||
-      stepType === 'exam' ||
-      stepType === StepType.EXAM
-    );
+    // Accept both string literals and Prisma enum values for backward compatibility
+    const isActivity = stepType === 'activity' || stepType === 'ACTIVITY';
+    const isQuestion = stepType === 'question' || stepType === 'QUESTION';
+    const isExam = stepType === 'exam' || stepType === 'EXAM';
+    return isActivity || isQuestion || isExam;
   }
 
   private stateForStep(step: { stepType?: string | null }): PedagogicalState {
@@ -1285,7 +1272,7 @@ export class OrchestrateRecipeUseCase {
 
       // For question steps, transition to ACTIVITY_WAIT
       // Always respect stepType — the type guard is only for extracting data
-      if (nextStep?.stepType === 'question' || nextStep?.stepType === StepType.QUESTION) {
+      if (nextStep?.stepType === 'question') {
         const questionText = isQuestionScript(nextScript)
           ? extractText((nextScript as QuestionScript).question)
           : this.buildVoiceText(nextStep);
@@ -1481,7 +1468,7 @@ export class OrchestrateRecipeUseCase {
       // PRIORITY: Use stepType to determine evaluation method
       // - 'question' steps use LLM (free response)
       // - 'activity'/'exam' steps use deterministic comparison (MCQ)
-      if (stepType === 'question' || stepType === StepType.QUESTION) {
+      if (stepType === 'question') {
         orchestrateLogger.info('[ACTIVITY_WAIT] Using LLM for question step');
         // Always use LLM for question steps (free response)
         // ── Pregunta de comprensión: evaluar con LLM ─────────────────────
@@ -1526,7 +1513,7 @@ export class OrchestrateRecipeUseCase {
               : 'EVALUATE_INCORRECT';
           nextState = this.applyStateTransition('ACTIVITY_WAIT', event);
         }
-      } else if (stepType === StepType.ACTIVITY || stepType === 'exam') {
+      } else if (stepType === 'activity' || stepType === 'exam') {
         // Use deterministic comparison for activity steps (MCQ)
         const as = script as ActivityScript;
         const norm = studentInput.trim().toLowerCase();
@@ -1888,7 +1875,7 @@ export class OrchestrateRecipeUseCase {
         '[interactStream] ACTIVITY_WAIT - processing answer',
       );
 
-      if (stepType === StepType.ACTIVITY || stepType === 'exam') {
+      if (stepType === 'activity' || stepType === 'exam') {
         // MCQ: deterministic comparison (NO LLM)
         const as = script as ActivityScript;
         const norm = studentInput.trim().toLowerCase();
@@ -1950,7 +1937,7 @@ export class OrchestrateRecipeUseCase {
           autoAdvance: false, // Wait for user to continue
         };
         return;
-      } else if (stepType === 'question' || stepType === StepType.QUESTION) {
+      } else if (stepType === 'question') {
         // Question: use LLM evaluation (will be handled below)
         orchestrateLogger.info('[interactStream] ACTIVITY_WAIT - using LLM for question step');
       }
@@ -2085,7 +2072,7 @@ export class OrchestrateRecipeUseCase {
 
       // For question steps, transition to ACTIVITY_WAIT
       // Always respect stepType — the type guard is only for extracting data
-      if (nextStep?.stepType === 'question' || nextStep?.stepType === StepType.QUESTION) {
+      if (nextStep?.stepType === 'question') {
         const questionText = isQuestionScript(nextScript)
           ? extractText((nextScript as QuestionScript).question)
           : this.buildVoiceText(nextStep);
@@ -2299,34 +2286,11 @@ export class OrchestrateRecipeUseCase {
       const script = currentStep.script as any;
       const stepType = currentStep.stepType as string;
 
-      // Use stepType to determine evaluation method (same as interact() method)
-      if (stepType === 'question' || stepType === StepType.QUESTION) {
-        const evaluation = await this.evaluateAnswer({
-          script: script as QuestionScript,
-          studentInput,
-          attemptNumber: failedAttempts + 1,
-          recipeTitle: recipe.title,
-          stepIndex: currentIdx,
-          studentId: userId,
-        });
-        const qs = script as QuestionScript;
-        if (evaluation.result === 'correct') {
-          voiceText = qs.feedback.correct;
-          nextState = 'EVALUATION';
-          failedAttempts = 0;
-        } else if (evaluation.result === 'partial') {
-          voiceText = qs.hint ?? evaluation.hint ?? qs.feedback.incorrect;
-          nextState = 'ACTIVITY_WAIT';
-        } else {
-          failedAttempts++;
-          totalWrongAnswers++;
-          voiceText = qs.feedback.incorrect;
-          nextState =
-            failedAttempts >= this.config.skipAfterFailedAttempts && this.config.enableActivitySkip
-              ? 'ACTIVITY_SKIP_OFFER'
-              : 'EVALUATION';
-        }
-      } else if (stepType === StepType.ACTIVITY || stepType === 'exam') {
+      // QUESTION: free response - response already generated above, just advance
+      // ACTIVITY/EXAM: evaluate with MCQ
+      if (stepType === 'question') {
+        nextState = 'EVALUATION';
+      } else if (stepType === 'activity' || stepType === 'exam') {
         const as = script as ActivityScript;
         const norm = studentInput.trim().toLowerCase();
         const correct = as.options.find((o) => o.isCorrect);
