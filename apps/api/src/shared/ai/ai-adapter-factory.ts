@@ -87,7 +87,7 @@ interface AIProviderStrategy {
 class GeminiStrategy implements AIProviderStrategy {
   create(options: AIAdapterFactoryOptions): AIAdapterInstances {
     if (!options.geminiApiKey) throw new Error('GEMINI_API_KEY is not configured');
-    const model = options.defaultModelGemini || 'gemini-3.1-flash-lite';
+    const model = options.defaultModelGemini || 'gemini-2.5-flash-lite';
     return {
       aiModel: new GeminiAIModelAdapter(
         options.promptRepo,

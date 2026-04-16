@@ -115,9 +115,9 @@ export class GeminiAIModelAdapter extends BaseGenerativeAdapter implements AISer
 abstract class BaseGeminiClassifierAdapter extends BaseLLMAdapter {
   protected readonly client: GoogleGenerativeAI;
   protected readonly fallbackModels = [
-    'gemini-3.1-flash-lite',
-    'gemini-3-flash-preview',
     'gemini-2.5-flash-lite',
+    'gemini-3-flash-preview',
+    'gemini-3.1-flash-lite', // deprecated, mantener al final
   ];
 
   constructor(apiKey: string, logger?: pino.Logger) {
