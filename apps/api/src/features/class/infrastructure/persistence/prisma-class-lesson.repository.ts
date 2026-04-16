@@ -11,6 +11,7 @@ function mapPrismaToClassLessonEntity(prismaLesson: {
   id: string;
   classId: string;
   recipeId: string;
+  title?: string | null;
   order: number;
   createdAt: Date;
   updatedAt: Date;
@@ -20,6 +21,7 @@ function mapPrismaToClassLessonEntity(prismaLesson: {
     id: prismaLesson.id,
     classId: prismaLesson.classId,
     recipeId: prismaLesson.recipeId,
+    title: prismaLesson.title ?? undefined,
     order: prismaLesson.order,
     createdAt: prismaLesson.createdAt,
     updatedAt: prismaLesson.updatedAt,
@@ -32,6 +34,34 @@ export class PrismaClassLessonRepository implements IClassLessonRepository {
     const lessons = await prisma.classLesson.findMany({
       where: { classId },
       orderBy: { order: 'asc' },
+      include: { recipe: { select: { id: true, title: true, expectedDurationMinutes: true } } },
+    });
+    return lessons.map(mapPrismaToClassLessonEntity);
+  }
+
+  async findById(id: string): Promise<ClassLessonEntity | null> {
+    const lesson = await prisma.classLesson.findUnique({
+      where: { id },
+      include: { recipe: { select: { id: true, title: true, expectedDurationMinutes: true } } },
+    });
+    return lesson ? mapPrismaToClassLessonEntity(lesson) : null;
+  }
+
+  async findByRecipeId(recipeId: string): Promise<ClassLessonEntity[]> {
+    const lessons = await prisma.classLesson.findMany({
+      where: { recipeId },
+      include: { recipe: { select: { id: true, title: true, expectedDurationMinutes: true } } },
+    });
+    return lessons.map(mapPrismaToClassLessonEntity);
+  }
+
+  async findByUserId(userId: string): Promise<ClassLessonEntity[]> {
+    const lessons = await prisma.classLesson.findMany({
+      where: {
+        class: {
+          tutorId: userId,
+        },
+      },
       include: { recipe: { select: { id: true, title: true, expectedDurationMinutes: true } } },
     });
     return lessons.map(mapPrismaToClassLessonEntity);
@@ -58,6 +88,7 @@ export class PrismaClassLessonRepository implements IClassLessonRepository {
     if (lessonData.classId !== undefined) updateData.classId = lessonData.classId;
     if (lessonData.recipeId !== undefined) updateData.recipeId = lessonData.recipeId;
     if (lessonData.order !== undefined) updateData.order = lessonData.order;
+    if (lessonData.title !== undefined) updateData.title = lessonData.title;
 
     const updated = await prisma.classLesson.update({
       where: { id },

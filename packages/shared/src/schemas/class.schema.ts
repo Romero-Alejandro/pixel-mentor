@@ -12,6 +12,7 @@ export const ClassLessonSchema = z.object({
   id: z.string(),
   classId: z.string(),
   recipeId: z.string(),
+  title: z.string().optional(),
   order: z.number(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
@@ -27,11 +28,13 @@ export const ClassLessonSchema = z.object({
 
 export const ClassLessonCreateSchema = z.object({
   recipeId: z.string().min(1),
+  title: z.string().optional(),
   order: z.number().optional(),
 });
 
 export const ClassLessonUpdateSchema = z.object({
   recipeId: z.string().min(1).optional(),
+  title: z.string().optional(),
   order: z.number().optional(),
 });
 

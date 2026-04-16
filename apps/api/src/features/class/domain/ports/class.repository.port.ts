@@ -31,6 +31,12 @@ export interface IClassRepository {
 export interface IClassLessonRepository {
   findByClassId(classId: string): Promise<ClassLessonEntity[]>;
 
+  findById(id: string): Promise<ClassLessonEntity | null>;
+
+  findByRecipeId(recipeId: string): Promise<ClassLessonEntity[]>;
+
+  findByUserId(userId: string): Promise<ClassLessonEntity[]>;
+
   create(
     lessonData: Omit<ClassLessonEntity, 'id' | 'createdAt' | 'updatedAt'>,
   ): Promise<ClassLessonEntity>;

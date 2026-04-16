@@ -292,6 +292,18 @@ export const ProgressStatus: {
 export type ProgressStatus = (typeof ProgressStatus)[keyof typeof ProgressStatus]
 
 
+export const StepType: {
+  CONTENT: 'CONTENT',
+  ACTIVITY: 'ACTIVITY',
+  QUESTION: 'QUESTION',
+  INTRO: 'INTRO',
+  CLOSURE: 'CLOSURE',
+  EXAM: 'EXAM'
+};
+
+export type StepType = (typeof StepType)[keyof typeof StepType]
+
+
 export const ClassStatus: {
   DRAFT: 'DRAFT',
   UNDER_REVIEW: 'UNDER_REVIEW',
@@ -334,6 +346,10 @@ export const EventType: typeof $Enums.EventType
 export type ProgressStatus = $Enums.ProgressStatus
 
 export const ProgressStatus: typeof $Enums.ProgressStatus
+
+export type StepType = $Enums.StepType
+
+export const StepType: typeof $Enums.StepType
 
 export type ClassStatus = $Enums.ClassStatus
 
@@ -12452,7 +12468,7 @@ export namespace Prisma {
     createdAt: Date | null
     conceptId: string | null
     activityId: string | null
-    stepType: string | null
+    stepType: $Enums.StepType | null
   }
 
   export type RecipeStepMaxAggregateOutputType = {
@@ -12464,7 +12480,7 @@ export namespace Prisma {
     createdAt: Date | null
     conceptId: string | null
     activityId: string | null
-    stepType: string | null
+    stepType: $Enums.StepType | null
   }
 
   export type RecipeStepCountAggregateOutputType = {
@@ -12633,7 +12649,7 @@ export namespace Prisma {
     script: JsonValue | null
     activityData: JsonValue | null
     question: JsonValue | null
-    stepType: string | null
+    stepType: $Enums.StepType
     _count: RecipeStepCountAggregateOutputType | null
     _avg: RecipeStepAvgAggregateOutputType | null
     _sum: RecipeStepSumAggregateOutputType | null
@@ -12772,7 +12788,7 @@ export namespace Prisma {
       script: Prisma.JsonValue | null
       activityData: Prisma.JsonValue | null
       question: Prisma.JsonValue | null
-      stepType: string | null
+      stepType: $Enums.StepType
     }, ExtArgs["result"]["recipeStep"]>
     composites: {}
   }
@@ -13212,7 +13228,7 @@ export namespace Prisma {
     readonly script: FieldRef<"RecipeStep", 'Json'>
     readonly activityData: FieldRef<"RecipeStep", 'Json'>
     readonly question: FieldRef<"RecipeStep", 'Json'>
-    readonly stepType: FieldRef<"RecipeStep", 'String'>
+    readonly stepType: FieldRef<"RecipeStep", 'StepType'>
   }
     
 
@@ -43407,6 +43423,7 @@ export namespace Prisma {
     id: string | null
     classId: string | null
     recipeId: string | null
+    title: string | null
     order: number | null
     createdAt: Date | null
     updatedAt: Date | null
@@ -43416,6 +43433,7 @@ export namespace Prisma {
     id: string | null
     classId: string | null
     recipeId: string | null
+    title: string | null
     order: number | null
     createdAt: Date | null
     updatedAt: Date | null
@@ -43425,6 +43443,7 @@ export namespace Prisma {
     id: number
     classId: number
     recipeId: number
+    title: number
     order: number
     createdAt: number
     updatedAt: number
@@ -43444,6 +43463,7 @@ export namespace Prisma {
     id?: true
     classId?: true
     recipeId?: true
+    title?: true
     order?: true
     createdAt?: true
     updatedAt?: true
@@ -43453,6 +43473,7 @@ export namespace Prisma {
     id?: true
     classId?: true
     recipeId?: true
+    title?: true
     order?: true
     createdAt?: true
     updatedAt?: true
@@ -43462,6 +43483,7 @@ export namespace Prisma {
     id?: true
     classId?: true
     recipeId?: true
+    title?: true
     order?: true
     createdAt?: true
     updatedAt?: true
@@ -43558,6 +43580,7 @@ export namespace Prisma {
     id: string
     classId: string
     recipeId: string
+    title: string | null
     order: number
     createdAt: Date
     updatedAt: Date
@@ -43586,6 +43609,7 @@ export namespace Prisma {
     id?: boolean
     classId?: boolean
     recipeId?: boolean
+    title?: boolean
     order?: boolean
     createdAt?: boolean
     updatedAt?: boolean
@@ -43597,6 +43621,7 @@ export namespace Prisma {
     id?: boolean
     classId?: boolean
     recipeId?: boolean
+    title?: boolean
     order?: boolean
     createdAt?: boolean
     updatedAt?: boolean
@@ -43608,6 +43633,7 @@ export namespace Prisma {
     id?: boolean
     classId?: boolean
     recipeId?: boolean
+    title?: boolean
     order?: boolean
     createdAt?: boolean
     updatedAt?: boolean
@@ -43619,12 +43645,13 @@ export namespace Prisma {
     id?: boolean
     classId?: boolean
     recipeId?: boolean
+    title?: boolean
     order?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type ClassLessonOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "classId" | "recipeId" | "order" | "createdAt" | "updatedAt", ExtArgs["result"]["classLesson"]>
+  export type ClassLessonOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "classId" | "recipeId" | "title" | "order" | "createdAt" | "updatedAt", ExtArgs["result"]["classLesson"]>
   export type ClassLessonInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     class?: boolean | ClassDefaultArgs<ExtArgs>
     recipe?: boolean | RecipeDefaultArgs<ExtArgs>
@@ -43648,6 +43675,7 @@ export namespace Prisma {
       id: string
       classId: string
       recipeId: string
+      title: string | null
       order: number
       createdAt: Date
       updatedAt: Date
@@ -44079,6 +44107,7 @@ export namespace Prisma {
     readonly id: FieldRef<"ClassLesson", 'String'>
     readonly classId: FieldRef<"ClassLesson", 'String'>
     readonly recipeId: FieldRef<"ClassLesson", 'String'>
+    readonly title: FieldRef<"ClassLesson", 'String'>
     readonly order: FieldRef<"ClassLesson", 'Int'>
     readonly createdAt: FieldRef<"ClassLesson", 'DateTime'>
     readonly updatedAt: FieldRef<"ClassLesson", 'DateTime'>
@@ -47275,6 +47304,7 @@ export namespace Prisma {
     id: 'id',
     classId: 'classId',
     recipeId: 'recipeId',
+    title: 'title',
     order: 'order',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
@@ -47453,6 +47483,20 @@ export namespace Prisma {
    * Reference to a field of type 'QueryMode'
    */
   export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QueryMode'>
+    
+
+
+  /**
+   * Reference to a field of type 'StepType'
+   */
+  export type EnumStepTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'StepType'>
+    
+
+
+  /**
+   * Reference to a field of type 'StepType[]'
+   */
+  export type ListEnumStepTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'StepType[]'>
     
 
 
@@ -48099,7 +48143,7 @@ export namespace Prisma {
     script?: JsonNullableFilter<"RecipeStep">
     activityData?: JsonNullableFilter<"RecipeStep">
     question?: JsonNullableFilter<"RecipeStep">
-    stepType?: StringNullableFilter<"RecipeStep"> | string | null
+    stepType?: EnumStepTypeFilter<"RecipeStep"> | $Enums.StepType
     recipe?: XOR<RecipeScalarRelationFilter, RecipeWhereInput>
     atom?: XOR<AtomScalarRelationFilter, AtomWhereInput>
     concept?: XOR<ConceptNullableScalarRelationFilter, ConceptWhereInput> | null
@@ -48119,7 +48163,7 @@ export namespace Prisma {
     script?: SortOrderInput | SortOrder
     activityData?: SortOrderInput | SortOrder
     question?: SortOrderInput | SortOrder
-    stepType?: SortOrderInput | SortOrder
+    stepType?: SortOrder
     recipe?: RecipeOrderByWithRelationInput
     atom?: AtomOrderByWithRelationInput
     concept?: ConceptOrderByWithRelationInput
@@ -48143,7 +48187,7 @@ export namespace Prisma {
     script?: JsonNullableFilter<"RecipeStep">
     activityData?: JsonNullableFilter<"RecipeStep">
     question?: JsonNullableFilter<"RecipeStep">
-    stepType?: StringNullableFilter<"RecipeStep"> | string | null
+    stepType?: EnumStepTypeFilter<"RecipeStep"> | $Enums.StepType
     recipe?: XOR<RecipeScalarRelationFilter, RecipeWhereInput>
     atom?: XOR<AtomScalarRelationFilter, AtomWhereInput>
     concept?: XOR<ConceptNullableScalarRelationFilter, ConceptWhereInput> | null
@@ -48163,7 +48207,7 @@ export namespace Prisma {
     script?: SortOrderInput | SortOrder
     activityData?: SortOrderInput | SortOrder
     question?: SortOrderInput | SortOrder
-    stepType?: SortOrderInput | SortOrder
+    stepType?: SortOrder
     _count?: RecipeStepCountOrderByAggregateInput
     _avg?: RecipeStepAvgOrderByAggregateInput
     _max?: RecipeStepMaxOrderByAggregateInput
@@ -48187,7 +48231,7 @@ export namespace Prisma {
     script?: JsonNullableWithAggregatesFilter<"RecipeStep">
     activityData?: JsonNullableWithAggregatesFilter<"RecipeStep">
     question?: JsonNullableWithAggregatesFilter<"RecipeStep">
-    stepType?: StringNullableWithAggregatesFilter<"RecipeStep"> | string | null
+    stepType?: EnumStepTypeWithAggregatesFilter<"RecipeStep"> | $Enums.StepType
   }
 
   export type ConceptWhereInput = {
@@ -50115,6 +50159,7 @@ export namespace Prisma {
     id?: StringFilter<"ClassLesson"> | string
     classId?: StringFilter<"ClassLesson"> | string
     recipeId?: StringFilter<"ClassLesson"> | string
+    title?: StringNullableFilter<"ClassLesson"> | string | null
     order?: IntFilter<"ClassLesson"> | number
     createdAt?: DateTimeFilter<"ClassLesson"> | Date | string
     updatedAt?: DateTimeFilter<"ClassLesson"> | Date | string
@@ -50126,6 +50171,7 @@ export namespace Prisma {
     id?: SortOrder
     classId?: SortOrder
     recipeId?: SortOrder
+    title?: SortOrderInput | SortOrder
     order?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -50141,6 +50187,7 @@ export namespace Prisma {
     NOT?: ClassLessonWhereInput | ClassLessonWhereInput[]
     classId?: StringFilter<"ClassLesson"> | string
     recipeId?: StringFilter<"ClassLesson"> | string
+    title?: StringNullableFilter<"ClassLesson"> | string | null
     order?: IntFilter<"ClassLesson"> | number
     createdAt?: DateTimeFilter<"ClassLesson"> | Date | string
     updatedAt?: DateTimeFilter<"ClassLesson"> | Date | string
@@ -50152,6 +50199,7 @@ export namespace Prisma {
     id?: SortOrder
     classId?: SortOrder
     recipeId?: SortOrder
+    title?: SortOrderInput | SortOrder
     order?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -50169,6 +50217,7 @@ export namespace Prisma {
     id?: StringWithAggregatesFilter<"ClassLesson"> | string
     classId?: StringWithAggregatesFilter<"ClassLesson"> | string
     recipeId?: StringWithAggregatesFilter<"ClassLesson"> | string
+    title?: StringNullableWithAggregatesFilter<"ClassLesson"> | string | null
     order?: IntWithAggregatesFilter<"ClassLesson"> | number
     createdAt?: DateTimeWithAggregatesFilter<"ClassLesson"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"ClassLesson"> | Date | string
@@ -50912,7 +50961,7 @@ export namespace Prisma {
     script?: NullableJsonNullValueInput | InputJsonValue
     activityData?: NullableJsonNullValueInput | InputJsonValue
     question?: NullableJsonNullValueInput | InputJsonValue
-    stepType?: string | null
+    stepType?: $Enums.StepType
     recipe: RecipeCreateNestedOneWithoutStepsInput
     atom: AtomCreateNestedOneWithoutRecipeStepsInput
     concept?: ConceptCreateNestedOneWithoutRecipeStepsInput
@@ -50932,7 +50981,7 @@ export namespace Prisma {
     script?: NullableJsonNullValueInput | InputJsonValue
     activityData?: NullableJsonNullValueInput | InputJsonValue
     question?: NullableJsonNullValueInput | InputJsonValue
-    stepType?: string | null
+    stepType?: $Enums.StepType
   }
 
   export type RecipeStepUpdateInput = {
@@ -50944,7 +50993,7 @@ export namespace Prisma {
     script?: NullableJsonNullValueInput | InputJsonValue
     activityData?: NullableJsonNullValueInput | InputJsonValue
     question?: NullableJsonNullValueInput | InputJsonValue
-    stepType?: NullableStringFieldUpdateOperationsInput | string | null
+    stepType?: EnumStepTypeFieldUpdateOperationsInput | $Enums.StepType
     recipe?: RecipeUpdateOneRequiredWithoutStepsNestedInput
     atom?: AtomUpdateOneRequiredWithoutRecipeStepsNestedInput
     concept?: ConceptUpdateOneWithoutRecipeStepsNestedInput
@@ -50964,7 +51013,7 @@ export namespace Prisma {
     script?: NullableJsonNullValueInput | InputJsonValue
     activityData?: NullableJsonNullValueInput | InputJsonValue
     question?: NullableJsonNullValueInput | InputJsonValue
-    stepType?: NullableStringFieldUpdateOperationsInput | string | null
+    stepType?: EnumStepTypeFieldUpdateOperationsInput | $Enums.StepType
   }
 
   export type RecipeStepCreateManyInput = {
@@ -50980,7 +51029,7 @@ export namespace Prisma {
     script?: NullableJsonNullValueInput | InputJsonValue
     activityData?: NullableJsonNullValueInput | InputJsonValue
     question?: NullableJsonNullValueInput | InputJsonValue
-    stepType?: string | null
+    stepType?: $Enums.StepType
   }
 
   export type RecipeStepUpdateManyMutationInput = {
@@ -50992,7 +51041,7 @@ export namespace Prisma {
     script?: NullableJsonNullValueInput | InputJsonValue
     activityData?: NullableJsonNullValueInput | InputJsonValue
     question?: NullableJsonNullValueInput | InputJsonValue
-    stepType?: NullableStringFieldUpdateOperationsInput | string | null
+    stepType?: EnumStepTypeFieldUpdateOperationsInput | $Enums.StepType
   }
 
   export type RecipeStepUncheckedUpdateManyInput = {
@@ -51008,7 +51057,7 @@ export namespace Prisma {
     script?: NullableJsonNullValueInput | InputJsonValue
     activityData?: NullableJsonNullValueInput | InputJsonValue
     question?: NullableJsonNullValueInput | InputJsonValue
-    stepType?: NullableStringFieldUpdateOperationsInput | string | null
+    stepType?: EnumStepTypeFieldUpdateOperationsInput | $Enums.StepType
   }
 
   export type ConceptCreateInput = {
@@ -53025,6 +53074,7 @@ export namespace Prisma {
 
   export type ClassLessonCreateInput = {
     id?: string
+    title?: string | null
     order: number
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -53036,6 +53086,7 @@ export namespace Prisma {
     id?: string
     classId: string
     recipeId: string
+    title?: string | null
     order: number
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -53043,6 +53094,7 @@ export namespace Prisma {
 
   export type ClassLessonUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
+    title?: NullableStringFieldUpdateOperationsInput | string | null
     order?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -53054,6 +53106,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     classId?: StringFieldUpdateOperationsInput | string
     recipeId?: StringFieldUpdateOperationsInput | string
+    title?: NullableStringFieldUpdateOperationsInput | string | null
     order?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -53063,6 +53116,7 @@ export namespace Prisma {
     id?: string
     classId: string
     recipeId: string
+    title?: string | null
     order: number
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -53070,6 +53124,7 @@ export namespace Prisma {
 
   export type ClassLessonUpdateManyMutationInput = {
     id?: StringFieldUpdateOperationsInput | string
+    title?: NullableStringFieldUpdateOperationsInput | string | null
     order?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -53079,6 +53134,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     classId?: StringFieldUpdateOperationsInput | string
     recipeId?: StringFieldUpdateOperationsInput | string
+    title?: NullableStringFieldUpdateOperationsInput | string | null
     order?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -53954,6 +54010,13 @@ export namespace Prisma {
     not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
   }
 
+  export type EnumStepTypeFilter<$PrismaModel = never> = {
+    equals?: $Enums.StepType | EnumStepTypeFieldRefInput<$PrismaModel>
+    in?: $Enums.StepType[] | ListEnumStepTypeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.StepType[] | ListEnumStepTypeFieldRefInput<$PrismaModel>
+    not?: NestedEnumStepTypeFilter<$PrismaModel> | $Enums.StepType
+  }
+
   export type RecipeScalarRelationFilter = {
     is?: RecipeWhereInput
     isNot?: RecipeWhereInput
@@ -54051,6 +54114,16 @@ export namespace Prisma {
     _count?: NestedIntNullableFilter<$PrismaModel>
     _min?: NestedJsonNullableFilter<$PrismaModel>
     _max?: NestedJsonNullableFilter<$PrismaModel>
+  }
+
+  export type EnumStepTypeWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.StepType | EnumStepTypeFieldRefInput<$PrismaModel>
+    in?: $Enums.StepType[] | ListEnumStepTypeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.StepType[] | ListEnumStepTypeFieldRefInput<$PrismaModel>
+    not?: NestedEnumStepTypeWithAggregatesFilter<$PrismaModel> | $Enums.StepType
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumStepTypeFilter<$PrismaModel>
+    _max?: NestedEnumStepTypeFilter<$PrismaModel>
   }
   export type JsonFilter<$PrismaModel = never> =
     | PatchUndefined<
@@ -55419,6 +55492,7 @@ export namespace Prisma {
     id?: SortOrder
     classId?: SortOrder
     recipeId?: SortOrder
+    title?: SortOrder
     order?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -55432,6 +55506,7 @@ export namespace Prisma {
     id?: SortOrder
     classId?: SortOrder
     recipeId?: SortOrder
+    title?: SortOrder
     order?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -55441,6 +55516,7 @@ export namespace Prisma {
     id?: SortOrder
     classId?: SortOrder
     recipeId?: SortOrder
+    title?: SortOrder
     order?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -56670,6 +56746,10 @@ export namespace Prisma {
     create?: XOR<ActivityCreateWithoutRecipeStepsInput, ActivityUncheckedCreateWithoutRecipeStepsInput>
     connectOrCreate?: ActivityCreateOrConnectWithoutRecipeStepsInput
     connect?: ActivityWhereUniqueInput
+  }
+
+  export type EnumStepTypeFieldUpdateOperationsInput = {
+    set?: $Enums.StepType
   }
 
   export type RecipeUpdateOneRequiredWithoutStepsNestedInput = {
@@ -58562,6 +58642,13 @@ export namespace Prisma {
     _min?: NestedEnumConsentStatusFilter<$PrismaModel>
     _max?: NestedEnumConsentStatusFilter<$PrismaModel>
   }
+
+  export type NestedEnumStepTypeFilter<$PrismaModel = never> = {
+    equals?: $Enums.StepType | EnumStepTypeFieldRefInput<$PrismaModel>
+    in?: $Enums.StepType[] | ListEnumStepTypeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.StepType[] | ListEnumStepTypeFieldRefInput<$PrismaModel>
+    not?: NestedEnumStepTypeFilter<$PrismaModel> | $Enums.StepType
+  }
   export type NestedJsonNullableFilter<$PrismaModel = never> =
     | PatchUndefined<
         Either<Required<NestedJsonNullableFilterBase<$PrismaModel>>, Exclude<keyof Required<NestedJsonNullableFilterBase<$PrismaModel>>, 'path'>>,
@@ -58584,6 +58671,16 @@ export namespace Prisma {
     gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
     gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
     not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+  }
+
+  export type NestedEnumStepTypeWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.StepType | EnumStepTypeFieldRefInput<$PrismaModel>
+    in?: $Enums.StepType[] | ListEnumStepTypeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.StepType[] | ListEnumStepTypeFieldRefInput<$PrismaModel>
+    not?: NestedEnumStepTypeWithAggregatesFilter<$PrismaModel> | $Enums.StepType
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumStepTypeFilter<$PrismaModel>
+    _max?: NestedEnumStepTypeFilter<$PrismaModel>
   }
   export type NestedJsonFilter<$PrismaModel = never> =
     | PatchUndefined<
@@ -60165,7 +60262,7 @@ export namespace Prisma {
     script?: NullableJsonNullValueInput | InputJsonValue
     activityData?: NullableJsonNullValueInput | InputJsonValue
     question?: NullableJsonNullValueInput | InputJsonValue
-    stepType?: string | null
+    stepType?: $Enums.StepType
     atom: AtomCreateNestedOneWithoutRecipeStepsInput
     concept?: ConceptCreateNestedOneWithoutRecipeStepsInput
     activity?: ActivityCreateNestedOneWithoutRecipeStepsInput
@@ -60183,7 +60280,7 @@ export namespace Prisma {
     script?: NullableJsonNullValueInput | InputJsonValue
     activityData?: NullableJsonNullValueInput | InputJsonValue
     question?: NullableJsonNullValueInput | InputJsonValue
-    stepType?: string | null
+    stepType?: $Enums.StepType
   }
 
   export type RecipeStepCreateOrConnectWithoutRecipeInput = {
@@ -60360,6 +60457,7 @@ export namespace Prisma {
 
   export type ClassLessonCreateWithoutRecipeInput = {
     id?: string
+    title?: string | null
     order: number
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -60369,6 +60467,7 @@ export namespace Prisma {
   export type ClassLessonUncheckedCreateWithoutRecipeInput = {
     id?: string
     classId: string
+    title?: string | null
     order: number
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -60538,7 +60637,7 @@ export namespace Prisma {
     script?: JsonNullableFilter<"RecipeStep">
     activityData?: JsonNullableFilter<"RecipeStep">
     question?: JsonNullableFilter<"RecipeStep">
-    stepType?: StringNullableFilter<"RecipeStep"> | string | null
+    stepType?: EnumStepTypeFilter<"RecipeStep"> | $Enums.StepType
   }
 
   export type ConceptUpsertWithWhereUniqueWithoutRecipeInput = {
@@ -60679,6 +60778,7 @@ export namespace Prisma {
     id?: StringFilter<"ClassLesson"> | string
     classId?: StringFilter<"ClassLesson"> | string
     recipeId?: StringFilter<"ClassLesson"> | string
+    title?: StringNullableFilter<"ClassLesson"> | string | null
     order?: IntFilter<"ClassLesson"> | number
     createdAt?: DateTimeFilter<"ClassLesson"> | Date | string
     updatedAt?: DateTimeFilter<"ClassLesson"> | Date | string
@@ -61148,7 +61248,7 @@ export namespace Prisma {
     script?: NullableJsonNullValueInput | InputJsonValue
     activityData?: NullableJsonNullValueInput | InputJsonValue
     question?: NullableJsonNullValueInput | InputJsonValue
-    stepType?: string | null
+    stepType?: $Enums.StepType
     recipe: RecipeCreateNestedOneWithoutStepsInput
     atom: AtomCreateNestedOneWithoutRecipeStepsInput
     activity?: ActivityCreateNestedOneWithoutRecipeStepsInput
@@ -61166,7 +61266,7 @@ export namespace Prisma {
     script?: NullableJsonNullValueInput | InputJsonValue
     activityData?: NullableJsonNullValueInput | InputJsonValue
     question?: NullableJsonNullValueInput | InputJsonValue
-    stepType?: string | null
+    stepType?: $Enums.StepType
   }
 
   export type RecipeStepCreateOrConnectWithoutConceptInput = {
@@ -61321,7 +61421,7 @@ export namespace Prisma {
     script?: NullableJsonNullValueInput | InputJsonValue
     activityData?: NullableJsonNullValueInput | InputJsonValue
     question?: NullableJsonNullValueInput | InputJsonValue
-    stepType?: string | null
+    stepType?: $Enums.StepType
     recipe: RecipeCreateNestedOneWithoutStepsInput
     atom: AtomCreateNestedOneWithoutRecipeStepsInput
     concept?: ConceptCreateNestedOneWithoutRecipeStepsInput
@@ -61339,7 +61439,7 @@ export namespace Prisma {
     script?: NullableJsonNullValueInput | InputJsonValue
     activityData?: NullableJsonNullValueInput | InputJsonValue
     question?: NullableJsonNullValueInput | InputJsonValue
-    stepType?: string | null
+    stepType?: $Enums.StepType
   }
 
   export type RecipeStepCreateOrConnectWithoutActivityInput = {
@@ -61448,7 +61548,7 @@ export namespace Prisma {
     script?: NullableJsonNullValueInput | InputJsonValue
     activityData?: NullableJsonNullValueInput | InputJsonValue
     question?: NullableJsonNullValueInput | InputJsonValue
-    stepType?: string | null
+    stepType?: $Enums.StepType
     recipe: RecipeCreateNestedOneWithoutStepsInput
     concept?: ConceptCreateNestedOneWithoutRecipeStepsInput
     activity?: ActivityCreateNestedOneWithoutRecipeStepsInput
@@ -61466,7 +61566,7 @@ export namespace Prisma {
     script?: NullableJsonNullValueInput | InputJsonValue
     activityData?: NullableJsonNullValueInput | InputJsonValue
     question?: NullableJsonNullValueInput | InputJsonValue
-    stepType?: string | null
+    stepType?: $Enums.StepType
   }
 
   export type RecipeStepCreateOrConnectWithoutAtomInput = {
@@ -65372,6 +65472,7 @@ export namespace Prisma {
 
   export type ClassLessonCreateWithoutClassInput = {
     id?: string
+    title?: string | null
     order: number
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -65381,6 +65482,7 @@ export namespace Prisma {
   export type ClassLessonUncheckedCreateWithoutClassInput = {
     id?: string
     recipeId: string
+    title?: string | null
     order: number
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -66617,7 +66719,7 @@ export namespace Prisma {
     script?: NullableJsonNullValueInput | InputJsonValue
     activityData?: NullableJsonNullValueInput | InputJsonValue
     question?: NullableJsonNullValueInput | InputJsonValue
-    stepType?: string | null
+    stepType?: $Enums.StepType
   }
 
   export type ConceptCreateManyRecipeInput = {
@@ -66674,6 +66776,7 @@ export namespace Prisma {
   export type ClassLessonCreateManyRecipeInput = {
     id?: string
     classId: string
+    title?: string | null
     order: number
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -66698,7 +66801,7 @@ export namespace Prisma {
     script?: NullableJsonNullValueInput | InputJsonValue
     activityData?: NullableJsonNullValueInput | InputJsonValue
     question?: NullableJsonNullValueInput | InputJsonValue
-    stepType?: NullableStringFieldUpdateOperationsInput | string | null
+    stepType?: EnumStepTypeFieldUpdateOperationsInput | $Enums.StepType
     atom?: AtomUpdateOneRequiredWithoutRecipeStepsNestedInput
     concept?: ConceptUpdateOneWithoutRecipeStepsNestedInput
     activity?: ActivityUpdateOneWithoutRecipeStepsNestedInput
@@ -66716,7 +66819,7 @@ export namespace Prisma {
     script?: NullableJsonNullValueInput | InputJsonValue
     activityData?: NullableJsonNullValueInput | InputJsonValue
     question?: NullableJsonNullValueInput | InputJsonValue
-    stepType?: NullableStringFieldUpdateOperationsInput | string | null
+    stepType?: EnumStepTypeFieldUpdateOperationsInput | $Enums.StepType
   }
 
   export type RecipeStepUncheckedUpdateManyWithoutRecipeInput = {
@@ -66731,7 +66834,7 @@ export namespace Prisma {
     script?: NullableJsonNullValueInput | InputJsonValue
     activityData?: NullableJsonNullValueInput | InputJsonValue
     question?: NullableJsonNullValueInput | InputJsonValue
-    stepType?: NullableStringFieldUpdateOperationsInput | string | null
+    stepType?: EnumStepTypeFieldUpdateOperationsInput | $Enums.StepType
   }
 
   export type ConceptUpdateWithoutRecipeInput = {
@@ -66899,6 +67002,7 @@ export namespace Prisma {
 
   export type ClassLessonUpdateWithoutRecipeInput = {
     id?: StringFieldUpdateOperationsInput | string
+    title?: NullableStringFieldUpdateOperationsInput | string | null
     order?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -66908,6 +67012,7 @@ export namespace Prisma {
   export type ClassLessonUncheckedUpdateWithoutRecipeInput = {
     id?: StringFieldUpdateOperationsInput | string
     classId?: StringFieldUpdateOperationsInput | string
+    title?: NullableStringFieldUpdateOperationsInput | string | null
     order?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -66916,6 +67021,7 @@ export namespace Prisma {
   export type ClassLessonUncheckedUpdateManyWithoutRecipeInput = {
     id?: StringFieldUpdateOperationsInput | string
     classId?: StringFieldUpdateOperationsInput | string
+    title?: NullableStringFieldUpdateOperationsInput | string | null
     order?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -66974,7 +67080,7 @@ export namespace Prisma {
     script?: NullableJsonNullValueInput | InputJsonValue
     activityData?: NullableJsonNullValueInput | InputJsonValue
     question?: NullableJsonNullValueInput | InputJsonValue
-    stepType?: string | null
+    stepType?: $Enums.StepType
   }
 
   export type ActivityUpdateWithoutConceptInput = {
@@ -67021,7 +67127,7 @@ export namespace Prisma {
     script?: NullableJsonNullValueInput | InputJsonValue
     activityData?: NullableJsonNullValueInput | InputJsonValue
     question?: NullableJsonNullValueInput | InputJsonValue
-    stepType?: NullableStringFieldUpdateOperationsInput | string | null
+    stepType?: EnumStepTypeFieldUpdateOperationsInput | $Enums.StepType
     recipe?: RecipeUpdateOneRequiredWithoutStepsNestedInput
     atom?: AtomUpdateOneRequiredWithoutRecipeStepsNestedInput
     activity?: ActivityUpdateOneWithoutRecipeStepsNestedInput
@@ -67039,7 +67145,7 @@ export namespace Prisma {
     script?: NullableJsonNullValueInput | InputJsonValue
     activityData?: NullableJsonNullValueInput | InputJsonValue
     question?: NullableJsonNullValueInput | InputJsonValue
-    stepType?: NullableStringFieldUpdateOperationsInput | string | null
+    stepType?: EnumStepTypeFieldUpdateOperationsInput | $Enums.StepType
   }
 
   export type RecipeStepUncheckedUpdateManyWithoutConceptInput = {
@@ -67054,7 +67160,7 @@ export namespace Prisma {
     script?: NullableJsonNullValueInput | InputJsonValue
     activityData?: NullableJsonNullValueInput | InputJsonValue
     question?: NullableJsonNullValueInput | InputJsonValue
-    stepType?: NullableStringFieldUpdateOperationsInput | string | null
+    stepType?: EnumStepTypeFieldUpdateOperationsInput | $Enums.StepType
   }
 
   export type RecipeStepCreateManyActivityInput = {
@@ -67069,7 +67175,7 @@ export namespace Prisma {
     script?: NullableJsonNullValueInput | InputJsonValue
     activityData?: NullableJsonNullValueInput | InputJsonValue
     question?: NullableJsonNullValueInput | InputJsonValue
-    stepType?: string | null
+    stepType?: $Enums.StepType
   }
 
   export type RecipeStepUpdateWithoutActivityInput = {
@@ -67081,7 +67187,7 @@ export namespace Prisma {
     script?: NullableJsonNullValueInput | InputJsonValue
     activityData?: NullableJsonNullValueInput | InputJsonValue
     question?: NullableJsonNullValueInput | InputJsonValue
-    stepType?: NullableStringFieldUpdateOperationsInput | string | null
+    stepType?: EnumStepTypeFieldUpdateOperationsInput | $Enums.StepType
     recipe?: RecipeUpdateOneRequiredWithoutStepsNestedInput
     atom?: AtomUpdateOneRequiredWithoutRecipeStepsNestedInput
     concept?: ConceptUpdateOneWithoutRecipeStepsNestedInput
@@ -67099,7 +67205,7 @@ export namespace Prisma {
     script?: NullableJsonNullValueInput | InputJsonValue
     activityData?: NullableJsonNullValueInput | InputJsonValue
     question?: NullableJsonNullValueInput | InputJsonValue
-    stepType?: NullableStringFieldUpdateOperationsInput | string | null
+    stepType?: EnumStepTypeFieldUpdateOperationsInput | $Enums.StepType
   }
 
   export type RecipeStepUncheckedUpdateManyWithoutActivityInput = {
@@ -67114,7 +67220,7 @@ export namespace Prisma {
     script?: NullableJsonNullValueInput | InputJsonValue
     activityData?: NullableJsonNullValueInput | InputJsonValue
     question?: NullableJsonNullValueInput | InputJsonValue
-    stepType?: NullableStringFieldUpdateOperationsInput | string | null
+    stepType?: EnumStepTypeFieldUpdateOperationsInput | $Enums.StepType
   }
 
   export type AtomOptionCreateManyAtomInput = {
@@ -67139,7 +67245,7 @@ export namespace Prisma {
     script?: NullableJsonNullValueInput | InputJsonValue
     activityData?: NullableJsonNullValueInput | InputJsonValue
     question?: NullableJsonNullValueInput | InputJsonValue
-    stepType?: string | null
+    stepType?: $Enums.StepType
   }
 
   export type AtomCompetencyCreateManyAtomInput = {
@@ -67232,7 +67338,7 @@ export namespace Prisma {
     script?: NullableJsonNullValueInput | InputJsonValue
     activityData?: NullableJsonNullValueInput | InputJsonValue
     question?: NullableJsonNullValueInput | InputJsonValue
-    stepType?: NullableStringFieldUpdateOperationsInput | string | null
+    stepType?: EnumStepTypeFieldUpdateOperationsInput | $Enums.StepType
     recipe?: RecipeUpdateOneRequiredWithoutStepsNestedInput
     concept?: ConceptUpdateOneWithoutRecipeStepsNestedInput
     activity?: ActivityUpdateOneWithoutRecipeStepsNestedInput
@@ -67250,7 +67356,7 @@ export namespace Prisma {
     script?: NullableJsonNullValueInput | InputJsonValue
     activityData?: NullableJsonNullValueInput | InputJsonValue
     question?: NullableJsonNullValueInput | InputJsonValue
-    stepType?: NullableStringFieldUpdateOperationsInput | string | null
+    stepType?: EnumStepTypeFieldUpdateOperationsInput | $Enums.StepType
   }
 
   export type RecipeStepUncheckedUpdateManyWithoutAtomInput = {
@@ -67265,7 +67371,7 @@ export namespace Prisma {
     script?: NullableJsonNullValueInput | InputJsonValue
     activityData?: NullableJsonNullValueInput | InputJsonValue
     question?: NullableJsonNullValueInput | InputJsonValue
-    stepType?: NullableStringFieldUpdateOperationsInput | string | null
+    stepType?: EnumStepTypeFieldUpdateOperationsInput | $Enums.StepType
   }
 
   export type AtomCompetencyUpdateWithoutAtomInput = {
@@ -67817,6 +67923,7 @@ export namespace Prisma {
   export type ClassLessonCreateManyClassInput = {
     id?: string
     recipeId: string
+    title?: string | null
     order: number
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -67859,6 +67966,7 @@ export namespace Prisma {
 
   export type ClassLessonUpdateWithoutClassInput = {
     id?: StringFieldUpdateOperationsInput | string
+    title?: NullableStringFieldUpdateOperationsInput | string | null
     order?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -67868,6 +67976,7 @@ export namespace Prisma {
   export type ClassLessonUncheckedUpdateWithoutClassInput = {
     id?: StringFieldUpdateOperationsInput | string
     recipeId?: StringFieldUpdateOperationsInput | string
+    title?: NullableStringFieldUpdateOperationsInput | string | null
     order?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -67876,6 +67985,7 @@ export namespace Prisma {
   export type ClassLessonUncheckedUpdateManyWithoutClassInput = {
     id?: StringFieldUpdateOperationsInput | string
     recipeId?: StringFieldUpdateOperationsInput | string
+    title?: NullableStringFieldUpdateOperationsInput | string | null
     order?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string

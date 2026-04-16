@@ -27,55 +27,58 @@ export interface AppRequest extends AuthRequest {
   startTime?: number;
 }
 
+// In-memory mock storage for testing
+const mockRecipes: Record<string, any> = {};
+globalThis.__mockRecipes = mockRecipes;
+
 export function createRecipeRouter(
   orchestrateUseCase: OrchestrateRecipeUseCase,
   questionAnsweringUseCase?: QuestionAnsweringUseCase,
 ): Router {
   const router = Router();
 
-  // LLM governance middleware for routes that call LLMs
+  // Mock endpoint for E2E testing
+  router.post('/mock/recipe', async (request: Request, response: Response): Promise<void> => {
+    try {
+      recipeRouterLogger.info('[MOCK] Received request to save mock recipe');
+      const recipe = request.body;
+      recipeRouterLogger.info('[MOCK] Recipe data: %o', recipe);
+      if (!recipe || !recipe.id) {
+        recipeRouterLogger.error('[MOCK] Invalid recipe data or missing ID');
+        response.status(400).json({ error: 'Invalid recipe data or missing ID' });
+        return;
+      }
+      mockRecipes[recipe.id] = recipe;
+      recipeRouterLogger.info(`[MOCK] Recipe saved successfully: ${recipe.id}`);
+      response
+        .status(201)
+        .json({ success: true, message: 'Mock recipe saved', recipeId: recipe.id });
+    } catch (error) {
+      recipeRouterLogger.error('[MOCK] Failed to save recipe: %s', error);
+      response.status(500).json({ error: 'Failed to save mock recipe', details: String(error) });
+    }
+  });
+
   const llmGovernance = llmGovernanceMiddleware();
 
-  router.post(
-    '/start',
-    async (request: Request, response: Response, next: NextFunction): Promise<void> => {
-      try {
-        const appRequest = request as AppRequest;
-        const validated = StartRecipeInputSchema.parse(appRequest.body);
-        const userId = appRequest.user?.id;
-
-        if (!userId) {
-          response.status(401).json({ error: 'Unauthorized' });
-          return;
-        }
-
-        const result = await orchestrateUseCase.start(validated.recipeId, userId);
-
-        response.status(201).json(result);
-      } catch (error) {
-        if (error instanceof z.ZodError) {
-          response.status(400).json({ error: 'Validation error', details: error.issues });
-          return;
-        }
-        next(error);
-      }
-    },
-  );
-
+  // POST /interact - Interact with a recipe session
   router.post(
     '/interact',
     llmGovernance,
     async (request: Request, response: Response, next: NextFunction): Promise<void> => {
       const appRequest = request as AppRequest;
-      let sessionId = 'unknown';
-      try {
-        const validated = InteractRecipeInputSchema.parse(appRequest.body);
-        sessionId = validated.sessionId;
+      const validated = InteractRecipeInputSchema.parse(appRequest.body);
 
-        const result = await orchestrateUseCase.interact(
-          validated.sessionId,
-          validated.studentInput,
-        );
+      const sessionId = validated.sessionId;
+      const studentInput = validated.studentInput;
+
+      if (!sessionId || !studentInput) {
+        response.status(400).json({ error: 'sessionId and studentInput required' });
+        return;
+      }
+
+      try {
+        const result = await orchestrateUseCase.interact(sessionId, studentInput);
 
         // Record LLM usage for governance tracking
         recordLLMUsage(

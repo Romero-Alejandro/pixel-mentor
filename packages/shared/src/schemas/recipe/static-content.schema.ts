@@ -6,7 +6,7 @@ import { ActivityContentSchema } from './activity-content.schema.js';
 // ==================== Static Content ====================
 
 export const StaticContentSchema = z.object({
-  stepType: z.enum(['content', 'activity', 'intro', 'closure']),
+  stepType: z.enum(['content', 'activity', 'question', 'intro', 'closure']),
   script: StepContentSchema.optional(),
   activity: ActivityContentSchema.optional(),
 });

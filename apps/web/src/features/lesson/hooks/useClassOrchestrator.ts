@@ -17,6 +17,7 @@ interface LessonResponse {
   sessionCompleted?: boolean;
   lessonProgress?: { currentStep: number; totalSteps: number };
   staticContent?: {
+    stepType?: 'content' | 'activity' | 'question' | 'intro' | 'closure';
     script?: {
       transition?: string | { text: string };
       content?: string | { text: string };
@@ -226,9 +227,16 @@ export function useClassOrchestrator() {
         return;
       }
 
-      // --- 3. Estado Actividad / Pregunta ---
-      const activity = staticContent?.activity;
+      // --- 3. Estado Actividad ---
       if (pedagogicalState === 'ACTIVITY_WAIT') {
+        const { stepType, activity } = staticContent || {};
+        const hasOptions = activity?.options && activity.options.length > 0;
+        console.log('[DEBUG] ACTIVITY_WAIT STATE:', {
+          stepType,
+          activity,
+          hasOptions,
+        });
+
         lessonState.setQuestionText(extractText(activity?.instruction));
         lessonState.setOptions(
           activity?.options?.map((o, i) => ({
@@ -238,8 +246,31 @@ export function useClassOrchestrator() {
           })) || [],
         );
         lessonState.setFeedbackData(null);
-        lessonState.setUIState(activity?.options ? 'activity' : 'question');
+        // Panel decision: ActivityPanel if stepType=activity OR (stepType=question with options)
+        // Otherwise QuestionPanel
+        const isActivityPanel = stepType === 'activity' || hasOptions;
+        lessonState.setUIState(isActivityPanel ? 'activity' : 'question');
         await speak(voiceText || extractText(activity?.instruction) || '', _voiceSettings);
+        return;
+      }
+
+      // --- 4. Estado Pregunta ---
+      if (pedagogicalState === 'QUESTION') {
+        const { stepType, script } = staticContent || {};
+        const questionText = extractText(script?.question);
+        console.log('[DEBUG] QUESTION STATE:', {
+          pedagogicalState,
+          stepType,
+          questionText,
+          staticContent: script,
+        });
+
+        // Always question panel for QUESTION pedagogical state (open-ended answers)
+        lessonState.setQuestionText(questionText);
+        lessonState.setOptions([]);
+        lessonState.setFeedbackData(null);
+        lessonState.setUIState('question');
+        await speak(voiceText || questionText || '', _voiceSettings);
         return;
       }
 
@@ -297,7 +328,11 @@ export function useClassOrchestrator() {
       lessonIdRef.current = lessonId;
 
       try {
-        const result = await api.startRecipe(lessonId);
+        const classId = await api.getClassIdByLessonId(lessonId);
+        if (!classId) {
+          throw new Error('No se encontró la clase asociada a esta lección');
+        }
+        const result = await api.startClassDemo(classId);
         sessionIdRef.current = result.sessionId;
         store.setSessionId(result.sessionId);
         store.setIsRepeat(!!result.isRepeat);

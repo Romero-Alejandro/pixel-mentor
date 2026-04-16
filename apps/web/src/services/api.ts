@@ -121,9 +121,22 @@ export const api = {
     );
     return SessionSchema.array().parse(data);
   },
-  startRecipe: async (recipeId: string) => {
-    const { data } = await apiClient.post('/api/recipe/start', { recipeId });
-    return StartRecipeOutputSchema.parse(data);
+  startClassDemo: async (classId: string) => {
+    const { data } = await apiClient.post(`/api/classes/${classId}/demo`);
+    return {
+      sessionId: data.sessionId,
+      pedagogicalState: data.pedagogicalState,
+      voiceText: data.voiceText,
+      meta: data.meta,
+      isRepeat: data.isRepeat,
+      lessonProgress: data.lessonProgress,
+      contentSteps: data.contentSteps,
+      recipeId: data.recipeId,
+    };
+  },
+  getClassIdByLessonId: async (lessonId: string) => {
+    const { data } = await apiClient.get(`/api/classes/lessons/${lessonId}/class`);
+    return data.classId;
   },
   interactWithRecipe: async (sessionId: string, studentInput: string) => {
     const { data } = await apiClient.post('/api/recipe/interact', { sessionId, studentInput });
@@ -247,13 +260,7 @@ export const api = {
     );
     return GenerateClassDraftOutputSchema.parse(data);
   },
-  // ==================== Class Demo ====================
-  startClassDemo: async (classId: string) => {
-    const { data } = await apiClient.post<{ sessionId: string; recipeId: string; title: string }>(
-      `/api/classes/${classId}/demo`,
-    );
-    return data;
-  },
+
   // ==================== Recipe Management ====================
   listAllRecipes: async (options?: { status?: 'my' | 'published' }) => {
     const activeOnly =

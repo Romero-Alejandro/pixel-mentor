@@ -16,7 +16,7 @@ export interface AppRequest extends Request {
 export type AppRequestHandler = (
   req: AppRequest,
   res: Response,
-  next: NextFunction,
+  next?: NextFunction,
 ) => Promise<void> | void;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

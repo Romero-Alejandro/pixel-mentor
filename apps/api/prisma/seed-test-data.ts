@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import argon2 from 'argon2';
 
-import { PrismaClient } from '../src/database/client';
+import { Prisma, PrismaClient } from '../src/database/client';
 
 const prisma = new PrismaClient();
 
@@ -239,7 +239,7 @@ function stepData(params: {
   recipeId: string;
   atomId: string;
   order: number;
-  stepType: string;
+  stepType: 'CONTENT' | 'ACTIVITY' | 'QUESTION' | 'INTRO' | 'CLOSURE' | 'EXAM';
   script: any;
   conceptId?: string;
   activityId?: string;
@@ -258,6 +258,19 @@ function stepData(params: {
 
 async function main() {
   console.log('🌱 Starting database seed...');
+
+  // Find admin user created by seed-admin.ts
+  const admin = await prisma.user.findFirst({
+    where: { role: 'ADMIN' },
+  });
+
+  if (!admin) {
+    throw new Error(
+      'Admin user not found. Run `pnpm db:seed:admin` first to create the admin user.',
+    );
+  }
+
+  console.log(`👤 Using admin user: ${admin.email}`);
 
   const TEST_STUDENT_ID = randomUUID();
   const TEST_TEACHER_ID = randomUUID();
@@ -434,6 +447,7 @@ async function main() {
         version: '2.0.0',
         published: true,
         moduleId: mathModule.id,
+        authorId: admin.id,
       },
     });
 
@@ -960,7 +974,7 @@ async function main() {
         recipeId: mathRecipeId,
         atomId: mathAtoms.intro,
         order: 0,
-        stepType: 'intro',
+        stepType: 'INTRO',
         script: introScript(
           '¡Hola! Me alegra mucho que estés acá.',
           'Hoy vamos a aprender dos operaciones muy importantes: la suma y la resta. Son herramientas que usamos para contar, repartir y resolver problemas simples de la vida diaria.',
@@ -972,7 +986,7 @@ async function main() {
         atomId: mathAtoms.sum,
         conceptId: mathConcepts.sum.id,
         order: 1,
-        stepType: 'content',
+        stepType: 'CONTENT',
         script: contentScript(
           'Empecemos con la suma.',
           'Sumar significa juntar cantidades para saber cuántas hay en total. El signo que usamos es el más, +.',
@@ -990,7 +1004,7 @@ async function main() {
         atomId: mathAtoms.sumQuestion,
         conceptId: mathConcepts.sum.id,
         order: 2,
-        stepType: 'question',
+        stepType: 'QUESTION',
         script: questionScript(
           'Pensá un momento antes de responder.',
           '¿Qué significa sumar?',
@@ -1006,7 +1020,7 @@ async function main() {
         conceptId: mathConcepts.sum.id,
         activityId: mathActivities.sum.id,
         order: 3,
-        stepType: 'activity',
+        stepType: 'ACTIVITY',
         script: activityScript(
           'Ahora vamos a practicar.',
           'Si tenés 2 manzanas y te dan 3 más, ¿cuántas manzanas tenés en total?',
@@ -1037,7 +1051,7 @@ async function main() {
         atomId: mathAtoms.subtract,
         conceptId: mathConcepts.subtract.id,
         order: 4,
-        stepType: 'content',
+        stepType: 'CONTENT',
         script: contentScript(
           'Ahora aprendamos la resta.',
           'Restar significa quitar o sacar una cantidad de otra. El signo de la resta es el menos, -.',
@@ -1055,7 +1069,7 @@ async function main() {
         atomId: mathAtoms.subtractQuestion,
         conceptId: mathConcepts.subtract.id,
         order: 5,
-        stepType: 'question',
+        stepType: 'QUESTION',
         script: questionScript(
           'Ahora te pregunto sobre la resta.',
           '¿Qué significa restar?',
@@ -1071,7 +1085,7 @@ async function main() {
         conceptId: mathConcepts.subtract.id,
         activityId: mathActivities.subtract.id,
         order: 6,
-        stepType: 'activity',
+        stepType: 'ACTIVITY',
         script: activityScript(
           'Vamos a practicar la resta.',
           'Si tenés 5 caramelos y te comés 2, ¿cuántos caramelos te quedan?',
@@ -1102,7 +1116,7 @@ async function main() {
         atomId: mathAtoms.review,
         conceptId: mathConcepts.review.id,
         order: 7,
-        stepType: 'content',
+        stepType: 'CONTENT',
         script: contentScript(
           'Hagamos un repaso rápido antes del examen.',
           'Hoy aprendiste que sumar es juntar cantidades y restar es quitar cantidades. También viste que usamos los signos + y - para representarlas.',
@@ -1117,7 +1131,7 @@ async function main() {
         conceptId: mathConcepts.review.id,
         activityId: mathActivities.exam.id,
         order: 8,
-        stepType: 'exam',
+        stepType: 'EXAM',
         script: examScript(
           'Llegó el momento del examen. Tranquilo, vos podés.',
           '¿Cuál opción es correcta?',
@@ -1146,7 +1160,7 @@ async function main() {
         recipeId: mathRecipeId,
         atomId: mathAtoms.closure,
         order: 9,
-        stepType: 'closure',
+        stepType: 'CLOSURE',
         script: introScript(
           '¡Llegamos al final de la clase!',
           'Hoy aprendiste que sumar es juntar cantidades usando el signo +, y que restar es quitar cantidades usando el signo -. ¡Estás listo para resolver muchos problemas!',
@@ -1170,6 +1184,7 @@ async function main() {
         version: '2.0.0',
         published: true,
         moduleId: shapesModule.id,
+        authorId: admin.id,
       },
     });
 
@@ -1868,7 +1883,7 @@ async function main() {
         recipeId: shapesRecipeId,
         atomId: shapesAtoms.intro,
         order: 0,
-        stepType: 'intro',
+        stepType: 'INTRO',
         script: introScript(
           '¡Hola! Hoy vamos a aprender figuras geométricas muy conocidas.',
           'Vamos a estudiar el círculo, el cuadrado y el triángulo. Son figuras que vemos en objetos de todos los días, como pelotas, ventanas, carteles y pizzas.',
@@ -1880,7 +1895,7 @@ async function main() {
         atomId: shapesAtoms.circle,
         conceptId: shapesConcepts.circle.id,
         order: 1,
-        stepType: 'content',
+        stepType: 'CONTENT',
         script: contentScript(
           'Comencemos con el círculo.',
           'El círculo es una figura redonda. No tiene lados rectos ni esquinas. Es suave y continua por todos sus bordes.',
@@ -1898,7 +1913,7 @@ async function main() {
         atomId: shapesAtoms.circleQuestion,
         conceptId: shapesConcepts.circle.id,
         order: 2,
-        stepType: 'question',
+        stepType: 'QUESTION',
         script: questionScript(
           'Escuchá bien la pregunta.',
           '¿Cuántas esquinas tiene un círculo?',
@@ -1914,7 +1929,7 @@ async function main() {
         conceptId: shapesConcepts.circle.id,
         activityId: shapesActivities.circle.id,
         order: 3,
-        stepType: 'activity',
+        stepType: 'ACTIVITY',
         script: activityScript(
           'Vamos a practicar.',
           '¿Cuál de estas cosas tiene forma de círculo?',
@@ -1945,7 +1960,7 @@ async function main() {
         atomId: shapesAtoms.square,
         conceptId: shapesConcepts.square.id,
         order: 4,
-        stepType: 'content',
+        stepType: 'CONTENT',
         script: contentScript(
           'Ahora vamos con el cuadrado.',
           'El cuadrado tiene 4 lados iguales y 4 esquinas. Todas sus partes son del mismo tamaño. Es una figura muy ordenada y fácil de reconocer.',
@@ -1963,7 +1978,7 @@ async function main() {
         atomId: shapesAtoms.squareQuestion,
         conceptId: shapesConcepts.square.id,
         order: 5,
-        stepType: 'question',
+        stepType: 'QUESTION',
         script: questionScript(
           'Ahora una pregunta sobre el cuadrado.',
           '¿Cuántas esquinas tiene un cuadrado?',
@@ -1979,7 +1994,7 @@ async function main() {
         conceptId: shapesConcepts.square.id,
         activityId: shapesActivities.square.id,
         order: 6,
-        stepType: 'activity',
+        stepType: 'ACTIVITY',
         script: activityScript(
           'Vamos a practicar el cuadrado.',
           '¿Cuántas esquinas tiene un cuadrado?',
@@ -2010,7 +2025,7 @@ async function main() {
         atomId: shapesAtoms.triangle,
         conceptId: shapesConcepts.triangle.id,
         order: 7,
-        stepType: 'content',
+        stepType: 'CONTENT',
         script: contentScript(
           'Llegó el turno del triángulo.',
           'El triángulo tiene 3 lados y 3 esquinas. Su nombre ya nos da una pista, porque “tri” significa tres.',
@@ -2028,7 +2043,7 @@ async function main() {
         atomId: shapesAtoms.triangleQuestion,
         conceptId: shapesConcepts.triangle.id,
         order: 8,
-        stepType: 'question',
+        stepType: 'QUESTION',
         script: questionScript(
           'Escuchá esta pregunta.',
           '¿Cuántos lados tiene un triángulo?',
@@ -2044,7 +2059,7 @@ async function main() {
         conceptId: shapesConcepts.triangle.id,
         activityId: shapesActivities.triangle.id,
         order: 9,
-        stepType: 'activity',
+        stepType: 'ACTIVITY',
         script: activityScript(
           'Última práctica antes del examen.',
           '¿Cuál de estas cosas tiene forma de triángulo?',
@@ -2075,7 +2090,7 @@ async function main() {
         atomId: shapesAtoms.review,
         conceptId: shapesConcepts.review.id,
         order: 10,
-        stepType: 'content',
+        stepType: 'CONTENT',
         script: contentScript(
           'Hagamos un repaso rápido antes del examen.',
           'El círculo no tiene esquinas. El cuadrado tiene 4 lados iguales y 4 esquinas. El triángulo tiene 3 lados y 3 esquinas.',
@@ -2098,7 +2113,7 @@ async function main() {
         conceptId: shapesConcepts.review.id,
         activityId: shapesActivities.exam.id,
         order: 11,
-        stepType: 'exam',
+        stepType: 'EXAM',
         script: examScript(
           'Llegó el examen. ¡Vos podés!',
           '¿Cuál opción es correcta?',
@@ -2127,7 +2142,7 @@ async function main() {
         recipeId: shapesRecipeId,
         atomId: shapesAtoms.closure,
         order: 12,
-        stepType: 'closure',
+        stepType: 'CLOSURE',
         script: introScript(
           '¡Terminaste la clase!',
           'Hoy aprendiste tres figuras importantes: el círculo, que no tiene esquinas; el cuadrado, que tiene 4 lados iguales y 4 esquinas; y el triángulo, que tiene 3 lados y 3 esquinas. ¡Buscalos en tu casa!',

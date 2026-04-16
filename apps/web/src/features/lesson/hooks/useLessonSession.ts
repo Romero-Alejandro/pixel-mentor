@@ -90,7 +90,7 @@ export function useLessonSession(sessionId: string | null) {
 
   // Mutation for start lesson
   const startMutation = useMutation({
-    mutationFn: (recipeId: string) => api.startRecipe(recipeId),
+    mutationFn: (classId: string) => api.startClassDemo(classId),
     onSuccess: (data) => {
       // Store recipeId in a separate query for reference
       queryClient.setQueryData(['startData', data.sessionId], {

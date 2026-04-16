@@ -1,16 +1,11 @@
-/**
- * Class HTTP Routes
- */
-
-import { Router, type Response } from 'express';
+import { Router } from 'express';
 import { z } from 'zod';
+import type { Response, Request, NextFunction } from 'express';
 
 import type { AppRequest } from '@/shared/types/express.d';
 import type {
   ClassService,
   CreateClassInput,
-  UpdateClassInput,
-  AddLessonInput,
   UpdateLessonInput,
   ListClassesOptions,
 } from '@/features/class/application/services/class.service';
@@ -22,491 +17,320 @@ import {
 } from '@/features/class/application/services/class.service';
 import type { IClassLessonRepository } from '@/features/class/domain/ports/class.repository.port';
 import type { StartRecipeUseCase } from '@/features/recipe/application/use-cases/start-recipe.use-case';
+import type { StaticContent } from '@/shared/dto/index';
+
+interface DemoInteractionOutput {
+  voiceText: string;
+  pedagogicalState: string;
+  staticContent: StaticContent;
+  meta?: Record<string, unknown>;
+  contentSteps?: Array<{
+    stepIndex: number;
+    stepType: string;
+    staticContent: StaticContent;
+  }>;
+  lessonProgress: {
+    currentStep: number;
+    totalSteps: number;
+  };
+  isRepeat?: boolean;
+}
 
 const ClassCreateSchema = z.object({
-  title: z.string().min(1).max(255),
-  description: z.string().optional(),
-  classTemplateId: z.string().optional(),
-  lessons: z
-    .array(
-      z.object({
-        recipeId: z.string().min(1),
-        order: z.number(),
-      }),
-    )
-    .optional(),
-});
-
-const ClassUpdateSchema = z.object({
-  title: z.string().min(1).max(255).optional(),
-  description: z.string().optional(),
-  classTemplateId: z.string().optional(),
+  body: z.object({
+    title: z.string().min(1).max(255),
+    description: z.string().optional(),
+    classTemplateId: z.string().optional(),
+    lessons: z
+      .array(
+        z.object({
+          recipeId: z.string().min(1),
+          order: z.number(),
+        }),
+      )
+      .optional(),
+  }),
 });
 
 const ClassListQuerySchema = z.object({
-  status: z.enum(['DRAFT', 'UNDER_REVIEW', 'PUBLISHED', 'ARCHIVED']).optional(),
-  page: z.number().int().min(1).default(1),
-  limit: z.number().int().min(1).max(100).default(20),
+  query: z.object({
+    status: z.enum(['DRAFT', 'UNDER_REVIEW', 'PUBLISHED', 'ARCHIVED']).optional(),
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+  }),
 });
 
 const AddLessonSchema = z.object({
-  recipeId: z.string().min(1),
-  order: z.number().int().min(0).optional(),
-});
-
-const ReorderLessonsSchema = z.object({
-  lessonIds: z.array(z.string().min(1)).min(1),
+  body: z.object({
+    recipeId: z.string().min(1),
+    order: z.number().int().min(0).optional(),
+  }),
 });
 
 const UpdateLessonSchema = z.object({
-  recipeId: z.string().min(1).optional(),
-  order: z.number().int().min(0).optional(),
+  body: z.object({
+    recipeId: z.string().min(1).optional(),
+    order: z.number().int().min(0).optional(),
+  }),
+});
+
+const ReorderLessonsSchema = z.object({
+  body: z.object({
+    lessonIds: z.array(z.string().min(1)).min(1),
+  }),
+});
+
+const PublishClassSchema = z.object({
+  body: z.object({
+    targetAgeMin: z.number().min(3).max(18).optional(),
+    targetAgeMax: z.number().min(3).max(18).optional(),
+    objectives: z.array(z.string()).min(3).max(10).optional(),
+  }),
 });
 
 export interface ClassRouterDependencies {
   classService: ClassService;
   classLessonRepository: IClassLessonRepository;
   startRecipeUseCase: StartRecipeUseCase;
+  orchestrateUseCase: any;
 }
 
+const validate =
+  (schema: z.AnyZodObject) => async (req: Request, _res: Response, next: NextFunction) => {
+    try {
+      const parsed = await schema.parseAsync({
+        body: req.body,
+        query: req.query,
+        params: req.params,
+      });
+      req.body = parsed.body ?? req.body;
+      // req.query = (parsed.query as any) ?? req.query;
+      // req.params = parsed.params ?? req.params;
+      next();
+    } catch (error) {
+      next(error);
+    }
+  };
+
 export function createClassRouter(deps: ClassRouterDependencies): Router {
-  const { classService, classLessonRepository, startRecipeUseCase } = deps;
+  const { classService, classLessonRepository, startRecipeUseCase, orchestrateUseCase } = deps;
   const router = Router();
 
-  // @ts-expect-error - Express 5 compatibility
-  router.post('/', async (req: AppRequest, res: Response): Promise<void> => {
-    try {
-      const tutorId = req.user?.id;
-      if (!tutorId) {
-        res.status(401).json({ error: 'Unauthorized' });
-        return;
-      }
-
-      const validatedData = ClassCreateSchema.parse(req.body);
-      const input: CreateClassInput = {
-        title: validatedData.title,
-        description: validatedData.description,
-        lessons: validatedData.lessons?.map((l, index) => ({
-          recipeId: l.recipeId,
-          order: l.order ?? index,
-        })),
-      };
-
-      const classEntity = await classService.createClass(tutorId, input);
-      res.status(201).json(classEntity);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ error: 'Validation error', details: error.issues });
-        return;
-      }
-      throw error;
+  const ensureAuthenticated = (req: AppRequest, res: Response, next: NextFunction) => {
+    if (!req.user?.id) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
     }
-  });
+    next();
+  };
 
-  // @ts-expect-error - Express 5 compatibility
-  router.get('/', async (req: AppRequest, res: Response): Promise<void> => {
-    try {
-      const tutorId = req.user?.id;
-      if (!tutorId) {
-        res.status(401).json({ error: 'Unauthorized' });
-        return;
-      }
-
-      const queryParams = ClassListQuerySchema.parse({
-        status: req.query.status,
-        page: req.query.page ? parseInt(String(req.query.page), 10) : undefined,
-        limit: req.query.limit ? parseInt(String(req.query.limit), 10) : undefined,
-      });
-
-      const options: ListClassesOptions = {
-        status: queryParams.status,
-        page: queryParams.page,
-        limit: queryParams.limit,
-      };
-
-      const result = await classService.listClasses(tutorId, options);
-      res.status(200).json(result);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ error: 'Validation error', details: error.issues });
-        return;
-      }
-      throw error;
+  const checkOwnership = async (req: AppRequest, classId: string) => {
+    const userId = req.user!.id;
+    const classEntity = await classService.getClass(classId);
+    if (classEntity.tutorId !== userId && req.user?.role !== 'ADMIN') {
+      throw new ClassOwnershipError(classId, userId);
     }
-  });
+    return classEntity;
+  };
 
-  // @ts-expect-error - Express 5 compatibility
-  router.get('/:id', async (req: AppRequest, res: Response): Promise<void> => {
+  router.use(ensureAuthenticated);
+
+  router.post(
+    '/',
+    validate(ClassCreateSchema),
+    async (req: AppRequest, res: Response, next: NextFunction) => {
+      try {
+        const input: CreateClassInput = {
+          ...req.body,
+          lessons: req.body.lessons?.map((l: any, index: number) => ({
+            ...l,
+            order: l.order ?? index,
+          })),
+        };
+        const classEntity = await classService.createClass(req.user!.id, input);
+        res.status(201).json(classEntity);
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  router.get(
+    '/',
+    validate(ClassListQuerySchema),
+    async (req: AppRequest, res: Response, next: NextFunction) => {
+      try {
+        const { status, page, limit } = req.query as any;
+        const result = await classService.listClasses(req.user!.id, { status, page, limit });
+        res.status(200).json(result);
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  router.get('/:id', async (req: AppRequest, res: Response, next: NextFunction) => {
     try {
-      const id = req.params.id as string;
-      const tutorId = req.user?.id;
-
-      if (!tutorId) {
-        res.status(401).json({ error: 'Unauthorized' });
-        return;
-      }
-
-      const classEntity = await classService.getClass(id);
-
-      if (classEntity.tutorId !== tutorId && req.user?.role !== 'ADMIN') {
-        res.status(403).json({ error: 'Forbidden: You do not own this class' });
-        return;
-      }
-
+      const classEntity = await checkOwnership(req, req.params.id);
       res.status(200).json(classEntity);
     } catch (error) {
-      if (error instanceof ClassNotFoundError) {
-        res.status(404).json({ error: error.message });
-        return;
-      }
-      throw error;
+      next(error);
     }
   });
 
-  // @ts-expect-error - Express 5 compatibility
-  router.patch('/:id', async (req: AppRequest, res: Response): Promise<void> => {
+  router.delete('/:id', async (req: AppRequest, res: Response, next: NextFunction) => {
     try {
-      const id = req.params.id as string;
-      const tutorId = req.user?.id;
-
-      if (!tutorId) {
-        res.status(401).json({ error: 'Unauthorized' });
-        return;
-      }
-
-      const validatedData = ClassUpdateSchema.parse(req.body);
-      const input: UpdateClassInput = {
-        title: validatedData.title,
-        description: validatedData.description,
-      };
-
-      const updatedClass = await classService.updateClass(id, tutorId, input);
-      res.status(200).json(updatedClass);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ error: 'Validation error', details: error.issues });
-        return;
-      }
-      if (error instanceof ClassNotFoundError) {
-        res.status(404).json({ error: error.message });
-        return;
-      }
-      if (error instanceof ClassOwnershipError) {
-        res.status(403).json({ error: error.message });
-        return;
-      }
-      if (error instanceof ClassStateError) {
-        res.status(409).json({ error: error.message });
-        return;
-      }
-      throw error;
-    }
-  });
-
-  // @ts-expect-error - Express 5 compatibility
-  router.delete('/:id', async (req: AppRequest, res: Response): Promise<void> => {
-    try {
-      const id = req.params.id as string;
-      const tutorId = req.user?.id;
-
-      if (!tutorId) {
-        res.status(401).json({ error: 'Unauthorized' });
-        return;
-      }
-
-      await classService.deleteClass(id, tutorId);
+      await classService.deleteClass(req.params.id, req.user!.id);
       res.status(204).send();
     } catch (error) {
-      if (error instanceof ClassNotFoundError) {
-        res.status(404).json({ error: error.message });
-        return;
-      }
-      if (error instanceof ClassOwnershipError) {
-        res.status(403).json({ error: error.message });
-        return;
-      }
-      if (error instanceof ClassStateError) {
-        res.status(409).json({ error: error.message });
-        return;
-      }
-      throw error;
+      next(error);
     }
   });
 
-  // @ts-expect-error - Express 5 compatibility
-  router.post('/:id/publish', async (req: AppRequest, res: Response): Promise<void> => {
+  router.post('/:id/demo', async (req: AppRequest, res: Response, next: NextFunction) => {
     try {
-      const id = req.params.id as string;
-      const tutorId = req.user?.id;
+      const classId = req.params.id;
+      const userId = req.user!.id;
 
-      if (!tutorId) {
-        res.status(401).json({ error: 'Unauthorized' });
-        return;
-      }
-
-      const publishedClass = await classService.publishClass(id, tutorId);
-      res.status(200).json(publishedClass);
-    } catch (error) {
-      if (error instanceof ClassNotFoundError) {
-        res.status(404).json({ error: error.message });
-        return;
-      }
-      if (error instanceof ClassOwnershipError) {
-        res.status(403).json({ error: error.message });
-        return;
-      }
-      if (error instanceof ClassStateError) {
-        res.status(409).json({ error: error.message });
-        return;
-      }
-      if (error instanceof Error && error.name === 'ClassValidationError') {
-        res.status(422).json({ error: error.message });
-        return;
-      }
-      throw error;
-    }
-  });
-
-  // @ts-expect-error - Express 5 compatibility
-  router.post('/:id/unpublish', async (req: AppRequest, res: Response): Promise<void> => {
-    try {
-      const id = req.params.id as string;
-      const tutorId = req.user?.id;
-
-      if (!tutorId) {
-        res.status(401).json({ error: 'Unauthorized' });
-        return;
-      }
-
-      const unpublishedClass = await classService.unpublishClass(id, tutorId);
-      res.status(200).json(unpublishedClass);
-    } catch (error) {
-      if (error instanceof ClassNotFoundError) {
-        res.status(404).json({ error: error.message });
-        return;
-      }
-      if (error instanceof ClassOwnershipError) {
-        res.status(403).json({ error: error.message });
-        return;
-      }
-      if (error instanceof ClassStateError) {
-        res.status(409).json({ error: error.message });
-        return;
-      }
-      throw error;
-    }
-  });
-
-  // @ts-expect-error - Express 5 compatibility
-  router.post('/:id/lessons', async (req: AppRequest, res: Response): Promise<void> => {
-    try {
-      const id = req.params.id as string;
-      const tutorId = req.user?.id;
-
-      if (!tutorId) {
-        res.status(401).json({ error: 'Unauthorized' });
-        return;
-      }
-
-      const validatedData = AddLessonSchema.parse(req.body);
-      const input: AddLessonInput = {
-        recipeId: validatedData.recipeId,
-        order: validatedData.order,
-      };
-
-      const lesson = await classService.addLesson(id, tutorId, input);
-      res.status(201).json(lesson);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ error: 'Validation error', details: error.issues });
-        return;
-      }
-      if (error instanceof ClassNotFoundError) {
-        res.status(404).json({ error: error.message });
-        return;
-      }
-      if (error instanceof ClassOwnershipError) {
-        res.status(403).json({ error: error.message });
-        return;
-      }
-      if (error instanceof ClassStateError) {
-        res.status(409).json({ error: error.message });
-        return;
-      }
-      throw error;
-    }
-  });
-
-  // @ts-expect-error - Express 5 compatibility
-  router.patch('/:id/lessons/reorder', async (req: AppRequest, res: Response): Promise<void> => {
-    try {
-      const id = req.params.id as string;
-      const tutorId = req.user?.id;
-
-      if (!tutorId) {
-        res.status(401).json({ error: 'Unauthorized' });
-        return;
-      }
-
-      const validatedData = ReorderLessonsSchema.parse(req.body);
-      await classService.reorderLessons(id, tutorId, validatedData.lessonIds);
-      res.status(200).json({ message: 'Lessons reordered successfully' });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ error: 'Validation error', details: error.issues });
-        return;
-      }
-      if (error instanceof ClassNotFoundError) {
-        res.status(404).json({ error: error.message });
-        return;
-      }
-      if (error instanceof ClassOwnershipError) {
-        res.status(403).json({ error: error.message });
-        return;
-      }
-      if (error instanceof ClassStateError) {
-        res.status(409).json({ error: error.message });
-        return;
-      }
-      if (error instanceof LessonNotFoundError) {
-        res.status(404).json({ error: error.message });
-        return;
-      }
-      throw error;
-    }
-  });
-
-  // @ts-expect-error - Express 5 compatibility
-  router.delete('/:id/lessons/:lessonId', async (req: AppRequest, res: Response): Promise<void> => {
-    try {
-      const id = req.params.id as string;
-      const lessonId = req.params.lessonId as string;
-      const tutorId = req.user?.id;
-
-      if (!tutorId) {
-        res.status(401).json({ error: 'Unauthorized' });
-        return;
-      }
-
-      await classService.removeLesson(id, lessonId, tutorId);
-      res.status(204).send();
-    } catch (error) {
-      if (error instanceof ClassNotFoundError) {
-        res.status(404).json({ error: error.message });
-        return;
-      }
-      if (error instanceof ClassOwnershipError) {
-        res.status(403).json({ error: error.message });
-        return;
-      }
-      if (error instanceof ClassStateError) {
-        res.status(409).json({ error: error.message });
-        return;
-      }
-      if (error instanceof LessonNotFoundError) {
-        res.status(404).json({ error: error.message });
-        return;
-      }
-      throw error;
-    }
-  });
-
-  // @ts-expect-error - Express 5 compatibility
-  router.patch('/:id/lessons/:lessonId', async (req: AppRequest, res: Response): Promise<void> => {
-    try {
-      const id = req.params.id as string;
-      const lessonId = req.params.lessonId as string;
-      const tutorId = req.user?.id;
-
-      if (!tutorId) {
-        res.status(401).json({ error: 'Unauthorized' });
-        return;
-      }
-
-      const validatedData = UpdateLessonSchema.parse(req.body);
-      const input: UpdateLessonInput = {
-        recipeId: validatedData.recipeId,
-        order: validatedData.order,
-      };
-
-      const lesson = await classService.updateLesson(id, lessonId, tutorId, input);
-      res.status(200).json(lesson);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ error: 'Validation error', details: error.issues });
-        return;
-      }
-      if (error instanceof ClassNotFoundError) {
-        res.status(404).json({ error: error.message });
-        return;
-      }
-      if (error instanceof LessonNotFoundError) {
-        res.status(404).json({ error: error.message });
-        return;
-      }
-      if (error instanceof ClassOwnershipError) {
-        res.status(403).json({ error: error.message });
-        return;
-      }
-      if (error instanceof ClassStateError) {
-        res.status(409).json({ error: error.message });
-        return;
-      }
-      throw error;
-    }
-  });
-
-  // @ts-expect-error - Express 5 compatibility
-  router.post('/:id/demo', async (req: AppRequest, res: Response): Promise<void> => {
-    try {
-      const classId = req.params.id as string;
-      const userId = req.user?.id;
-
-      if (!userId) {
-        res.status(401).json({ error: 'Unauthorized' });
-        return;
-      }
-
-      const classEntity = await classService.getClass(classId);
-      if (!classEntity) {
-        throw new ClassNotFoundError(classId);
-      }
-      if (classEntity.tutorId !== userId && req.user?.role !== 'ADMIN') {
-        throw new ClassOwnershipError(classId, userId);
-      }
+      await checkOwnership(req, classId);
 
       const lessons = await classLessonRepository.findByClassId(classId);
-      if (lessons.length === 0) {
-        res.status(400).json({ error: 'Class has no lessons' });
-        return;
-      }
-
       const firstLesson = lessons.find((l) => l.recipeId);
-      if (!firstLesson) {
-        res.status(400).json({ error: 'No lesson with associated recipe found' });
+
+      if (!firstLesson?.recipeId) {
+        res.status(400).json({ error: 'Class has no valid lessons with recipes' });
         return;
       }
 
       const { sessionId } = await startRecipeUseCase.execute(firstLesson.recipeId, userId);
+      const interaction = (await orchestrateUseCase.interact(
+        sessionId,
+        '',
+      )) as DemoInteractionOutput;
+
       res.status(200).json({
         sessionId,
         recipeId: firstLesson.recipeId,
         title: firstLesson.recipe?.title ?? null,
+        pedagogicalState: interaction.pedagogicalState,
+        voiceText: interaction.voiceText,
+        meta: interaction.meta,
+        isRepeat: interaction.isRepeat ?? false,
+        lessonProgress: interaction.lessonProgress,
+        contentSteps: interaction.contentSteps,
       });
     } catch (error) {
-      if (error instanceof ClassNotFoundError) {
-        res.status(404).json({ error: error.message });
-        return;
+      next(error);
+    }
+  });
+
+  router.get(
+    '/lessons/:lessonId/class',
+    async (req: AppRequest, res: Response, next: NextFunction) => {
+      try {
+        const { lessonId } = req.params;
+
+        // First, try to find by lessonId
+        let lesson = await classLessonRepository.findById(lessonId);
+
+        // If not found, try to find by recipeId (support both lessonId and recipeId in URL)
+        if (!lesson) {
+          const lessons = await classLessonRepository.findByRecipeId(lessonId);
+          if (lessons.length > 0) {
+            lesson = lessons[0];
+          }
+        }
+
+        if (!lesson) throw new LessonNotFoundError(lessonId);
+
+        await checkOwnership(req, lesson.classId);
+        res.status(200).json({ classId: lesson.classId });
+      } catch (error) {
+        next(error);
       }
-      if (error instanceof ClassOwnershipError) {
-        res.status(403).json({ error: error.message });
-        return;
+    },
+  );
+
+  router.patch(
+    '/:id/lessons/:lessonId',
+    validate(UpdateLessonSchema),
+    async (req: AppRequest, res: Response, next: NextFunction) => {
+      try {
+        const lesson = await classService.updateLesson(
+          req.params.id,
+          req.params.lessonId,
+          req.user!.id,
+          req.body as UpdateLessonInput,
+        );
+        res.status(200).json(lesson);
+      } catch (error) {
+        next(error);
       }
-      if (error instanceof Error) {
-        res.status(500).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: 'Internal server error' });
+    },
+  );
+
+  // POST /:id/lessons - Add lesson to class
+  router.post(
+    '/:id/lessons',
+    validate(AddLessonSchema),
+    async (req: AppRequest, res: Response, next: NextFunction) => {
+      try {
+        const lesson = await classService.addLesson(req.params.id, req.user!.id, req.body);
+        res.status(201).json(lesson);
+      } catch (error) {
+        next(error);
       }
+    },
+  );
+
+  // DELETE /:id/lessons/:lessonId - Remove lesson from class
+  router.delete(
+    '/:id/lessons/:lessonId',
+    async (req: AppRequest, res: Response, next: NextFunction) => {
+      try {
+        await classService.removeLesson(req.params.id, req.params.lessonId, req.user!.id);
+        res.status(204).send();
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  // PATCH /:id/lessons/reorder - Reorder lessons
+  router.patch(
+    '/:id/lessons/reorder',
+    validate(ReorderLessonsSchema),
+    async (req: AppRequest, res: Response, next: NextFunction) => {
+      try {
+        await classService.reorderLessons(req.params.id, req.user!.id, req.body.lessonIds);
+        res.status(200).json({ message: 'Lessons reordered' });
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  // POST /:id/publish - Publish class
+  router.post(
+    '/:id/publish',
+    validate(PublishClassSchema),
+    async (req: AppRequest, res: Response, next: NextFunction) => {
+      try {
+        const classEntity = await classService.publishClass(req.params.id, req.user!.id);
+        res.status(200).json(classEntity);
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  // POST /:id/unpublish - Unpublish class
+  router.post('/:id/unpublish', async (req: AppRequest, res: Response, next: NextFunction) => {
+    try {
+      const classEntity = await classService.unpublishClass(req.params.id, req.user!.id);
+      res.status(200).json(classEntity);
+    } catch (error) {
+      next(error);
     }
   });
 

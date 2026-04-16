@@ -4,6 +4,8 @@
  * Coordinates all class operations including CRUD, publishing, and lesson management.
  */
 
+import { prisma } from '@/database/client.js';
+
 import type {
   IClassRepository,
   IClassLessonRepository,
@@ -40,6 +42,7 @@ export interface AddLessonInput {
 export interface UpdateLessonInput {
   recipeId?: string;
   order?: number;
+  title?: string;
 }
 
 export interface ListClassesOptions {
@@ -244,6 +247,7 @@ export class ClassService {
     const versionString = `${newVersion}.0.0`;
     const slug = this.generateSlug(classEntity.title);
 
+    // Create version first to get its ID
     await this.versionRepo.create({
       classId: id,
       version: versionString,
@@ -255,10 +259,10 @@ export class ClassService {
       status: 'PUBLISHED',
       lessons: lessons.map((lesson, index) => ({
         id: crypto.randomUUID(),
-        classVersionId: '',
+        classVersionId: '', // Set after version creation
         recipeId: lesson.recipeId,
         order: lesson.order ?? index,
-        title: classEntity.title,
+        title: lesson.title ?? lesson.recipe?.title ?? 'Untitled Lesson',
         createdAt: new Date(),
       })),
     });
@@ -359,9 +363,18 @@ export class ClassService {
       throw new LessonNotFoundError(lessonId);
     }
 
-    const updateData: { recipeId?: string; order?: number } = {};
+    // Validate recipeId exists if being updated
+    if (data.recipeId !== undefined) {
+      const recipe = await prisma.recipe.findUnique({ where: { id: data.recipeId } });
+      if (!recipe) {
+        throw new ClassValidationError(`Recipe with ID ${data.recipeId} not found`);
+      }
+    }
+
+    const updateData: { recipeId?: string; order?: number; title?: string } = {};
     if (data.recipeId !== undefined) updateData.recipeId = data.recipeId;
     if (data.order !== undefined) updateData.order = data.order;
+    if (data.title !== undefined) updateData.title = data.title;
 
     const updated = await this.lessonRepo.update(lessonId, updateData);
     if (!updated) {

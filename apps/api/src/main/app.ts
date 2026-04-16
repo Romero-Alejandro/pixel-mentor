@@ -260,9 +260,10 @@ export function createApp(deps: AppDependencies): Express {
   );
 
   // Class routes (protected, requires TEACHER or ADMIN role)
-  const classMiddleware = [protectedMiddleware, requireRole('TEACHER', 'ADMIN')] as const;
+  const classMiddleware = [protectedMiddleware, requireRole('TEACHER', 'ADMIN')];
+  console.log('🔍 Debug classMiddleware:', classMiddleware);
 
-  // Get start recipe use case from global
+  // Get recipe use cases from global
   const startRecipeUseCase = (globalThis as any).__startRecipeUseCase;
 
   app.use(
@@ -272,6 +273,7 @@ export function createApp(deps: AppDependencies): Express {
       classService: classContainer.classService,
       classLessonRepository: classContainer.classLessonRepository,
       startRecipeUseCase,
+      orchestrateUseCase,
     }),
   );
   app.use(
@@ -292,10 +294,10 @@ export function createApp(deps: AppDependencies): Express {
 
   // Admin routes (protected, requires ADMIN role)
   const adminMiddleware = [protectedMiddleware, requireRole('ADMIN')] as const;
-  app.use('/api/admin', ...adminMiddleware, createAdminRouter(auth.adminUserService));
+  app.use('/api/admin', Array.from(adminMiddleware), createAdminRouter(auth.adminUserService));
 
   // LLM Governance admin routes (protected, requires ADMIN role)
-  app.use('/api/admin/llm-governance', ...adminMiddleware, createLLMGovernanceRouter());
+  app.use('/api/admin/llm-governance', Array.from(adminMiddleware), createLLMGovernanceRouter());
 
   // Metrics endpoint for evaluation monitoring (public, no auth required)
   app.use('/api/metrics/evaluation', createMetricsRouter());

@@ -489,6 +489,7 @@ exports.Prisma.ClassLessonScalarFieldEnum = {
   id: 'id',
   classId: 'classId',
   recipeId: 'recipeId',
+  title: 'title',
   order: 'order',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -557,6 +558,15 @@ exports.ConsentStatus = exports.$Enums.ConsentStatus = {
   APPROVED: 'APPROVED',
   EXPIRED: 'EXPIRED',
   REVOKED: 'REVOKED'
+};
+
+exports.StepType = exports.$Enums.StepType = {
+  CONTENT: 'CONTENT',
+  ACTIVITY: 'ACTIVITY',
+  QUESTION: 'QUESTION',
+  INTRO: 'INTRO',
+  CLOSURE: 'CLOSURE',
+  EXAM: 'EXAM'
 };
 
 exports.AtomType = exports.$Enums.AtomType = {

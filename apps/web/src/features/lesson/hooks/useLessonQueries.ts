@@ -28,14 +28,27 @@ export function useRecipes(activeOnly = true): UseQueryResult<Recipe[]> {
 // Alias for backwards compatibility
 export const useLessons = useRecipes;
 
-export function useStartRecipe(): UseMutationResult<StartRecipeOutput, Error, string> {
+export function useStartClassDemo(): UseMutationResult<
+  {
+    sessionId: string;
+    pedagogicalState: any;
+    voiceText?: string;
+    meta?: { config: any };
+    isRepeat: boolean;
+    lessonProgress?: { currentStep: number; totalSteps: number };
+    contentSteps?: any[];
+    recipeId: string;
+  },
+  Error,
+  string
+> {
   return useMutation({
-    mutationFn: (recipeId: string) => api.startRecipe(recipeId),
+    mutationFn: (classId: string) => api.startClassDemo(classId),
   });
 }
 
 // Alias for backwards compatibility
-export const useStartLesson = useStartRecipe;
+export const useStartLesson = useStartClassDemo;
 
 export function useRecipeInteraction(): UseMutationResult<
   InteractRecipeOutput,
