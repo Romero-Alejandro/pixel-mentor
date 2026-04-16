@@ -435,7 +435,13 @@ export class OrchestrateRecipeUseCase {
     if (stepType === 'question' && isQuestionScript(script)) {
       return [txt(script.transition), txt(script.question)].filter(Boolean).join(' ');
     }
-    if ((stepType === 'activity' || stepType === 'exam') && isActivityScript(script)) {
+    if (
+      (stepType === 'activity' ||
+        stepType === 'exam' ||
+        stepType === 'ACTIVITY' ||
+        stepType === 'EXAM') &&
+      isActivityScript(script)
+    ) {
       return [txt(script.transition), txt(script.instruction)].filter(Boolean).join(' ');
     }
     const s = script as ContentScript;
@@ -1272,7 +1278,7 @@ export class OrchestrateRecipeUseCase {
 
       // For question steps, transition to ACTIVITY_WAIT
       // Always respect stepType — the type guard is only for extracting data
-      if (nextStep?.stepType === 'question') {
+      if (nextStep?.stepType === 'question' || nextStep?.stepType === 'QUESTION') {
         const questionText = isQuestionScript(nextScript)
           ? extractText((nextScript as QuestionScript).question)
           : this.buildVoiceText(nextStep);
@@ -1513,7 +1519,12 @@ export class OrchestrateRecipeUseCase {
               : 'EVALUATE_INCORRECT';
           nextState = this.applyStateTransition('ACTIVITY_WAIT', event);
         }
-      } else if (stepType === 'activity' || stepType === 'exam') {
+      } else if (
+        stepType === 'activity' ||
+        stepType === 'exam' ||
+        stepType === 'ACTIVITY' ||
+        stepType === 'EXAM'
+      ) {
         // Use deterministic comparison for activity steps (MCQ)
         const as = script as ActivityScript;
         const norm = studentInput.trim().toLowerCase();
@@ -1875,7 +1886,12 @@ export class OrchestrateRecipeUseCase {
         '[interactStream] ACTIVITY_WAIT - processing answer',
       );
 
-      if (stepType === 'activity' || stepType === 'exam') {
+      if (
+        stepType === 'activity' ||
+        stepType === 'exam' ||
+        stepType === 'ACTIVITY' ||
+        stepType === 'EXAM'
+      ) {
         // MCQ: deterministic comparison (NO LLM)
         const as = script as ActivityScript;
         const norm = studentInput.trim().toLowerCase();
@@ -2075,7 +2091,7 @@ export class OrchestrateRecipeUseCase {
 
       // For question steps, transition to ACTIVITY_WAIT
       // Always respect stepType — the type guard is only for extracting data
-      if (nextStep?.stepType === 'question') {
+      if (nextStep?.stepType === 'question' || nextStep?.stepType === 'QUESTION') {
         const questionText = isQuestionScript(nextScript)
           ? extractText((nextScript as QuestionScript).question)
           : this.buildVoiceText(nextStep);
