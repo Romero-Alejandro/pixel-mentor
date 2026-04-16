@@ -1469,7 +1469,7 @@ export class OrchestrateRecipeUseCase {
       // - 'question' steps use LLM (free response)
       // - 'activity'/'exam' steps use deterministic comparison (MCQ)
       if (stepType === 'question') {
-        orchestrateLogger.info('[ACTIVITY_WAIT] Using LLM for question step');
+        orchestrateLogger.info('[BUG] QUESTION at 1471 - calling evaluateAnswer');
         // Always use LLM for question steps (free response)
         // ── Pregunta de comprensión: evaluar con LLM ─────────────────────
         const evaluation = await this.evaluateAnswer({
@@ -1938,8 +1938,9 @@ export class OrchestrateRecipeUseCase {
         };
         return;
       } else if (stepType === 'question') {
-        // Question: use LLM evaluation (will be handled below)
-        orchestrateLogger.info('[interactStream] ACTIVITY_WAIT - using LLM for question step');
+        // QUESTION: response already generated above via generateResponseStream
+        // Just advance to EVALUATION state without calling evaluateAnswer
+        nextState = 'EVALUATION';
       }
     }
 
@@ -2289,6 +2290,7 @@ export class OrchestrateRecipeUseCase {
       // QUESTION: free response - response already generated above, just advance
       // ACTIVITY/EXAM: evaluate with MCQ
       if (stepType === 'question') {
+        orchestrateLogger.info('[FIXED] QUESTION at 2291 - skipping evaluateAnswer');
         nextState = 'EVALUATION';
       } else if (stepType === 'activity' || stepType === 'exam') {
         const as = script as ActivityScript;
