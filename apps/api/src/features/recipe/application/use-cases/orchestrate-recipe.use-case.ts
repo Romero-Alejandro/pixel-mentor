@@ -1939,13 +1939,20 @@ export class OrchestrateRecipeUseCase {
         return;
       } else if (stepType === 'question') {
         // QUESTION: response already generated above via generateResponseStream
-        // Just advance to EVALUATION state without calling evaluateAnswer
-        nextState = 'EVALUATION';
+        // Need to handle at outer scope after variables are declared
+        orchestrateLogger.info('[QUESTION] Step type detected, will handle after scope');
       }
     }
 
-    // ── AWAITING_START fast path (no streaming needed) ──────────────────────
-    if (currentState === 'AWAITING_START') {
+    // Handle QUESTION after variables are declared
+    if (currentState === 'ACTIVITY_WAIT' && currentStep.stepType === 'question') {
+      const questionVoiceText = fullResponse || 'Gracias por tu respuesta. Continuemos.';
+      const questionNextState: PedagogicalState = 'EVALUATION';
+      // Override for final yield
+      voiceText = questionVoiceText;
+      nextState = questionNextState;
+    } else if (currentState === 'AWAITING_START') {
+      // ── AWAITING_START fast path (no streaming needed) ──────────────────────
       const lower = studentInput.toLowerCase();
       orchestrateLogger.info(
         { studentInput, lower, currentIdx, stepType: currentStep.stepType },
@@ -2507,6 +2514,17 @@ export class OrchestrateRecipeUseCase {
       xpEarned = calculateXPFromAccuracy(accuracy.accuracyPercent);
       accuracyData = accuracy;
     }
+
+    // Debug: confirm we're reaching the final yield
+    orchestrateLogger.info(
+      {
+        nextState,
+        nextIdx,
+        willComplete,
+        fullResponseLength: fullResponse?.length ?? 0,
+      },
+      '[FINAL] Sending end event for QUESTION step',
+    );
 
     yield {
       type: 'end',
