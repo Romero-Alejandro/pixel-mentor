@@ -1468,7 +1468,7 @@ export class OrchestrateRecipeUseCase {
       // PRIORITY: Use stepType to determine evaluation method
       // - 'question' steps use LLM (free response)
       // - 'activity'/'exam' steps use deterministic comparison (MCQ)
-      if (stepType === 'question') {
+      if (stepType === 'question' || stepType === 'QUESTION') {
         orchestrateLogger.info('[BUG] QUESTION at 1471 - calling evaluateAnswer');
         // Always use LLM for question steps (free response)
         // ── Pregunta de comprensión: evaluar con LLM ─────────────────────
@@ -1937,7 +1937,7 @@ export class OrchestrateRecipeUseCase {
           autoAdvance: false, // Wait for user to continue
         };
         return;
-      } else if (stepType === 'question') {
+      } else if (stepType === 'question' || stepType === 'QUESTION') {
         // QUESTION: response already generated above via generateResponseStream
         // The main state machine at line 2308 will handle this
         orchestrateLogger.info('[QUESTION] Step type detected, will handle in main state machine');
@@ -2291,10 +2291,15 @@ export class OrchestrateRecipeUseCase {
 
       // QUESTION: free response - response already generated above, just advance
       // ACTIVITY/EXAM: evaluate with MCQ
-      if (stepType === 'question') {
+      if (stepType === 'question' || stepType === 'QUESTION') {
         orchestrateLogger.info('[FIXED] QUESTION at 2291 - skipping evaluateAnswer');
         nextState = 'EVALUATION';
-      } else if (stepType === 'activity' || stepType === 'exam') {
+      } else if (
+        stepType === 'activity' ||
+        stepType === 'exam' ||
+        stepType === 'ACTIVITY' ||
+        stepType === 'EXAM'
+      ) {
         const as = script as ActivityScript;
         const norm = studentInput.trim().toLowerCase();
         const correct = as.options.find((o) => o.isCorrect);
