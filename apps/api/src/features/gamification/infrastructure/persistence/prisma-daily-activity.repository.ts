@@ -8,26 +8,26 @@ export class PrismaDailyActivityRepository implements IDailyActivityRepository {
     const startOfDay = new Date(date);
     startOfDay.setUTCHours(0, 0, 0, 0);
 
-    try {
-      await prisma.dailyActivity.upsert({
-        where: {
-          userId_date: {
-            userId,
-            date: startOfDay,
-          },
-        },
-        update: {},
-        create: {
+    // Verificar si el registro ya existe
+    const existingActivity = await prisma.dailyActivity.findUnique({
+      where: {
+        userId_date: {
           userId,
           date: startOfDay,
         },
-      });
-    } catch (error) {
-      // If record already exists (unique constraint), treat as success
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        return;
-      }
-      throw error;
+      },
+    });
+
+    if (existingActivity) {
+      // Si ya existe, no hacer nada - el registro ya está creado
+      return;
     }
+    // Si no existe, crear el registro
+    await prisma.dailyActivity.create({
+      data: {
+        userId,
+        date: startOfDay,
+      },
+    });
   }
 }
