@@ -1,5 +1,13 @@
 import { randomUUID } from 'node:crypto';
+import { StepType as PrismaStepType } from '@/database/generated/client/index.js';
 import { config } from '@/shared/config/index.js';
+
+/**
+ * Alias for Prisma StepType enum to avoid conflict with domain StepType type.
+ * This module compares stepType values from the database (PrismaStepType) against string literals
+ * stored in step.script and incoming data.
+ */
+const StepType = PrismaStepType;
 
 // Helper to extract text from string | {text: string} object
 type TextOrTextObject = string | { text: string };
@@ -192,7 +200,7 @@ export class OrchestrateRecipeUseCase {
     tier: 'perfect' | 'high' | 'medium' | 'low';
   }> {
     const activitySteps = steps.filter(
-      (s) => s.stepType === 'activity' || s.stepType === 'question',
+      (s) => s.stepType === StepType.ACTIVITY || s.stepType === StepType.QUESTION,
     );
     const totalActivities = activitySteps.length;
 
@@ -312,7 +320,11 @@ export class OrchestrateRecipeUseCase {
     }
 
     // ── Contenido / intro / closure ──────────────────────────────────────
-    if (stepType === 'content' || stepType === 'intro' || stepType === 'closure') {
+    if (
+      stepType === StepType.CONTENT ||
+      stepType === StepType.INTRO ||
+      stepType === StepType.CLOSURE
+    ) {
       const s = script as ContentScript;
       return {
         stepType: stepType as 'content' | 'intro' | 'closure',
@@ -327,7 +339,7 @@ export class OrchestrateRecipeUseCase {
 
     // ── Pregunta de comprensión (respuesta libre) ─────────────────────────
     // Always respect stepType — type guard is only for extracting data
-    if (stepType === 'question') {
+    if (stepType === StepType.QUESTION) {
       const questionText = isQuestionScript(script)
         ? extractText((script as QuestionScript).question)
         : '';
@@ -336,7 +348,7 @@ export class OrchestrateRecipeUseCase {
         : { correct: '', incorrect: '' };
       const hint = isQuestionScript(script) ? (script as QuestionScript).hint : undefined;
       return {
-        stepType: 'activity', // La UI lo trata como panel interactivo
+        stepType: StepType.QUESTION, // Preserve original type for frontend routing
         script: {
           transition: extractText(
             isQuestionScript(script) ? (script as QuestionScript).transition : '',
@@ -347,7 +359,7 @@ export class OrchestrateRecipeUseCase {
         },
         activity: {
           instruction: questionText,
-          options: [], // Sin opciones = input libre en el frontend
+          options: null, // Explicitamente null para preguntas (sin opciones)
           feedback: {
             correct: fb.correct,
             incorrect: fb.incorrect,
@@ -359,7 +371,7 @@ export class OrchestrateRecipeUseCase {
 
     // ── Actividad / examen (opción múltiple) ──────────────────────────────
     // Always respect stepType — type guard is only for extracting data
-    if (stepType === 'activity' || stepType === 'exam') {
+    if (stepType === StepType.ACTIVITY || stepType === StepType.EXAM) {
       const instructionText = isActivityScript(script)
         ? extractText((script as ActivityScript).instruction)
         : '';
@@ -374,7 +386,7 @@ export class OrchestrateRecipeUseCase {
         ? (script as ActivityScript).feedback
         : { correct: '', incorrect: '' };
       return {
-        stepType: 'activity',
+        stepType: StepType.ACTIVITY,
         script: {
           transition: extractText(
             isActivityScript(script) ? (script as ActivityScript).transition : '',
@@ -397,7 +409,7 @@ export class OrchestrateRecipeUseCase {
     // Fallback
     const s = script as ContentScript;
     return {
-      stepType: 'content',
+      stepType: StepType.CONTENT,
       script: {
         transition: s.transition ?? '',
         content: s.content ?? '',
@@ -426,10 +438,13 @@ export class OrchestrateRecipeUseCase {
       return '';
     };
 
-    if (stepType === 'question' && isQuestionScript(script)) {
+    if (stepType === StepType.QUESTION && isQuestionScript(script)) {
       return [txt(script.transition), txt(script.question)].filter(Boolean).join(' ');
     }
-    if ((stepType === 'activity' || stepType === 'exam') && isActivityScript(script)) {
+    if (
+      (stepType === StepType.ACTIVITY || stepType === StepType.EXAM) &&
+      isActivityScript(script)
+    ) {
       return [txt(script.transition), txt(script.instruction)].filter(Boolean).join(' ');
     }
     const s = script as ContentScript;
@@ -494,7 +509,15 @@ export class OrchestrateRecipeUseCase {
   }
 
   private requiresStudentInput(stepType?: string | null): boolean {
-    return stepType === 'activity' || stepType === 'exam' || stepType === 'question';
+    // Accept both string literals and StepType enum values
+    return (
+      stepType === 'activity' ||
+      stepType === StepType.ACTIVITY ||
+      stepType === 'question' ||
+      stepType === StepType.QUESTION ||
+      stepType === 'exam' ||
+      stepType === StepType.EXAM
+    );
   }
 
   private stateForStep(step: { stepType?: string | null }): PedagogicalState {
@@ -918,8 +941,24 @@ export class OrchestrateRecipeUseCase {
   // ─────────────────────────────────────────────────────────────────────────
 
   async start(recipeId: string, studentId: string) {
-    const recipe = await this.recipeRepo.findById(recipeId);
-    if (!recipe) throw new RecipeNotFoundError(recipeId);
+    // Check if this is a mock recipe ID (used in E2E tests)
+    const isMockRecipe = recipeId.startsWith('test-recipe-');
+    let recipe;
+
+    if (isMockRecipe) {
+      // Use the mock recipe stored in the global object (set via /mock/recipe endpoint)
+      const mockRecipes = globalThis.__mockRecipes || {};
+      recipe = mockRecipes[recipeId];
+      orchestrateLogger.info(`[MOCK] Using mock recipe: ${recipeId}`);
+      if (!recipe) {
+        orchestrateLogger.error(`[MOCK] Mock recipe not found: ${recipeId}`);
+        throw new RecipeNotFoundError(recipeId);
+      }
+    } else {
+      // Normal flow: fetch from repository
+      recipe = await this.recipeRepo.findById(recipeId);
+      if (!recipe) throw new RecipeNotFoundError(recipeId);
+    }
 
     this.config = parseRecipeConfig(recipe.meta);
     const student = await this.userRepo.findById(studentId);
@@ -957,7 +996,7 @@ export class OrchestrateRecipeUseCase {
         pedagogicalState: (needsToStart
           ? 'AWAITING_START'
           : existing.stateCheckpoint.currentState) as PedagogicalState,
-        staticContent: this.extractStaticContent(steps[idx] ?? steps[0]),
+        staticContent: this.extractStaticContent(steps[0]), // Always include first step's content for AWAITING_START
         config: this.config as unknown as Record<string, unknown>,
         resumed: true,
         needsStart: needsToStart,
@@ -1073,11 +1112,25 @@ export class OrchestrateRecipeUseCase {
     if (session.status !== 'ACTIVE' && session.status !== 'IDLE')
       throw new Error(`Session not active: ${session.status}`);
 
-    const recipe = await this.recipeRepo.findById(session.recipeId);
-    if (!recipe) throw new RecipeNotFoundError(session.recipeId);
+    // Check if this is a mock recipe ID (used in E2E tests)
+    const isMockRecipe = session.recipeId.startsWith('test-recipe-');
+    let recipe;
+
+    if (isMockRecipe) {
+      // Use the mock recipe stored in the global object (set via /mock/recipe endpoint)
+      const mockRecipes = globalThis.__mockRecipes || {};
+      recipe = mockRecipes[session.recipeId];
+      if (!recipe) throw new RecipeNotFoundError(session.recipeId);
+    } else {
+      // Normal flow: fetch from repository
+      recipe = await this.recipeRepo.findById(session.recipeId);
+      if (!recipe) throw new RecipeNotFoundError(session.recipeId);
+    }
     this.config = parseRecipeConfig(recipe.meta);
 
-    const steps = await this.recipeRepo.findStepsByRecipeId(session.recipeId);
+    const steps = isMockRecipe
+      ? recipe.steps
+      : await this.recipeRepo.findStepsByRecipeId(session.recipeId);
     if (!steps.length) throw new Error('Recipe has no steps');
 
     const history = await this.interactionRepo.findBySessionOrdered(sessionId);
@@ -1232,7 +1285,7 @@ export class OrchestrateRecipeUseCase {
 
       // For question steps, transition to ACTIVITY_WAIT
       // Always respect stepType — the type guard is only for extracting data
-      if (nextStep?.stepType === 'question') {
+      if (nextStep?.stepType === 'question' || nextStep?.stepType === StepType.QUESTION) {
         const questionText = isQuestionScript(nextScript)
           ? extractText((nextScript as QuestionScript).question)
           : this.buildVoiceText(nextStep);
@@ -1428,7 +1481,7 @@ export class OrchestrateRecipeUseCase {
       // PRIORITY: Use stepType to determine evaluation method
       // - 'question' steps use LLM (free response)
       // - 'activity'/'exam' steps use deterministic comparison (MCQ)
-      if (stepType === 'question') {
+      if (stepType === 'question' || stepType === StepType.QUESTION) {
         orchestrateLogger.info('[ACTIVITY_WAIT] Using LLM for question step');
         // Always use LLM for question steps (free response)
         // ── Pregunta de comprensión: evaluar con LLM ─────────────────────
@@ -1473,7 +1526,7 @@ export class OrchestrateRecipeUseCase {
               : 'EVALUATE_INCORRECT';
           nextState = this.applyStateTransition('ACTIVITY_WAIT', event);
         }
-      } else if (stepType === 'activity' || stepType === 'exam') {
+      } else if (stepType === StepType.ACTIVITY || stepType === 'exam') {
         // Use deterministic comparison for activity steps (MCQ)
         const as = script as ActivityScript;
         const norm = studentInput.trim().toLowerCase();
@@ -1835,7 +1888,7 @@ export class OrchestrateRecipeUseCase {
         '[interactStream] ACTIVITY_WAIT - processing answer',
       );
 
-      if (stepType === 'activity' || stepType === 'exam') {
+      if (stepType === StepType.ACTIVITY || stepType === 'exam') {
         // MCQ: deterministic comparison (NO LLM)
         const as = script as ActivityScript;
         const norm = studentInput.trim().toLowerCase();
@@ -1897,7 +1950,7 @@ export class OrchestrateRecipeUseCase {
           autoAdvance: false, // Wait for user to continue
         };
         return;
-      } else if (stepType === 'question') {
+      } else if (stepType === 'question' || stepType === StepType.QUESTION) {
         // Question: use LLM evaluation (will be handled below)
         orchestrateLogger.info('[interactStream] ACTIVITY_WAIT - using LLM for question step');
       }
@@ -2032,7 +2085,7 @@ export class OrchestrateRecipeUseCase {
 
       // For question steps, transition to ACTIVITY_WAIT
       // Always respect stepType — the type guard is only for extracting data
-      if (nextStep?.stepType === 'question') {
+      if (nextStep?.stepType === 'question' || nextStep?.stepType === StepType.QUESTION) {
         const questionText = isQuestionScript(nextScript)
           ? extractText((nextScript as QuestionScript).question)
           : this.buildVoiceText(nextStep);
@@ -2247,7 +2300,7 @@ export class OrchestrateRecipeUseCase {
       const stepType = currentStep.stepType as string;
 
       // Use stepType to determine evaluation method (same as interact() method)
-      if (stepType === 'question') {
+      if (stepType === 'question' || stepType === StepType.QUESTION) {
         const evaluation = await this.evaluateAnswer({
           script: script as QuestionScript,
           studentInput,
@@ -2273,7 +2326,7 @@ export class OrchestrateRecipeUseCase {
               ? 'ACTIVITY_SKIP_OFFER'
               : 'EVALUATION';
         }
-      } else if (stepType === 'activity' || stepType === 'exam') {
+      } else if (stepType === StepType.ACTIVITY || stepType === 'exam') {
         const as = script as ActivityScript;
         const norm = studentInput.trim().toLowerCase();
         const correct = as.options.find((o) => o.isCorrect);
