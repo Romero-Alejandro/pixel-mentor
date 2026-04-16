@@ -64,17 +64,24 @@ async function bootstrap(): Promise<void> {
   // Log streaming configuration
   logger.info({ ENABLE_STREAMING: config.ENABLE_STREAMING }, 'Configuration loaded');
 
-  // Initialize the centralized AI service provider
+
+  // Create repos needed for AI service FIRST
+  // These are created directly to avoid circular dependencies
+  const { FileSystemPromptRepository } = await import('@/features/recipe/infrastructure/persistence/file-system-prompt.repository.js');
+  const { PrismaKnowledgeChunkRepository } = await import('@/features/knowledge/infrastructure/persistence/prisma-knowledge-chunk.repository.js');
+  const promptRepo = new FileSystemPromptRepository();
+  const knowledgeRepo = new PrismaKnowledgeChunkRepository();
+
+  // Initialize the centralized AI service provider with promptRepo
   // This validates the provider config and creates all AI adapters once
   const aiServices = initializeAIServices(
     config,
-    null as any, // promptRepo - will be available after container build
-    null as any, // knowledgeChunkRepository - will be available after container build
+    promptRepo,
+    knowledgeRepo,
     logger,
   );
 
   // Build the main container with all feature containers
-  // AI model is injected from the centralized provider
   const container = buildContainer(config, logger, aiServices.aiModel);
 
   // Run staging validation (logs banner if new engine is active)
@@ -128,7 +135,7 @@ async function bootstrap(): Promise<void> {
 
   // Express app.listen() returns http.Server in Express 5
   const server: Server = app.listen(config.PORT, () => {
-    logger.info(`API running on port ${config.PORT}`);
+    logger.info(`🚀 API running on http://localhost:${config.PORT}`);
   });
 
   server.on('error', (error: unknown) => {
