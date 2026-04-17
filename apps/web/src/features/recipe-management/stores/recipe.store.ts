@@ -12,7 +12,7 @@ interface RecipeState {
   error: string | null;
 
   // Actions
-  fetchRecipes: (options?: { status?: 'my' | 'published' }) => Promise<void>;
+  fetchRecipes: (options?: { isMy?: boolean; publishedOnly?: boolean }) => Promise<void>;
   fetchRecipe: (recipeId: string) => Promise<void>;
   createRecipe: (data: {
     title: string;
@@ -92,7 +92,10 @@ export const useRecipeStore = create<RecipeState>()(
       fetchRecipes: async (options) => {
         set({ isLoading: true, error: null });
         try {
-          const result = await api.listAllRecipes(options);
+          const result = await api.listAllRecipes({
+            isMy: options?.isMy,
+            publishedOnly: options?.publishedOnly,
+          });
           set({ recipes: result, isLoading: false });
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : 'Failed to fetch recipes';
