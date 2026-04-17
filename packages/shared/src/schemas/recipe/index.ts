@@ -12,3 +12,11 @@ export { UpdateRecipeInputSchema, type UpdateRecipeInput } from './recipe.schema
 export { ReorderStepsInputSchema, type ReorderStepsInput } from './recipe.schema.js';
 export { GetRecipeInputSchema, type GetRecipeInput } from './recipe.schema.js';
 export { ListRecipesInputSchema, type ListRecipesInput } from './recipe.schema.js';
+export {
+  normalizeStepData,
+  type StepDataInput,
+  STEP_TYPE_LABELS,
+  STEP_TYPE_COLORS,
+  transformStepScript,
+  getStepTitle,
+} from './recipe.utils.js';

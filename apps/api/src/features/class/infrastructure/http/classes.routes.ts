@@ -251,6 +251,20 @@ export function createClassRouter(deps: ClassRouterDependencies): Router {
     },
   );
 
+  // PATCH /:id/lessons/reorder - Reorder lessons (MUST be before /:lessonId)
+  router.patch(
+    '/:id/lessons/reorder',
+    validate(ReorderLessonsSchema),
+    async (req: AppRequest, res: Response, next: NextFunction) => {
+      try {
+        await classService.reorderLessons(req.params.id, req.user!.id, req.body.lessonIds);
+        res.status(200).json({ message: 'Lessons reordered' });
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
   router.patch(
     '/:id/lessons/:lessonId',
     validate(UpdateLessonSchema),

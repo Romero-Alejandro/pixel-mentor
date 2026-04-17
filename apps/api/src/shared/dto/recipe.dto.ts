@@ -25,4 +25,6 @@ export {
   type GetRecipeInput,
   ListRecipesInputSchema,
   type ListRecipesInput,
+  normalizeStepData,
+  type StepDataInput,
 } from '@pixel-mentor/shared/schemas/recipe';

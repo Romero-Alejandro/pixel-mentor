@@ -1,4 +1,4 @@
-import type { RecipeStep } from './recipe.schema';
+import type { RecipeStep } from '../../recipe.js';
 
 export type StepType = 'content' | 'activity' | 'question' | 'intro' | 'closure';
 
@@ -61,3 +61,132 @@ export const getStepTitle = (step: RecipeStep): string => {
 
   return finalTitle.length > 50 ? `${finalTitle.slice(0, 50)}...` : finalTitle;
 };
+
+// ==================== Step Data Normalization ====================
+
+export interface StepDataInput {
+  stepType?: StepType;
+  script?: Record<string, unknown>;
+  activity?: Record<string, unknown>;
+  question?: Record<string, unknown>;
+  order?: number;
+  atomId?: string;
+  conceptId?: string;
+  activityId?: string;
+}
+
+/**
+ * Normaliza datos de paso del formato UI al formato Zod.
+ * El frontend envía datos en formato "UI" (script con kind), pero Zod espera campos separados.
+ * Esta función detecta y normaliza ambos formatos.
+ */
+export function normalizeStepData(input: StepDataInput): StepDataInput {
+  const { stepType, script, activity, question, ...rest } = input;
+
+  // Si ya tiene activity o question como objetos separados, no necesita normalización
+  if (activity || question) {
+    return input;
+  }
+
+  // Detectar formato UI (script con kind) y normalizar
+  if (script && typeof script === 'object' && 'kind' in script) {
+    const kind = (script as { kind?: string }).kind;
+
+    if (kind === 'activity') {
+      // Normalizar activity desde formato UI
+      const instruction = extractText(script.instruction);
+      const options = (script.options as Array<{ text: string; isCorrect: boolean }>) || [];
+      const feedback = (script.feedback as Record<string, string>) || {};
+
+      return {
+        ...rest,
+        stepType: stepType || 'activity',
+        activity: {
+          instruction: { text: instruction },
+          options: options.map((o) => ({ text: o.text, isCorrect: o.isCorrect })),
+          feedback: {
+            correct: feedback.correct || '¡Correcto!',
+            incorrect: feedback.incorrect || 'Intenta de nuevo',
+          },
+        },
+        script: undefined,
+      };
+    }
+
+    if (kind === 'question') {
+      // Normalizar question desde formato UI
+      const questionText = extractText(script.question);
+      const expectedAnswer = (script.expectedAnswer as string) || '';
+      const feedback = (script.feedback as Record<string, string>) || {};
+      const hint = (script.hint as string) || '';
+
+      return {
+        ...rest,
+        stepType: stepType || 'question',
+        question: {
+          question: { text: questionText },
+          expectedAnswer: { text: expectedAnswer },
+          feedback: {
+            correct: feedback.correct || '¡Muy bien!',
+            incorrect: feedback.incorrect || 'Casi, intentá de nuevo',
+          },
+          hint: { text: hint },
+        },
+        script: undefined,
+      };
+    }
+  }
+
+  // Normalizar campos de texto a objetos {text} para contenido/intro/closure
+  if (stepType === 'content' || stepType === 'intro' || stepType === 'closure') {
+    const normalized: StepDataInput = {
+      ...rest,
+      stepType,
+      script: undefined,
+    };
+
+    if (script && typeof script === 'object') {
+      normalized.script = {
+        transition: { text: extractText(script.transition) || '¡Vamos!' },
+        content: {
+          text: extractText(script.content) || 'Contenido',
+          chunks: [{ text: extractText(script.content) || 'Contenido', pauseAfter: 500 }],
+        },
+        examples: ((script.examples as Array<string | { text: string }>) || []).map((e) =>
+          typeof e === 'string' ? { text: e } : e,
+        ),
+        closure: { text: extractText(script.closure) || '¡Muy bien!' },
+      };
+    }
+
+    return normalized;
+  }
+
+  // Para activity sin formato UI, asegurar que activity tenga estructura válida
+  if (stepType === 'activity' && script) {
+    return {
+      ...rest,
+      stepType,
+      activity: {
+        instruction: { text: extractText(script.instruction) || 'Realiza la actividad' },
+        options: [],
+        feedback: { correct: '¡Correcto!', incorrect: 'Intenta de nuevo' },
+      },
+    };
+  }
+
+  // Para question sin formato UI
+  if (stepType === 'question' && script) {
+    return {
+      ...rest,
+      stepType,
+      question: {
+        question: { text: extractText(script.question) || '¿Qué aprendiste?' },
+        expectedAnswer: { text: (script.expectedAnswer as string) || '' },
+        feedback: { correct: '¡Correcto!', incorrect: 'Casi' },
+      },
+    };
+  }
+
+  return input;
+}
