@@ -20,10 +20,17 @@ import { Button, Card, Spinner, Input } from '@/components/ui';
 
 type FilterStatus = 'all' | 'my-drafts' | 'my-published';
 
-const FILTER_CONFIG: Record<FilterStatus, 'my' | 'published'> = {
-  'my-drafts': 'my',
-  'my-published': 'my',
-  all: 'published',
+interface FilterConfig {
+  /** Whether to show only the current user's recipes */
+  isMy: boolean;
+  /** Whether to show only published recipes */
+  publishedOnly: boolean;
+}
+
+const FILTER_CONFIG: Record<FilterStatus, FilterConfig> = {
+  'my-drafts': { isMy: true, publishedOnly: false },
+  'my-published': { isMy: true, publishedOnly: true },
+  all: { isMy: false, publishedOnly: true },
 };
 
 export function RecipesPage() {
@@ -45,14 +52,14 @@ export function RecipesPage() {
     );
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
+  const [filterStatus, setFilterStatus] = useState<FilterStatus>('my-drafts');
 
   const isAuthorizedTeacher = user?.role === 'TEACHER' || user?.role === 'ADMIN';
 
   useEffect(() => {
     if (isAuthorizedTeacher) {
-      const status = FILTER_CONFIG[filterStatus];
-      fetchRecipes({ status });
+      const config = FILTER_CONFIG[filterStatus];
+      fetchRecipes({ isMy: config.isMy, publishedOnly: config.publishedOnly });
     }
   }, [filterStatus, isAuthorizedTeacher, fetchRecipes]);
 

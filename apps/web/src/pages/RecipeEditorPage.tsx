@@ -39,25 +39,27 @@ const renderSafe = (val: any) => (val && typeof val === 'object' ? '' : String(v
 
 const transformAIScript = (stepType: string, script: any): Record<string, unknown> => {
   const getT = (val: any) => extractText(val);
+  const contentText = getT(script.content) || 'Contenido';
 
-  // 🛠️ FIX DE RAÍZ: Estructura base requerida por el esquema Zod del backend
+  // 🛠️ FIX DE RAÍZ: Estructura EXACTA requerida por el esquema Zod del backend
+  // Importante: chunks y examples deben estar al nivel del raíz, no dentro de content
   const baseFields = {
     transition: { text: getT(script.transition) || '¡Vamos!' },
     content: {
-      text: getT(script.content) || 'Contenido',
-      chunks: script.content?.chunks || [
-        { text: getT(script.content) || 'Contenido', pauseAfter: 500 },
-      ],
+      text: contentText,
+      chunks: [{ text: contentText, pauseAfter: 500 }],
     },
-    examples: Array.isArray(script.examples)
-      ? script.examples.map((e: any) => ({ text: getT(e) }))
-      : [],
+    examples:
+      Array.isArray(script.examples) && script.examples.length > 0
+        ? script.examples.map((e: any) => ({ text: getT(e.text || e) }))
+        : [{ text: contentText }],
     closure: { text: getT(script.closure) || '¡Muy bien!' },
   };
 
   if (stepType === 'activity') {
+    // Activity NO necesita content, examples, closure - solo instruction y options
     return {
-      ...baseFields,
+      transition: { text: getT(script.transition) || '¡Vamos!' },
       kind: 'activity',
       instruction: { text: getT(script.instruction) || 'Realiza la actividad' },
       options: (script.options || []).map((o: any) => ({
@@ -72,8 +74,10 @@ const transformAIScript = (stepType: string, script: any): Record<string, unknow
   }
 
   if (stepType === 'question') {
+    // Question NO necesita content, examples, closure - solo question y feedback
+    const hintText = getT(script.hint);
     return {
-      ...baseFields,
+      transition: { text: getT(script.transition) || '¡Vamos!' },
       kind: 'question',
       question: { text: getT(script.question) || '¿Qué aprendiste?' },
       expectedAnswer: getT(script.expectedAnswer) || 'Una respuesta',
@@ -81,6 +85,7 @@ const transformAIScript = (stepType: string, script: any): Record<string, unknow
         correct: getT(script.feedback?.correct) || '¡Correcto!',
         incorrect: getT(script.feedback?.incorrect) || 'Pista: revisa lo aprendido',
       },
+      hint: hintText,
     };
   }
 
@@ -265,20 +270,28 @@ export function RecipeEditorPage() {
   const handleAIGenerated = async (draft: any) => {
     try {
       let id = recipeId;
+
+      // Transformar TODOS los steps ANTES de enviar al backend
+      const transformedSteps =
+        draft.steps?.map((step: any) => ({
+          order: step.order,
+          stepType: step.stepType,
+          script: transformAIScript(step.stepType, step.script),
+        })) || [];
+
       if (isNew) {
-        const res = await createRecipe({ ...draft, published: false });
+        const res = await createRecipe({
+          title: draft.title,
+          description: draft.description,
+          expectedDurationMinutes: draft.expectedDurationMinutes,
+          published: false,
+          steps: transformedSteps,
+        });
         id = res.id;
         navigate(`/units/${id}/edit`, { replace: true });
       } else if (id) await updateRecipe(id, { title: draft.title, description: draft.description });
 
       if (!id) return;
-      for (const step of draft.steps) {
-        await addStep(id, {
-          order: (currentRecipe?.steps?.length || 0) + 1,
-          stepType: step.stepType,
-          script: transformAIScript(step.stepType, step.script),
-        });
-      }
       await fetchRecipe(id);
       playToastSuccess();
     } catch (e) {

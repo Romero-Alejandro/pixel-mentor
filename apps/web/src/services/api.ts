@@ -262,10 +262,11 @@ export const api = {
   },
 
   // ==================== Recipe Management ====================
-  listAllRecipes: async (options?: { status?: 'my' | 'published' }) => {
-    const activeOnly =
-      options?.status === 'published' ? true : options?.status === 'my' ? false : undefined;
-    const { data } = await apiClient.get('/api/recipes', { params: { activeOnly } });
+  listAllRecipes: async (options?: { isMy?: boolean; publishedOnly?: boolean }) => {
+    const params: Record<string, string> = {};
+    if (options?.isMy !== undefined) params.isMy = String(options.isMy);
+    if (options?.publishedOnly !== undefined) params.publishedOnly = String(options.publishedOnly);
+    const { data } = await apiClient.get('/api/recipes', { params });
     const recipes = (data.recipes ?? data) as Recipe[];
     return recipes;
   },
