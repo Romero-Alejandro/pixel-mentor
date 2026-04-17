@@ -97,9 +97,14 @@ ${objectives}
 
 ## REGLAS IMPORTANTES:
 
-1. **Actividades (activity)**: Debe tener instruction como OBJETO {text: "..."}, opciones (options) y feedback
-2. **Preguntas (question)**: Debe tener question como OBJETO {text: "..."}, expectedAnswer y feedback  
-3. **Contenido (content)**: transition, content, examples, closure
+1. **LÍMITES DE TEXTO** (MUY IMPORTANTE):
+   - Cada texto debe ser BREVE y CONCISO (máximo 100 caracteres por texto)
+   - Los ejemplos deben ser cortos (máximo 80 caracteres)
+   - NO generes textos muy largos o fallará la base de datos
+
+2. **Actividades (activity)**: Debe tener instruction como OBJETO {text: "..."}, opciones (options) y feedback
+3. **Preguntas (question)**: Debe tener question como OBJETO {text: "..."}, expectedAnswer y feedback  
+4. **Contenido (content)**: transition, content, examples, closure
 
 ## ESTRUCTURA (6-7 pasos):
 
@@ -110,52 +115,117 @@ ${objectives}
 ### Paso 6: CONTENT (profundización)
 ### Paso 7: CIERRE
 
-## FORMATO ACTIVITY (IMPORTANTE):
+## FORMATO OBLIGATORIO PARA CADA TIPO:
+
+### CONTENT/INTRO/CLOSURE - Debe tener ESTOS campos:
+{
+  "order": 1,
+  "stepType": "content",
+  "script": {
+    "transition": {"text": "Transición de entrada"},
+    "content": {
+      "text": "Contenido principal",
+      "chunks": [{"text": "Contenido chunk", "pauseAfter": 500}]
+    },
+    "examples": [{"text": "Ejemplo 1"}],
+    "closure": {"text": "Cierre"}
+  }
+}
+
+### ACTIVITY - Debe tener ESTOS campos:
 {
   "order": 4,
   "stepType": "activity",
   "script": {
     "kind": "activity",
-    "instruction": { "text": "Instrucción clara" },
+    "transition": {"text": "¡Vamos!"},
+    "instruction": {"text": "Instrucción clara"},
     "options": [
-      {"text": "Correcta", "isCorrect": true},
-      {"text": "Incorrecta1", "isCorrect": false},
-      {"text": "Incorrecta2", "isCorrect": false}
+      {"text": "Opción correcta", "isCorrect": true},
+      {"text": "Opción incorrecta", "isCorrect": false}
     ],
-    "feedback": {
-      "correct": "¡Muy bien! Explicación específica",
-      "incorrect": "No. Pista breve."
-    }
+    "feedback": {"correct": "¡Muy bien!", "incorrect": "Intenta de nuevo"}
   }
 }
 
-## FORMATO QUESTION:
+### QUESTION - Debe tener ESTOS campos:
 {
   "order": 5,
-  "stepType": "question", 
+  "stepType": "question",
   "script": {
     "kind": "question",
-    "question": { "text": "¿Pregunta breve?" },
-    "expectedAnswer": "Respuesta",
-    "feedback": {
-      "correct": "¡Correcto!",
-      "incorrect": "Pista"
-    }
+    "transition": {"text": "¡Vamos!"},
+    "question": {"text": "¿Pregunta?"},
+    "expectedAnswer": "Respuesta correcta",
+    "feedback": {"correct": "¡Correcto!", "incorrect": "Pista"},
+    "hint": "Pista opcional"
   }
 }
 
-## EJEMPLO "LAS VOCALES":
+## EJEMPLO COMPLETO "LAS VOCALES":
 {
   "steps": [
-    {"order":1,"stepType":"intro","title":"¡Hola!","script":{"transition":{"text":"¡Hola! ¿Sabías que hay letras mágicas?"},"content":{"text":"Hoy vamos a aprender las vocales"},"closure":{"text":"¡Vamos!"}}},
-    {"order":2,"stepType":"content","title":"La A","script":{"transition":{"text":"Conozcamos la A"},"content":{"text":"La A es como una montaña. Su sonido es fuerte.","chunks":[{"text":"La A es como una montaña",500}]},"examples":[{"text":"MANZANA tiene A"}],"closure":{"text":"¡Muy bien!"}}},
-    {"order":3,"stepType":"activity","title":"¿Qué vocal?","script":{"kind":"activity","instruction":{"text":"¿Qué vocal tiene MANZANA?"},"options":[{"text":"A","isCorrect":true},{"text":"E","isCorrect":false},{"text":"I","isCorrect":false}],"feedback":{"correct":"¡Exacto! MANZANA tiene A","incorrect":"Pista: es la primera letra"}}},
-    {"order":4,"stepType":"question","title":"¿Qué aprendimos?","script":{"kind":"question","question":{"text":"¿Cuántas vocales hay?"},"expectedAnswer":"Cinco","feedback":{"correct":"¡ Correcto!","incorrect":"Pista: A,E,I,O,U"}}},
-    {"order":5,"stepType":"closure","title":"¡Fin!","script":{"transition":{"text":"¡Felicidades!"},"content":{"text":"Ahora conoces las vocales","chunks":[{"text":"Conoces las vocales",500}]},"closure":{"text":"¡Eres un experto!"}}}
+    {
+      "order": 1,
+      "stepType": "intro",
+      "script": {
+        "transition": {"text": "¡Hola exploradores!"},
+        "content": {"text": "Hoy vamos a aprender las vocales", "chunks": [{"text": "Las vocales son mágicas", "pauseAfter": 500}]},
+        "examples": [{"text": "A, E, I, O, U"}],
+        "closure": {"text": "¡Vamos a descubrir!"}
+      }
+    },
+    {
+      "order": 2,
+      "stepType": "content",
+      "script": {
+        "transition": {"text": "Conozcamos la A"},
+        "content": {"text": "La A es como una montaña", "chunks": [{"text": "La A suena fuerte", "pauseAfter": 500}]},
+        "examples": [{"text": "MANZANA tiene A"}],
+        "closure": {"text": "¡Muy bien!"}
+      }
+    },
+    {
+      "order": 3,
+      "stepType": "activity",
+      "script": {
+        "kind": "activity",
+        "transition": {"text": "¡A trabajar!"},
+        "instruction": {"text": "¿Qué vocal tiene MANZANA?"},
+        "options": [
+          {"text": "A", "isCorrect": true},
+          {"text": "E", "isCorrect": false},
+          {"text": "I", "isCorrect": false}
+        ],
+        "feedback": {"correct": "¡Exacto! MANZANA tiene A", "incorrect": "Pista: es la primera"}
+      }
+    },
+    {
+      "order": 4,
+      "stepType": "question",
+      "script": {
+        "kind": "question",
+        "transition": {"text": "¡Responde!"},
+        "question": {"text": "¿Cuántas vocales hay?"},
+        "expectedAnswer": "Cinco",
+        "feedback": {"correct": "¡Correcto!", "incorrect": "Pista: A,E,I,O,U"},
+        "hint": "Son 5"
+      }
+    },
+    {
+      "order": 5,
+      "stepType": "closure",
+      "script": {
+        "transition": {"text": "¡Felicidades!"},
+        "content": {"text": "Ahora conoces las vocales", "chunks": [{"text": "Conoces las 5 vocales", "pauseAfter": 500}]},
+        "examples": [{"text": "¡Eres un experto!"}],
+        "closure": {"text": "¡Hasta luego!"}
+      }
+    }
   ]
 }
 
-Devuelve SOLO JSON válido.`;
+Devuelve SOLO JSON válido, sin texto adicional.`;
   }
 
   private parseAIResponse(

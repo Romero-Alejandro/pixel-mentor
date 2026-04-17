@@ -24,6 +24,7 @@ import {
   UpdateRecipeInputSchema,
   RecipeStepInputSchema,
   ReorderStepsInputSchema,
+  normalizeStepData,
 } from '@/shared/dto/index';
 import type { AppRequest } from '@/shared/types/express.d.js';
 
@@ -84,7 +85,10 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
           moduleId: recipe.moduleId,
           createdAt: recipe.createdAt?.toISOString(),
           updatedAt: recipe.updatedAt?.toISOString(),
-          steps: recipe.steps || [],
+          steps: (recipe.steps || []).map((step: any) => ({
+            ...step,
+            stepType: step.stepType || 'content',
+          })),
         };
 
         response.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -147,6 +151,11 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
 
         const validated = CreateRecipeInputSchema.parse(request.body);
 
+        // Normalizar steps si existen (vienen del AI generator en formato UI)
+        const normalizedSteps = ((validated as any).steps || []).map((step: any) =>
+          normalizeStepData(step),
+        );
+
         const recipe = await createRecipeUseCase.execute(
           {
             title: validated.title,
@@ -154,7 +163,7 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
             expectedDurationMinutes: validated.expectedDurationMinutes ?? undefined,
             moduleId: validated.moduleId ?? undefined,
             published: validated.published,
-            steps: (validated as any).steps,
+            steps: normalizedSteps,
           },
           userId,
         );
@@ -180,7 +189,10 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
           moduleId: recipe.moduleId,
           createdAt: recipe.createdAt?.toISOString(),
           updatedAt: recipe.updatedAt?.toISOString(),
-          steps: recipe.steps || [],
+          steps: (recipe.steps || []).map((step: any) => ({
+            ...step,
+            stepType: step.stepType || 'content',
+          })),
         };
 
         response.status(201).json(plainRecipe);
@@ -344,18 +356,34 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
 
         let validated: any;
         try {
-          // Manual validation instead of Zod schema to avoid Zod v4 issues
-          const body = request.body;
-          validated = {
-            order: typeof body.order === 'number' ? body.order : 1,
-            stepType: body.stepType || 'content',
-            script: body.script || null,
-            activity: body.activity || null,
-            question: body.question || null,
-          };
-          console.log('[addStep] Manual validation:', JSON.stringify(validated));
+          // Normalizar datos del formato UI al formato Zod
+          const normalized = normalizeStepData(request.body);
+          console.log('[addStep] Normalized data:', JSON.stringify(normalized));
+
+          // Validar con Zod schema
+          validated = RecipeStepInputSchema.parse(normalized);
+          console.log('[addStep] Zod validated:', JSON.stringify(validated));
         } catch (validationError) {
-          throw new Error('Invalid request body');
+          if (validationError instanceof z.ZodError) {
+            const errorMessages = validationError.issues
+              .map((issue) => {
+                const path = issue.path.join('.');
+                return `${path ? path + ': ' : ''}${issue.message}`;
+              })
+              .join('; ');
+
+            request.logger?.error(
+              { zodErrors: validationError.issues },
+              '[addStep] Zod validation failed',
+            );
+            response.status(400).json({
+              error: 'Error de validación',
+              message: errorMessages,
+              details: validationError.issues,
+            });
+            return;
+          }
+          throw validationError;
         }
 
         const step = await addStepUseCase.execute(
