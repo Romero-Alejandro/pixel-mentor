@@ -1,8 +1,29 @@
 import { LEVEL_TITLES } from '../../domain/constants';
 import type { ILevelConfigRepository } from '../../domain/ports/level-config.repository.port';
 
+const DEFAULT_MAX_LEVEL = 6;
+
 export class LevelService {
-  constructor(private levelConfigRepo?: ILevelConfigRepository) {}
+  private maxLevel: number = DEFAULT_MAX_LEVEL;
+
+  constructor(private levelConfigRepo?: ILevelConfigRepository) {
+    if (levelConfigRepo) {
+      this.initializeMaxLevel();
+    }
+  }
+
+  private async initializeMaxLevel(): Promise<void> {
+    if (!this.levelConfigRepo) return;
+    const configs = await this.levelConfigRepo.findAll();
+    if (configs.length > 0) {
+      const max = Math.max(...configs.map((c) => c.level));
+      if (max > 0) this.maxLevel = max;
+    }
+  }
+
+  getMaxLevel(): number {
+    return this.maxLevel;
+  }
 
   async getLevel(level: number) {
     if (!this.levelConfigRepo) return null;
@@ -10,17 +31,45 @@ export class LevelService {
   }
 
   async calculateLevel(totalXP: number): Promise<number> {
-    if (!this.levelConfigRepo) return 1;
+    let maxLevel = this.maxLevel;
 
-    const levelConfigs = await this.levelConfigRepo.findAll();
-
-    for (const config of levelConfigs) {
-      if (totalXP >= config.minXP) {
-        return config.level;
+    if (this.levelConfigRepo) {
+      const levelConfigs = await this.levelConfigRepo.findAll();
+      if (levelConfigs.length > 0) {
+        maxLevel = Math.max(...levelConfigs.map((c) => c.level), DEFAULT_MAX_LEVEL);
+        this.maxLevel = maxLevel;
       }
     }
 
-    return 1;
+    if (!this.levelConfigRepo) {
+      const fallbackLevels: Record<number, number> = {
+        1: 0,
+        2: 100,
+        3: 250,
+        4: 500,
+        5: 1000,
+        6: 2000,
+      };
+      for (const [level, minXP] of Object.entries(fallbackLevels).sort(
+        (a, b) => Number(b[1]) - Number(a[1]),
+      )) {
+        if (totalXP >= Number(minXP)) {
+          return Math.min(Number(level), maxLevel);
+        }
+      }
+      return 1;
+    }
+
+    const levelConfigs = await this.levelConfigRepo.findAll();
+    let calculatedLevel = 1;
+
+    for (const config of levelConfigs) {
+      if (totalXP >= config.minXP) {
+        calculatedLevel = config.level;
+      }
+    }
+
+    return Math.min(calculatedLevel, maxLevel);
   }
 
   async getXPForNextLevel(currentLevel: number): Promise<number> {

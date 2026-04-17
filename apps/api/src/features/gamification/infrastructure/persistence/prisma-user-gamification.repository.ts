@@ -83,31 +83,29 @@ export class PrismaUserGamificationRepository implements IUserGamificationReposi
   ): Promise<{ newXP: number; leveledUp: boolean; newLevel?: number; newLevelTitle?: string }> {
     await this.getOrCreate(userId);
 
-    const before = await prisma.userGamification.findUnique({
-      where: { userId },
-    });
+    const maxLevel = this.levelService.getMaxLevel();
 
-    if (!before) {
-      throw new Error(`Failed to get or create gamification for user ${userId}`);
-    }
-
-    const previousLevel = before.level;
-    const newTotalXP = before.totalXP + amount;
-
-    const newLevel = await this.levelService.calculateLevel(newTotalXP);
-    const leveledUp = newLevel > previousLevel;
-    const newLevelTitle = leveledUp ? this.levelService.getLevelTitle(newLevel) : undefined;
-
-    await prisma.userGamification.update({
+    const updated = await prisma.userGamification.update({
       where: { userId },
       data: {
-        totalXP: newTotalXP,
-        level: newLevel,
+        totalXP: { increment: amount },
       },
     });
 
+    const newLevel = Math.min(updated.level, maxLevel);
+    const leveledUp = newLevel > 1;
+
+    if (updated.level !== newLevel) {
+      await prisma.userGamification.update({
+        where: { userId },
+        data: { level: newLevel },
+      });
+    }
+
+    const newLevelTitle = leveledUp ? this.levelService.getLevelTitle(newLevel) : undefined;
+
     return {
-      newXP: newTotalXP,
+      newXP: updated.totalXP,
       leveledUp,
       newLevel: leveledUp ? newLevel : undefined,
       newLevelTitle,

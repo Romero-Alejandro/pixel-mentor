@@ -26,24 +26,30 @@ interface GamificationState {
   particleTrigger: number;
   pendingToasts: EarnedBadge[];
 
+  // Race condition prevention
+  lastUpdateTimestamp: number;
+  requestVersion: number;
+
   // Actions
   fetchProfile: () => Promise<void>;
   recordActivity: (type: 'LESSON_COMPLETED' | 'ACTIVITY_ATTEMPT' | 'DAILY_LOGIN') => Promise<void>;
   dismissLevelUp: () => void;
   dismissBadgeEarned: () => void;
+  processNextToast: () => void;
+  clearAllToasts: () => void;
   emitXPEarned: (amount: number) => void;
   clearXPEarned: () => void;
 
-  // SSE event handlers
-  onXPEarned: (newTotalXP: number, reason: string) => void;
-  onBadgeEarned: (badge: EarnedBadge) => void;
+  // SSE event handlers with version checking
+  onXPEarned: (newTotalXP: number, reason: string, version: number) => void;
+  onBadgeEarned: (badge: EarnedBadge, version: number) => void;
   onLevelUp: (data: {
     newLevel: number;
     newLevelTitle: string;
     previousLevel: number;
     totalXP: number;
-  }) => void;
-  onStreakUpdated: (currentStreak: number, longestStreak: number) => void;
+  }, version: number) => void;
+  onStreakUpdated: (currentStreak: number, longestStreak: number, version: number) => void;
 }
 
 export const useGamificationStore = create<GamificationState>()((set) => ({
@@ -65,11 +71,33 @@ export const useGamificationStore = create<GamificationState>()((set) => ({
   particleTrigger: 0,
   pendingToasts: [],
 
+  // Race condition prevention
+  lastUpdateTimestamp: 0,
+  requestVersion: 0,
+
+  // Process the next badge from the toasts queue
+  processNextToast: () => {
+    set((state) => {
+      if (state.pendingToasts.length === 0) {
+        return { showBadgeEarned: false, badgeData: null };
+      }
+      const [next, ...rest] = state.pendingToasts;
+      return {
+        pendingToasts: rest,
+        showBadgeEarned: true,
+        badgeData: next,
+      };
+    });
+  },
+
+  // Clear all pending toasts
+  clearAllToasts: () => set({ pendingToasts: [], showBadgeEarned: false, badgeData: null }),
+
   fetchProfile: async () => {
     set({ isLoading: true, error: null });
     try {
       const profile = await gamificationApi.getProfile();
-      set({ profile, isLoading: false });
+      set({ profile, isLoading: false, requestVersion: 0 });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to fetch gamification profile';
       set({ error: message, isLoading: false });
@@ -78,7 +106,8 @@ export const useGamificationStore = create<GamificationState>()((set) => ({
   },
 
   recordActivity: async (type: 'LESSON_COMPLETED' | 'ACTIVITY_ATTEMPT' | 'DAILY_LOGIN') => {
-    set({ isLoading: true, error: null });
+    // Increment version for race condition detection
+    set((state) => ({ isLoading: true, error: null, requestVersion: state.requestVersion + 1 }));
     try {
       const result = await gamificationApi.recordActivity({ type });
       set({
@@ -99,11 +128,17 @@ export const useGamificationStore = create<GamificationState>()((set) => ({
         });
       }
 
+      // Process ALL new badges, not just the first one
       if (result.newBadges.length > 0) {
-        const firstBadge = result.newBadges[0] as EarnedBadge;
+        const allNewBadges = result.newBadges as EarnedBadge[];
+        // Add all to pending toasts queue
+        set((state) => ({
+          pendingToasts: [...state.pendingToasts, ...allNewBadges],
+        }));
+        // Show modal for first badge, rest will appear as toasts
         set({
           showBadgeEarned: true,
-          badgeData: firstBadge,
+          badgeData: allNewBadges[0],
         });
       }
     } catch (err: unknown) {
@@ -118,44 +153,72 @@ export const useGamificationStore = create<GamificationState>()((set) => ({
   emitXPEarned: (amount: number) => set({ xpEarned: { amount } }),
   clearXPEarned: () => set({ xpEarned: null }),
 
-  // SSE event handlers
-  onXPEarned: (newTotalXP: number, _reason: string) =>
-    set((state) => ({
-      profile: state.profile ? { ...state.profile, totalXP: newTotalXP } : state.profile,
-      particleTrigger: state.particleTrigger + 1,
-    })),
+  // SSE event handlers with version checking to prevent race conditions
+  onXPEarned: (newTotalXP: number, _reason: string, version: number) =>
+    set((state) => {
+      // Ignore stale responses - only process if version matches current request
+      if (version < state.requestVersion) {
+        return state;
+      }
+      return {
+        profile: state.profile ? { ...state.profile, totalXP: newTotalXP } : state.profile,
+        particleTrigger: state.particleTrigger + 1,
+        lastUpdateTimestamp: Date.now(),
+      };
+    }),
 
-  onBadgeEarned: (badge: EarnedBadge) =>
-    set((state) => ({
-      profile: state.profile
-        ? { ...state.profile, badges: [...state.profile.badges, badge] }
-        : state.profile,
-      showBadgeEarned: true,
-      badgeData: badge,
-      pendingToasts: [...state.pendingToasts, badge],
-    })),
+  onBadgeEarned: (badge: EarnedBadge, version: number) =>
+    set((state) => {
+      // Ignore stale responses
+      if (version < state.requestVersion) {
+        return state;
+      }
+      return {
+        profile: state.profile
+          ? { ...state.profile, badges: [...state.profile.badges, badge] }
+          : state.profile,
+        showBadgeEarned: true,
+        badgeData: badge,
+        pendingToasts: [...state.pendingToasts, badge],
+        lastUpdateTimestamp: Date.now(),
+      };
+    }),
 
-  onLevelUp: (data) =>
-    set((state) => ({
-      profile: state.profile
-        ? {
-            ...state.profile,
-            currentLevel: data.newLevel,
-            levelTitle: data.newLevelTitle,
-          }
-        : state.profile,
-      showLevelUp: true,
-      levelUpData: {
-        userId: state.profile?.userId ?? '',
-        newLevel: data.newLevel,
-        newLevelTitle: data.newLevelTitle,
-        previousLevel: data.previousLevel,
-        totalXP: data.totalXP,
-      },
-    })),
+  onLevelUp: (data, version: number) =>
+    set((state) => {
+      // Ignore stale responses
+      if (version < state.requestVersion) {
+        return state;
+      }
+      return {
+        profile: state.profile
+          ? {
+              ...state.profile,
+              currentLevel: data.newLevel,
+              levelTitle: data.newLevelTitle,
+            }
+          : state.profile,
+        showLevelUp: true,
+        levelUpData: {
+          userId: state.profile?.userId ?? '',
+          newLevel: data.newLevel,
+          newLevelTitle: data.newLevelTitle,
+          previousLevel: data.previousLevel,
+          totalXP: data.totalXP,
+        },
+        lastUpdateTimestamp: Date.now(),
+      };
+    }),
 
-  onStreakUpdated: (currentStreak: number, longestStreak: number) =>
-    set((state) => ({
-      profile: state.profile ? { ...state.profile, currentStreak, longestStreak } : state.profile,
-    })),
+  onStreakUpdated: (currentStreak: number, longestStreak: number, version: number) =>
+    set((state) => {
+      // Ignore stale responses
+      if (version < state.requestVersion) {
+        return state;
+      }
+      return {
+        profile: state.profile ? { ...state.profile, currentStreak, longestStreak } : state.profile,
+        lastUpdateTimestamp: Date.now(),
+      };
+    }),
 }));

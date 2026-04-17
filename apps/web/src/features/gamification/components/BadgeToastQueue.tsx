@@ -6,33 +6,23 @@ import { useGamificationStore } from '../stores/gamification.store';
 import { BadgeEarnedToast } from './BadgeEarnedToast';
 
 export function BadgeToastQueue() {
-  const showBadgeEarned = useGamificationStore((s) => s.showBadgeEarned);
-  const badgeData = useGamificationStore((s) => s.badgeData);
-  const dismissBadgeEarned = useGamificationStore((s) => s.dismissBadgeEarned);
-
-  const [queue, setQueue] = useState<EarnedBadge[]>([]);
+  const pendingToasts = useGamificationStore((s) => s.pendingToasts);
+  const processNextToast = useGamificationStore((s) => s.processNextToast);
   const [current, setCurrent] = useState<EarnedBadge | null>(null);
 
-  // When store signals a new badge, add it to the queue
+  // When store has pending toasts and nothing is showing, pop the next one
   useEffect(() => {
-    if (showBadgeEarned && badgeData) {
-      setQueue((prev) => [...prev, badgeData]);
-      // Clear store signal immediately so the same badge isn't re-queued
-      dismissBadgeEarned();
-    }
-  }, [showBadgeEarned, badgeData, dismissBadgeEarned]);
-
-  // If nothing is showing, pop the next badge from the queue
-  useEffect(() => {
-    if (!current && queue.length > 0) {
-      const [next, ...rest] = queue;
+    if (!current && pendingToasts.length > 0) {
+      const [next] = pendingToasts;
       setCurrent(next);
-      setQueue(rest);
+      // Store has already removed it from pendingToasts via processNextToast
     }
-  }, [current, queue]);
+  }, [pendingToasts, current]);
 
   const handleDismiss = () => {
     setCurrent(null);
+    // Trigger processing the next toast from pendingToasts
+    processNextToast();
   };
 
   if (!current) return null;

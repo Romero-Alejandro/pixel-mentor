@@ -4,6 +4,7 @@ import { PrismaUserGamificationRepository } from '../persistence/prisma-user-gam
 import { PrismaBadgeRepository } from '../persistence/prisma-badge.repository.js';
 import { PrismaLevelConfigRepository } from '../persistence/prisma-level-config.repository.js';
 import { PrismaDailyActivityRepository } from '../persistence/prisma-daily-activity.repository.js';
+import { PrismaAuditRepository } from '../persistence/prisma-audit.repository.js';
 import { LevelService } from '../../application/services/level.service.js';
 import { StreakService } from '../../application/services/streak.service.js';
 import { BadgeProgressCalculator } from '../../application/services/badge-progress.service.js';
@@ -20,6 +21,7 @@ import {
 
 import type { ProgressRepository } from '@/features/progress/domain/ports/progress.repository.port';
 import type { ActivityAttemptRepository } from '@/features/activity/domain/ports/activity-attempt.repository.port';
+import { prisma } from '@/database/client.js';
 
 export interface GamificationContainer {
   userGamificationRepository: PrismaUserGamificationRepository;
@@ -71,6 +73,8 @@ export function buildGamificationContainer(
   strategyRegistry.register(new StreakMilestone30Strategy());
   strategyRegistry.register(new StreakBonusStrategy());
 
+  const auditRepository = new PrismaAuditRepository(prisma);
+
   const gameEngine = new GameEngineCore(
     userGamificationRepository,
     badgeRepository,
@@ -79,6 +83,7 @@ export function buildGamificationContainer(
     progressRepo,
     undefined,
     logger,
+    auditRepository,
   );
   gameEngine.initialize();
 

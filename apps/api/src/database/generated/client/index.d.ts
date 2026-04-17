@@ -164,6 +164,11 @@ export type LevelConfig = $Result.DefaultSelection<Prisma.$LevelConfigPayload>
  */
 export type DailyActivity = $Result.DefaultSelection<Prisma.$DailyActivityPayload>
 /**
+ * Model GamificationAuditLog
+ * 
+ */
+export type GamificationAuditLog = $Result.DefaultSelection<Prisma.$GamificationAuditLogPayload>
+/**
  * Model RefreshToken
  * 
  */
@@ -774,6 +779,16 @@ export class PrismaClient<
   get dailyActivity(): Prisma.DailyActivityDelegate<ExtArgs, ClientOptions>;
 
   /**
+   * `prisma.gamificationAuditLog`: Exposes CRUD operations for the **GamificationAuditLog** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more GamificationAuditLogs
+    * const gamificationAuditLogs = await prisma.gamificationAuditLog.findMany()
+    * ```
+    */
+  get gamificationAuditLog(): Prisma.GamificationAuditLogDelegate<ExtArgs, ClientOptions>;
+
+  /**
    * `prisma.refreshToken`: Exposes CRUD operations for the **RefreshToken** model.
     * Example usage:
     * ```ts
@@ -1303,6 +1318,7 @@ export namespace Prisma {
     UserBadge: 'UserBadge',
     LevelConfig: 'LevelConfig',
     DailyActivity: 'DailyActivity',
+    GamificationAuditLog: 'GamificationAuditLog',
     RefreshToken: 'RefreshToken',
     ClassTemplate: 'ClassTemplate',
     Class: 'Class',
@@ -1327,7 +1343,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "user" | "apiKey" | "parentalConsent" | "level" | "module" | "recipe" | "recipeStep" | "concept" | "activity" | "atom" | "atomOption" | "knowledgeChunk" | "session" | "interaction" | "teacherReviewTicket" | "asset" | "assetAttachment" | "competency" | "atomCompetency" | "tag" | "recipeTag" | "userProgress" | "activityAttempt" | "competencyMastery" | "eventLog" | "userGamification" | "badge" | "userBadge" | "levelConfig" | "dailyActivity" | "refreshToken" | "classTemplate" | "class" | "classLesson" | "classVersion" | "classVersionLesson"
+      modelProps: "user" | "apiKey" | "parentalConsent" | "level" | "module" | "recipe" | "recipeStep" | "concept" | "activity" | "atom" | "atomOption" | "knowledgeChunk" | "session" | "interaction" | "teacherReviewTicket" | "asset" | "assetAttachment" | "competency" | "atomCompetency" | "tag" | "recipeTag" | "userProgress" | "activityAttempt" | "competencyMastery" | "eventLog" | "userGamification" | "badge" | "userBadge" | "levelConfig" | "dailyActivity" | "gamificationAuditLog" | "refreshToken" | "classTemplate" | "class" | "classLesson" | "classVersion" | "classVersionLesson"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -3551,6 +3567,80 @@ export namespace Prisma {
           }
         }
       }
+      GamificationAuditLog: {
+        payload: Prisma.$GamificationAuditLogPayload<ExtArgs>
+        fields: Prisma.GamificationAuditLogFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.GamificationAuditLogFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$GamificationAuditLogPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.GamificationAuditLogFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$GamificationAuditLogPayload>
+          }
+          findFirst: {
+            args: Prisma.GamificationAuditLogFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$GamificationAuditLogPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.GamificationAuditLogFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$GamificationAuditLogPayload>
+          }
+          findMany: {
+            args: Prisma.GamificationAuditLogFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$GamificationAuditLogPayload>[]
+          }
+          create: {
+            args: Prisma.GamificationAuditLogCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$GamificationAuditLogPayload>
+          }
+          createMany: {
+            args: Prisma.GamificationAuditLogCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.GamificationAuditLogCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$GamificationAuditLogPayload>[]
+          }
+          delete: {
+            args: Prisma.GamificationAuditLogDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$GamificationAuditLogPayload>
+          }
+          update: {
+            args: Prisma.GamificationAuditLogUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$GamificationAuditLogPayload>
+          }
+          deleteMany: {
+            args: Prisma.GamificationAuditLogDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.GamificationAuditLogUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.GamificationAuditLogUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$GamificationAuditLogPayload>[]
+          }
+          upsert: {
+            args: Prisma.GamificationAuditLogUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$GamificationAuditLogPayload>
+          }
+          aggregate: {
+            args: Prisma.GamificationAuditLogAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateGamificationAuditLog>
+          }
+          groupBy: {
+            args: Prisma.GamificationAuditLogGroupByArgs<ExtArgs>
+            result: $Utils.Optional<GamificationAuditLogGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.GamificationAuditLogCountArgs<ExtArgs>
+            result: $Utils.Optional<GamificationAuditLogCountAggregateOutputType> | number
+          }
+        }
+      }
       RefreshToken: {
         payload: Prisma.$RefreshTokenPayload<ExtArgs>
         fields: Prisma.RefreshTokenFieldRefs
@@ -4121,6 +4211,7 @@ export namespace Prisma {
     userBadge?: UserBadgeOmit
     levelConfig?: LevelConfigOmit
     dailyActivity?: DailyActivityOmit
+    gamificationAuditLog?: GamificationAuditLogOmit
     refreshToken?: RefreshTokenOmit
     classTemplate?: ClassTemplateOmit
     class?: ClassOmit
@@ -39960,6 +40051,1079 @@ export namespace Prisma {
 
 
   /**
+   * Model GamificationAuditLog
+   */
+
+  export type AggregateGamificationAuditLog = {
+    _count: GamificationAuditLogCountAggregateOutputType | null
+    _avg: GamificationAuditLogAvgAggregateOutputType | null
+    _sum: GamificationAuditLogSumAggregateOutputType | null
+    _min: GamificationAuditLogMinAggregateOutputType | null
+    _max: GamificationAuditLogMaxAggregateOutputType | null
+  }
+
+  export type GamificationAuditLogAvgAggregateOutputType = {
+    xpAwarded: number | null
+  }
+
+  export type GamificationAuditLogSumAggregateOutputType = {
+    xpAwarded: number | null
+  }
+
+  export type GamificationAuditLogMinAggregateOutputType = {
+    id: string | null
+    userId: string | null
+    eventType: string | null
+    xpAwarded: number | null
+    succeeded: boolean | null
+    errorMessage: string | null
+    createdAt: Date | null
+  }
+
+  export type GamificationAuditLogMaxAggregateOutputType = {
+    id: string | null
+    userId: string | null
+    eventType: string | null
+    xpAwarded: number | null
+    succeeded: boolean | null
+    errorMessage: string | null
+    createdAt: Date | null
+  }
+
+  export type GamificationAuditLogCountAggregateOutputType = {
+    id: number
+    userId: number
+    eventType: number
+    details: number
+    xpAwarded: number
+    badgesAwarded: number
+    succeeded: number
+    errorMessage: number
+    createdAt: number
+    _all: number
+  }
+
+
+  export type GamificationAuditLogAvgAggregateInputType = {
+    xpAwarded?: true
+  }
+
+  export type GamificationAuditLogSumAggregateInputType = {
+    xpAwarded?: true
+  }
+
+  export type GamificationAuditLogMinAggregateInputType = {
+    id?: true
+    userId?: true
+    eventType?: true
+    xpAwarded?: true
+    succeeded?: true
+    errorMessage?: true
+    createdAt?: true
+  }
+
+  export type GamificationAuditLogMaxAggregateInputType = {
+    id?: true
+    userId?: true
+    eventType?: true
+    xpAwarded?: true
+    succeeded?: true
+    errorMessage?: true
+    createdAt?: true
+  }
+
+  export type GamificationAuditLogCountAggregateInputType = {
+    id?: true
+    userId?: true
+    eventType?: true
+    details?: true
+    xpAwarded?: true
+    badgesAwarded?: true
+    succeeded?: true
+    errorMessage?: true
+    createdAt?: true
+    _all?: true
+  }
+
+  export type GamificationAuditLogAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which GamificationAuditLog to aggregate.
+     */
+    where?: GamificationAuditLogWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of GamificationAuditLogs to fetch.
+     */
+    orderBy?: GamificationAuditLogOrderByWithRelationInput | GamificationAuditLogOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: GamificationAuditLogWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` GamificationAuditLogs from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` GamificationAuditLogs.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned GamificationAuditLogs
+    **/
+    _count?: true | GamificationAuditLogCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: GamificationAuditLogAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: GamificationAuditLogSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: GamificationAuditLogMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: GamificationAuditLogMaxAggregateInputType
+  }
+
+  export type GetGamificationAuditLogAggregateType<T extends GamificationAuditLogAggregateArgs> = {
+        [P in keyof T & keyof AggregateGamificationAuditLog]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateGamificationAuditLog[P]>
+      : GetScalarType<T[P], AggregateGamificationAuditLog[P]>
+  }
+
+
+
+
+  export type GamificationAuditLogGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: GamificationAuditLogWhereInput
+    orderBy?: GamificationAuditLogOrderByWithAggregationInput | GamificationAuditLogOrderByWithAggregationInput[]
+    by: GamificationAuditLogScalarFieldEnum[] | GamificationAuditLogScalarFieldEnum
+    having?: GamificationAuditLogScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: GamificationAuditLogCountAggregateInputType | true
+    _avg?: GamificationAuditLogAvgAggregateInputType
+    _sum?: GamificationAuditLogSumAggregateInputType
+    _min?: GamificationAuditLogMinAggregateInputType
+    _max?: GamificationAuditLogMaxAggregateInputType
+  }
+
+  export type GamificationAuditLogGroupByOutputType = {
+    id: string
+    userId: string
+    eventType: string
+    details: JsonValue | null
+    xpAwarded: number
+    badgesAwarded: JsonValue | null
+    succeeded: boolean
+    errorMessage: string | null
+    createdAt: Date
+    _count: GamificationAuditLogCountAggregateOutputType | null
+    _avg: GamificationAuditLogAvgAggregateOutputType | null
+    _sum: GamificationAuditLogSumAggregateOutputType | null
+    _min: GamificationAuditLogMinAggregateOutputType | null
+    _max: GamificationAuditLogMaxAggregateOutputType | null
+  }
+
+  type GetGamificationAuditLogGroupByPayload<T extends GamificationAuditLogGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<GamificationAuditLogGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof GamificationAuditLogGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], GamificationAuditLogGroupByOutputType[P]>
+            : GetScalarType<T[P], GamificationAuditLogGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type GamificationAuditLogSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    eventType?: boolean
+    details?: boolean
+    xpAwarded?: boolean
+    badgesAwarded?: boolean
+    succeeded?: boolean
+    errorMessage?: boolean
+    createdAt?: boolean
+  }, ExtArgs["result"]["gamificationAuditLog"]>
+
+  export type GamificationAuditLogSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    eventType?: boolean
+    details?: boolean
+    xpAwarded?: boolean
+    badgesAwarded?: boolean
+    succeeded?: boolean
+    errorMessage?: boolean
+    createdAt?: boolean
+  }, ExtArgs["result"]["gamificationAuditLog"]>
+
+  export type GamificationAuditLogSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    eventType?: boolean
+    details?: boolean
+    xpAwarded?: boolean
+    badgesAwarded?: boolean
+    succeeded?: boolean
+    errorMessage?: boolean
+    createdAt?: boolean
+  }, ExtArgs["result"]["gamificationAuditLog"]>
+
+  export type GamificationAuditLogSelectScalar = {
+    id?: boolean
+    userId?: boolean
+    eventType?: boolean
+    details?: boolean
+    xpAwarded?: boolean
+    badgesAwarded?: boolean
+    succeeded?: boolean
+    errorMessage?: boolean
+    createdAt?: boolean
+  }
+
+  export type GamificationAuditLogOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "eventType" | "details" | "xpAwarded" | "badgesAwarded" | "succeeded" | "errorMessage" | "createdAt", ExtArgs["result"]["gamificationAuditLog"]>
+
+  export type $GamificationAuditLogPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "GamificationAuditLog"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      userId: string
+      eventType: string
+      details: Prisma.JsonValue | null
+      xpAwarded: number
+      badgesAwarded: Prisma.JsonValue | null
+      succeeded: boolean
+      errorMessage: string | null
+      createdAt: Date
+    }, ExtArgs["result"]["gamificationAuditLog"]>
+    composites: {}
+  }
+
+  type GamificationAuditLogGetPayload<S extends boolean | null | undefined | GamificationAuditLogDefaultArgs> = $Result.GetResult<Prisma.$GamificationAuditLogPayload, S>
+
+  type GamificationAuditLogCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<GamificationAuditLogFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: GamificationAuditLogCountAggregateInputType | true
+    }
+
+  export interface GamificationAuditLogDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['GamificationAuditLog'], meta: { name: 'GamificationAuditLog' } }
+    /**
+     * Find zero or one GamificationAuditLog that matches the filter.
+     * @param {GamificationAuditLogFindUniqueArgs} args - Arguments to find a GamificationAuditLog
+     * @example
+     * // Get one GamificationAuditLog
+     * const gamificationAuditLog = await prisma.gamificationAuditLog.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends GamificationAuditLogFindUniqueArgs>(args: SelectSubset<T, GamificationAuditLogFindUniqueArgs<ExtArgs>>): Prisma__GamificationAuditLogClient<$Result.GetResult<Prisma.$GamificationAuditLogPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one GamificationAuditLog that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {GamificationAuditLogFindUniqueOrThrowArgs} args - Arguments to find a GamificationAuditLog
+     * @example
+     * // Get one GamificationAuditLog
+     * const gamificationAuditLog = await prisma.gamificationAuditLog.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends GamificationAuditLogFindUniqueOrThrowArgs>(args: SelectSubset<T, GamificationAuditLogFindUniqueOrThrowArgs<ExtArgs>>): Prisma__GamificationAuditLogClient<$Result.GetResult<Prisma.$GamificationAuditLogPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first GamificationAuditLog that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {GamificationAuditLogFindFirstArgs} args - Arguments to find a GamificationAuditLog
+     * @example
+     * // Get one GamificationAuditLog
+     * const gamificationAuditLog = await prisma.gamificationAuditLog.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends GamificationAuditLogFindFirstArgs>(args?: SelectSubset<T, GamificationAuditLogFindFirstArgs<ExtArgs>>): Prisma__GamificationAuditLogClient<$Result.GetResult<Prisma.$GamificationAuditLogPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first GamificationAuditLog that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {GamificationAuditLogFindFirstOrThrowArgs} args - Arguments to find a GamificationAuditLog
+     * @example
+     * // Get one GamificationAuditLog
+     * const gamificationAuditLog = await prisma.gamificationAuditLog.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends GamificationAuditLogFindFirstOrThrowArgs>(args?: SelectSubset<T, GamificationAuditLogFindFirstOrThrowArgs<ExtArgs>>): Prisma__GamificationAuditLogClient<$Result.GetResult<Prisma.$GamificationAuditLogPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more GamificationAuditLogs that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {GamificationAuditLogFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all GamificationAuditLogs
+     * const gamificationAuditLogs = await prisma.gamificationAuditLog.findMany()
+     * 
+     * // Get first 10 GamificationAuditLogs
+     * const gamificationAuditLogs = await prisma.gamificationAuditLog.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const gamificationAuditLogWithIdOnly = await prisma.gamificationAuditLog.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends GamificationAuditLogFindManyArgs>(args?: SelectSubset<T, GamificationAuditLogFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$GamificationAuditLogPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a GamificationAuditLog.
+     * @param {GamificationAuditLogCreateArgs} args - Arguments to create a GamificationAuditLog.
+     * @example
+     * // Create one GamificationAuditLog
+     * const GamificationAuditLog = await prisma.gamificationAuditLog.create({
+     *   data: {
+     *     // ... data to create a GamificationAuditLog
+     *   }
+     * })
+     * 
+     */
+    create<T extends GamificationAuditLogCreateArgs>(args: SelectSubset<T, GamificationAuditLogCreateArgs<ExtArgs>>): Prisma__GamificationAuditLogClient<$Result.GetResult<Prisma.$GamificationAuditLogPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many GamificationAuditLogs.
+     * @param {GamificationAuditLogCreateManyArgs} args - Arguments to create many GamificationAuditLogs.
+     * @example
+     * // Create many GamificationAuditLogs
+     * const gamificationAuditLog = await prisma.gamificationAuditLog.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends GamificationAuditLogCreateManyArgs>(args?: SelectSubset<T, GamificationAuditLogCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many GamificationAuditLogs and returns the data saved in the database.
+     * @param {GamificationAuditLogCreateManyAndReturnArgs} args - Arguments to create many GamificationAuditLogs.
+     * @example
+     * // Create many GamificationAuditLogs
+     * const gamificationAuditLog = await prisma.gamificationAuditLog.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many GamificationAuditLogs and only return the `id`
+     * const gamificationAuditLogWithIdOnly = await prisma.gamificationAuditLog.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends GamificationAuditLogCreateManyAndReturnArgs>(args?: SelectSubset<T, GamificationAuditLogCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$GamificationAuditLogPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a GamificationAuditLog.
+     * @param {GamificationAuditLogDeleteArgs} args - Arguments to delete one GamificationAuditLog.
+     * @example
+     * // Delete one GamificationAuditLog
+     * const GamificationAuditLog = await prisma.gamificationAuditLog.delete({
+     *   where: {
+     *     // ... filter to delete one GamificationAuditLog
+     *   }
+     * })
+     * 
+     */
+    delete<T extends GamificationAuditLogDeleteArgs>(args: SelectSubset<T, GamificationAuditLogDeleteArgs<ExtArgs>>): Prisma__GamificationAuditLogClient<$Result.GetResult<Prisma.$GamificationAuditLogPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one GamificationAuditLog.
+     * @param {GamificationAuditLogUpdateArgs} args - Arguments to update one GamificationAuditLog.
+     * @example
+     * // Update one GamificationAuditLog
+     * const gamificationAuditLog = await prisma.gamificationAuditLog.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends GamificationAuditLogUpdateArgs>(args: SelectSubset<T, GamificationAuditLogUpdateArgs<ExtArgs>>): Prisma__GamificationAuditLogClient<$Result.GetResult<Prisma.$GamificationAuditLogPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more GamificationAuditLogs.
+     * @param {GamificationAuditLogDeleteManyArgs} args - Arguments to filter GamificationAuditLogs to delete.
+     * @example
+     * // Delete a few GamificationAuditLogs
+     * const { count } = await prisma.gamificationAuditLog.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends GamificationAuditLogDeleteManyArgs>(args?: SelectSubset<T, GamificationAuditLogDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more GamificationAuditLogs.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {GamificationAuditLogUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many GamificationAuditLogs
+     * const gamificationAuditLog = await prisma.gamificationAuditLog.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends GamificationAuditLogUpdateManyArgs>(args: SelectSubset<T, GamificationAuditLogUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more GamificationAuditLogs and returns the data updated in the database.
+     * @param {GamificationAuditLogUpdateManyAndReturnArgs} args - Arguments to update many GamificationAuditLogs.
+     * @example
+     * // Update many GamificationAuditLogs
+     * const gamificationAuditLog = await prisma.gamificationAuditLog.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more GamificationAuditLogs and only return the `id`
+     * const gamificationAuditLogWithIdOnly = await prisma.gamificationAuditLog.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends GamificationAuditLogUpdateManyAndReturnArgs>(args: SelectSubset<T, GamificationAuditLogUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$GamificationAuditLogPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one GamificationAuditLog.
+     * @param {GamificationAuditLogUpsertArgs} args - Arguments to update or create a GamificationAuditLog.
+     * @example
+     * // Update or create a GamificationAuditLog
+     * const gamificationAuditLog = await prisma.gamificationAuditLog.upsert({
+     *   create: {
+     *     // ... data to create a GamificationAuditLog
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the GamificationAuditLog we want to update
+     *   }
+     * })
+     */
+    upsert<T extends GamificationAuditLogUpsertArgs>(args: SelectSubset<T, GamificationAuditLogUpsertArgs<ExtArgs>>): Prisma__GamificationAuditLogClient<$Result.GetResult<Prisma.$GamificationAuditLogPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of GamificationAuditLogs.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {GamificationAuditLogCountArgs} args - Arguments to filter GamificationAuditLogs to count.
+     * @example
+     * // Count the number of GamificationAuditLogs
+     * const count = await prisma.gamificationAuditLog.count({
+     *   where: {
+     *     // ... the filter for the GamificationAuditLogs we want to count
+     *   }
+     * })
+    **/
+    count<T extends GamificationAuditLogCountArgs>(
+      args?: Subset<T, GamificationAuditLogCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], GamificationAuditLogCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a GamificationAuditLog.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {GamificationAuditLogAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends GamificationAuditLogAggregateArgs>(args: Subset<T, GamificationAuditLogAggregateArgs>): Prisma.PrismaPromise<GetGamificationAuditLogAggregateType<T>>
+
+    /**
+     * Group by GamificationAuditLog.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {GamificationAuditLogGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends GamificationAuditLogGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: GamificationAuditLogGroupByArgs['orderBy'] }
+        : { orderBy?: GamificationAuditLogGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, GamificationAuditLogGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetGamificationAuditLogGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the GamificationAuditLog model
+   */
+  readonly fields: GamificationAuditLogFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for GamificationAuditLog.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__GamificationAuditLogClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the GamificationAuditLog model
+   */
+  interface GamificationAuditLogFieldRefs {
+    readonly id: FieldRef<"GamificationAuditLog", 'String'>
+    readonly userId: FieldRef<"GamificationAuditLog", 'String'>
+    readonly eventType: FieldRef<"GamificationAuditLog", 'String'>
+    readonly details: FieldRef<"GamificationAuditLog", 'Json'>
+    readonly xpAwarded: FieldRef<"GamificationAuditLog", 'Int'>
+    readonly badgesAwarded: FieldRef<"GamificationAuditLog", 'Json'>
+    readonly succeeded: FieldRef<"GamificationAuditLog", 'Boolean'>
+    readonly errorMessage: FieldRef<"GamificationAuditLog", 'String'>
+    readonly createdAt: FieldRef<"GamificationAuditLog", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * GamificationAuditLog findUnique
+   */
+  export type GamificationAuditLogFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the GamificationAuditLog
+     */
+    select?: GamificationAuditLogSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the GamificationAuditLog
+     */
+    omit?: GamificationAuditLogOmit<ExtArgs> | null
+    /**
+     * Filter, which GamificationAuditLog to fetch.
+     */
+    where: GamificationAuditLogWhereUniqueInput
+  }
+
+  /**
+   * GamificationAuditLog findUniqueOrThrow
+   */
+  export type GamificationAuditLogFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the GamificationAuditLog
+     */
+    select?: GamificationAuditLogSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the GamificationAuditLog
+     */
+    omit?: GamificationAuditLogOmit<ExtArgs> | null
+    /**
+     * Filter, which GamificationAuditLog to fetch.
+     */
+    where: GamificationAuditLogWhereUniqueInput
+  }
+
+  /**
+   * GamificationAuditLog findFirst
+   */
+  export type GamificationAuditLogFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the GamificationAuditLog
+     */
+    select?: GamificationAuditLogSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the GamificationAuditLog
+     */
+    omit?: GamificationAuditLogOmit<ExtArgs> | null
+    /**
+     * Filter, which GamificationAuditLog to fetch.
+     */
+    where?: GamificationAuditLogWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of GamificationAuditLogs to fetch.
+     */
+    orderBy?: GamificationAuditLogOrderByWithRelationInput | GamificationAuditLogOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for GamificationAuditLogs.
+     */
+    cursor?: GamificationAuditLogWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` GamificationAuditLogs from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` GamificationAuditLogs.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of GamificationAuditLogs.
+     */
+    distinct?: GamificationAuditLogScalarFieldEnum | GamificationAuditLogScalarFieldEnum[]
+  }
+
+  /**
+   * GamificationAuditLog findFirstOrThrow
+   */
+  export type GamificationAuditLogFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the GamificationAuditLog
+     */
+    select?: GamificationAuditLogSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the GamificationAuditLog
+     */
+    omit?: GamificationAuditLogOmit<ExtArgs> | null
+    /**
+     * Filter, which GamificationAuditLog to fetch.
+     */
+    where?: GamificationAuditLogWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of GamificationAuditLogs to fetch.
+     */
+    orderBy?: GamificationAuditLogOrderByWithRelationInput | GamificationAuditLogOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for GamificationAuditLogs.
+     */
+    cursor?: GamificationAuditLogWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` GamificationAuditLogs from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` GamificationAuditLogs.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of GamificationAuditLogs.
+     */
+    distinct?: GamificationAuditLogScalarFieldEnum | GamificationAuditLogScalarFieldEnum[]
+  }
+
+  /**
+   * GamificationAuditLog findMany
+   */
+  export type GamificationAuditLogFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the GamificationAuditLog
+     */
+    select?: GamificationAuditLogSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the GamificationAuditLog
+     */
+    omit?: GamificationAuditLogOmit<ExtArgs> | null
+    /**
+     * Filter, which GamificationAuditLogs to fetch.
+     */
+    where?: GamificationAuditLogWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of GamificationAuditLogs to fetch.
+     */
+    orderBy?: GamificationAuditLogOrderByWithRelationInput | GamificationAuditLogOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing GamificationAuditLogs.
+     */
+    cursor?: GamificationAuditLogWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` GamificationAuditLogs from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` GamificationAuditLogs.
+     */
+    skip?: number
+    distinct?: GamificationAuditLogScalarFieldEnum | GamificationAuditLogScalarFieldEnum[]
+  }
+
+  /**
+   * GamificationAuditLog create
+   */
+  export type GamificationAuditLogCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the GamificationAuditLog
+     */
+    select?: GamificationAuditLogSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the GamificationAuditLog
+     */
+    omit?: GamificationAuditLogOmit<ExtArgs> | null
+    /**
+     * The data needed to create a GamificationAuditLog.
+     */
+    data: XOR<GamificationAuditLogCreateInput, GamificationAuditLogUncheckedCreateInput>
+  }
+
+  /**
+   * GamificationAuditLog createMany
+   */
+  export type GamificationAuditLogCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many GamificationAuditLogs.
+     */
+    data: GamificationAuditLogCreateManyInput | GamificationAuditLogCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * GamificationAuditLog createManyAndReturn
+   */
+  export type GamificationAuditLogCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the GamificationAuditLog
+     */
+    select?: GamificationAuditLogSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the GamificationAuditLog
+     */
+    omit?: GamificationAuditLogOmit<ExtArgs> | null
+    /**
+     * The data used to create many GamificationAuditLogs.
+     */
+    data: GamificationAuditLogCreateManyInput | GamificationAuditLogCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * GamificationAuditLog update
+   */
+  export type GamificationAuditLogUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the GamificationAuditLog
+     */
+    select?: GamificationAuditLogSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the GamificationAuditLog
+     */
+    omit?: GamificationAuditLogOmit<ExtArgs> | null
+    /**
+     * The data needed to update a GamificationAuditLog.
+     */
+    data: XOR<GamificationAuditLogUpdateInput, GamificationAuditLogUncheckedUpdateInput>
+    /**
+     * Choose, which GamificationAuditLog to update.
+     */
+    where: GamificationAuditLogWhereUniqueInput
+  }
+
+  /**
+   * GamificationAuditLog updateMany
+   */
+  export type GamificationAuditLogUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update GamificationAuditLogs.
+     */
+    data: XOR<GamificationAuditLogUpdateManyMutationInput, GamificationAuditLogUncheckedUpdateManyInput>
+    /**
+     * Filter which GamificationAuditLogs to update
+     */
+    where?: GamificationAuditLogWhereInput
+    /**
+     * Limit how many GamificationAuditLogs to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * GamificationAuditLog updateManyAndReturn
+   */
+  export type GamificationAuditLogUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the GamificationAuditLog
+     */
+    select?: GamificationAuditLogSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the GamificationAuditLog
+     */
+    omit?: GamificationAuditLogOmit<ExtArgs> | null
+    /**
+     * The data used to update GamificationAuditLogs.
+     */
+    data: XOR<GamificationAuditLogUpdateManyMutationInput, GamificationAuditLogUncheckedUpdateManyInput>
+    /**
+     * Filter which GamificationAuditLogs to update
+     */
+    where?: GamificationAuditLogWhereInput
+    /**
+     * Limit how many GamificationAuditLogs to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * GamificationAuditLog upsert
+   */
+  export type GamificationAuditLogUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the GamificationAuditLog
+     */
+    select?: GamificationAuditLogSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the GamificationAuditLog
+     */
+    omit?: GamificationAuditLogOmit<ExtArgs> | null
+    /**
+     * The filter to search for the GamificationAuditLog to update in case it exists.
+     */
+    where: GamificationAuditLogWhereUniqueInput
+    /**
+     * In case the GamificationAuditLog found by the `where` argument doesn't exist, create a new GamificationAuditLog with this data.
+     */
+    create: XOR<GamificationAuditLogCreateInput, GamificationAuditLogUncheckedCreateInput>
+    /**
+     * In case the GamificationAuditLog was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<GamificationAuditLogUpdateInput, GamificationAuditLogUncheckedUpdateInput>
+  }
+
+  /**
+   * GamificationAuditLog delete
+   */
+  export type GamificationAuditLogDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the GamificationAuditLog
+     */
+    select?: GamificationAuditLogSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the GamificationAuditLog
+     */
+    omit?: GamificationAuditLogOmit<ExtArgs> | null
+    /**
+     * Filter which GamificationAuditLog to delete.
+     */
+    where: GamificationAuditLogWhereUniqueInput
+  }
+
+  /**
+   * GamificationAuditLog deleteMany
+   */
+  export type GamificationAuditLogDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which GamificationAuditLogs to delete
+     */
+    where?: GamificationAuditLogWhereInput
+    /**
+     * Limit how many GamificationAuditLogs to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * GamificationAuditLog without action
+   */
+  export type GamificationAuditLogDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the GamificationAuditLog
+     */
+    select?: GamificationAuditLogSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the GamificationAuditLog
+     */
+    omit?: GamificationAuditLogOmit<ExtArgs> | null
+  }
+
+
+  /**
    * Model RefreshToken
    */
 
@@ -47258,6 +48422,21 @@ export namespace Prisma {
   export type DailyActivityScalarFieldEnum = (typeof DailyActivityScalarFieldEnum)[keyof typeof DailyActivityScalarFieldEnum]
 
 
+  export const GamificationAuditLogScalarFieldEnum: {
+    id: 'id',
+    userId: 'userId',
+    eventType: 'eventType',
+    details: 'details',
+    xpAwarded: 'xpAwarded',
+    badgesAwarded: 'badgesAwarded',
+    succeeded: 'succeeded',
+    errorMessage: 'errorMessage',
+    createdAt: 'createdAt'
+  };
+
+  export type GamificationAuditLogScalarFieldEnum = (typeof GamificationAuditLogScalarFieldEnum)[keyof typeof GamificationAuditLogScalarFieldEnum]
+
+
   export const RefreshTokenScalarFieldEnum: {
     id: 'id',
     userId: 'userId',
@@ -49926,6 +51105,80 @@ export namespace Prisma {
     userId?: StringWithAggregatesFilter<"DailyActivity"> | string
     date?: DateTimeWithAggregatesFilter<"DailyActivity"> | Date | string
     createdAt?: DateTimeWithAggregatesFilter<"DailyActivity"> | Date | string
+  }
+
+  export type GamificationAuditLogWhereInput = {
+    AND?: GamificationAuditLogWhereInput | GamificationAuditLogWhereInput[]
+    OR?: GamificationAuditLogWhereInput[]
+    NOT?: GamificationAuditLogWhereInput | GamificationAuditLogWhereInput[]
+    id?: StringFilter<"GamificationAuditLog"> | string
+    userId?: StringFilter<"GamificationAuditLog"> | string
+    eventType?: StringFilter<"GamificationAuditLog"> | string
+    details?: JsonNullableFilter<"GamificationAuditLog">
+    xpAwarded?: IntFilter<"GamificationAuditLog"> | number
+    badgesAwarded?: JsonNullableFilter<"GamificationAuditLog">
+    succeeded?: BoolFilter<"GamificationAuditLog"> | boolean
+    errorMessage?: StringNullableFilter<"GamificationAuditLog"> | string | null
+    createdAt?: DateTimeFilter<"GamificationAuditLog"> | Date | string
+  }
+
+  export type GamificationAuditLogOrderByWithRelationInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    eventType?: SortOrder
+    details?: SortOrderInput | SortOrder
+    xpAwarded?: SortOrder
+    badgesAwarded?: SortOrderInput | SortOrder
+    succeeded?: SortOrder
+    errorMessage?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type GamificationAuditLogWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: GamificationAuditLogWhereInput | GamificationAuditLogWhereInput[]
+    OR?: GamificationAuditLogWhereInput[]
+    NOT?: GamificationAuditLogWhereInput | GamificationAuditLogWhereInput[]
+    userId?: StringFilter<"GamificationAuditLog"> | string
+    eventType?: StringFilter<"GamificationAuditLog"> | string
+    details?: JsonNullableFilter<"GamificationAuditLog">
+    xpAwarded?: IntFilter<"GamificationAuditLog"> | number
+    badgesAwarded?: JsonNullableFilter<"GamificationAuditLog">
+    succeeded?: BoolFilter<"GamificationAuditLog"> | boolean
+    errorMessage?: StringNullableFilter<"GamificationAuditLog"> | string | null
+    createdAt?: DateTimeFilter<"GamificationAuditLog"> | Date | string
+  }, "id">
+
+  export type GamificationAuditLogOrderByWithAggregationInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    eventType?: SortOrder
+    details?: SortOrderInput | SortOrder
+    xpAwarded?: SortOrder
+    badgesAwarded?: SortOrderInput | SortOrder
+    succeeded?: SortOrder
+    errorMessage?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    _count?: GamificationAuditLogCountOrderByAggregateInput
+    _avg?: GamificationAuditLogAvgOrderByAggregateInput
+    _max?: GamificationAuditLogMaxOrderByAggregateInput
+    _min?: GamificationAuditLogMinOrderByAggregateInput
+    _sum?: GamificationAuditLogSumOrderByAggregateInput
+  }
+
+  export type GamificationAuditLogScalarWhereWithAggregatesInput = {
+    AND?: GamificationAuditLogScalarWhereWithAggregatesInput | GamificationAuditLogScalarWhereWithAggregatesInput[]
+    OR?: GamificationAuditLogScalarWhereWithAggregatesInput[]
+    NOT?: GamificationAuditLogScalarWhereWithAggregatesInput | GamificationAuditLogScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"GamificationAuditLog"> | string
+    userId?: StringWithAggregatesFilter<"GamificationAuditLog"> | string
+    eventType?: StringWithAggregatesFilter<"GamificationAuditLog"> | string
+    details?: JsonNullableWithAggregatesFilter<"GamificationAuditLog">
+    xpAwarded?: IntWithAggregatesFilter<"GamificationAuditLog"> | number
+    badgesAwarded?: JsonNullableWithAggregatesFilter<"GamificationAuditLog">
+    succeeded?: BoolWithAggregatesFilter<"GamificationAuditLog"> | boolean
+    errorMessage?: StringNullableWithAggregatesFilter<"GamificationAuditLog"> | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"GamificationAuditLog"> | Date | string
   }
 
   export type RefreshTokenWhereInput = {
@@ -52833,6 +54086,90 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type GamificationAuditLogCreateInput = {
+    id?: string
+    userId: string
+    eventType: string
+    details?: NullableJsonNullValueInput | InputJsonValue
+    xpAwarded?: number
+    badgesAwarded?: NullableJsonNullValueInput | InputJsonValue
+    succeeded?: boolean
+    errorMessage?: string | null
+    createdAt?: Date | string
+  }
+
+  export type GamificationAuditLogUncheckedCreateInput = {
+    id?: string
+    userId: string
+    eventType: string
+    details?: NullableJsonNullValueInput | InputJsonValue
+    xpAwarded?: number
+    badgesAwarded?: NullableJsonNullValueInput | InputJsonValue
+    succeeded?: boolean
+    errorMessage?: string | null
+    createdAt?: Date | string
+  }
+
+  export type GamificationAuditLogUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    eventType?: StringFieldUpdateOperationsInput | string
+    details?: NullableJsonNullValueInput | InputJsonValue
+    xpAwarded?: IntFieldUpdateOperationsInput | number
+    badgesAwarded?: NullableJsonNullValueInput | InputJsonValue
+    succeeded?: BoolFieldUpdateOperationsInput | boolean
+    errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type GamificationAuditLogUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    eventType?: StringFieldUpdateOperationsInput | string
+    details?: NullableJsonNullValueInput | InputJsonValue
+    xpAwarded?: IntFieldUpdateOperationsInput | number
+    badgesAwarded?: NullableJsonNullValueInput | InputJsonValue
+    succeeded?: BoolFieldUpdateOperationsInput | boolean
+    errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type GamificationAuditLogCreateManyInput = {
+    id?: string
+    userId: string
+    eventType: string
+    details?: NullableJsonNullValueInput | InputJsonValue
+    xpAwarded?: number
+    badgesAwarded?: NullableJsonNullValueInput | InputJsonValue
+    succeeded?: boolean
+    errorMessage?: string | null
+    createdAt?: Date | string
+  }
+
+  export type GamificationAuditLogUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    eventType?: StringFieldUpdateOperationsInput | string
+    details?: NullableJsonNullValueInput | InputJsonValue
+    xpAwarded?: IntFieldUpdateOperationsInput | number
+    badgesAwarded?: NullableJsonNullValueInput | InputJsonValue
+    succeeded?: BoolFieldUpdateOperationsInput | boolean
+    errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type GamificationAuditLogUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    eventType?: StringFieldUpdateOperationsInput | string
+    details?: NullableJsonNullValueInput | InputJsonValue
+    xpAwarded?: IntFieldUpdateOperationsInput | number
+    badgesAwarded?: NullableJsonNullValueInput | InputJsonValue
+    succeeded?: BoolFieldUpdateOperationsInput | boolean
+    errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type RefreshTokenCreateInput = {
     id?: string
     tokenHash: string
@@ -55337,6 +56674,46 @@ export namespace Prisma {
     userId?: SortOrder
     date?: SortOrder
     createdAt?: SortOrder
+  }
+
+  export type GamificationAuditLogCountOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    eventType?: SortOrder
+    details?: SortOrder
+    xpAwarded?: SortOrder
+    badgesAwarded?: SortOrder
+    succeeded?: SortOrder
+    errorMessage?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type GamificationAuditLogAvgOrderByAggregateInput = {
+    xpAwarded?: SortOrder
+  }
+
+  export type GamificationAuditLogMaxOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    eventType?: SortOrder
+    xpAwarded?: SortOrder
+    succeeded?: SortOrder
+    errorMessage?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type GamificationAuditLogMinOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    eventType?: SortOrder
+    xpAwarded?: SortOrder
+    succeeded?: SortOrder
+    errorMessage?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type GamificationAuditLogSumOrderByAggregateInput = {
+    xpAwarded?: SortOrder
   }
 
   export type RefreshTokenCountOrderByAggregateInput = {

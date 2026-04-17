@@ -155,9 +155,12 @@ export function createGamificationRouter(
       try {
         const userId = req.user!.id;
         const validated = ActivitySchema.parse(req.body);
-        const eventBus = getEventBus();
         const now = new Date();
 
+        let levelUpOccurred = false;
+        let earnedBadges: Array<{ code: string; name: string; icon: string }> = [];
+
+        // Call game engine directly to get results synchronously instead of fire-and-forget EventBus
         switch (validated.type) {
           case 'LESSON_COMPLETED': {
             const payload: LessonCompletedPayload = {
@@ -166,7 +169,12 @@ export function createGamificationRouter(
               lessonTitle: validated.payload?.lessonTitle ?? 'Lesson',
               completedAt: now,
             };
-            await eventBus.emit(GameDomainEvents.LESSON_COMPLETED, payload);
+            // Process lesson completion to get actual results
+            const result = await processLessonDirectly(userId, payload, gameEngine);
+            if (result) {
+              levelUpOccurred = result.leveledUp;
+              earnedBadges = result.badgesEarned;
+            }
             break;
           }
           case 'ACTIVITY_ATTEMPT': {
@@ -178,7 +186,10 @@ export function createGamificationRouter(
               hintUsed: validated.payload?.hintUsed ?? false,
               completedAt: now,
             };
-            await eventBus.emit(GameDomainEvents.ACTIVITY_ATTEMPT, payload);
+            const result = await processActivityDirectly(userId, payload, gameEngine);
+            if (result) {
+              earnedBadges = result.badgesEarned;
+            }
             break;
           }
           case 'DAILY_LOGIN': {
@@ -186,19 +197,28 @@ export function createGamificationRouter(
               userId,
               loginDate: now,
             };
-            await eventBus.emit(GameDomainEvents.DAILY_LOGIN, payload);
+            const result = await processDailyLoginDirectly(userId, payload, gameEngine);
+            if (result) {
+              levelUpOccurred = result.leveledUp;
+              earnedBadges = result.badgesEarned;
+            }
             break;
           }
         }
 
+        // Get fresh profile after all operations complete
         const profile = await gameEngine.getProfile(userId);
         const shared = mapToProfileResponse(profile);
 
         res.json({
           success: true,
           profile: shared,
-          levelUp: false,
-          newBadges: [],
+          levelUp: levelUpOccurred,
+          newBadges: earnedBadges.map((b) => ({
+            code: b.code,
+            name: b.name,
+            icon: b.icon,
+          })),
         });
       } catch (error) {
         if (error instanceof z.ZodError) {
@@ -429,6 +449,110 @@ export function createGamificationRouter(
       }
     },
   );
+
+  // Helper to process lesson directly and return results synchronously
+  async function processLessonDirectly(
+    userId: string,
+    payload: LessonCompletedPayload,
+    gameEngine: GameEngineCore,
+  ): Promise<{
+    leveledUp: boolean;
+    badgesEarned: Array<{ code: string; name: string; icon: string }>;
+  } | null> {
+    try {
+      const profile = await gameEngine.getProfile(userId);
+      if (!profile) return null;
+
+      const previousLevel = profile.level;
+
+      // Mark lesson as mastered
+      const eventBus = getEventBus();
+      await eventBus.emit(GameDomainEvents.LESSON_COMPLETED, payload);
+
+      // Small delay to let event process, then get fresh profile
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const newProfile = await gameEngine.getProfile(userId);
+      if (!newProfile) return null;
+
+      const newBadges = newProfile.badges.filter(
+        (b) => !profile.badges.some((pb) => pb.code === b.code),
+      );
+
+      return {
+        leveledUp: newProfile.level > previousLevel,
+        badgesEarned: newBadges.map((b) => ({ code: b.code, name: b.name, icon: b.icon })),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  // Helper to process activity directly
+  async function processActivityDirectly(
+    userId: string,
+    payload: ActivityAttemptPayload,
+    gameEngine: GameEngineCore,
+  ): Promise<{ badgesEarned: Array<{ code: string; name: string; icon: string }> } | null> {
+    try {
+      const profile = await gameEngine.getProfile(userId);
+      if (!profile) return null;
+
+      const eventBus = getEventBus();
+      await eventBus.emit(GameDomainEvents.ACTIVITY_ATTEMPT, payload);
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const newProfile = await gameEngine.getProfile(userId);
+      if (!newProfile) return null;
+
+      const newBadges = newProfile.badges.filter(
+        (b) => !profile.badges.some((pb) => pb.code === b.code),
+      );
+
+      return {
+        badgesEarned: newBadges.map((b) => ({ code: b.code, name: b.name, icon: b.icon })),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  // Helper to process daily login directly
+  async function processDailyLoginDirectly(
+    userId: string,
+    payload: DailyLoginPayload,
+    gameEngine: GameEngineCore,
+  ): Promise<{
+    leveledUp: boolean;
+    badgesEarned: Array<{ code: string; name: string; icon: string }>;
+  } | null> {
+    try {
+      const profile = await gameEngine.getProfile(userId);
+      if (!profile) return null;
+
+      const previousLevel = profile.level;
+
+      const eventBus = getEventBus();
+      await eventBus.emit(GameDomainEvents.DAILY_LOGIN, payload);
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const newProfile = await gameEngine.getProfile(userId);
+      if (!newProfile) return null;
+
+      const newBadges = newProfile.badges.filter(
+        (b) => !profile.badges.some((pb) => pb.code === b.code),
+      );
+
+      return {
+        leveledUp: newProfile.level > previousLevel,
+        badgesEarned: newBadges.map((b) => ({ code: b.code, name: b.name, icon: b.icon })),
+      };
+    } catch {
+      return null;
+    }
+  }
 
   return router;
 }

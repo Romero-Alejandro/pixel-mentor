@@ -82,3 +82,21 @@ export interface IBadgeRepository {
   ): Promise<{ totalEarned: number; totalXPFromBadges: number; byType: Record<string, number> }>;
   hasBadge(userId: string, badgeCode: string): Promise<boolean>;
 }
+
+export interface GamificationAuditLogEntry {
+  id?: string;
+  userId: string;
+  eventType: string;
+  details?: Record<string, unknown>;
+  xpAwarded: number;
+  badgesAwarded?: string[];
+  succeeded: boolean;
+  errorMessage?: string;
+  createdAt?: Date;
+}
+
+export interface IGamificationAuditRepository {
+  logEvent(entry: GamificationAuditLogEntry): Promise<void>;
+  getLogsByUserId(userId: string, limit?: number): Promise<GamificationAuditLogEntry[]>;
+  getLogsByEventType(eventType: string, limit?: number): Promise<GamificationAuditLogEntry[]>;
+}

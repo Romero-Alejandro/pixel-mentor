@@ -11,11 +11,13 @@ interface XPEarnedEvent {
   type: 'xp_earned';
   amount: number;
   reason: string;
+  version: number;
 }
 
 interface BadgeEarnedEvent {
   type: 'badge_earned';
   badge: EarnedBadge;
+  version: number;
 }
 
 interface LevelUpEvent {
@@ -24,15 +26,17 @@ interface LevelUpEvent {
   newLevelTitle: string;
   previousLevel: number;
   totalXP: number;
+  version: number;
 }
 
 interface StreakUpdatedEvent {
   type: 'streak_updated';
   currentStreak: number;
   longestStreak: number;
+  version: number;
 }
 
-const MAX_RECONNECT_DELAY = 30000; // 30 seconds max
+const MAX_RECONNECT_DELAY = 30000;
 const INITIAL_RECONNECT_DELAY = 1000;
 
 export function useGamificationSSE(enabled = true) {
@@ -41,6 +45,7 @@ export function useGamificationSSE(enabled = true) {
   const [isConnected, setIsConnected] = useState(false);
   const reconnectAttemptRef = useRef(0);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const connectionVersionRef = useRef(0);
 
   const cleanup = useCallback(() => {
     if (reconnectTimeoutRef.current) {
@@ -53,6 +58,15 @@ export function useGamificationSSE(enabled = true) {
     }
     setIsConnected(false);
   }, []);
+
+  // Fetch fresh gamification state on reconnect
+  const fetchFreshState = useCallback(async () => {
+    try {
+      await store.fetchProfile();
+    } catch {
+      // Silent fail - will retry on next reconnect
+    }
+  }, [store]);
 
   useEffect(() => {
     if (!enabled) {
@@ -69,6 +83,8 @@ export function useGamificationSSE(enabled = true) {
 
       const controller = new AbortController();
       abortControllerRef.current = controller;
+      connectionVersionRef.current += 1;
+      const currentVersion = connectionVersionRef.current;
 
       fetchEventSource('/api/gamification/events', {
         method: 'GET',
@@ -82,44 +98,60 @@ export function useGamificationSSE(enabled = true) {
         },
         onmessage: (event: EventSourceMessage) => {
           try {
-            // Event format: "event: {type}\ndata: {...}\n\n"
-            // Need to check event.event for event type, not data.type
             const data = JSON.parse(event.data);
             const eventType = event.event;
 
             switch (eventType) {
               case 'xp_earned': {
-                const { profile } = store;
-                if (!profile) break;
-                const newTotalXP = profile.totalXP + (data as XPEarnedEvent).amount;
-                store.onXPEarned(newTotalXP, (data as XPEarnedEvent).reason);
-                break;
-              }
-              case 'badge_earned':
-                store.onBadgeEarned((data as BadgeEarnedEvent).badge);
-                break;
-              case 'level_up':
-                store.onLevelUp(data as LevelUpEvent);
-                break;
-              case 'streak_updated':
-                store.onStreakUpdated(
-                  (data as StreakUpdatedEvent).currentStreak,
-                  (data as StreakUpdatedEvent).longestStreak,
+                const eventData = data as XPEarnedEvent;
+                store.onXPEarned(
+                  eventData.amount,
+                  eventData.reason,
+                  eventData.version ?? currentVersion,
                 );
                 break;
+              }
+              case 'badge_earned': {
+                const eventData = data as BadgeEarnedEvent;
+                store.onBadgeEarned(
+                  eventData.badge,
+                  eventData.version ?? currentVersion,
+                );
+                break;
+              }
+              case 'level_up': {
+                const eventData = data as LevelUpEvent;
+                store.onLevelUp(
+                  {
+                    newLevel: eventData.newLevel,
+                    newLevelTitle: eventData.newLevelTitle,
+                    previousLevel: eventData.previousLevel,
+                    totalXP: eventData.totalXP,
+                  },
+                  eventData.version ?? currentVersion,
+                );
+                break;
+              }
+              case 'streak_updated': {
+                const eventData = data as StreakUpdatedEvent;
+                store.onStreakUpdated(
+                  eventData.currentStreak,
+                  eventData.longestStreak,
+                  eventData.version ?? currentVersion,
+                );
+                break;
+              }
               default:
                 logger.warn('[GamificationSSE] Unknown event type:', eventType);
             }
-          } catch (e) {
-            // Silently ignore parse errors - they may be from connection issues
-            // Don't spam console with gamification errors
+          } catch {
+            // Silently ignore parse errors
           }
         },
         onerror: () => {
           setIsConnected(false);
           abortControllerRef.current = null;
 
-          // Exponential backoff reconnection
           const delay = Math.min(
             INITIAL_RECONNECT_DELAY * Math.pow(2, reconnectAttemptRef.current),
             MAX_RECONNECT_DELAY,
@@ -135,11 +167,9 @@ export function useGamificationSSE(enabled = true) {
               connect();
             }, delay);
           } else {
-            console.error('[GamificationSSE] Max reconnection attempts reached');
+            logger.error('[GamificationSSE] Max reconnection attempts reached');
           }
 
-          // Return a retry delay to stop fetchEventSource from auto-retrying
-          // We handle reconnection manually with setTimeout
           return null;
         },
         onclose: () => {
@@ -148,7 +178,7 @@ export function useGamificationSSE(enabled = true) {
         },
       }).catch((err) => {
         if (err.name !== 'AbortError') {
-          console.error('[GamificationSSE] fetchEventSource error:', err);
+          logger.error('[GamificationSSE] fetchEventSource error:', err);
         }
       });
     };
@@ -158,7 +188,7 @@ export function useGamificationSSE(enabled = true) {
     return () => {
       cleanup();
     };
-  }, [enabled, store, cleanup]);
+  }, [enabled, cleanup, fetchFreshState]);
 
   return { isConnected };
 }

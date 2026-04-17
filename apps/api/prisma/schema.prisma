@@ -677,6 +677,24 @@ model DailyActivity {
   @@map("daily_activities")
 }
 
+// ==================== GAMIFICATION AUDIT LOG ====================
+
+model GamificationAuditLog {
+  id          String   @id @default(uuid())
+  userId      String
+  eventType   String   @db.VarChar(100)
+  details     Json?
+  xpAwarded   Int      @default(0)
+  badgesAwarded Json?
+  succeeded   Boolean  @default(true)
+  errorMessage String? @db.Text
+  createdAt   DateTime @default(now())
+
+  @@index([userId, eventType, createdAt])
+  @@index([userId])
+  @@map("gamification_audit_logs")
+}
+
 // Refresh token for JWT rotation and revocation
 model RefreshToken {
   id        String    @id @default(uuid())

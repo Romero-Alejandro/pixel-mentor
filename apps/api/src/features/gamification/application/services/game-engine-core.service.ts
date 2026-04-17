@@ -6,13 +6,18 @@
  * - Processes those events through reward strategies
  * - Updates user gamification state
  * - Emits game engine events for UI updates
+ * - Uses MutexManager for atomic per-user operations
+ * - Logs all gamification events to audit trail
  */
 
 import { createLogger } from '@/shared/logger/logger.js';
+import { prisma } from '@/database/client.js';
+import { GamificationConfig } from '../../config/gamification.config.js';
 
 import type { RewardContext } from '../strategies/reward.types.js';
 import type { StrategyRegistry } from '../strategies/strategy-registry.js';
 import type { StreakService } from './streak.service.js';
+import { mutexManager } from './mutex-manager.service.js';
 
 import type { EventBus } from '@/shared/events/event-bus.port';
 import { getEventBus } from '@/shared/events/event-bus.port';
@@ -30,8 +35,10 @@ import { GameDomainEvents, GameEngineEvents } from '@/shared/events/game-events.
 import type {
   IUserGamificationRepository,
   IBadgeRepository,
+  IGamificationAuditRepository,
   RewardResult,
   GamificationProfile,
+  GamificationAuditLogEntry,
 } from '../../domain/ports/gamification.ports';
 import type { ProgressRepository } from '@/features/progress/domain/ports/progress.repository.port';
 
@@ -60,6 +67,7 @@ export class GameEngineCore {
     private progressRepo: ProgressRepository,
     eventBus?: EventBus,
     logger?: ReturnType<typeof createLogger>,
+    private auditRepo?: IGamificationAuditRepository,
   ) {
     this.eventBus = eventBus ?? getEventBus();
     this.logger = logger ?? createLogger();
@@ -165,12 +173,15 @@ export class GameEngineCore {
    * Handle lesson completion event.
    */
   private async handleLessonCompleted(payload: LessonCompletedPayload): Promise<void> {
+    const userId = payload.userId;
+    const release = mutexManager.acquireLock(userId);
+
     try {
-      this.logger.info(`[GameEngine] Processing LESSON_COMPLETED for user ${payload.userId}`);
+      this.logger.info(`[GameEngine] Processing LESSON_COMPLETED for user ${userId}`);
 
       // Build context for strategy execution
       const context = await this.buildRewardContext(
-        payload.userId,
+        userId,
         GameDomainEvents.LESSON_COMPLETED,
         payload,
       );
@@ -178,68 +189,128 @@ export class GameEngineCore {
       // Execute strategies (LessonCompletionStrategy, FirstLessonBadgeStrategy)
       const strategyResult = await this.strategyRegistry.execute(context);
 
-      // Apply XP rewards
-      let newTotalXP = 0;
-      let leveledUp = false;
-      let newLevel: number | undefined;
-      let newLevelTitle: string | undefined;
-
-      if (strategyResult.totalXP > 0) {
-        const xpResult = await this.userGamificationRepo.addXP(
-          payload.userId,
-          strategyResult.totalXP,
-        );
-        newTotalXP = xpResult.newXP;
-        leveledUp = xpResult.leveledUp;
-        newLevel = xpResult.newLevel;
-        newLevelTitle = xpResult.newLevelTitle;
-      }
-
-      // Award streak bonus XP if any
-      if (strategyResult.totalStreakBonus > 0) {
-        const xpResult = await this.userGamificationRepo.addXP(
-          payload.userId,
-          strategyResult.totalStreakBonus,
-        );
-        newTotalXP = xpResult.newXP;
-        if (xpResult.leveledUp) {
-          leveledUp = true;
-          newLevel = xpResult.newLevel;
-          newLevelTitle = xpResult.newLevelTitle;
-        }
-      }
-
-      // Award badges from strategy execution
+      const xpToAward = strategyResult.totalXP + strategyResult.totalStreakBonus;
       const newBadges: Array<{ code: string; name: string; icon: string }> = [];
-      for (const badge of strategyResult.badgesToAward) {
-        const awarded = await this.badgeRepo.awardBadge(payload.userId, badge.code);
-        if (awarded) {
-          newBadges.push({ code: badge.code, name: badge.name, icon: badge.icon });
-        }
+
+      // Use atomic transaction for all state changes
+      if (xpToAward > 0 || strategyResult.badgesToAward.length > 0) {
+        await prisma.$transaction(async (tx) => {
+          // Apply XP rewards atomically
+          let newTotalXP = 0;
+          let leveledUp = false;
+          let newLevel: number | undefined;
+          let newLevelTitle: string | undefined;
+
+          if (xpToAward > 0) {
+            const profile = await this.userGamificationRepo.findByUserId(userId);
+            const previousLevel = profile?.level ?? 1;
+
+            const updated = await tx.userGamification.update({
+              where: { userId },
+              data: {
+                totalXP: { increment: xpToAward },
+              },
+            });
+
+            newTotalXP = updated.totalXP;
+            await tx.userGamification.update({
+              where: { userId },
+              data: { level: updated.level },
+            });
+
+            newLevel = updated.level;
+            newLevelTitle =
+              updated.level > previousLevel ? await this.getLevelTitle(updated.level) : undefined;
+            leveledUp = updated.level > previousLevel;
+          }
+
+          // Award badges within the same transaction
+          for (const badge of strategyResult.badgesToAward) {
+            const badgeRec = await tx.badge.findUnique({ where: { code: badge.code } });
+            if (!badgeRec) continue;
+
+            const existing = await tx.userBadge.findUnique({
+              where: { userId_badgeId: { userId, badgeId: badgeRec.id } },
+            });
+
+            if (!existing) {
+              let userGamification = await tx.userGamification.findUnique({ where: { userId } });
+              if (!userGamification) {
+                userGamification = await tx.userGamification.create({
+                  data: { userId, totalXP: 0, currentStreak: 0, longestStreak: 0, level: 1 },
+                });
+              }
+
+              await tx.userBadge.create({
+                data: { userId, badgeId: badgeRec.id, userGamificationId: userGamification.id },
+              });
+              newBadges.push({ code: badge.code, name: badge.name, icon: badge.icon });
+            }
+          }
+
+          const result: RewardResult = {
+            xpAwarded: xpToAward,
+            newTotalXP,
+            leveledUp,
+            newLevel,
+            newLevelTitle,
+            badgesEarned: newBadges,
+            streakUpdated: false,
+          };
+
+          // Emit game engine events for UI
+          await this.emitRewardsEarned(userId, result);
+        });
       }
-
-      const result: RewardResult = {
-        xpAwarded: strategyResult.totalXP + strategyResult.totalStreakBonus,
-        newTotalXP,
-        leveledUp,
-        newLevel,
-        newLevelTitle,
-        badgesEarned: newBadges,
-        streakUpdated: false,
-      };
-
-      // Emit game engine events for UI
-      await this.emitRewardsEarned(payload.userId, result);
 
       // Mark lesson as MASTERED in UserProgress (if not already)
-      await this.markLessonAsMastered(payload.userId, payload.lessonId);
+      await this.markLessonAsMastered(userId, payload.lessonId);
+
+      // Log to audit trail
+      await this.logToAudit(
+        userId,
+        'LESSON_COMPLETED',
+        {
+          lessonId: payload.lessonId,
+          xpAwarded: xpToAward,
+          badges: newBadges.map((b) => b.code),
+        },
+        xpToAward,
+        newBadges.map((b) => b.code),
+        true,
+      );
 
       this.logger.info(
-        `[GameEngine] Lesson completion processed: +${result.xpAwarded} XP, ${result.badgesEarned.length} badges`,
+        `[GameEngine] Lesson completion processed: +${xpToAward} XP, ${newBadges.length} badges`,
       );
     } catch (error) {
       this.logger.error({ err: error }, '[GameEngine] Error processing lesson completion');
+      await this.logToAudit(
+        userId,
+        'LESSON_COMPLETED',
+        {
+          lessonId: payload.lessonId,
+        },
+        0,
+        [],
+        false,
+        (error as Error).message,
+      );
+    } finally {
+      release();
     }
+  }
+
+  private async getLevelTitle(level: number): Promise<string> {
+    const titles: Record<number, string> = {
+      1: 'Semilla',
+      2: 'Brote',
+      3: 'Flor',
+      4: 'Árbol',
+      5: 'Bosque',
+      6: 'Campeón',
+    };
+    return titles[level] ?? `Nivel ${level}`;
   }
 
   /**
@@ -259,17 +330,19 @@ export class GameEngineCore {
    * Handle activity attempt event (perfect score).
    */
   private async handleActivityAttempt(payload: ActivityAttemptPayload): Promise<void> {
+    const userId = payload.userId;
+    const release = mutexManager.acquireLock(userId);
+
     try {
       if (payload.correct && payload.attemptNumber === 1) {
         // Perfect score bonus - award XP
-        this.logger.info(`[GameEngine] Processing PERFECT ATTEMPT for user ${payload.userId}`);
+        this.logger.info(`[GameEngine] Processing PERFECT ATTEMPT for user ${userId}`);
 
-        const PERFECT_BONUS = 20;
-        const xpResult = await this.userGamificationRepo.addXP(payload.userId, PERFECT_BONUS);
+        const perfectBonus = GamificationConfig.PERFECT_FIRST_ATTEMPT_BONUS;
 
         // Build context for strategy execution
         const context = await this.buildRewardContext(
-          payload.userId,
+          userId,
           GameDomainEvents.ACTIVITY_ATTEMPT,
           payload,
         );
@@ -277,29 +350,80 @@ export class GameEngineCore {
         // Execute badge strategies (could award badges for perfect attempts)
         const strategyResult = await this.strategyRegistry.execute(context);
 
-        // Award badges from strategy execution
         const newBadges: Array<{ code: string; name: string; icon: string }> = [];
-        for (const badge of strategyResult.badgesToAward) {
-          const awarded = await this.badgeRepo.awardBadge(payload.userId, badge.code);
-          if (awarded) {
-            newBadges.push({ code: badge.code, name: badge.name, icon: badge.icon });
+
+        // Use atomic transaction for all state changes
+        await prisma.$transaction(async (tx) => {
+          const updated = await tx.userGamification.update({
+            where: { userId },
+            data: { totalXP: { increment: perfectBonus } },
+          });
+
+          // Award badges within transaction
+          for (const badge of strategyResult.badgesToAward) {
+            const badgeRec = await tx.badge.findUnique({ where: { code: badge.code } });
+            if (!badgeRec) continue;
+
+            const existing = await tx.userBadge.findUnique({
+              where: { userId_badgeId: { userId, badgeId: badgeRec.id } },
+            });
+
+            if (!existing) {
+              let userGamification = await tx.userGamification.findUnique({ where: { userId } });
+              if (!userGamification) {
+                userGamification = await tx.userGamification.create({
+                  data: { userId, totalXP: 0, currentStreak: 0, longestStreak: 0, level: 1 },
+                });
+              }
+
+              await tx.userBadge.create({
+                data: { userId, badgeId: badgeRec.id, userGamificationId: userGamification.id },
+              });
+              newBadges.push({ code: badge.code, name: badge.name, icon: badge.icon });
+            }
           }
-        }
 
-        const result: RewardResult = {
-          xpAwarded: PERFECT_BONUS,
-          newTotalXP: xpResult.newXP,
-          leveledUp: xpResult.leveledUp,
-          newLevel: xpResult.newLevel,
-          newLevelTitle: xpResult.newLevelTitle,
-          badgesEarned: newBadges,
-          streakUpdated: false,
-        };
+          const result: RewardResult = {
+            xpAwarded: perfectBonus,
+            newTotalXP: updated.totalXP,
+            leveledUp: false,
+            newLevel: undefined,
+            newLevelTitle: undefined,
+            badgesEarned: newBadges,
+            streakUpdated: false,
+          };
 
-        await this.emitRewardsEarned(payload.userId, result);
+          await this.emitRewardsEarned(userId, result);
+        });
+
+        // Log to audit trail
+        await this.logToAudit(
+          userId,
+          'ACTIVITY_ATTEMPT',
+          {
+            activityId: payload.activityId,
+            perfectAttempt: true,
+          },
+          perfectBonus,
+          newBadges.map((b) => b.code),
+          true,
+        );
       }
     } catch (error) {
       this.logger.error({ err: error }, '[GameEngine] Error processing activity attempt');
+      await this.logToAudit(
+        userId,
+        'ACTIVITY_ATTEMPT',
+        {
+          activityId: payload.activityId,
+        },
+        0,
+        [],
+        false,
+        (error as Error).message,
+      );
+    } finally {
+      release();
     }
   }
 
@@ -308,21 +432,17 @@ export class GameEngineCore {
    * Uses StreakService for accurate streak tracking with timezone handling.
    */
   private async handleDailyLogin(payload: DailyLoginPayload): Promise<void> {
+    const userId = payload.userId;
+    const release = mutexManager.acquireLock(userId);
+
     try {
-      this.logger.info(`[GameEngine] Processing DAILY_LOGIN for user ${payload.userId}`);
+      this.logger.info(`[GameEngine] Processing DAILY_LOGIN for user ${userId}`);
 
       // Record activity and get streak result using StreakService
-      const streakResult = await this.streakService.recordDailyLogin(
-        payload.userId,
-        payload.loginDate,
-      );
+      const streakResult = await this.streakService.recordDailyLogin(userId, payload.loginDate);
 
       // Build context for strategy execution with updated streak
-      const context = await this.buildRewardContext(
-        payload.userId,
-        GameDomainEvents.DAILY_LOGIN,
-        payload,
-      );
+      const context = await this.buildRewardContext(userId, GameDomainEvents.DAILY_LOGIN, payload);
 
       // Execute strategies (StreakBonusStrategy, StreakMilestoneStrategy)
       const strategyResult = await this.strategyRegistry.execute(context);
@@ -348,44 +468,140 @@ export class GameEngineCore {
         streakBroken: streakResult.streakWasBroken,
       });
 
-      // Apply streak bonus XP from both streak milestone and strategies
-      let newTotalXP = 0;
-      let leveledUp = false;
-      let newLevel: number | undefined;
-      let newLevelTitle: string | undefined;
-
-      if (totalStreakBonus > 0) {
-        const xpResult = await this.userGamificationRepo.addXP(payload.userId, totalStreakBonus);
-        newTotalXP = xpResult.newXP;
-        leveledUp = xpResult.leveledUp;
-        newLevel = xpResult.newLevel;
-        newLevelTitle = xpResult.newLevelTitle;
-      }
-
-      // Award badges from strategy execution
       const newBadges: Array<{ code: string; name: string; icon: string }> = [];
-      for (const badge of strategyResult.badgesToAward) {
-        const awarded = await this.badgeRepo.awardBadge(payload.userId, badge.code);
-        if (awarded) {
-          newBadges.push({ code: badge.code, name: badge.name, icon: badge.icon });
-        }
+
+      // Use atomic transaction for all state changes
+      if (totalStreakBonus > 0 || strategyResult.badgesToAward.length > 0) {
+        await prisma.$transaction(async (tx) => {
+          let newTotalXP = 0;
+          let leveledUp = false;
+          let newLevel: number | undefined;
+          let newLevelTitle: string | undefined;
+
+          // Apply streak bonus XP
+          if (totalStreakBonus > 0) {
+            const profile = await this.userGamificationRepo.findByUserId(userId);
+            const previousLevel = profile?.level ?? 1;
+
+            const updated = await tx.userGamification.update({
+              where: { userId },
+              data: {
+                totalXP: { increment: totalStreakBonus },
+              },
+            });
+
+            newTotalXP = updated.totalXP;
+            await tx.userGamification.update({
+              where: { userId },
+              data: { level: updated.level },
+            });
+
+            newLevel = updated.level;
+            newLevelTitle =
+              updated.level > previousLevel ? await this.getLevelTitle(updated.level) : undefined;
+            leveledUp = updated.level > previousLevel;
+          }
+
+          // Award badges within transaction
+          for (const badge of strategyResult.badgesToAward) {
+            const badgeRec = await tx.badge.findUnique({ where: { code: badge.code } });
+            if (!badgeRec) continue;
+
+            const existing = await tx.userBadge.findUnique({
+              where: { userId_badgeId: { userId, badgeId: badgeRec.id } },
+            });
+
+            if (!existing) {
+              let userGamification = await tx.userGamification.findUnique({ where: { userId } });
+              if (!userGamification) {
+                userGamification = await tx.userGamification.create({
+                  data: { userId, totalXP: 0, currentStreak: 0, longestStreak: 0, level: 1 },
+                });
+              }
+
+              await tx.userBadge.create({
+                data: { userId, badgeId: badgeRec.id, userGamificationId: userGamification.id },
+              });
+              newBadges.push({ code: badge.code, name: badge.name, icon: badge.icon });
+            }
+          }
+
+          const result: RewardResult = {
+            xpAwarded: totalStreakBonus,
+            newTotalXP,
+            leveledUp,
+            newLevel,
+            newLevelTitle,
+            badgesEarned: newBadges,
+            streakUpdated: true,
+            newStreak: streakResult.currentStreak,
+            isNewStreak: streakResult.streakWasBroken === false && streakResult.currentStreak > 1,
+          };
+
+          await this.emitRewardsEarned(userId, result);
+        });
       }
 
-      const result: RewardResult = {
-        xpAwarded: totalStreakBonus,
-        newTotalXP,
-        leveledUp,
-        newLevel,
-        newLevelTitle,
-        badgesEarned: newBadges,
-        streakUpdated: true,
-        newStreak: streakResult.currentStreak,
-        isNewStreak: streakResult.streakWasBroken === false && streakResult.currentStreak > 1,
-      };
-
-      await this.emitRewardsEarned(payload.userId, result);
+      // Log to audit trail
+      await this.logToAudit(
+        userId,
+        'DAILY_LOGIN',
+        {
+          loginDate: payload.loginDate,
+          streak: streakResult.currentStreak,
+          xpAwarded: totalStreakBonus,
+          badges: newBadges.map((b) => b.code),
+        },
+        totalStreakBonus,
+        newBadges.map((b) => b.code),
+        true,
+      );
     } catch (error) {
       this.logger.error({ err: error }, '[GameEngine] Error processing daily login');
+      await this.logToAudit(
+        userId,
+        'DAILY_LOGIN',
+        {
+          loginDate: payload.loginDate,
+        },
+        0,
+        [],
+        false,
+        (error as Error).message,
+      );
+    } finally {
+      release();
+    }
+  }
+
+  /**
+   * Log gamification event to audit trail.
+   */
+  private async logToAudit(
+    userId: string,
+    eventType: string,
+    details: Record<string, unknown>,
+    xpAwarded: number,
+    badgesAwarded: string[],
+    succeeded: boolean,
+    errorMessage?: string,
+  ): Promise<void> {
+    if (!this.auditRepo) return;
+
+    const entry: GamificationAuditLogEntry = {
+      userId,
+      eventType,
+      details,
+      xpAwarded,
+      badgesAwarded,
+      succeeded,
+      errorMessage,
+    };
+
+    try {
+      await this.auditRepo.logEvent(entry);
+    } catch (err) {
+      this.logger.error({ err }, '[GameEngine] Failed to log audit event');
     }
   }
 

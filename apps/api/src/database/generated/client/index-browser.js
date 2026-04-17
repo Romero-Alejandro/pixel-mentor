@@ -452,6 +452,18 @@ exports.Prisma.DailyActivityScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.GamificationAuditLogScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  eventType: 'eventType',
+  details: 'details',
+  xpAwarded: 'xpAwarded',
+  badgesAwarded: 'badgesAwarded',
+  succeeded: 'succeeded',
+  errorMessage: 'errorMessage',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.RefreshTokenScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
@@ -664,6 +676,7 @@ exports.Prisma.ModelName = {
   UserBadge: 'UserBadge',
   LevelConfig: 'LevelConfig',
   DailyActivity: 'DailyActivity',
+  GamificationAuditLog: 'GamificationAuditLog',
   RefreshToken: 'RefreshToken',
   ClassTemplate: 'ClassTemplate',
   Class: 'Class',
