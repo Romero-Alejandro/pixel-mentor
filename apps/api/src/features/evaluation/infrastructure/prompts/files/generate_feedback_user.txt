@@ -1,0 +1,12 @@
+CLASIFICACIÓN DE LA RESPUESTA:
+- Outcome: {{outcome}}
+- Puntuación: {{score}}/{{maxScore}}
+- Justificación: {{justification}}
+
+NOMBRE DEL ESTUDIANTE: {{studentName}}
+
+CONTEXTO:
+- Pregunta: {{questionText}}
+- Respuesta del estudiante: {{studentAnswer}}
+
+GENERA UN MENSAJE DE RETROALIMENTACIÓN POSITIVO Y CONSTRUCTIVO.

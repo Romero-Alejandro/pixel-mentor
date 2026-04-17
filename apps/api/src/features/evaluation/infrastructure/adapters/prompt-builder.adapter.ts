@@ -1,26 +1,20 @@
 /**
  * Prompt Builder Adapter
  *
- * Implementation of IPromptBuilderPort that uses the existing
- * evaluation prompts infrastructure.
+ * Implementation of IPromptBuilderPort that uses the new
+ * EvaluationPromptRepository with SafePromptBuilder security.
  */
 
 import type {
   IPromptBuilderPort,
   EvaluationPromptValues,
 } from '../../domain/ports/prompt-builder.port';
-import {
-  EXTRACT_CONCEPTS_USER_TEMPLATE,
-  CLASSIFY_USER_TEMPLATE,
-  GENERATE_FEEDBACK_USER_TEMPLATE,
-  buildExtractConceptsPrompt,
-  buildClassifyPrompt,
-  buildFeedbackPrompt,
-} from '../prompts/evaluation.prompts';
+import { getEvaluationPromptRepository } from '../prompts/evaluation-prompt-repository';
+import type { PromptValues } from '@/features/prompt/domain/ports/safe-prompt-builder.interface';
 
 /**
- * Adapter that implements IPromptBuilderPort using the existing
- * evaluation prompts module.
+ * Adapter that implements IPromptBuilderPort using the new
+ * EvaluationPromptRepository with security pipeline.
  */
 export class EvaluationPromptBuilderAdapter implements IPromptBuilderPort {
   /**
@@ -34,37 +28,42 @@ export class EvaluationPromptBuilderAdapter implements IPromptBuilderPort {
   buildExtractConceptsPrompt(
     questionText: string,
     studentAnswer: string,
-    template: string,
+    _template: string,
     values: EvaluationPromptValues,
   ): string {
-    return buildExtractConceptsPrompt(
-      questionText,
-      studentAnswer,
-      template || EXTRACT_CONCEPTS_USER_TEMPLATE,
-      values as Record<string, string>,
-    );
+    const repo = getEvaluationPromptRepository();
+    const promptValues: PromptValues = {
+      questionText: questionText,
+      studentAnswer: studentAnswer,
+      ...(values as PromptValues),
+    };
+
+    return repo.buildExtractConceptsPrompt(promptValues);
   }
 
   /**
    * @inheritdoc
    */
-  buildClassifyPrompt(template: string, values: EvaluationPromptValues, maxScore: number): string {
-    return buildClassifyPrompt(
-      template || CLASSIFY_USER_TEMPLATE,
-      values as Record<string, string | null | undefined>,
-      maxScore,
-    );
+  buildClassifyPrompt(_template: string, values: EvaluationPromptValues, maxScore: number): string {
+    const repo = getEvaluationPromptRepository();
+    const promptValues: PromptValues = {
+      ...(values as PromptValues),
+    };
+
+    return repo.buildClassifyPrompt(promptValues, maxScore);
   }
 
   /**
    * @inheritdoc
    */
-  buildFeedbackPrompt(template: string, values: EvaluationPromptValues, maxScore: number): string {
-    return buildFeedbackPrompt(
-      template || GENERATE_FEEDBACK_USER_TEMPLATE,
-      values as Record<string, string | null | undefined>,
-      maxScore,
-    );
+  buildFeedbackPrompt(_template: string, values: EvaluationPromptValues, maxScore: number): string {
+    const repo = getEvaluationPromptRepository();
+    const promptValues: PromptValues = {
+      ...(values as PromptValues),
+      maxScore: String(maxScore),
+    };
+
+    return repo.buildFeedbackPrompt(promptValues);
   }
 }
 

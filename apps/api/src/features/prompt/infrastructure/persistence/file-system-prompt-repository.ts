@@ -2,6 +2,8 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { createUnifiedPromptRenderer } from './unified-prompt-renderer.js';
+
 import type {
   PromptRepository,
   PromptParams,
@@ -13,10 +15,12 @@ type StateTemplateMap = Record<PedagogicalState, string>;
 export class FileSystemPromptRepository implements PromptRepository {
   private templates: StateTemplateMap;
   private basePath: string;
+  private renderer: ReturnType<typeof createUnifiedPromptRenderer>;
 
   constructor(promptsDir?: string) {
-    const defaultDir = join(fileURLToPath(new URL('.', import.meta.url)), '../../../prompts');
+    const defaultDir = join(fileURLToPath(new URL('.', import.meta.url)), '../../prompts');
     this.basePath = promptsDir || defaultDir;
+    this.renderer = createUnifiedPromptRenderer();
     this.templates = this.loadTemplates();
   }
 
@@ -42,7 +46,6 @@ export class FileSystemPromptRepository implements PromptRepository {
       if (existsSync(filePath)) {
         templates[state] = readFileSync(filePath, 'utf-8');
       } else {
-        // Fallback: generar prompt básico
         templates[state] = this.generateFallbackPrompt(state);
       }
     }
@@ -64,71 +67,32 @@ export class FileSystemPromptRepository implements PromptRepository {
   }
 
   private render(template: string, params: PromptParams): string {
-    let rendered = template;
+    const values = this.mapParamsToValues(params);
+    return this.renderer.render(template, values);
+  }
 
-    // Replace simple mustache-style placeholders
-    rendered = rendered.replace(
-      /\{\{persona\}\}/g,
-      params.persona || this.getDefaultPersona(params.currentState),
-    );
-    rendered = rendered.replace(/\{\{segment\}\}/g, params.currentSegment?.chunkText || '');
-    rendered = rendered.replace(/\{\{segmentText\}\}/g, params.currentSegment?.chunkText || '');
-    rendered = rendered.replace(
-      /\{\{currentSegmentIndex\}\}/g,
-      String((params.currentSegment?.order ?? 0) + 1),
-    );
-    rendered = rendered.replace(/\{\{totalSegments\}\}/g, String(params.totalSegments ?? 1));
+  private mapParamsToValues(params: PromptParams): Record<string, string> {
+    const values: Record<string, string> = {
+      persona: params.persona || this.getDefaultPersona(params.currentState),
+      segmentText: params.currentSegment?.chunkText || '',
+      currentSegmentIndex: String((params.currentSegment?.order ?? 0) + 1),
+      totalSegments: String(params.totalSegments ?? 1),
+      currentQuestion: params.currentQuestion?.text || '',
+      conversationHistory: JSON.stringify(
+        params.conversationHistory.map((turn) => ({
+          role: turn.role,
+          content: turn.content,
+        })),
+      ),
+      historySummary: params.historySummary || '',
+      ragContext: JSON.stringify(params.ragContext || []),
+    };
 
-    // RAG context
-    if (params.ragContext && Array.isArray(params.ragContext)) {
-      let ragText = '';
-      params.ragContext.forEach((item: any, idx: number) => {
-        const chunkText = item.chunk?.chunkText || item.text || '';
-        ragText += `${idx + 1}. ${chunkText}\n`;
-      });
-      rendered = rendered.replace(
-        /\{% if ragContext %}.*?\{% endif %\}/gs,
-        ragText.trim() ? `\nContexto relevante recuperado:\n${ragText}` : '',
-      );
-    } else {
-      rendered = rendered.replace(/\{% if ragContext %}.*?\{% endif %\}/gs, '');
+    if (params.currentQuestion?.options) {
+      values.currentQuestionOptions = params.currentQuestion.options.join(', ');
     }
 
-    // Current question
-    if (params.currentQuestion) {
-      const qText = `\nPregunta actual: ${params.currentQuestion.text}\n`;
-      const options = params.currentQuestion.options
-        ? `Opciones: ${params.currentQuestion.options.join(', ')}\n`
-        : '';
-      rendered = rendered.replace(/\{% if currentQuestion %}.*?\{% endif %\}/gs, qText + options);
-    } else {
-      rendered = rendered.replace(/\{% if currentQuestion %}.*?\{% endif %\}/gs, '');
-    }
-
-    // Conversation history
-    const historyLines = params.conversationHistory
-      .map((turn) => {
-        const role = turn.role === 'user' ? 'Estudiante' : 'Tutor';
-        return `${role}: ${turn.content}`;
-      })
-      .join('\n');
-    rendered = rendered.replace(
-      /\{% for turn in conversationHistory %}.*?\{% endfor %\}/gs,
-      historyLines,
-    );
-
-    // History summary
-    if (params.historySummary) {
-      const summaryBlock = `\n[RESUMEN DE CONVERSACIÓN ANTERIOR]\n${params.historySummary}\n[/RESUMEN]`;
-      rendered = rendered.replace(/\{% if historySummary %}.*?\{% endif %\}/gs, summaryBlock);
-    } else {
-      rendered = rendered.replace(/\{% if historySummary %}.*?\{% endif %\}/gs, '');
-    }
-
-    // Remove any leftover tags
-    rendered = rendered.replace(/\{%[^%]*%\}/g, '');
-
-    return rendered;
+    return values;
   }
 
   private getDefaultPersona(state: PedagogicalState): string {

@@ -52,14 +52,7 @@ import {
   type EvaluationResult,
   type EvaluationRequest,
 } from '@/features/evaluation/domain/entities/evaluation-types';
-import {
-  EXTRACT_CONCEPTS_USER_TEMPLATE,
-  CLASSIFY_USER_TEMPLATE,
-  GENERATE_FEEDBACK_USER_TEMPLATE,
-  buildExtractConceptsPrompt,
-  buildClassifyPrompt,
-  buildFeedbackPrompt,
-} from '@/features/evaluation/domain/constants/evaluation.prompts';
+import { getEvaluationPromptRepository } from '@/features/evaluation/infrastructure/prompts/evaluation-prompt-repository';
 import {
   ExtractConceptsResponseSchema,
   ClassificationResponseSchema,
@@ -245,14 +238,15 @@ export class LessonEvaluatorUseCase {
     questionText: string,
     studentAnswer: string,
   ): Promise<ExtractConceptsResponse> {
-    const prompt = buildExtractConceptsPrompt(
-      questionText,
-      studentAnswer,
-      EXTRACT_CONCEPTS_USER_TEMPLATE,
-      {},
-    );
+    const repo = getEvaluationPromptRepository();
+    const values: PromptValues = {
+      questionText: questionText,
+      studentAnswer: studentAnswer,
+    };
 
-    const rawResponse = await this.executeWithRetry(prompt);
+    const fullPrompt = repo.buildExtractConceptsPrompt(values);
+
+    const rawResponse = await this.executeWithRetry(fullPrompt);
     return this.validateSchema(rawResponse, ExtractConceptsResponseSchema);
   }
 
@@ -271,12 +265,10 @@ export class LessonEvaluatorUseCase {
     const { teacherConfig, questionText, lessonContext, studentProfile } = request;
     const maxScore = teacherConfig.maxScore ?? 10;
 
-    // Build concepts string for the prompt
     const conceptsStr = concepts.ideas.join('; ');
-
-    // Pre-process exemplars
     const exemplarsSection = this.buildExemplarsSection(teacherConfig.exemplars);
 
+    const repo = getEvaluationPromptRepository();
     const values: PromptValues = {
       questionText: questionText,
       studentAnswer: request.studentAnswer,
@@ -294,9 +286,9 @@ export class LessonEvaluatorUseCase {
       maxScore: String(maxScore),
     };
 
-    const prompt = buildClassifyPrompt(CLASSIFY_USER_TEMPLATE, values, maxScore);
+    const fullPrompt = repo.buildClassifyPrompt(values, maxScore);
 
-    const rawResponse = await this.executeWithRetry(prompt);
+    const rawResponse = await this.executeWithRetry(fullPrompt);
     return this.validateSchema(rawResponse, ClassificationResponseSchema);
   }
 
@@ -314,6 +306,7 @@ export class LessonEvaluatorUseCase {
   ): Promise<FeedbackResponse> {
     const maxScore = request.teacherConfig.maxScore ?? 10;
 
+    const repo = getEvaluationPromptRepository();
     const values: PromptValues = {
       questionText: request.questionText,
       studentAnswer: request.studentAnswer,
@@ -324,9 +317,9 @@ export class LessonEvaluatorUseCase {
       studentName: request.studentProfile?.name ?? 'Estudiante',
     };
 
-    const prompt = buildFeedbackPrompt(GENERATE_FEEDBACK_USER_TEMPLATE, values, maxScore);
+    const fullPrompt = repo.buildFeedbackPrompt(values);
 
-    const rawResponse = await this.executeWithRetry(prompt);
+    const rawResponse = await this.executeWithRetry(fullPrompt);
     return this.validateSchema(rawResponse, FeedbackResponseSchema);
   }
 

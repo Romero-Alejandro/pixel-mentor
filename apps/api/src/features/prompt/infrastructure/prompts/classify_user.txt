@@ -1,0 +1,22 @@
+PREGUNTA:
+{{questionText}}
+
+RESPUESTA DEL ESTUDIANTE:
+{{studentAnswer}}
+
+CONCEPTOS EXTRAÍDOS POR EL ESTUDIANTE:
+{{extractedConcepts}}
+
+CONTEXTO DE LA LECCIÓN:
+- Materia: {{subject}}
+- Nivel: {{gradeLevel}}
+- Tema: {{topic}}
+
+RÚBRICA DEL DOCENTE:
+- Verdad Central: {{centralTruth}}
+- Palabras Clave (referencia, NO obligatorio): {{requiredKeywords}}
+
+EJEMPLOS DE REFERENCIA:
+{{exemplarsSection}}
+
+CLASIFICA LA RESPUESTA USANDO LAS 6 CATEGORÍAS.
