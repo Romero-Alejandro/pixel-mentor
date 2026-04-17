@@ -1,4 +1,7 @@
-import { GamificationConfig, type GamificationConfigType } from '@/features/gamification/config/gamification.config.js';
+import {
+  GamificationConfig,
+  type GamificationConfigType,
+} from '@/features/gamification/config/gamification.config.js';
 
 describe('GamificationConfig', () => {
   describe('BASE_LESSON_XP', () => {

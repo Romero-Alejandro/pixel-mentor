@@ -1,7 +1,6 @@
 import type { IDailyActivityRepository } from '../../domain/ports/daily-activity.repository.port';
 
 import { prisma } from '@/database/client.js';
-import { Prisma } from '@/database/generated/client/index.js';
 
 export class PrismaDailyActivityRepository implements IDailyActivityRepository {
   async recordActivity(userId: string, date: Date): Promise<void> {
