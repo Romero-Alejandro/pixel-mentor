@@ -28,6 +28,7 @@ const mapToDomain = (entity: PrismaUserWithoutPassword): User => {
     cohort: entity.cohort ?? DEFAULT_COHORT,
     createdAt: entity.createdAt,
     updatedAt: entity.updatedAt,
+    slug: entity.slug ?? undefined,
   };
 };
 
@@ -44,6 +45,7 @@ const mapToDomainWithPassword = (entity: PrismaUser): User => {
     passwordHash: entity.passwordHash,
     createdAt: entity.createdAt,
     updatedAt: entity.updatedAt,
+    slug: entity.slug ?? undefined,
   };
 };
 
@@ -153,6 +155,7 @@ export class PrismaUserRepository implements IUserRepository {
           cohort: true,
           createdAt: true,
           updatedAt: true,
+          slug: true,
         },
       });
       return mapToDomain(created);
@@ -183,6 +186,7 @@ export class PrismaUserRepository implements IUserRepository {
           cohort: true,
           createdAt: true,
           updatedAt: true,
+          slug: true,
         },
       });
       return mapToDomain(updated);
@@ -208,6 +212,7 @@ export class PrismaUserRepository implements IUserRepository {
           cohort: true,
           createdAt: true,
           updatedAt: true,
+          slug: true,
         },
       });
       return mapToDomain(updated);
@@ -256,6 +261,7 @@ export class PrismaUserRepository implements IUserRepository {
           cohort: true,
           createdAt: true,
           updatedAt: true,
+          slug: true,
         },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limit,
