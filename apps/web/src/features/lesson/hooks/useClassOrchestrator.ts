@@ -123,13 +123,31 @@ export function useClassOrchestrator() {
           lessonState.setContentText('');
 
           return await new Promise<LessonResponse>((resolve, reject) => {
+            let resolved = false;
+            const fallbackState = {
+              voiceText: '',
+              pedagogicalState: 'EXPLANATION' as const,
+              sessionCompleted: false,
+              lessonProgress: { currentStep: 1, totalSteps: 10 },
+            };
+            const timeout = setTimeout(() => {
+              if (!resolved) {
+                console.warn('[DEBUG] Stream timeout, using fallback response');
+                resolve(fallbackState);
+              }
+            }, 5000);
+
             const controller = streamInteractWithRecipe(sid, input, {
               onMessage: (event: EventSourceMessage) => {
                 if (event.event === 'end') {
                   try {
+                    clearTimeout(timeout);
+                    resolved = true;
                     const data = JSON.parse(event.data);
                     resolve({ ...data, voiceText: fullText });
                   } catch (e) {
+                    clearTimeout(timeout);
+                    resolved = true;
                     reject(new Error('Error parsing stream end data'));
                   }
                 } else if (event.event === 'chunk') {
@@ -142,8 +160,16 @@ export function useClassOrchestrator() {
                   }
                 }
               },
-              onError: reject,
+              onError: (err) => {
+                clearTimeout(timeout);
+                if (!resolved) reject(err);
+              },
               onClose: () => {
+                clearTimeout(timeout);
+                if (!resolved) {
+                  console.warn('[DEBUG] Stream closed before receiving end event, using fallback');
+                  resolve(fallbackState);
+                }
                 isInteractingRef.current = false;
                 store.setIsStreaming(false);
               },
@@ -311,9 +337,27 @@ export function useClassOrchestrator() {
       const canAutoAdvance = !needsUserInput && !sessionCompleted;
 
       if (canAutoAdvance && voiceText.trim()) {
+        if (isInteractingRef.current) {
+          console.log(
+            '[DEBUG] Waiting for previous interaction to complete before auto-advancing...',
+          );
+          let waitCount = 0;
+          while (isInteractingRef.current && waitCount < 50) {
+            await new Promise((r) => setTimeout(r, 100));
+            waitCount++;
+          }
+        }
         const next = await doInteract('__auto__');
         if (next) await processResponse(next, false);
       } else if (pedagogicalState === 'AWAITING_START') {
+        if (isInteractingRef.current) {
+          console.log('[DEBUG] Waiting for previous interaction to complete before auto-start...');
+          let waitCount = 0;
+          while (isInteractingRef.current && waitCount < 50) {
+            await new Promise((r) => setTimeout(r, 100));
+            waitCount++;
+          }
+        }
         const next = await doInteract('listo');
         if (next) await processResponse(next, false);
       }

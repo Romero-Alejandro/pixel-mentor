@@ -17,13 +17,18 @@ import { createSessionsRouter } from '@/features/session/infrastructure/http/ses
 import { createTTSRouter } from '@/features/tts/infrastructure/http/tts.routes.js';
 import { createGamificationRouter } from '@/features/gamification/infrastructure/http/gamification.routes.js';
 import { createGamificationEventsRouter } from '@/features/gamification/infrastructure/http/gamification-events.routes.js';
-import { createClassRouter } from '@/features/class/infrastructure/http/classes.routes.js';
+import {
+  createClassRouter,
+  createClassLessonStudentRouter,
+} from '@/features/class/infrastructure/http/classes.routes.js';
 import {
   createClassAIRouter,
   createClassAISuggestionsRouter,
 } from '@/features/class/infrastructure/http/class-ai.routes.js';
 import { createClassTemplateRouter } from '@/features/class/infrastructure/http/class-templates.routes.js';
 import { createRecipeAIRouter } from '@/features/recipe/infrastructure/http/recipe-ai.routes.js';
+import { GroupService } from '@/features/group/application/services/group.service.js';
+import { setupGroupRoutes } from './app.group-routes.js';
 import { createAdminRouter } from '@/shared/http/admin.routes.js';
 import { createLLMGovernanceRouter } from '@/shared/http/llm-governance.routes.js';
 
@@ -164,6 +169,7 @@ export function createApp(deps: AppDependencies): Express {
       auth.registerUseCase,
       auth.loginUseCase,
       auth.refreshTokenUseCase,
+      auth.resolveUserByEmailUseCase,
       protectedMiddleware,
     ),
   );
@@ -222,6 +228,10 @@ export function createApp(deps: AppDependencies): Express {
       session.listSessionsUseCase,
       session.resetSessionUseCase,
       session.completeSessionUseCase,
+      // New dependencies for start-lesson endpoint
+      (globalThis as any).__startRecipeUseCase, // startRecipeUseCase from globalThis
+      classContainer.classService, // classService from class container
+      classContainer.classLessonRepository, // classLessonRepository from class container
     ),
   );
 
@@ -259,12 +269,24 @@ export function createApp(deps: AppDependencies): Express {
     createRecipeAIRouter({ recipeAIService: recipe.recipeAIService }),
   );
 
+  // Get recipe use cases from global (must be before routes that use them)
+  const startRecipeUseCase = (globalThis as any).__startRecipeUseCase;
+
+  // Student-facing class lesson routes (protected, requires auth only)
+  app.use(
+    '/api/classes',
+    protectedMiddleware,
+    createClassLessonStudentRouter({
+      classService: classContainer.classService,
+      classLessonRepository: classContainer.classLessonRepository,
+      startRecipeUseCase,
+      orchestrateUseCase,
+    }),
+  );
+
   // Class routes (protected, requires TEACHER or ADMIN role)
   const classMiddleware = [protectedMiddleware, requireRole('TEACHER', 'ADMIN')];
   console.log('🔍 Debug classMiddleware:', classMiddleware);
-
-  // Get recipe use cases from global
-  const startRecipeUseCase = (globalThis as any).__startRecipeUseCase;
 
   app.use(
     '/api/classes',
@@ -291,6 +313,9 @@ export function createApp(deps: AppDependencies): Express {
     ...classMiddleware,
     createClassTemplateRouter({ classTemplateService: classContainer.classTemplateService }),
   );
+
+  // Group routes (protected, requires TEACHER or ADMIN role)
+  setupGroupRoutes(app, protectedMiddleware, requireRole);
 
   // Admin routes (protected, requires ADMIN role)
   const adminMiddleware = [protectedMiddleware, requireRole('ADMIN')] as const;
