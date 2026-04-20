@@ -47,6 +47,18 @@ export class PrismaRecipeRepository implements RecipeRepository {
     return raw.map(this.mapRecipe);
   }
 
+  async findByUserId(userId: string): Promise<Recipe[]> {
+    const raw = await prisma.recipe.findMany({ where: { authorId: userId } });
+    return raw.map(this.mapRecipe);
+  }
+
+  async findByUserIdAndPublished(userId: string, published: boolean): Promise<Recipe[]> {
+    const raw = await prisma.recipe.findMany({
+      where: { authorId: userId, published },
+    });
+    return raw.map(this.mapRecipe);
+  }
+
   async create(recipe: RecipeCreateInput): Promise<Recipe> {
     const raw = await prisma.recipe.create({
       data: {

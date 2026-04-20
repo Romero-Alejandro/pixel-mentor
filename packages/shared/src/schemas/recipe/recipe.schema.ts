@@ -175,6 +175,8 @@ export type GetRecipeInput = z.infer<typeof GetRecipeInputSchema>;
 
 export const ListRecipesInputSchema = z.object({
   activeOnly: z.boolean().optional().default(true),
+  isMy: z.boolean().optional(),
+  publishedOnly: z.boolean().optional(),
 });
 
 export type ListRecipesInput = z.infer<typeof ListRecipesInputSchema>;

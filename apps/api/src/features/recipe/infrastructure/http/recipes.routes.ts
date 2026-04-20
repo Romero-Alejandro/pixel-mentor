@@ -113,17 +113,22 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
     // @ts-expect-error - Express 5 compatibility
     async (request: AppRequest, response: Response, next: NextFunction): Promise<void> => {
       try {
-        const query: any = {};
-        const rawActiveOnly = request.query.activeOnly;
-        if (rawActiveOnly !== undefined) {
-          const val = Array.isArray(rawActiveOnly) ? rawActiveOnly[0] : rawActiveOnly;
-          query.published = val === 'true';
-        }
+        const rawIsMy = request.query.isMy;
+        const rawPublishedOnly = request.query.publishedOnly;
+
+        const query = {
+          isMy: rawIsMy !== undefined ? rawIsMy === 'true' : undefined,
+          publishedOnly: rawPublishedOnly !== undefined ? rawPublishedOnly === 'true' : undefined,
+        };
 
         const validated = ListRecipesInputSchema.parse(query);
 
-        const activeOnly = validated.published ?? true;
-        const recipes = await listRecipesUseCase.execute(activeOnly);
+        const userId = request.user?.id;
+        const recipes = await listRecipesUseCase.execute({
+          isMy: validated.isMy,
+          publishedOnly: validated.publishedOnly,
+          userId,
+        });
 
         response.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
         response.json(recipes);

@@ -39,6 +39,8 @@ export interface RecipeRepository {
   findByIdWithSteps(id: string): Promise<Recipe | null>;
   findAll(): Promise<Recipe[]>;
   findPublished(): Promise<Recipe[]>;
+  findByUserId(userId: string): Promise<Recipe[]>;
+  findByUserIdAndPublished(userId: string, published: boolean): Promise<Recipe[]>;
   create(recipe: RecipeCreateInput): Promise<Recipe>;
   update(id: string, data: RecipeUpdateInput): Promise<Recipe>;
   delete(id: string): Promise<void>;

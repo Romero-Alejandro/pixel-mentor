@@ -18,10 +18,12 @@ interface RecipeSelectorProps {
 
 type FilterTab = 'all' | 'my-recipes' | 'published';
 
-const FILTER_MAPPING: Record<FilterTab, 'my' | 'published' | undefined> = {
+type FetchRecipesOptions = { isMy?: boolean; publishedOnly?: boolean } | undefined;
+
+const FILTER_MAPPING: Record<FilterTab, FetchRecipesOptions> = {
   all: undefined,
-  'my-recipes': 'my',
-  published: 'published',
+  'my-recipes': { isMy: true },
+  published: { publishedOnly: true },
 };
 
 const renderSafe = (value: unknown): string => {
@@ -60,8 +62,7 @@ export function RecipeSelector({ isOpen, onClose, onSelect }: RecipeSelectorProp
 
   useEffect(() => {
     if (isOpen && isTeacher) {
-      const status = FILTER_MAPPING[filterTab];
-      fetchRecipes(status ? { status } : undefined);
+      fetchRecipes(FILTER_MAPPING[filterTab]);
     }
   }, [isOpen, filterTab, isTeacher, fetchRecipes]);
 
