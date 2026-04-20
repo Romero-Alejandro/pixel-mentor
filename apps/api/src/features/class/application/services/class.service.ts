@@ -5,6 +5,7 @@
  */
 
 import { prisma } from '@/database/client.js';
+import { assertValidUUID } from '@/shared/validators/entity-validators';
 
 import type {
   IClassRepository,
@@ -111,6 +112,19 @@ export class LessonNotFoundError extends Error {
   }
 }
 
+export class ClassEnrollmentError extends Error {
+  readonly code = 'CLASS_ENROLLMENT_ERROR' as const;
+  readonly classId: string;
+  readonly userId: string;
+
+  constructor(classId: string, userId: string) {
+    super(`User ${userId} is not enrolled in class ${classId}`);
+    this.name = 'ClassEnrollmentError';
+    this.classId = classId;
+    this.userId = userId;
+  }
+}
+
 // Class Service
 export class ClassService {
   constructor(
@@ -142,13 +156,16 @@ export class ClassService {
     return this.getClass(classEntity.id);
   }
 
-  async getClass(id: string): Promise<ClassWithLessons> {
-    const classEntity = await this.classRepo.findById(id);
+  async getClass(idOrSlug: string): Promise<ClassWithLessons> {
+    const classId = await this._resolveClassIdOrSlug(idOrSlug);
+    const classEntity = await this.classRepo.findById(classId);
     if (!classEntity) {
-      throw new ClassNotFoundError(id);
+      // This should ideally not happen if _resolveClassIdOrSlug already threw
+      // but keeping for type safety and defensive programming.
+      throw new ClassNotFoundError(classId);
     }
 
-    const lessons = await this.lessonRepo.findByClassId(id);
+    const lessons = await this.lessonRepo.findByClassId(classId);
 
     return {
       ...classEntity,
@@ -156,47 +173,49 @@ export class ClassService {
     } as ClassWithLessons;
   }
 
-  async updateClass(id: string, tutorId: string, data: UpdateClassInput): Promise<Class> {
-    const classEntity = await this.classRepo.findById(id);
+  async updateClass(idOrSlug: string, tutorId: string, data: UpdateClassInput): Promise<Class> {
+    const classId = await this._resolveClassIdOrSlug(idOrSlug);
+    const classEntity = await this.classRepo.findById(classId);
     if (!classEntity) {
-      throw new ClassNotFoundError(id);
+      throw new ClassNotFoundError(classId);
     }
 
     if (classEntity.tutorId !== tutorId) {
-      throw new ClassOwnershipError(id, tutorId);
+      throw new ClassOwnershipError(classId, tutorId);
     }
 
     if (classEntity.status !== 'DRAFT') {
       throw new ClassStateError(
-        id,
+        classId,
         `Cannot update class in status ${classEntity.status}. Only DRAFT classes can be edited.`,
       );
     }
 
-    return this.classRepo.update(id, {
+    return this.classRepo.update(classId, {
       title: data.title,
       description: data.description,
     });
   }
 
-  async deleteClass(id: string, tutorId: string): Promise<void> {
-    const classEntity = await this.classRepo.findById(id);
+  async deleteClass(idOrSlug: string, tutorId: string): Promise<void> {
+    const classId = await this._resolveClassIdOrSlug(idOrSlug);
+    const classEntity = await this.classRepo.findById(classId);
     if (!classEntity) {
-      throw new ClassNotFoundError(id);
+      throw new ClassNotFoundError(classId);
     }
 
     if (classEntity.tutorId !== tutorId) {
-      throw new ClassOwnershipError(id, tutorId);
+      throw new ClassOwnershipError(classId, tutorId);
     }
 
     if (classEntity.status !== 'DRAFT') {
       throw new ClassStateError(
-        id,
+        classId,
         `Cannot delete class in status ${classEntity.status}. Only DRAFT classes can be deleted.`,
       );
     }
 
-    await this.classRepo.delete(id);
+    await this.classRepo.delete(classId);
   }
 
   async listClasses(
@@ -224,32 +243,36 @@ export class ClassService {
     };
   }
 
-  async publishClass(id: string, tutorId: string): Promise<Class> {
-    const classEntity = await this.classRepo.findById(id);
+  async publishClass(idOrSlug: string, tutorId: string): Promise<Class> {
+    const classId = await this._resolveClassIdOrSlug(idOrSlug);
+    const classEntity = await this.classRepo.findById(classId);
     if (!classEntity) {
-      throw new ClassNotFoundError(id);
+      throw new ClassNotFoundError(classId);
     }
 
     if (classEntity.tutorId !== tutorId) {
-      throw new ClassOwnershipError(id, tutorId);
+      throw new ClassOwnershipError(classId, tutorId);
     }
 
     if (classEntity.status === 'PUBLISHED') {
-      throw new ClassStateError(id, 'Class is already published');
+      throw new ClassStateError(classId, 'Class is already published');
     }
 
-    const lessons = await this.lessonRepo.findByClassId(id);
+    const lessons = await this.lessonRepo.findByClassId(classId);
     if (lessons.length < 1) {
       throw new ClassValidationError('Class must have at least 1 lesson before publishing');
     }
 
     const newVersion = classEntity.version + 1;
     const versionString = `${newVersion}.0.0`;
-    const slug = this.generateSlug(classEntity.title);
+    const slug = this.generateSlug(classEntity.title); // This slug will be for the ClassVersion, not the Class itself
+
+    // Update the Class entity with the generated slug
+    await this.classRepo.update(classId, { slug: slug });
 
     // Create version first to get its ID
     await this.versionRepo.create({
-      classId: id,
+      classId: classId,
       version: versionString,
       publishedAt: new Date(),
       isPublished: true,
@@ -267,37 +290,38 @@ export class ClassService {
       })),
     });
 
-    await this.classRepo.update(id, {
+    await this.classRepo.update(classId, {
       status: 'PUBLISHED',
       version: newVersion,
     });
 
-    const updated = await this.classRepo.findById(id);
+    const updated = await this.classRepo.findById(classId);
     if (!updated) {
-      throw new ClassNotFoundError(id);
+      throw new ClassNotFoundError(classId);
     }
     return updated;
   }
 
-  async unpublishClass(id: string, tutorId: string): Promise<Class> {
-    const classEntity = await this.classRepo.findById(id);
+  async unpublishClass(idOrSlug: string, tutorId: string): Promise<Class> {
+    const classId = await this._resolveClassIdOrSlug(idOrSlug);
+    const classEntity = await this.classRepo.findById(classId);
     if (!classEntity) {
-      throw new ClassNotFoundError(id);
+      throw new ClassNotFoundError(classId);
     }
 
     if (classEntity.tutorId !== tutorId) {
-      throw new ClassOwnershipError(id, tutorId);
+      throw new ClassOwnershipError(classId, tutorId);
     }
 
     if (classEntity.status === 'DRAFT') {
-      throw new ClassStateError(id, 'Class is already in DRAFT status');
+      throw new ClassStateError(classId, 'Class is already in DRAFT status');
     }
 
-    await this.classRepo.update(id, { status: 'DRAFT' });
+    await this.classRepo.update(classId, { status: 'DRAFT' });
 
-    const updated = await this.classRepo.findById(id);
+    const updated = await this.classRepo.findById(classId);
     if (!updated) {
-      throw new ClassNotFoundError(id);
+      throw new ClassNotFoundError(classId);
     }
     return updated;
   }
@@ -444,6 +468,68 @@ export class ClassService {
     }
 
     await this.lessonRepo.reorder(classId, lessonIds);
+  }
+
+  async isUserEnrolledInClass(userId: string, classId: string): Promise<boolean> {
+    console.log(`[DEBUG] Verificando acceso: classId=${classId}, userId=${userId}`);
+
+    // 1. Verificar si la clase existe (sin importar el estado)
+    const classEntity = await prisma.class.findUnique({
+      where: { id: classId },
+    });
+    if (!classEntity) {
+      console.log(`[DEBUG] Clase no encontrada: ${classId}`);
+      return false;
+    }
+
+    console.log(`[DEBUG] Estado de la clase: ${classEntity.status}`);
+
+    // 2. Verificar si el usuario es miembro de un grupo que tiene acceso a la clase
+    const groupClass = await prisma.groupClass.findFirst({
+      where: {
+        classId,
+        group: {
+          memberships: {
+            some: { studentId: userId },
+          },
+        },
+      },
+    });
+
+    console.log(`[DEBUG] Resultado de groupClass: ${JSON.stringify(groupClass)}`);
+    return !!groupClass;
+  }
+
+  async getLesson(classId: string, lessonId: string): Promise<ClassLessonEntity> {
+    const classEntity = await this.classRepo.findById(classId);
+    if (!classEntity) {
+      throw new ClassNotFoundError(classId);
+    }
+
+    const lessons = await this.lessonRepo.findByClassId(classId);
+    const lesson = lessons.find((l) => l.id === lessonId);
+
+    if (!lesson) {
+      throw new LessonNotFoundError(lessonId);
+    }
+
+    return lesson;
+  }
+
+  private async _resolveClassIdOrSlug(idOrSlug: string): Promise<string> {
+    // 1. Check if it's a valid UUID
+    try {
+      assertValidUUID(idOrSlug);
+      return idOrSlug; // It's a UUID, return directly
+    } catch (error) {
+      // Not a UUID, proceed to check as ID (fallback for legacy cases)
+      const classEntity = await this.classRepo.findById(idOrSlug);
+      if (classEntity) {
+        return classEntity.id;
+      }
+      // If not found as ID, throw error (slug support removed for simplicity)
+      throw new ClassNotFoundError(idOrSlug);
+    }
   }
 
   private generateSlug(title: string): string {

@@ -7,8 +7,14 @@ import type { ClassEntity, ClassStatus } from '../../domain/entities/class.entit
 
 import { prisma } from '@/database/client.js';
 
+const isValidUUID = (uuid: string): boolean => {
+  const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+  return uuidRegex.test(uuid);
+};
+
 function mapPrismaToClassEntity(prismaClass: {
   id: string;
+  shortId: string | null;
   title: string;
   description: string | null;
   tutorId: string;
@@ -34,6 +40,7 @@ function mapPrismaToClassEntity(prismaClass: {
 }): ClassEntity {
   return {
     id: prismaClass.id,
+    shortId: prismaClass.shortId ?? undefined,
     title: prismaClass.title,
     description: prismaClass.description ?? undefined,
     tutorId: prismaClass.tutorId,
@@ -63,8 +70,30 @@ function mapPrismaToClassEntity(prismaClass: {
 
 export class PrismaClassRepository implements IClassRepository {
   async findById(id: string): Promise<ClassEntity | null> {
+    let classEntity;
+    if (isValidUUID(id)) {
+      classEntity = await prisma.class.findUnique({
+        where: { id },
+        include: {
+          lessons: { orderBy: { order: 'asc' } },
+        },
+      });
+    } else {
+      classEntity = await prisma.class.findUnique({
+        where: { shortId: id },
+        include: {
+          lessons: { orderBy: { order: 'asc' } },
+        },
+      });
+    }
+
+    if (!classEntity) return null;
+    return mapPrismaToClassEntity(classEntity);
+  }
+
+  async findBySlug(slug: string): Promise<ClassEntity | null> {
     const classEntity = await prisma.class.findUnique({
-      where: { id },
+      where: { slug },
       include: {
         lessons: { orderBy: { order: 'asc' } },
       },
@@ -120,6 +149,7 @@ export class PrismaClassRepository implements IClassRepository {
         currentVersionId: classData.currentVersionId,
         status: classData.status,
         version: classData.version,
+        shortId: classData.shortId,
       },
       include: { lessons: { orderBy: { order: 'asc' } } },
     });
@@ -141,6 +171,7 @@ export class PrismaClassRepository implements IClassRepository {
       updateData.currentVersionId = classData.currentVersionId;
     if (classData.status !== undefined) updateData.status = classData.status;
     if (classData.version !== undefined) updateData.version = classData.version;
+    if (classData.shortId !== undefined) updateData.shortId = classData.shortId;
 
     const updated = await prisma.class.update({
       where: { id },

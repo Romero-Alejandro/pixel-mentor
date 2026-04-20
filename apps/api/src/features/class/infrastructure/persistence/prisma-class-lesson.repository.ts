@@ -47,6 +47,22 @@ export class PrismaClassLessonRepository implements IClassLessonRepository {
     return lesson ? mapPrismaToClassLessonEntity(lesson) : null;
   }
 
+  async findClassIdByLessonId(lessonId: string): Promise<string | null> {
+    // Try to find as ClassLesson (UUID)
+    const classLesson = await prisma.classLesson.findUnique({
+      where: { id: lessonId },
+      select: {
+        classId: true,
+      },
+    });
+
+    if (classLesson?.classId) {
+      return classLesson.classId;
+    }
+
+    return null;
+  }
+
   async findByRecipeId(recipeId: string): Promise<ClassLessonEntity[]> {
     const lessons = await prisma.classLesson.findMany({
       where: { recipeId },
