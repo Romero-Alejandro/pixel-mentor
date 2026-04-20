@@ -1,6 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { authApi, type User } from '../services/auth.api';
 import { setToken, getToken, clearToken } from '@/services/api-client';
+import { useAuthUIStore } from '../stores/auth.store';
+import { closeAudioContext } from '@/audio/micro/zzfx';
+
+import { logger } from '@/utils/logger';
 
 interface AuthResponse {
   user: User;
@@ -64,14 +68,31 @@ export function useAuth() {
     },
   });
 
+  /**
+   * Cleans up all user-specific global state on logout.
+   * Preserves user preferences (volume, muted) that persist across sessions.
+   */
+  const cleanupUserState = () => {
+    clearToken();
+    queryClient.clear();
+
+    useAuthUIStore.getState().closeModals();
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('auth-redirect-path');
+    }
+
+    try {
+      closeAudioContext();
+    } catch (e) {
+      logger.warn('Failed to close audio context', e);
+    }
+  };
+
   // Logout mutation
   const logoutMutation = useMutation({
-    mutationFn: async () => {
-      // Call logout endpoint if needed, otherwise just clear local state
-    },
+    mutationFn: async () => {},
     onSettled: () => {
-      clearToken();
-      queryClient.clear(); // Clear all cached data
+      cleanupUserState();
     },
   });
 
@@ -93,6 +114,7 @@ export function useAuth() {
     register: registerMutation.mutateAsync,
     logout: logoutMutation.mutateAsync,
     isLoggingIn: loginMutation.isPending,
+    isLoggingOut: logoutMutation.isPending,
     isRegistering: registerMutation.isPending,
     loginError: loginMutation.error,
     registerError: registerMutation.error,

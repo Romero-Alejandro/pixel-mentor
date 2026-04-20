@@ -81,7 +81,7 @@ export function MissionNode({
               {classItem.lessons?.map((lesson, idx) => (
                 <Link
                   key={lesson.id}
-                  to={`/lesson/${lesson.recipeId}`}
+                  to={`/lesson/${lesson.id}`}
                   className="w-full flex items-center gap-3 p-3 bg-slate-50 hover:bg-sky-50 rounded-[1.25rem] border-2 border-b-4 border-slate-200 hover:border-sky-300 hover:border-b-sky-400 active:border-b-2 active:translate-y-[2px] transition-all text-left outline-none group/lesson"
                   onClick={onInteract}
                 >

@@ -8,6 +8,7 @@ import type {
 
 export interface IClassRepository {
   findById(id: string): Promise<ClassEntity | null>;
+  findBySlug(slug: string): Promise<ClassEntity | null>;
 
   findByTutorId(
     tutorId: string,
@@ -32,6 +33,7 @@ export interface IClassLessonRepository {
   findByClassId(classId: string): Promise<ClassLessonEntity[]>;
 
   findById(id: string): Promise<ClassLessonEntity | null>;
+  findClassIdByLessonId(lessonId: string): Promise<string | null>;
 
   findByRecipeId(recipeId: string): Promise<ClassLessonEntity[]>;
 

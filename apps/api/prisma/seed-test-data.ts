@@ -261,7 +261,7 @@ async function main() {
 
   // Find admin user created by seed-admin.ts
   const admin = await prisma.user.findFirst({
-    where: { role: 'ADMIN' },
+    where: { role: 'ADMIN', email: 'admin@pixel-mentor.local' },
   });
 
   if (!admin) {
@@ -2205,16 +2205,71 @@ async function main() {
       },
     });
 
+    const testClassId = randomUUID();
+    await prisma.class.create({
+      data: {
+        id: testClassId,
+        title: 'Clase de Prueba: Matemáticas y Figuras',
+        description: 'Clase de prueba para verificar lecciones y recetas',
+        status: 'DRAFT',
+        tutorId: TEST_TEACHER_ID,
+        lessons: {
+          create: [
+            { recipeId: mathRecipeId, order: 1 },
+            { recipeId: shapesRecipeId, order: 2 },
+          ],
+        },
+      },
+    });
+
+    // Crear un grupo de prueba y asignar el estudiante y la clase
+    const testGroupId = randomUUID();
+
+    // 1. Crear el grupo
+    await prisma.group.create({
+      data: {
+        id: testGroupId,
+        name: 'Grupo de Prueba para Clase',
+        teacherId: TEST_TEACHER_ID,
+      },
+    });
+
+    // 2. Crear el miembro del grupo (GroupMember)
+    await prisma.groupMember.create({
+      data: {
+        groupId: testGroupId,
+        studentId: TEST_STUDENT_ID,
+        status: 'ACTIVE',
+      },
+    });
+
+    // 3. Asociar la clase al grupo (GroupClass)
+    await prisma.groupClass.create({
+      data: {
+        groupId: testGroupId,
+        classId: testClassId,
+        order: 0,
+      },
+    });
+
+    // Publicar la clase para que sea accesible
+    await prisma.class.update({
+      where: { id: testClassId },
+      data: { status: 'PUBLISHED' },
+    });
+
     console.log('\n🎉 Seed completed!');
     console.log('─────────────────────────────────────────────');
     console.log('📋 Recetas creadas:');
     console.log(`  Math:   ${mathRecipeId}  (${mathSteps.length} pasos)`);
     console.log(`  Shapes: ${shapesRecipeId}  (${shapesSteps.length} pasos)`);
+    console.log(`\n📚 Clase de prueba: ${testClassId} (PUBLICADA)`);
+    console.log(`👥 Grupo de prueba: ${testGroupId}`);
     console.log('\n👤 Credenciales:');
     console.log('  student@test.pixel-mentor / testpassword123');
     console.log('  teacher@test.pixel-mentor / testpassword123');
     console.log(
-      '\n💡 Todo el contenido quedó auto-contenido, estructurado y alineado al esquema Prisma.',
+      '💡 Todo el contenido quedó auto-contenido, estructurado y alineado al esquema Prisma.',
     );
     console.log('─────────────────────────────────────────────');
   } catch (error) {

@@ -1,13 +1,14 @@
-# openspec/config.yaml
+# SDD Configuration for pixel-mentor
+
 schema: spec-driven
 
 context: |
-  Tech stack: pnpm monorepo, Express/Prisma backend, React/Zustand frontend, Jest/Vitest/Playwright testing
-  Architecture: Hexagonal Architecture for backend, Feature-sliced for frontend
-  Testing: Jest (backend), Vitest (frontend), Playwright (E2E)
+  Tech stack: Node.js, Express, React, TypeScript, Prisma, PostgreSQL
+  Architecture: Hexagonal architecture for backend, Feature-based organization for frontend
+  Testing: Jest (backend), Playwright (E2E), Vitest (frontend unit tests)
   Style: ESLint, Prettier
 
-strict_tdd: true
+strict_tdd: false
 
 rules:
   proposal:
@@ -31,3 +32,25 @@ rules:
     - Compare implementation against every spec scenario
   archive:
     - Warn before merging destructive deltas (large removals)
+
+testing:
+  test_runner:
+    command: 'pnpm test'
+    framework: 'Jest'
+  test_layers:
+    unit: true
+    integration: true
+    e2e: true
+  coverage:
+    available: true
+    command: 'pnpm test --coverage'
+  quality_tools:
+    linter:
+      available: true
+      command: 'pnpm lint'
+    type_checker:
+      available: true
+      command: 'pnpm typecheck'
+    formatter:
+      available: true
+      command: 'pnpm format'

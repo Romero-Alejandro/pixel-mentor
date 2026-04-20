@@ -20,14 +20,40 @@ import { Button, Badge, Card, Modal } from '@/components/ui';
 import { RecipeSelector } from '@/features/recipe-management/components';
 import { logger } from '@/utils/logger';
 
-// Helper de seguridad definitivo
-const renderSafe = (val: any): string => {
+type Recipe = {
+  id: string;
+  title: string;
+  expectedDurationMinutes?: number | null;
+  steps?: { length: number };
+};
+
+type LessonWithRecipe = ClassLesson & {
+  recipe?: Recipe;
+};
+
+const renderSafe = (val: unknown): string => {
   if (!val || (typeof val === 'object' && !Array.isArray(val))) return '';
   return String(val);
 };
 
 const LessonCard = memo(
-  ({ lesson, index, isLast, onMoveUp, onMoveDown, onEdit, onDelete }: any) => (
+  ({
+    lesson,
+    index,
+    isLast,
+    onMoveUp,
+    onMoveDown,
+    onEdit,
+    onDelete,
+  }: {
+    lesson: LessonWithRecipe;
+    index: number;
+    isLast: boolean;
+    onMoveUp: (index: number) => void;
+    onMoveDown: (index: number) => void;
+    onEdit: (lesson: ClassLesson) => void;
+    onDelete: (lesson: ClassLesson) => void;
+  }) => (
     <Card
       variant="mission"
       className="group border-8 border-white bg-white shadow-gummy shadow-sky-100/50 hover:border-sky-200 transition-all p-5"

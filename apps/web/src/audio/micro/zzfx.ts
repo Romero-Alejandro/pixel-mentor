@@ -75,6 +75,17 @@ const MICRO_SOUND_PARAMS: Record<MicroAudioEvent, number[]> = {
 };
 
 /**
+ * Closes the Web Audio context to free resources.
+ * Call on logout or when audio is no longer needed.
+ */
+export const closeAudioContext = (): void => {
+  if (audioCtx) {
+    audioCtx.close();
+    audioCtx = null;
+  }
+};
+
+/**
  * Generates sound based on event parameters
  */
 export const playMicroSound = (event: MicroAudioEvent, customVolume?: number): void => {

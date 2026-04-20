@@ -196,7 +196,11 @@ export function AIRecipeGeneratorModal({
     // This fires when connection is lost, but it's normal after 'complete' event
     eventSource.onerror = (err) => {
       // Only treat as error if we haven't received any data
-      if (!receivedDataRef.current.steps.length && !receivedDataRef.current.progress && !receivedDataRef.current.complete) {
+      if (
+        !receivedDataRef.current.steps.length &&
+        !receivedDataRef.current.progress &&
+        !receivedDataRef.current.complete
+      ) {
         console.error('EventSource connection error:', err);
         alert({
           title: 'Error',
@@ -244,7 +248,7 @@ export function AIRecipeGeneratorModal({
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
           {/* Loading / Streaming State */}
-          {isGenerating && (
+          {isGenerating ? (
             <div className="bg-violet-50 border-2 border-violet-200 rounded-xl p-4 mb-4">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-6 h-6 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
@@ -259,7 +263,7 @@ export function AIRecipeGeneratorModal({
               </div>
               <p className="text-xs text-violet-600 mt-2">{generationProgress}% completado</p>
               {/* Streaming steps preview */}
-              {generatedSteps.length > 0 && (
+              {generatedSteps.length > 0 ? (
                 <div className="mt-3">
                   <p className="text-xs font-medium text-violet-600">Pasos generados:</p>
                   <div className="space-y-1 mt-1">
@@ -273,9 +277,9 @@ export function AIRecipeGeneratorModal({
                     ))}
                   </div>
                 </div>
-              )}
+              ) : null}
             </div>
-          )}
+          ) : null}
           {step === 'form' ? (
             <div className="space-y-6">
               {/* Topic */}

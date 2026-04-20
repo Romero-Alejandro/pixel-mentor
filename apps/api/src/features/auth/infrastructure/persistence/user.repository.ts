@@ -28,7 +28,6 @@ const mapToDomain = (entity: PrismaUserWithoutPassword): User => {
     cohort: entity.cohort ?? DEFAULT_COHORT,
     createdAt: entity.createdAt,
     updatedAt: entity.updatedAt,
-    slug: entity.slug ?? undefined,
   };
 };
 
@@ -45,7 +44,6 @@ const mapToDomainWithPassword = (entity: PrismaUser): User => {
     passwordHash: entity.passwordHash,
     createdAt: entity.createdAt,
     updatedAt: entity.updatedAt,
-    slug: entity.slug ?? undefined,
   };
 };
 

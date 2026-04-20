@@ -6,6 +6,10 @@ import { buildContainer } from './main/container.js';
 import { createApp } from './main/app.js';
 
 import { config, getFeatureFlagService } from '@/shared/config';
+import {
+  requireRole,
+  authMiddleware,
+} from '@/features/auth/infrastructure/http/auth.middleware.js';
 import { prisma } from '@/database/client.js';
 import { runStagingValidation } from '@/shared/monitoring/staging-validation.js';
 import { initializeAIServices } from '@/shared/ai/ai-service.provider.js';
@@ -116,6 +120,8 @@ async function bootstrap(): Promise<void> {
   // Using 'any' type to bypass TypeScript issues with duplicate class declarations
   (globalThis as any).__orchestrateUseCase = orchestrateUseCase;
   (globalThis as any).__startRecipeUseCase = startRecipeUseCase;
+
+  // Add group routes after app creation (content control feature)
 
   // Create and configure Express app
   const app = createApp({

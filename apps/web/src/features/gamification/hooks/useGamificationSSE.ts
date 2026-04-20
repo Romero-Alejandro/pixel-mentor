@@ -113,10 +113,7 @@ export function useGamificationSSE(enabled = true) {
               }
               case 'badge_earned': {
                 const eventData = data as BadgeEarnedEvent;
-                store.onBadgeEarned(
-                  eventData.badge,
-                  eventData.version ?? currentVersion,
-                );
+                store.onBadgeEarned(eventData.badge, eventData.version ?? currentVersion);
                 break;
               }
               case 'level_up': {

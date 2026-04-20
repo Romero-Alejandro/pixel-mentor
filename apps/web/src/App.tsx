@@ -18,6 +18,10 @@ import { RecipesPage } from './pages/RecipesPage';
 import { RecipeEditorPage } from './pages/RecipeEditorPage';
 import { GamificationTestPage } from './pages/GamificationTestPage';
 import { LongTextTestPage } from './pages/LongTextTestPage';
+import { GroupListPage } from './pages/GroupListPage';
+import { GroupDetailPage } from './pages/GroupDetailPage';
+import { MyLearningPage } from './pages/MyLearningPage';
+import { ClassLessonsPage } from './pages/ClassLessonsPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -146,6 +150,14 @@ export default function App() {
           }
         />
         <Route
+          path="/classes/:classId/lessons"
+          element={
+            <ProtectedRoute>
+              <ClassLessonsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/mission-report"
           element={
             <ProtectedRoute>
@@ -239,6 +251,39 @@ export default function App() {
         {/* Test Routes (no auth required) - only available in development/E2E mode */}
         <Route path="/test/gamification" element={<GamificationTestPage />} />
         <Route path="/test/lesson-long-text" element={<LongTextTestPage />} />
+
+        {/* Group Routes - Teacher only */}
+        <Route
+          path="/groups"
+          element={
+            <ProtectedRoute>
+              <TeacherRoute>
+                <GroupListPage />
+              </TeacherRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/groups/:groupId"
+          element={
+            <ProtectedRoute>
+              <TeacherRoute>
+                <GroupDetailPage />
+              </TeacherRoute>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Student Learning Routes */}
+        <Route
+          path="/my-learning"
+          element={
+            <ProtectedRoute>
+              <MyLearningPage />
+            </ProtectedRoute>
+          }
+        />
+
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

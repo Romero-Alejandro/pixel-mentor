@@ -6,12 +6,20 @@ import type { GetSessionUseCase } from '@/features/session/application/use-cases
 import type { ListSessionsUseCase } from '@/features/session/application/use-cases/list-sessions.use-case';
 import type { ResetSessionUseCase } from '@/features/session/application/use-cases/reset-session.use-case';
 import type { CompleteSessionUseCase } from '@/features/session/application/use-cases/complete-session.use-case';
+import type { StartRecipeUseCase } from '@/features/recipe/application/use-cases/start-recipe.use-case'; // New Import
+import type { ClassService } from '@/features/class/application/services/class.service'; // New Import
+import type { IClassLessonRepository } from '@/features/class/domain/ports/class.repository.port'; // New Import
+import {
+  LessonNotFoundError,
+  ClassEnrollmentError,
+} from '@/features/class/application/services/class.service'; // New Import
 import {
   GetSessionInputSchema,
   ListSessionsInputSchema,
   ReplaySessionParamsSchema,
   CompleteSessionParamsSchema,
 } from '@/shared/dto/index';
+import type { AppRequest } from '@/shared/types/express.d.js'; // New Import
 
 export interface AppRequest extends Request {
   logger?: pino.Logger;
@@ -24,6 +32,9 @@ export function createSessionsRouter(
   listSessionsUseCase: ListSessionsUseCase,
   resetSessionUseCase: ResetSessionUseCase,
   completeSessionUseCase: CompleteSessionUseCase,
+  startRecipeUseCase: StartRecipeUseCase, // New Dependency
+  classService: ClassService, // New Dependency
+  classLessonRepository: IClassLessonRepository, // New Dependency
 ): Router {
   const router = Router();
 
@@ -118,6 +129,57 @@ export function createSessionsRouter(
         const result = await completeSessionUseCase.execute(params.id);
         response.json(result);
       } catch (error) {
+        if (error instanceof z.ZodError) {
+          response.status(400).json({ error: 'Validation error', details: error.issues });
+          return;
+        }
+        next(error);
+      }
+    },
+  );
+
+  router.post(
+    '/start-lesson',
+    async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+      const appRequest = request as AppRequest;
+      const studentId = appRequest.user!.id; // Authenticated user
+
+      const StartLessonSchema = z.object({
+        lessonId: z.string().min(1),
+      });
+
+      try {
+        const validated = StartLessonSchema.parse(appRequest.body);
+        const { lessonId } = validated;
+
+        // 1. Find classId from lessonId
+        const classId = await classLessonRepository.findClassIdByLessonId(lessonId);
+        if (!classId) {
+          throw new LessonNotFoundError(lessonId);
+        }
+
+        // 2. Check if student is enrolled in the class
+        const isEnrolled = await classService.isUserEnrolledInClass(studentId, classId);
+        if (!isEnrolled) {
+          throw new ClassEnrollmentError(classId, studentId);
+        }
+
+        // 3. Get recipeId from lessonId
+        const lesson = await classLessonRepository.findById(lessonId);
+        if (!lesson || !lesson.recipeId) {
+          throw new LessonNotFoundError(lessonId);
+        }
+        const recipeId = lesson.recipeId;
+
+        // 4. Start the recipe session
+        const { sessionId, resumed } = await startRecipeUseCase.execute(recipeId, studentId);
+
+        response.status(200).json({ sessionId, resumed });
+      } catch (error) {
+        if (error instanceof LessonNotFoundError || error instanceof ClassEnrollmentError) {
+          response.status(403).json({ error: error.message, code: error.code });
+          return;
+        }
         if (error instanceof z.ZodError) {
           response.status(400).json({ error: 'Validation error', details: error.issues });
           return;

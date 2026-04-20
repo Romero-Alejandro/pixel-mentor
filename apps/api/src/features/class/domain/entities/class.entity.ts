@@ -41,6 +41,7 @@ export interface ClassTemplateEntity {
 
 export interface ClassEntity {
   readonly id: string;
+  readonly shortId?: string;
   readonly title: string;
   readonly description?: string;
   readonly tutorId: string;
@@ -48,6 +49,7 @@ export interface ClassEntity {
   readonly currentVersionId?: string;
   readonly status: ClassStatus;
   readonly version: number;
+  readonly slug?: string;
   readonly createdAt: Date;
   readonly updatedAt: Date;
   readonly lessons?: readonly ClassLessonEntity[];

@@ -10,7 +10,7 @@
 ## Terminal Protocols
 
 - Terminal Output Control: PROHIBITED massive log dumping. Pipe commands that might output large text arrays (like `npm install` or massive test failures) through truncators (e.g., `| head -n 50` or `| tail -n 50`). Keep the signal-to-noise ratio high.
-PROHIBITED: Global test/lint suites. Target specific packages/files.
+  PROHIBITED: Global test/lint suites. Target specific packages/files.
 
 ### Backend (@pixel-mentor/api)
 
@@ -85,19 +85,7 @@ MANDATORY: Always start with the `[Audit/Plan]` line as defined in Global Direct
 - Behavior: Atomic logical groups. One commit per isolated fix. PROHIBITED mass/WIP commits.
 
 ### Mechanical Safety Protocol (Anti-Hallucination)
+
 - Zero-Hallucination Edits: PROHIBITED rewriting entire files (>300 lines) for minor changes. Map block scopes before touching nested logic.
 - Post-Edit Verification: MANDATORY execution of target-specific `typecheck` or `lint` on edited `*.ts/tsx` files BEFORE responding or committing.
 - Syntax Error Fallback: If compiler throws syntax errors (e.g., unbalanced brackets), PROHIBITED guessing based on log line. Inspect preceding block structures using text search to trace the unclosed scope.
-
-## Diagnostic & Debugging Protocol (Anti-Loop System)
-
-When encountering a bug, error log, or 404/500 HTTP response, you MUST follow this precise reasoning protocol BEFORE executing any file search or terminal command.
-
-1. **Stop & Think [Diagnostic Plan]:** You are PROHIBITED from using `grep`, `glob`, or random file searches immediately. You must write a brief `[Diagnostic Plan]` analyzing the logical flow.
-2. **Smart Stack Trace Reading:** PROHIBITED from focusing only on the top line of an error stack. You MUST scan down the stack trace to find the FIRST line that originates from the project's `src/` directory. Ignore `node_modules` or framework internal errors.
-3. **Top-Down Tracing Paths:**
-   - **Backend (HTTP/API):** DO NOT search globally. Trace: `main/routes.ts` -> Specific Module Router (`features/.../routes.ts`) -> Controller -> Application Use Case.
-   - **Frontend (UI/State):** DO NOT search globally. Trace: App Router Config -> Target Page/View -> Container Component -> Zustand Store / React Query Hook.
-4. **Reproduce Before Fix (Test-Driven Debugging):** For logical or data transformation bugs, you MUST attempt to write a failing unit test (`*.test.ts` or `*.spec.ts`) that reproduces the exact error BEFORE modifying the source code. Use the test runner output to mechanically guide your fix.
-5. **Anti-Loop Circuit Breaker:** If you execute a search command (e.g., `glob`, `grep`) and it fails to find the target, you are PROHIBITED from running variations of the same command. You MUST change your strategy, trace from the application root, or halt and explicitly ask the user for domain context.
-6. **Time Context:** Look at response times in logs. A `1ms` response on a 404 means the router rejected it before any logic ran. A `5000ms` response means a database timeout or infinite loop. Use this data.

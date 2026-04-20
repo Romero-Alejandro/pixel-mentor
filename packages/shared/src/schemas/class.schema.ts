@@ -9,8 +9,8 @@ export type ClassStatus = z.infer<typeof ClassStatusSchema>;
 // ==================== Class Lesson ====================
 
 export const ClassLessonSchema = z.object({
-  id: z.string(),
-  classId: z.string(),
+  id: z.string().uuid(),
+  classId: z.string().uuid(),
   recipeId: z.string(),
   title: z.string().optional(),
   order: z.number(),
@@ -19,7 +19,7 @@ export const ClassLessonSchema = z.object({
   // Recipe data (populated by backend include)
   recipe: z
     .object({
-      id: z.string(),
+id: z.string().uuid(),
       title: z.string(),
       expectedDurationMinutes: z.number().nullable().optional(),
     })
@@ -45,7 +45,7 @@ export type ClassLessonUpdate = z.infer<typeof ClassLessonUpdateSchema>;
 // ==================== Class Version Lesson ====================
 
 export const ClassVersionLessonSchema = z.object({
-  id: z.string(),
+  id: z.string().uuid(),
   classVersionId: z.string(),
   recipeId: z.string(),
   order: z.number(),
@@ -58,7 +58,7 @@ export type ClassVersionLesson = z.infer<typeof ClassVersionLessonSchema>;
 // ==================== Class ====================
 
 export const ClassSchema = z.object({
-  id: z.string(),
+  id: z.string().uuid(),
   title: z.string(),
   description: z.string().nullable().optional(),
   tutorId: z.string(),
@@ -102,8 +102,8 @@ export type ClassPublish = z.infer<typeof ClassPublishSchema>;
 // ==================== Class Version ====================
 
 export const ClassVersionSchema = z.object({
-  id: z.string(),
-  classId: z.string(),
+  id: z.string().uuid(),
+  classId: z.string().uuid(),
   version: z.string(),
   publishedAt: z.string().nullable().optional(),
   isPublished: z.boolean(),
@@ -120,7 +120,7 @@ export type ClassVersion = z.infer<typeof ClassVersionSchema>;
 // ==================== Class Template ====================
 
 export const ClassTemplateSchema = z.object({
-  id: z.string(),
+  id: z.string().uuid(),
   name: z.string(),
   description: z.string().nullable().optional(),
   tutorId: z.string(),
@@ -178,7 +178,7 @@ export const GenerateClassDraftInputSchema = z.object({
   availableRecipes: z
     .array(
       z.object({
-        id: z.string(),
+  id: z.string().uuid(),
         title: z.string(),
         description: z.string().optional(),
       }),

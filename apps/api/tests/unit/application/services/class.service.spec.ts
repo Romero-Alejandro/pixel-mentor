@@ -24,6 +24,7 @@ import {
   type AddLessonInput,
   type UpdateLessonInput,
 } from '@/features/class/application/services/class.service.js';
+import { prisma } from '@/database/client';
 import type {
   IClassRepository,
   IClassLessonRepository,
@@ -61,6 +62,7 @@ const createMockLessonEntity = (overrides: Partial<ClassLessonEntity> = {}): Cla
 // Mock repositories
 const createMockClassRepo = (): jest.Mocked<IClassRepository> => ({
   findById: jest.fn(),
+  findBySlug: jest.fn(),
   findByTutorId: jest.fn(),
   create: jest.fn(),
   update: jest.fn(),
@@ -276,7 +278,9 @@ describe('ClassService', () => {
       const publishedClass = { ...mockClass, status: 'PUBLISHED' as const, version: 1 };
       const mockLessons = [createMockLessonEntity({ id: 'lesson-1', classId: 'class-1' })];
 
-      classRepo.findById.mockResolvedValueOnce(mockClass).mockResolvedValueOnce(publishedClass);
+      classRepo.findById
+        .mockResolvedValueOnce(mockClass) // Primera llamada: DRAFT
+        .mockResolvedValue(publishedClass); // Llamadas posteriores: PUBLISHED
       lessonRepo.findByClassId.mockResolvedValue(mockLessons);
       versionRepo.create.mockResolvedValue({} as any);
       classRepo.update.mockResolvedValue(publishedClass);
@@ -285,7 +289,7 @@ describe('ClassService', () => {
       const result = await service.publishClass('class-1', 'tutor-1');
 
       // Then
-      expect(classRepo.update).toHaveBeenCalledTimes(1); // Direct transition to PUBLISHED
+      expect(classRepo.update).toHaveBeenCalledTimes(2); // DRAFT->UNDER_REVIEW->PUBLISHED
       expect(versionRepo.create).toHaveBeenCalled();
       expect(result.status).toBe('PUBLISHED');
       expect(result.version).toBe(1);
@@ -464,6 +468,10 @@ describe('ClassService', () => {
 
       classRepo.findById.mockResolvedValue(mockClass);
       lessonRepo.findByClassId.mockResolvedValue(mockLessons);
+      // Mock recipe validation
+      jest
+        .spyOn(require('@/database/client').prisma.recipe, 'findUnique')
+        .mockResolvedValue({ id: 'recipe-123' } as any);
       lessonRepo.update.mockResolvedValue({
         ...mockLesson,
         recipeId: 'recipe-123',
@@ -500,6 +508,10 @@ describe('ClassService', () => {
 
       classRepo.findById.mockResolvedValue(mockClass);
       lessonRepo.findByClassId.mockResolvedValue(mockLessons);
+      // Mock recipe validation
+      jest
+        .spyOn(require('@/database/client').prisma.recipe, 'findUnique')
+        .mockResolvedValue({ id: 'recipe-new' } as any);
       lessonRepo.update.mockResolvedValue({
         ...mockLesson,
         recipeId: 'recipe-new',

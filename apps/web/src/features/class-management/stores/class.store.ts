@@ -82,6 +82,8 @@ export const useClassStore = create<ClassState>()(
         set({ isLoading: true, error: null });
         try {
           const result = await api.getClass(classId);
+          console.log('[DEBUG] Clase cargada:', result);
+          console.log('[DEBUG] Lessons:', result.lessons);
           set({ currentClass: result, isLoading: false });
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : 'Failed to fetch class';

@@ -161,9 +161,11 @@ export function ClassEditorPage() {
     playClick();
     try {
       const result = await startClassDemo(classId);
+      console.log('[DEBUG] Result from startClassDemo:', result);
+      console.log('[DEBUG] result.id for navigation:', result.id);
       if (result?.recipeId) {
         playToastSuccess();
-        navigate(`/lesson/${result.recipeId}`);
+        navigate(`/lesson/${result.id}`);
       }
     } catch {
       // Error handled in store

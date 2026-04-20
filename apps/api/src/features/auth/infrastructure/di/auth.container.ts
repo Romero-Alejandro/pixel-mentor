@@ -5,6 +5,7 @@ import { LoginUseCase } from '@/features/auth/application/use-cases/login.use-ca
 import { VerifyTokenUseCase } from '@/features/auth/application/use-cases/verify-token.use-case.js';
 import { AdminUserService } from '@/features/auth/application/services/admin-user.service.js';
 import { RefreshTokenUseCase } from '@/features/auth/application/use-cases/refresh-token.use-case.js';
+import { ResolveUserByEmailUseCase } from '@/features/auth/application/use-cases/resolve-user-by-email.use-case.js';
 import { PrismaUserRepository } from '@/features/auth/infrastructure/persistence/user.repository.js';
 import { PrismaApiKeyRepository } from '@/features/auth/infrastructure/persistence/api-key.repository.js';
 import { PrismaParentalConsentRepository } from '@/features/auth/infrastructure/persistence/parental-consent.repository.js';
@@ -20,6 +21,7 @@ export interface AuthContainer {
   loginUseCase: LoginUseCase;
   verifyTokenUseCase: VerifyTokenUseCase;
   refreshTokenUseCase: RefreshTokenUseCase;
+  resolveUserByEmailUseCase: ResolveUserByEmailUseCase;
   adminUserService: AdminUserService;
   userRepository: PrismaUserRepository;
   apiKeyRepository: PrismaApiKeyRepository;
@@ -49,6 +51,7 @@ export function buildAuthContainer(_logger: pino.Logger): AuthContainer {
       accessTokenService,
       refreshTokenService,
     ),
+    resolveUserByEmailUseCase: new ResolveUserByEmailUseCase(userRepository),
     adminUserService: new AdminUserService(userRepository, hashingService),
     userRepository,
     apiKeyRepository,

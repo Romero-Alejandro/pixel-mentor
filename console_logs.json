@@ -1,0 +1,74 @@
+[
+  {
+    "type": "debug",
+    "text": "[vite] connecting...",
+    "location": {
+      "url": "http://localhost:5173/@vite/client",
+      "lineNumber": 732,
+      "columnNumber": 8
+    }
+  },
+  {
+    "type": "debug",
+    "text": "[vite] connected.",
+    "location": {
+      "url": "http://localhost:5173/@vite/client",
+      "lineNumber": 826,
+      "columnNumber": 11
+    }
+  },
+  {
+    "type": "info",
+    "text": "%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+    "location": {
+      "url": "http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=afca7edb",
+      "lineNumber": 20102,
+      "columnNumber": 53
+    }
+  },
+  {
+    "type": "log",
+    "text": "[PixelMentor] [Audio] useSpriteAudioEvents initialized. muted: false volume: 0.8 sound: false",
+    "location": {
+      "url": "http://localhost:5173/src/utils/logger.ts",
+      "lineNumber": 3,
+      "columnNumber": 23
+    }
+  },
+  {
+    "type": "log",
+    "text": "[PixelMentor] [Audio] useSpriteAudioEvents initialized. muted: false volume: 0.8 sound: false",
+    "location": {
+      "url": "http://localhost:5173/src/utils/logger.ts",
+      "lineNumber": 3,
+      "columnNumber": 23
+    }
+  },
+  {
+    "type": "log",
+    "text": "[PixelMentor] [Audio] Sprite file loaded successfully",
+    "location": {
+      "url": "http://localhost:5173/src/utils/logger.ts",
+      "lineNumber": 3,
+      "columnNumber": 23
+    }
+  },
+  {
+    "type": "log",
+    "text": "[PixelMentor] [Audio] useSpriteAudioEvents initialized. muted: false volume: 0.8 sound: true",
+    "location": {
+      "url": "http://localhost:5173/src/utils/logger.ts",
+      "lineNumber": 3,
+      "columnNumber": 23
+    }
+  },
+  {
+    "type": "log",
+    "text": "[PixelMentor] [Audio] useSpriteAudioEvents initialized. muted: false volume: 0.8 sound: true",
+    "location": {
+      "url": "http://localhost:5173/src/utils/logger.ts",
+      "lineNumber": 3,
+      "columnNumber": 23
+    }
+  }
+]

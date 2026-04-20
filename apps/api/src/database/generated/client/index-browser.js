@@ -486,6 +486,7 @@ exports.Prisma.ClassTemplateScalarFieldEnum = {
 
 exports.Prisma.ClassScalarFieldEnum = {
   id: 'id',
+  shortId: 'shortId',
   title: 'title',
   description: 'description',
   createdAt: 'createdAt',
@@ -528,6 +529,31 @@ exports.Prisma.ClassVersionLessonScalarFieldEnum = {
   duration: 'duration',
   recipeSnapshot: 'recipeSnapshot',
   createdAt: 'createdAt'
+};
+
+exports.Prisma.GroupScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  description: 'description',
+  teacherId: 'teacherId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.GroupMemberScalarFieldEnum = {
+  id: 'id',
+  groupId: 'groupId',
+  studentId: 'studentId',
+  joinedAt: 'joinedAt',
+  status: 'status'
+};
+
+exports.Prisma.GroupClassScalarFieldEnum = {
+  id: 'id',
+  groupId: 'groupId',
+  classId: 'classId',
+  order: 'order',
+  assignedAt: 'assignedAt'
 };
 
 exports.Prisma.SortOrder = {
@@ -645,6 +671,12 @@ exports.ClassStatus = exports.$Enums.ClassStatus = {
   ARCHIVED: 'ARCHIVED'
 };
 
+exports.MemberStatus = exports.$Enums.MemberStatus = {
+  ACTIVE: 'ACTIVE',
+  INACTIVE: 'INACTIVE',
+  COMPLETED: 'COMPLETED'
+};
+
 exports.Prisma.ModelName = {
   User: 'User',
   ApiKey: 'ApiKey',
@@ -682,7 +714,10 @@ exports.Prisma.ModelName = {
   Class: 'Class',
   ClassLesson: 'ClassLesson',
   ClassVersion: 'ClassVersion',
-  ClassVersionLesson: 'ClassVersionLesson'
+  ClassVersionLesson: 'ClassVersionLesson',
+  Group: 'Group',
+  GroupMember: 'GroupMember',
+  GroupClass: 'GroupClass'
 };
 
 /**

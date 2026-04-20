@@ -1,0 +1,2494 @@
+[
+  {
+    "url": "http://localhost:5173/",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "connection": "keep-alive",
+      "content-length": "633",
+      "content-type": "text/html",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "etag": "W/\"279-hPe3Ez4hqYf/q7e1Wwpyvj7kdpI\"",
+      "keep-alive": "timeout=5",
+      "vary": "Origin\nSec-Fetch-Dest"
+    }
+  },
+  {
+    "url": "http://localhost:5173/@vite/client",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"84ab-7AIhGHnmHhPbrY+3zsc+DYHIuwY\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "179714",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/main.tsx?t=1776488277481",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"9ba-Z/HNWlo6py6IQnS8sbqp7piWEh8\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "5089",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/@fs/home/alejandro/dev/projects/active/pixel-mentor/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.32.0_tsx@4.21.0_yaml@2.8.3/node_modules/vite/dist/client/env.mjs",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"25b-V2bmMiQli1AsiiEb1NEXbTMk57g\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "3478",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/node_modules/.vite/deps/react_jsx-dev-runtime.js?v=afca7edb",
+    "status": 200,
+    "headers": {
+      "cache-control": "max-age=31536000,immutable",
+      "etag": "W/\"30ef-EJlj251YIrIGvrt1yAp2Sld1a8k\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "12527",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/@react-refresh",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"5367-h8iO905IyT3hT92qDTgpgcseDiA\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "111894",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/node_modules/.vite/deps/@tanstack_react-query.js?v=afca7edb",
+    "status": 200,
+    "headers": {
+      "cache-control": "max-age=31536000,immutable",
+      "etag": "W/\"1c0d0-uHC44FZLCp6GLC/q/AaKkMjrZ1s\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "114896",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/node_modules/.vite/deps/react.js?v=afca7edb",
+    "status": 200,
+    "headers": {
+      "cache-control": "max-age=31536000,immutable",
+      "etag": "W/\"b9-BWMr3KwXLQcBCe7TimSvM60QUZY\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "1024",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/App.tsx?t=1776488277481",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"7ed4-Q1bS3RGWW9g1M7cdBAiD+ucAqBg\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "59791",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/hooks/useConfirmationDialogs.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"5c16-PWbQFDzt47L1GPI/9r8v5zZLDmA\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "56125",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/contexts/AudioContext.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"1c58-RZdCzw2aSPC2irPUA4NO9mpFiyo\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "17867",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/node_modules/.vite/deps/chunk-EBZS5F5X.js?v=afca7edb",
+    "status": 200,
+    "headers": {
+      "cache-control": "max-age=31536000,immutable",
+      "etag": "W/\"3253-mMLft82ML+7xl7wLzWUVEHMbURI\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "12883",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/node_modules/.vite/deps/chunk-G3PMV62Z.js?v=afca7edb",
+    "status": 200,
+    "headers": {
+      "cache-control": "max-age=31536000,immutable",
+      "etag": "W/\"5d9-6wRzMCCzieNLVIrKd7nF1XzrMAE\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "7968",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/node_modules/.vite/deps/chunk-LQJ5AVEX.js?v=afca7edb",
+    "status": 200,
+    "headers": {
+      "cache-control": "max-age=31536000,immutable",
+      "etag": "W/\"b294-8J7Eboy73wtVDap/3UoTBYfX+GA\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "45716",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/auth/hooks/useAuth.ts?t=1776488277481",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"1251-6TlolzfacsGXOeHBADzFG65dFIk\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "14400",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/node_modules/.vite/deps/react_compiler-runtime.js?v=afca7edb",
+    "status": 200,
+    "headers": {
+      "cache-control": "max-age=31536000,immutable",
+      "etag": "W/\"6b9-vlRmMwtWYyhoYjtzcxZXbny/PvQ\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "1721",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/index.css?t=1776487070750",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"240ac-lhRBpPXy3zqkUorbYXAXx9w6JeI\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "147628",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/auth/stores/auth.store.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"b3c-O5C4LHLAgGmfuDt0TcInuOxLXxA\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "9171",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/components/ui/index.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"2e3-VT0uMCmyfo1ZiygwYa/49QHAPkQ\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "2874",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/gamification/hooks/useGamificationSSE.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"12b8-8ex7DnueG8DTbWL/uDND/xcbT/Q\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "17647",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/pages/LoginPage.tsx?t=1776488277481",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"1034-Ep8i9pEH6yFB2n6KaGjrWhSBWLQ\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "6571",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/pages/RegisterPage.tsx?t=1776488277481",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"c62-FoOR/CzVWU9a02eK0l4gKZG0BEU\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "4693",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=afca7edb",
+    "status": 200,
+    "headers": {
+      "cache-control": "max-age=31536000,immutable",
+      "etag": "W/\"6f3c3-Tnka5CyoggwWNAiaFLz4lQnx5Ho\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "455619",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=afca7edb",
+    "status": 200,
+    "headers": {
+      "cache-control": "max-age=31536000,immutable",
+      "etag": "W/\"f5863-LKzeREDuCmJmxN2t/jG8XDYL1f8\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "1005667",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/pages/LessonPage.tsx?t=1776488277481",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"66d5-05WwUqgdQ8Dim1elFgzM5R815Lw\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "57660",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/pages/DashboardPage.tsx?t=1776488277481",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"b4ec-Ue9899TF0a+juHI29ANwXyqzT+4\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "92727",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/pages/MissionReportPage.tsx?t=1776488277481",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"5d1a-euDEl66jqMH3vHG2yxY9auanP7M\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "46925",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/pages/ClassListPage.tsx?t=1776488277481",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"6741-RkezVsmNqY4Plwxjz4GgHgIgNEw\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "58924",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/pages/ClassTemplatesPage.tsx?t=1776488277481",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"4ad2-yJCYaw/FnhTWCeeQttqAEHY/0O4\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "37945",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/pages/ClassEditorPage.tsx?t=1776488277481",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"b5d6-DK0yHqz43LBcZvReyjbl329WN7k\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "96197",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/pages/RecipesPage.tsx?t=1776488277481",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"62aa-8CoG4BUf8jgmEvXYYc692Z3c1W8\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "53713",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/pages/AdminUsersPage.tsx?t=1776488277481",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"a4a7-HxwinLmh24jH58ovpKf+2gBH+Go\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "89630",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/pages/RecipeEditorPage.tsx?t=1776488277481",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"9aa0-XmDMkMQDKFVlu0NNcCcJDpf2ZYI\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "89475",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/pages/GroupListPage.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"ebd-DGjlg7mTdh7UAnqgvJDiXSenkEc\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "5628",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/pages/GamificationTestPage.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"455d-y+xVswAToJGGgAEt+XfLUMFH4Tw\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "36640",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/pages/LongTextTestPage.tsx?t=1776488277481",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"343a-+b77bvjoOh4Us3hgNu5eRcOzLuA\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "29329",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/pages/GroupDetailPage.tsx?t=1776488277481",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"68d6-loAXTrslJblk5InLWtUzyzbKA0s\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "55041",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/pages/MyLearningPage.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"b2c-theVOzqlA6ZLChhtZCKOBO4k85U\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "4195",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/components/ui/Modal.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"21a6-VIzZ7UI2M57y4JbpH9ZaUqzYFNI\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "18721",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/audio/types/audio-events.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"7cc-RLPmdGCSMN0V1GMlqbQ3l+GmOmI\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "5247",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/components/ui/Input.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"1c4a-E7X3hWBy3jr0ksHUwekSjjNeDWA\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "16285",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/components/ui/Button.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"1d27-5OWlKyDMhfxOE7T/tYE6p62z9KM\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "16342",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/audio/micro/index.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"d19-oyeat5kP1i1RMerh9jVR384oFl4\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "9840",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/auth/services/auth.api.ts?t=1776488277481",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"2d8-N8JOMeWv0TUBZvITv0w6gubSdr4\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "3015",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/node_modules/.vite/deps/zustand.js?v=afca7edb",
+    "status": 200,
+    "headers": {
+      "cache-control": "max-age=31536000,immutable",
+      "etag": "W/\"890-kyMfZTKKSpm1CNwNPOJT+9/DvzQ\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "2192",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/audio/sprites/index.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"d4a-RT1HYajcLnHszSRBDK/2ZanvqvI\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "11837",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/services/api-client.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"48c-jIj9d8Tjf+FtIjMHmy2EIn81RVo\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "4279",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/components/ui/Card.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"f19-bOzOpKkSHh9Xo0RLMWeW9tvAvss\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "7520",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/components/ui/Badge.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"d72-mjF7MMWi1T0FsiII13G76dZ68g0\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "6541",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/components/ui/Spinner.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"f15-YZEzVoTCjd6FP5Oq2N4wPjOau6I\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "6912",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/components/ui/Toast.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"1a7b-YM2g43Ulp4RbU1cm/qG26ewKNq8\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "14658",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/components/ui/Skeleton.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"64bd-Y6In0NMfjerfr0018Kzk4qr1FEA\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "47288",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/components/ui/Textarea.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"1733-iNOiTrXU+c1e3StaBxoQTO413Ys\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "11878",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/components/ui/ErrorBanner.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"2f2c-Yd+X0ejfHnO3VOGEY0oJfzXoHW0\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "24851",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/components/ui/ErrorBoundary.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"296e-ZeQC0OgjdquAqg9QRAApABWSTDs\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "23609",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/node_modules/.vite/deps/@microsoft_fetch-event-source.js?v=afca7edb",
+    "status": 200,
+    "headers": {
+      "cache-control": "max-age=31536000,immutable",
+      "etag": "W/\"1989-hyaisUV6JJlJ0U92jCuarjlvY3Y\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "6537",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/gamification/stores/gamification.store.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"1346-IkL3bHH0o0lefb4Vv0E7BJvzBEM\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "20713",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/utils/logger.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"273-YWqKcs30SwGuoCzjv9Spm1RnFXU\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "2590",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/auth/components/LoginForm.tsx?t=1776488277481",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"3190-DKL6iPkCZm3jzShHNlYbCZa9nDo\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "24559",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/node_modules/.vite/deps/zustand_react_shallow.js?v=afca7edb",
+    "status": 200,
+    "headers": {
+      "cache-control": "max-age=31536000,immutable",
+      "etag": "W/\"9cb-3G7az3/W7ADZXejQiIvW9Byghd0\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "2507",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/node_modules/.vite/deps/chunk-CXS66GOW.js?v=afca7edb",
+    "status": 200,
+    "headers": {
+      "cache-control": "max-age=31536000,immutable",
+      "etag": "W/\"4032-T7sp/WqgRXlmDjklgVCGi2+2/8U\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "16434",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/auth/components/RegisterForm.tsx?t=1776488277481",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"382d-vzjwk2S1dqRQ5/6n9+rjl21q4ek\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "29552",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/lesson/components/ConcentrationPanel.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"3731-VuSS+4u2fhDU2fpYH48uGyoEIT8\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "31896",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/components/mascot/Mascot.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"2998-7LcKye1yl4BTAl9G8wiW5dhKHNM\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "24603",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/lesson/components/QuestionPanel.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"2470-kQSVuSIFBCrIkSAM5QOg2FNGF0U\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "17867",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/lesson/components/LessonHeader.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"2a80-mFYPZ0gtdtcXcH0Hd+lC7HPM3Rg\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "22063",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/lesson/constants/lesson.constants.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"875-BZsAuKaCN07WHywnPyt5xyg8lrE\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "8564",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/lesson/components/ActivityPanel.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"3534-2zTYZScYOhQFQJ/jp8UpuqLQKWA\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "27171",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/lesson/components/FeedbackPanel.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"322e-D+AO6Vyqsa+kKV7O6iQndqm2gic\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "25053",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/lesson/hooks/useAutoStart.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"cc0-Qc/vD2DuFtpDKRvIh/J1eniB65w\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "11995",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/lesson/components/CompletedPanel.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"6574-JZYGkVvcMvYbsCHeWpGGxVt23uA\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "50799",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/lesson/hooks/useTextSync.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"10e3-tlxooPLHKaLSoordGNzFm3f/jAU\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "17670",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/voice/hooks/useVoiceSettings.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"702-FLD5MqAUwxIpSFJdiopY2Gj7bwE\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "5381",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/lesson/hooks/useClassOrchestrator.ts?t=1776488277481",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"2f06-T7JhxVu9xK0iPO7YT2m7F5IyUt8\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "44633",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/lesson/stores/lesson.store.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"888-xqe7lLoLNFl3cXQbdsDiwa23+z8\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "12495",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/gamification/components/StreakWidget.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"206f-aFbg0uauiRHEM8T5fXgqZUlpSAg\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "15762",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/gamification/components/CompactGamificationHeader.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"1ca0-pZJjqfBrIv/+iIgeZ/ilQrbcFbo\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "13319",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/gamification/components/StreakCalendar.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"1833-MovFX2I5+AZWDPgCrVE/LYbGjjU\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "11566",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/gamification/components/XPChart.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"2332-zFyzoVsrOXexzXTXnVwD45M9qMM\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "16413",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/gamification/components/BadgeGrid.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"384c-dxocaGXavNCH55VrGDhotbi1d0c\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "29191",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/dashboard/constants/dashboard.constants.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"23c-5NevInIJBY+GpvCOuwEPHBI4K1o\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "2799",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/components/AudioControl.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"2c90-lwVz0HBURuGR2ivoH9QLpFOhUcE\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "23387",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/dashboard/hooks/useDashboardData.ts?t=1776488277481",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"616-x/FOpbV/Fo9cBWVkjP8wp7JN76A\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "6661",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/dashboard/components/MissionMap.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"2dc4-TyGI3Q2ciblLPKSrJ0Zq7DUq2Mg\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "24335",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/recipe-management/stores/recipe.store.ts?t=1776488277481",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"208f-Wzk0iQbAXffxQgRKO413kT+rdho\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "34046",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/services/api.ts?t=1776488277481",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"2eb6-95wz9Cx3/f19u122ErHZtd0hQPU\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "47685",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/dashboard/hooks/useAnimatedNumber.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"70b-EBcuqGP+uhUvo+zj8cP4sV4ERlM\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "5250",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/class-management/stores/class.store.ts?t=1776488277481",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"2a1d-YW8V3BOxe3FSynMi8a60A9Et6Ek\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "42008",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/class-management/components/ClassCard.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"3ae9-mUGb9C8FUysQRHgDzy+nhRjSssg\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "31868",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/class-management/components/ClassLessonList.tsx?t=1776488277481",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"8012-9KMv9SJoSfcZaCz04uU8FSsREqQ\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "69557",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/recipe-management/components/AIRecipeGeneratorModal.tsx?t=1776488277481",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"93fc-YKg6eYsoorZMRd0wMZ9DKgf/a+Y\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "79115",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/recipe-management/components/StepEditor.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"9a8e-B5lKPW5/VQP38TZjzX3/l17e8lA\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "95441",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/recipe-management/components/RecipeCard.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"44d9-SUgx6tJ4SRDPILugdN/d5IDSYrw\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "36240",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/group/components/GroupList.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"2663-nWNiNg6DgPii4h/bgnzBiV2JiG4\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "21006",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/gamification/components/BadgeEarnedModal.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"2c58-mVHh+9ZwTGlcc91iE1uWydcgeKg\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "23743",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/gamification/components/XPProgress.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"24d1-iBmGMqHMqmjf7teLWKrrxgxk7Mg\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "20268",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/gamification/components/GamificationHeader.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"1c76-TjMKrAjA0oHXv5NQbJKwxShLeXY\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "13865",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/gamification/components/StreakCounter.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"190e-A2pylkS7LZeBBHTEk/XL7RyUPxg\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "13073",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/gamification/components/LevelUpModal.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"2e7e-zyPS8RHOGu4OO5mL13YhNBf+d08\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "24793",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/voice/hooks/useVoice.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"5592-qSzHvXFgf1Yt2p3vGshdbPoM7ZI\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "81149",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/node_modules/.vite/deps/react-dom.js?v=afca7edb",
+    "status": 200,
+    "headers": {
+      "cache-control": "max-age=31536000,immutable",
+      "etag": "W/\"101-iuD2CvEp9+kNwY7W/zI2g+/GlwE\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "1352",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/utils/cn.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"d7-0k8LtKefWy9hZFt7gRSGS2w7sWI\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "922",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/group/services/group.api.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"931-sIu2/tDNHAYYbHmAR92u4NgnIQg\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "10940",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/student-learning/components/StudentLearningView.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"2589-5cuXcAj+dUv0cZ2L+PKdC53YNKs\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "18340",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/group/stores/group.store.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"1660-sJa80wVrbvwoVxQWD7+UKmW9UaI\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "22447",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/node_modules/.vite/deps/@tabler_icons-react.js?v=afca7edb",
+    "status": 200,
+    "headers": {
+      "cache-control": "max-age=31536000,immutable",
+      "etag": "W/\"40bf9d-aG3xI1432JOr/sgqk2RhbeN1yF4\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "4243357",
+      "date": "Sat, 18 Apr 2026 06:38:19 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/audio/stores/audio.store.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"1f0-cjnVNlPv2Vc36kcfL72aR5b4Fpo\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "2427",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/@fs/home/alejandro/dev/projects/active/pixel-mentor/packages/shared/src/index.ts?t=1776488277481",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"3c6-e9FQEDl0jqc3Vo07Q6H4jOmcruo\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "2897",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/audio/micro/zzfx.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"b15-PZ6YCPN9RAfyu68CX7/Pb+DbjIw\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "11772",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/node_modules/.vite/deps/use-sound.js?v=afca7edb",
+    "status": 200,
+    "headers": {
+      "cache-control": "max-age=31536000,immutable",
+      "etag": "W/\"1052-mWYi40sbnDAxwehw+aN8XU+hY74\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "4178",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/node_modules/.vite/deps/axios.js?v=afca7edb",
+    "status": 200,
+    "headers": {
+      "cache-control": "max-age=31536000,immutable",
+      "etag": "W/\"15c12-rUGYPUQhJ1N1lvB+LyJeoZzDpIw\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "89106",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/gamification/services/gamification.api.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"4be-IGrZJytfev8Mc9r3t9J8LffSSqI\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "5129",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/voice/components/VoiceSettingsPanel.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"4d67-ymWtY6aLzi13Fiku8CYCEVDloQQ\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "43698",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/node_modules/.vite/deps/@rive-app_react-canvas.js?v=afca7edb",
+    "status": 200,
+    "headers": {
+      "cache-control": "max-age=31536000,immutable",
+      "etag": "W/\"5f4e6-yfVBFbPtwKChZqXtRMPcsqrFvUg\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "390374",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/lesson/hooks/useLessonState.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"f5d-nc9ZNRbH+oosEvFqw8KXdQPUDSA\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "12148",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/lesson/hooks/useChatStream.ts?t=1776488277481",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"e3f-00uFuBqdWdyxFdIoWrCkUybiUAI\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "10662",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/node_modules/.vite/deps/zustand_middleware.js?v=afca7edb",
+    "status": 200,
+    "headers": {
+      "cache-control": "max-age=31536000,immutable",
+      "etag": "W/\"407d-EMwufRGEpSSYO4qc3z3SxpE1Xxc\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "16509",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/dashboard/utils/classContext.util.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"7bb-N8Quzg9qgoySqoNpIYpHpe8QTSs\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "8778",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/utils/uuid.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"ae-30oDEW+Lq9hHAt86MDCI+a2lr1k\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "937",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/recipe-management/components/index.ts?t=1776488277481",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"120-nWgbkB9eUXMTCz0OWVffNEFnPiw\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "947",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/node_modules/.vite/deps/clsx.js?v=afca7edb",
+    "status": 200,
+    "headers": {
+      "cache-control": "max-age=31536000,immutable",
+      "etag": "W/\"2d7-efXG6AcYS0Fc+6ivVz+rvGwWuZE\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "727",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/group/components/GroupCard.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"2d61-2Z2rrx7we76MJVIkJjVsO9qEKyc\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "22064",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/gamification/components/LevelBadge.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"1cfe-6kRmrizc+moVmI7LvXTj6JoObOo\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "16693",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/group/components/CreateGroupModal.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"1b8a-PkYKdOI1J2HXMi/YbSphVsqChrE\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "14037",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/dashboard/components/MissionNode.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"499e-IiPLbo7G5Fm52Of9+8dGKVYGht8\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "39957",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/node_modules/.vite/deps/tailwind-merge.js?v=afca7edb",
+    "status": 200,
+    "headers": {
+      "cache-control": "max-age=31536000,immutable",
+      "etag": "W/\"18457-6Yi/HjdqOxZhLvzOt0Wk25AbN9U\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "99415",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/@fs/home/alejandro/dev/projects/active/pixel-mentor/packages/shared/src/gamification/index.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"152-8r4Yo8IPnJBVnNwwRYomgin5piQ\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "1565",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/@fs/home/alejandro/dev/projects/active/pixel-mentor/packages/shared/src/schemas/index.ts?t=1776488277481",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"2cd-C4A7EmJZJkJtzy+ZFE1w2QGnk9o\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "1552",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/student-learning/stores/student-learning.store.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"41c-YEIwrh70Qq9ZQH0QOhx7o5d0w4c\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "4463",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/student-learning/components/LearningPathCard.tsx",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"3072-Uil9lzAhJUp41+xP9S51guTTS9Y\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "24693",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/@fs/home/alejandro/dev/projects/active/pixel-mentor/packages/shared/src/types/tts.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"55-7z5olfz1Qarr1L306zPUSqGW3jo\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "1760",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/@fs/home/alejandro/dev/projects/active/pixel-mentor/packages/shared/src/auth.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"467-gIbOZwcb52MCY+V+CbfYdlnAhSE\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "5606",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/@fs/home/alejandro/dev/projects/active/pixel-mentor/packages/shared/src/keyword-extractor.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"16bd-CxdzOoEq6eXVe4+Bmc0Y3gNa7DY\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "23788",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/@fs/home/alejandro/dev/projects/active/pixel-mentor/packages/shared/src/pedagogical.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"323-hhjX3gm4YgIcIvYbg/6EtUb3op4\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "3818",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/@fs/home/alejandro/dev/projects/active/pixel-mentor/packages/shared/src/session.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"476-p/zRuowokUyylHOoBeJFuzVMvYY\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "5381",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/@fs/home/alejandro/dev/projects/active/pixel-mentor/packages/shared/src/recipe.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"1636-LQXQUl9b9mlHb/00bS0XC27PbPg\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "25217",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/recipe-management/components/RecipeSelector.tsx?t=1776488277481",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"5b1c-CZVDXf51g2fIbi1T49FOt51HOXc\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "48579",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/@fs/home/alejandro/dev/projects/active/pixel-mentor/packages/shared/src/gamification/types.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"827-CJ75mUGNVhe8yYYB/RnM6FB5mFY\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "10862",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/@fs/home/alejandro/dev/projects/active/pixel-mentor/packages/shared/src/gamification/api.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"468-UlPnNO5hxGm+prWWtDNs0jgDhnY\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "5719",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/@fs/home/alejandro/dev/projects/active/pixel-mentor/packages/shared/src/gamification/endpoints.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"3dd-W+p2U4KIV1xHeOKPhbJHIHPv63Q\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "4396",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/@fs/home/alejandro/dev/projects/active/pixel-mentor/packages/shared/src/schemas/evaluation/index.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"139-Qm8S4m82HTqZleVbz7ZYmW4a4gY\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "1012",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/@fs/home/alejandro/dev/projects/active/pixel-mentor/packages/shared/src/schemas/recipe/index.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"8e9-XZpPDvgXMszM5tKCUYFgoSlKlrI\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "5352",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/@fs/home/alejandro/dev/projects/active/pixel-mentor/packages/shared/src/schemas/orchestration/index.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"62a-xiv/xqqLMU7ge3zdPE2DBVZyyLk\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "3621",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/@fs/home/alejandro/dev/projects/active/pixel-mentor/packages/shared/src/schemas/session/index.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"12a-Or0GLVysZqh919ilGt5XIEx5H/Y\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "961",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/@fs/home/alejandro/dev/projects/active/pixel-mentor/packages/shared/src/schemas/validation.schema.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"b1a-SgHsmTPowfwzxtSPVSkVXCR5+Ho\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "12789",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/src/features/student-learning/services/student-learning.api.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"15e-GbfMnwygbTHW383PlEprkMA6vko\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "2169",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/@fs/home/alejandro/dev/projects/active/pixel-mentor/packages/shared/src/schemas/class.schema.ts?t=1776488277481",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"11ec-I/eLh9t/mooy2OaHSJs+SbhI6E8\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "22375",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/@fs/home/alejandro/dev/projects/active/pixel-mentor/packages/shared/src/schemas/evaluation/question.schema.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"176-E301h+iTVXrGpcdF2tkP34sWwJw\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "2165",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/@fs/home/alejandro/dev/projects/active/pixel-mentor/packages/shared/src/schemas/recipe/step-content.schema.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"d8-cRTFCFe7+Fm37gn8Mu5ZADNo+5A\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "1367",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/@fs/home/alejandro/dev/projects/active/pixel-mentor/packages/shared/src/schemas/recipe/activity-content.schema.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"1d1-xYkd14ONZZfwcQckAJ/sZVnNBzk\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "2092",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/@fs/home/alejandro/dev/projects/active/pixel-mentor/packages/shared/src/schemas/recipe/static-content.schema.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"244-nDUTY10WXeysZZcYUvGDzO+v8xc\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "2091",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/@fs/home/alejandro/dev/projects/active/pixel-mentor/packages/shared/src/schemas/recipe/activity-option.schema.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"a0-HOcU+O7cG88YAnelysz2PS3cDzs\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "1123",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/@fs/home/alejandro/dev/projects/active/pixel-mentor/packages/shared/src/schemas/recipe/question.schema.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"1e8-zx8J0ZZxjdY5jp+3Dl450LEqHfM\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "2727",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/@fs/home/alejandro/dev/projects/active/pixel-mentor/packages/shared/src/schemas/recipe/step-script.schema.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"8ac-ngKB8yvIZHz6NjvvQfZQg734Odw\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "11011",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/@fs/home/alejandro/dev/projects/active/pixel-mentor/packages/shared/src/schemas/orchestration/start-recipe.schema.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"8f1-MmCrZvZa7rq0XKlOuVv02sY94Jc\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "9868",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/@fs/home/alejandro/dev/projects/active/pixel-mentor/packages/shared/src/schemas/recipe/recipe.utils.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"139f-9n5nAorJEBzjT7R3BFhZztzS0LI\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "19618",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/@fs/home/alejandro/dev/projects/active/pixel-mentor/packages/shared/src/schemas/recipe/recipe.schema.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"12cf-1r7KpxASxQJ1WBoBZM/BHLnj8HY\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "20322",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/@fs/home/alejandro/dev/projects/active/pixel-mentor/packages/shared/src/schemas/orchestration/interact.schema.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"8eb-Q53JmKfH2OVXyqLnnJv2FYHczFE\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "9794",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/@fs/home/alejandro/dev/projects/active/pixel-mentor/packages/shared/src/schemas/orchestration/interaction-chunk.schema.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"3cb-cV77Fj8LdOBpDlpsXHCpl2WkA18\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "3906",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/@fs/home/alejandro/dev/projects/active/pixel-mentor/packages/shared/src/schemas/session/session.schema.ts",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"1c8-nOHaT2u0VkQioDg8tHe7eEYyoR4\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "2331",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/node_modules/.vite/deps/zod.js?v=afca7edb",
+    "status": 200,
+    "headers": {
+      "cache-control": "max-age=31536000,immutable",
+      "etag": "W/\"728e9-Xy2nHSUsGIC7uYTnc17imr8LGPw\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "469225",
+      "date": "Sat, 18 Apr 2026 06:38:20 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "http://localhost:5173/node_modules/.vite/deps/howler-DATNB7XD.js?v=afca7edb",
+    "status": 200,
+    "headers": {
+      "cache-control": "max-age=31536000,immutable",
+      "etag": "W/\"15342-sXwnPIXR8c9bwHgc6xSxumkzEyY\"",
+      "connection": "keep-alive",
+      "access-control-allow-origin": "http://localhost:5173",
+      "keep-alive": "timeout=5",
+      "content-length": "86850",
+      "date": "Sat, 18 Apr 2026 06:38:21 GMT",
+      "content-type": "text/javascript",
+      "vary": "Origin"
+    }
+  },
+  {
+    "url": "https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700;800&display=swap",
+    "status": 200,
+    "headers": {
+      "content-encoding": "gzip",
+      "x-content-type-options": "nosniff",
+      "expires": "Sat, 18 Apr 2026 06:38:21 GMT",
+      "alt-svc": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000",
+      "date": "Sat, 18 Apr 2026 06:38:21 GMT",
+      "content-type": "text/css; charset=utf-8",
+      "vary": "Sec-Fetch-Dest, Sec-Fetch-Mode, Sec-Fetch-Site",
+      "last-modified": "Sat, 18 Apr 2026 06:38:21 GMT",
+      "x-frame-options": "SAMEORIGIN",
+      "strict-transport-security": "max-age=31536000",
+      "link": "<https://fonts.gstatic.com>; rel=preconnect; crossorigin",
+      "cache-control": "private, max-age=86400, stale-while-revalidate=604800",
+      "timing-allow-origin": "*",
+      "cross-origin-opener-policy": "same-origin-allow-popups",
+      "cross-origin-resource-policy": "cross-origin",
+      "access-control-allow-origin": "*",
+      "x-xss-protection": "0",
+      "server": "ESF"
+    }
+  },
+  {
+    "url": "http://localhost:5173/audio/sprites/sfx-sprite.mp3",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache",
+      "etag": "W/\"293078-1774045121583\"",
+      "connection": "keep-alive",
+      "content-length": "293078",
+      "keep-alive": "timeout=5",
+      "date": "Sat, 18 Apr 2026 06:38:21 GMT",
+      "content-type": "audio/mpeg",
+      "vary": "Origin",
+      "last-modified": "Fri, 20 Mar 2026 22:18:41 GMT"
+    }
+  },
+  {
+    "url": "https://fonts.gstatic.com/s/quicksand/v37/6xKtdSZaM9iE8KbpRA_hK1QN.woff2",
+    "status": 200,
+    "headers": {
+      "age": "19875",
+      "report-to": "{\"group\":\"apps-themes\",\"max_age\":2592000,\"endpoints\":[{\"url\":\"https://csp.withgoogle.com/csp/report-to/apps-themes\"}]}",
+      "x-content-type-options": "nosniff",
+      "expires": "Sun, 18 Apr 2027 01:07:06 GMT",
+      "alt-svc": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000",
+      "date": "Sat, 18 Apr 2026 01:07:06 GMT",
+      "last-modified": "Wed, 27 Aug 2025 19:19:09 GMT",
+      "content-type": "font/woff2",
+      "cache-control": "public, max-age=31536000",
+      "timing-allow-origin": "*",
+      "cross-origin-opener-policy": "same-origin; report-to=\"apps-themes\"",
+      "cross-origin-resource-policy": "cross-origin",
+      "content-security-policy-report-only": "require-trusted-types-for 'script'; report-uri https://csp.withgoogle.com/csp/apps-themes",
+      "accept-ranges": "bytes",
+      "access-control-allow-origin": "*",
+      "content-length": "28244",
+      "x-xss-protection": "0",
+      "server": "sffe"
+    }
+  }
+]

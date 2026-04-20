@@ -96,20 +96,26 @@ enum ClassStatus {
   ARCHIVED
 }
 
+enum MemberStatus {
+  ACTIVE
+  INACTIVE
+  COMPLETED
+}
+
 // ==================== CORE MODELS ====================
 
 model User {
   id           String   @id @default(uuid())
-  email        String   @unique @db.VarChar(255)
-  username     String?  @unique @db.VarChar(50)
-  passwordHash String   @db.VarChar(255)
-  name         String   @db.VarChar(255)
-  role         Role     @default(STUDENT)
-  age          Int?     @db.SmallInt
-  quota        Int      @default(0)
-  cohort       String   @default("default") @db.VarChar(100)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+   email        String   @unique @db.VarChar(255)
+   username     String?  @unique @db.VarChar(50)
+   passwordHash String   @db.VarChar(255)
+   name         String   @db.VarChar(255)
+   role         Role     @default(STUDENT)
+   age          Int?     @db.SmallInt
+   quota        Int      @default(0)
+   cohort       String   @default("default") @db.VarChar(100)
+   createdAt    DateTime @default(now())
+   updatedAt    DateTime @updatedAt
 
   sessions         Session[]
   apiKeys          ApiKey[]
@@ -129,6 +135,10 @@ model User {
 
   // Recipe relations
   recipes Recipe[]
+
+  // Group relations
+  createdGroups   Group[]       @relation("TeacherGroups")
+  memberships   GroupMember[]  @relation("StudentMemberships")
 
   @@index([email])
   @@index([username])
@@ -718,7 +728,7 @@ model RefreshToken {
 
 // Template for creating classes
 model ClassTemplate {
-  id          String   @id @default(cuid())
+  id          String   @id @default(uuid())
   name        String   @db.VarChar(255)
   description String?
   createdAt   DateTime @default(now())
@@ -734,7 +744,8 @@ model ClassTemplate {
 
 // The mutable class entity being edited by the tutor
 model Class {
-  id          String   @id @default(cuid())
+  id          String   @id @default(uuid())
+  shortId     String?  @unique @db.VarChar(30)
   title       String   @db.VarChar(255)
   description String?
   createdAt   DateTime @default(now())
@@ -757,6 +768,9 @@ model Class {
   // Lessons in the current draft
   lessons ClassLesson[]
 
+  // Group assignments for gamified sequence
+  groupAssignments GroupClass[] @relation("ClassGroupAssignments")
+
   @@index([tutorId])
   @@index([status])
   @@map("classes")
@@ -764,7 +778,7 @@ model Class {
 
 // Individual lesson within a class (mutable draft)
 model ClassLesson {
-  id      String @id @default(cuid())
+  id      String @id @default(uuid())
   classId String
   class   Class  @relation(fields: [classId], references: [id], onDelete: Cascade)
 
@@ -785,7 +799,7 @@ model ClassLesson {
 
 // An immutable, published version of a class
 model ClassVersion {
-  id      String @id @default(cuid())
+  id      String @id @default(uuid())
   classId String @map("class_id")
   class   Class  @relation(fields: [classId], references: [id], onDelete: Cascade)
 
@@ -809,7 +823,7 @@ model ClassVersion {
 
 // Individual lesson snapshot for a published class version
 model ClassVersionLesson {
-  id             String       @id @default(cuid())
+  id             String       @id @default(uuid())
   classVersionId String       @map("class_version_id")
   classVersion   ClassVersion @relation(fields: [classVersionId], references: [id], onDelete: Cascade)
 
@@ -829,4 +843,55 @@ model ClassVersionLesson {
   @@index([classVersionId])
   @@index([recipeId])
   @@map("class_version_lessons")
+}
+
+// ==================== GROUP MODELS (Content Control) ====================
+
+model Group {
+  id          String   @id @default(uuid())
+  name        String   @db.VarChar(255)
+  description String?  @db.VarChar(500)
+  teacherId   String
+  teacher    User     @relation("TeacherGroups", fields: [teacherId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  memberships      GroupMember[] @relation("GroupMemberships")
+  classAssignments GroupClass[]   @relation("GroupClassAssignments")
+
+  @@index([teacherId])
+  @@map("groups")
+}
+
+model GroupMember {
+  id        String       @id @default(uuid())
+  groupId   String
+  studentId String
+  joinedAt  DateTime     @default(now())
+  status    MemberStatus @default(ACTIVE)
+
+  group   Group   @relation("GroupMemberships", fields: [groupId], references: [id], onDelete: Cascade)
+  student User    @relation("StudentMemberships", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, studentId])
+  @@index([studentId])
+  @@index([groupId])
+  @@map("group_members")
+}
+
+model GroupClass {
+  id         String   @id @default(uuid())
+  groupId    String
+  classId    String
+  order      Int      @default(0) @db.SmallInt
+  assignedAt DateTime @default(now())
+
+  group Group   @relation("GroupClassAssignments", fields: [groupId], references: [id], onDelete: Cascade)
+  class Class   @relation("ClassGroupAssignments", fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, order])
+  @@unique([groupId, classId])
+  @@index([groupId])
+  @@index([classId])
+  @@map("group_classes")
 }

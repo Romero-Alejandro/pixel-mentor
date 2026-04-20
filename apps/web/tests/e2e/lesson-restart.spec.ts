@@ -1,4 +1,5 @@
-import { test, expect, Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
 // Helper to get first active recipeId for student
 async function getFirstRecipeId(page: Page): Promise<string> {

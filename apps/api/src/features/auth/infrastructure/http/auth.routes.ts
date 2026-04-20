@@ -7,11 +7,14 @@ import {
 } from 'express';
 import { z } from 'zod';
 
+import { requireRole } from './auth.middleware.js';
+
 import type { IUserRepository } from '@/features/auth/domain/ports/user.repository.port.js';
-import type {
-  RegisterUseCase,
-  LoginUseCase,
-  RefreshTokenUseCase,
+import {
+  type RegisterUseCase,
+  type LoginUseCase,
+  type RefreshTokenUseCase,
+  type ResolveUserByEmailUseCase,
 } from '@/features/auth/application/use-cases/index.js';
 import type { AuthError } from '@/features/auth/domain/auth.errors.js';
 
@@ -32,12 +35,17 @@ const RefreshTokenBodySchema = z.object({
   refreshToken: z.string().min(1, 'Refresh token is required'),
 });
 
+const ResolveUserQuerySchema = z.object({
+  email: z.string().email('Email inválido'),
+});
+
 export class AuthController {
   constructor(
     private userRepo: IUserRepository,
     private registerUseCase: RegisterUseCase,
     private loginUseCase: LoginUseCase,
     private refreshTokenUseCase: RefreshTokenUseCase,
+    private resolveUserByEmailUseCase: ResolveUserByEmailUseCase,
   ) {}
 
   async register(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -157,6 +165,31 @@ export class AuthController {
       next(error);
     }
   }
+
+  async resolveByEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const validated = ResolveUserQuerySchema.parse(req.query);
+
+      const result = await this.resolveUserByEmailUseCase.execute({
+        email: validated.email,
+      });
+
+      if (!result) {
+        res.status(404).json({ error: 'Usuario no encontrado', code: 'USER_NOT_FOUND' });
+        return;
+      }
+
+      res.json({ uuid: result.uuid, email: result.email, name: result.name });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res
+          .status(400)
+          .json({ error: 'Error de validación', code: 'VALIDATION_ERROR', details: error.issues });
+        return;
+      }
+      next(error);
+    }
+  }
 }
 
 export function createAuthRouter(
@@ -164,6 +197,7 @@ export function createAuthRouter(
   registerUseCase: RegisterUseCase,
   loginUseCase: LoginUseCase,
   refreshTokenUseCase: RefreshTokenUseCase,
+  resolveUserByEmailUseCase: ResolveUserByEmailUseCase,
   protectedMiddleware: RequestHandler,
 ) {
   const controller = new AuthController(
@@ -171,6 +205,7 @@ export function createAuthRouter(
     registerUseCase,
     loginUseCase,
     refreshTokenUseCase,
+    resolveUserByEmailUseCase,
   );
 
   const router = Router();
@@ -186,9 +221,17 @@ export function createAuthRouter(
     controller.refresh(req, res, next),
   );
 
-  // Protected route - auth required
+  // Protected routes - auth required
   router.get('/me', protectedMiddleware, (req: Request, res: Response, next: NextFunction) =>
     controller.me(req, res, next),
+  );
+
+  // Protected route - auth + teacher role required
+  router.get(
+    '/users/resolve',
+    protectedMiddleware,
+    requireRole('TEACHER'),
+    (req: Request, res: Response, next: NextFunction) => controller.resolveByEmail(req, res, next),
   );
 
   return router;

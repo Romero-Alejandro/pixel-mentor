@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import {
   IconMoodSmile,
@@ -7,6 +7,8 @@ import {
   IconSchool,
   IconUsers,
   IconListDetails,
+  IconUsersGroup,
+  IconLogout,
 } from '@tabler/icons-react';
 
 import { useAuth } from '@/features/auth/hooks/useAuth';
@@ -18,6 +20,7 @@ import { StreakCalendar } from '@/features/gamification/components/StreakCalenda
 import { XPChart } from '@/features/gamification/components/XPChart';
 import { BadgeGrid } from '@/features/gamification/components/BadgeGrid';
 import { useAudio } from '@/contexts/AudioContext';
+import { useToast } from '@/contexts/ToastContext';
 import { AudioControl } from '@/components/AudioControl';
 import {
   DASHBOARD_TABS,
@@ -29,10 +32,12 @@ import { useDashboardData } from '@/features/dashboard/hooks/useDashboardData';
 import { MissionMap } from '@/features/dashboard/components/MissionMap';
 
 export function DashboardPage() {
+  const navigate = useNavigate();
   const { playClick, playClickSecondary, playSelect, playStreakMaintained, playModalOpen } =
     useAudio();
+  const toast = useToast();
 
-  const { user, logout } = useAuth();
+  const { user, logout, isLoggingOut } = useAuth();
 
   const { profile, fetchProfile, particleTrigger, recordActivity } = useGamificationStore(
     useShallow((state) => ({
@@ -73,9 +78,18 @@ export function DashboardPage() {
     setActiveTab(tab);
   }
 
-  function handleLogout() {
+  async function handleLogout() {
+    if (isLoggingOut) return;
     playClickSecondary();
-    logout();
+
+    try {
+      await logout();
+      toast.success('¡Sesión cerrada!', { message: 'Hasta pronto' });
+      navigate('/login', { replace: true });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error al cerrar sesión';
+      toast.error(message);
+    }
   }
 
   const xpPercent =
@@ -112,6 +126,12 @@ export function DashboardPage() {
                 >
                   <IconListDetails className="w-4 h-4" /> Unidades
                 </Link>
+                <Link
+                  to="/groups"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold text-emerald-600 hover:bg-emerald-50 transition-colors outline-none"
+                >
+                  <IconUsersGroup className="w-4 h-4" /> Grupos
+                </Link>
                 {isAdmin ? (
                   <Link
                     to="/admin/users"
@@ -123,13 +143,30 @@ export function DashboardPage() {
               </nav>
             ) : null}
 
+            {!isTeacher ? (
+              <nav className="hidden sm:flex items-center gap-2 mr-4">
+                <Link
+                  to="/my-learning"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold text-emerald-600 hover:bg-emerald-50 transition-colors outline-none"
+                >
+                  <IconMap className="w-4 h-4" /> Mi Aprendizaje
+                </Link>
+              </nav>
+            ) : null}
+
             {profile ? <CompactGamificationHeader profile={profile} /> : null}
             <AudioControl />
             <button
               onClick={handleLogout}
-              className="text-sm font-bold text-slate-500 hover:text-rose-500 transition-colors px-3 py-2 rounded-xl hover:bg-rose-50 outline-none"
+              disabled={isLoggingOut}
+              className="text-sm font-bold text-slate-500 hover:text-rose-500 transition-colors px-3 py-2 rounded-xl hover:bg-rose-50 outline-none disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-slate-500 flex items-center gap-1.5"
             >
-              Salir
+              {isLoggingOut ? (
+                <Spinner size="sm" className="text-rose-500" />
+              ) : (
+                <IconLogout className="w-4 h-4" />
+              )}
+              {isLoggingOut ? 'Saliendo...' : 'Salir'}
             </button>
           </div>
         </div>
@@ -212,6 +249,26 @@ export function DashboardPage() {
               </Link>
             </div>
           </>
+        ) : null}
+
+        {!isTeacher ? (
+          <div className="mb-8 animate-bounce-in">
+            <Link to="/my-learning" className="group outline-none">
+              <div className="bg-white rounded-[2rem] p-6 border-4 border-emerald-200 shadow-[0_6px_0_0_#a7f3d0] hover:border-emerald-300 hover:shadow-[0_8px_0_0_#6ee7b7] transition-all hover:-translate-y-1 active:translate-y-1 active:shadow-none">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-emerald-100 flex items-center justify-center group-hover:bg-emerald-200 transition-colors">
+                    <IconMap className="w-7 h-7 text-emerald-500" />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-slate-800 text-lg">Mi Camino de Aprendizaje</h3>
+                    <p className="text-sm text-slate-500 font-medium">
+                      Ver tus grupos y clases asignadas
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </Link>
+          </div>
         ) : null}
 
         <div className="flex flex-col lg:flex-row gap-8">

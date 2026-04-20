@@ -43,12 +43,15 @@ interface GamificationState {
   // SSE event handlers with version checking
   onXPEarned: (newTotalXP: number, reason: string, version: number) => void;
   onBadgeEarned: (badge: EarnedBadge, version: number) => void;
-  onLevelUp: (data: {
-    newLevel: number;
-    newLevelTitle: string;
-    previousLevel: number;
-    totalXP: number;
-  }, version: number) => void;
+  onLevelUp: (
+    data: {
+      newLevel: number;
+      newLevelTitle: string;
+      previousLevel: number;
+      totalXP: number;
+    },
+    version: number,
+  ) => void;
   onStreakUpdated: (currentStreak: number, longestStreak: number, version: number) => void;
 }
 
