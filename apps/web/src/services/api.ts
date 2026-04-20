@@ -2,7 +2,6 @@ import { fetchEventSource, type EventSourceMessage } from '@microsoft/fetch-even
 import {
   RecipeSchema,
   SessionSchema,
-  StartRecipeOutputSchema,
   InteractRecipeOutputSchema,
   QuestionAnswerOutputSchema,
   ClassSchema,
@@ -31,6 +30,7 @@ import {
 } from '@pixel-mentor/shared';
 
 import { apiClient, getToken } from './api-client';
+import { isValidUUID } from '@/utils/uuid';
 
 import { logger } from '@/utils/logger';
 
@@ -110,6 +110,11 @@ export const streamInteractWithRecipe = (
 };
 
 export const api = {
+  validateId: (id: string, name: string) => {
+    if (!isValidUUID(id)) {
+      throw new Error(`Invalid ${name} ID format: ${id}. Expected UUID.`);
+    }
+  },
   // Auth methods moved to features/auth/services/auth.api.ts
   listRecipes: async (activeOnly = true) => {
     const { data } = await apiClient.get(`/api/recipes?activeOnly=${activeOnly}`);
@@ -132,6 +137,7 @@ export const api = {
       lessonProgress: data.lessonProgress,
       contentSteps: data.contentSteps,
       recipeId: data.recipeId,
+      title: data.title,
     };
   },
   getClassIdByLessonId: async (lessonId: string) => {
@@ -183,7 +189,13 @@ export const api = {
       limit: data.limit ?? 20,
     };
   },
+  getMyClasses: async () => {
+    const { data } = await apiClient.get('/api/classes?status=PUBLISHED');
+    const classes = (data.classes ?? data) as Class[];
+    return classes;
+  },
   getClass: async (classId: string) => {
+    api.validateId(classId, 'Class');
     const { data } = await apiClient.get(`/api/classes/${classId}`);
     return data;
   },
@@ -192,6 +204,7 @@ export const api = {
     return res;
   },
   updateClass: async (classId: string, data: ClassUpdate) => {
+    api.validateId(classId, 'Class');
     const { data: res } = await apiClient.patch(
       `/api/classes/${classId}`,
       ClassUpdateSchema.parse(data),
@@ -199,9 +212,11 @@ export const api = {
     return ClassSchema.parse(res);
   },
   deleteClass: async (classId: string) => {
+    api.validateId(classId, 'Class');
     await apiClient.delete(`/api/classes/${classId}`);
   },
   publishClass: async (classId: string, data?: ClassPublish) => {
+    api.validateId(classId, 'Class');
     const { data: res } = await apiClient.post(
       `/api/classes/${classId}/publish`,
       data ? ClassPublishSchema.parse(data) : {},
@@ -209,18 +224,26 @@ export const api = {
     return ClassSchema.parse(res);
   },
   unpublishClass: async (classId: string) => {
+    api.validateId(classId, 'Class');
     const { data: res } = await apiClient.post(`/api/classes/${classId}/unpublish`);
     return ClassSchema.parse(res);
   },
   addClassLesson: async (classId: string, lesson: { recipeId: string; order?: number }) => {
+    api.validateId(classId, 'Class');
     const { data } = await apiClient.post(`/api/classes/${classId}/lessons`, lesson);
     return data;
   },
   removeClassLesson: async (classId: string, lessonId: string) => {
+    api.validateId(classId, 'Class');
+    // Assuming lessonId is also a UUID for consistency. Add validation for lessonId.
+    api.validateId(lessonId, 'Lesson');
     await apiClient.delete(`/api/classes/${classId}/lessons/${lessonId}`);
     return undefined;
   },
   reorderClassLessons: async (classId: string, lessonIds: string[]) => {
+    api.validateId(classId, 'Class');
+    // Assuming lessonIds are also UUIDs. Validate each one.
+    for (const id of lessonIds) api.validateId(id, 'Lesson');
     const { data } = await apiClient.patch(`/api/classes/${classId}/lessons/reorder`, {
       lessonIds,
     });
@@ -231,6 +254,8 @@ export const api = {
     lessonId: string,
     lesson: Partial<{ recipeId: string; order: number }>,
   ) => {
+    api.validateId(classId, 'Class');
+    api.validateId(lessonId, 'Lesson');
     const { data } = await apiClient.patch(`/api/classes/${classId}/lessons/${lessonId}`, lesson);
     return data;
   },
@@ -247,6 +272,7 @@ export const api = {
     return ClassTemplateSchema.parse(res);
   },
   createClassFromTemplate: async (templateId: string, title: string) => {
+    api.validateId(templateId, 'ClassTemplate');
     const { data } = await apiClient.post(`/api/class-templates/${templateId}/create-class`, {
       title,
     });

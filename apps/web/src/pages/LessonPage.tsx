@@ -26,6 +26,7 @@ import { useLessonStore } from '@/features/lesson/stores/lesson.store';
 
 export function LessonPage() {
   const { lessonId } = useParams<{ lessonId: string }>();
+  console.log('Lesson ID from route:', lessonId);
   const { settings: voiceSettings, updateSettings } = useVoiceSettings();
   const { particleTrigger } = useGamificationStore();
   const { playSprite } = useAudio();
