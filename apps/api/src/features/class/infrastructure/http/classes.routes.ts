@@ -3,17 +3,17 @@ import type { ZodObject } from 'zod';
 import { z } from 'zod';
 import type { Response, Request, NextFunction } from 'express';
 
-import { checkEnrollment, checkOwnership } from './middlewares/class-middleware.js';
+import { checkOwnership } from './middlewares/class-middleware.js';
 
+import type { ContentAccessService } from '@/features/group/application/services/content-access.service.js';
+import { requireRole } from '@/features/auth/infrastructure/http/auth.middleware.js';
 import type { AppRequest } from '@/shared/types/express.d';
 import type {
   ClassService,
-  CreateClassInput,
   UpdateLessonInput,
 } from '@/features/class/application/services/class.service';
 import {
-  ClassNotFoundError,
-  ClassOwnershipError,
+  ClassEnrollmentError,
   LessonNotFoundError,
 } from '@/features/class/application/services/class.service';
 import type { IClassLessonRepository } from '@/features/class/domain/ports/class.repository.port';
@@ -36,29 +36,6 @@ interface DemoInteractionOutput {
   };
   isRepeat?: boolean;
 }
-
-const ClassCreateSchema = z.object({
-  body: z.object({
-    title: z.string().min(1).max(255),
-    description: z.string().optional(),
-    classTemplateId: z.string().optional(),
-    lessons: z
-      .array(
-        z.object({
-          recipeId: z.string().min(1),
-          order: z.number(),
-        }),
-      )
-      .optional(),
-  }),
-});
-
-const ClassUpdateSchema = z.object({
-  body: z.object({
-    title: z.string().min(1).max(255).optional(),
-    description: z.string().optional(),
-  }),
-});
 
 const ClassListQuerySchema = z.object({
   query: z.object({
@@ -101,10 +78,17 @@ export interface ClassRouterDependencies {
   classLessonRepository: IClassLessonRepository;
   startRecipeUseCase: StartRecipeUseCase;
   orchestrateUseCase: any;
+  contentAccessService: ContentAccessService;
 }
 
 export function createClassRouter(deps: ClassRouterDependencies): Router {
-  const { classService, classLessonRepository, startRecipeUseCase, orchestrateUseCase } = deps;
+  const {
+    classService,
+    classLessonRepository,
+    startRecipeUseCase,
+    orchestrateUseCase,
+    contentAccessService,
+  } = deps;
   const router = Router();
 
   const validate =
@@ -124,66 +108,75 @@ export function createClassRouter(deps: ClassRouterDependencies): Router {
       }
     };
 
-  router.post('/:id/preview', async (req: AppRequest, res: Response, next: NextFunction) => {
-    console.log(
-      `[DEBUG] Solicitud a /preview: userId=${req.user?.id}, role=${req.user?.role}, classId=${req.params.id}`,
-    );
-    try {
-      const classId = req.params.id as string;
-      const userId = req.user!.id;
+  router.post(
+    '/:id/preview',
+    requireRole('TEACHER', 'ADMIN'),
+    async (req: AppRequest, res: Response, next: NextFunction) => {
+      console.log(
+        `[DEBUG] Solicitud a /preview: userId=${req.user?.id}, role=${req.user?.role}, classId=${req.params.id}`,
+      );
+      try {
+        const classId = req.params.id as string;
+        const userId = req.user!.id;
 
-      console.log(`[DEBUG] Verificando ownership: classId=${classId}, userId=${userId}`);
-      await checkOwnership(req, classService, classId);
+        console.log(`[DEBUG] Verificando ownership: classId=${classId}, userId=${userId}`);
+        await checkOwnership(req, classService, classId);
 
-      // Validar que la clase esté en estado DRAFT (solo para previsualización)
-      const classEntity = await classService.getClass(classId);
-      if (classEntity.status !== 'DRAFT') {
-        res.status(403).json({
-          error: 'Preview is only available for classes in DRAFT state',
+        // Validar que la clase esté en estado DRAFT (solo para previsualización)
+        const classEntity = await classService.getClass(classId);
+        if (classEntity.status !== 'DRAFT') {
+          res.status(403).json({
+            error: 'Preview is only available for classes in DRAFT state',
+          });
+          return;
+        }
+
+        const lessons = await classLessonRepository.findByClassId(classId);
+        const firstLesson = lessons.find((l) => l.recipeId);
+
+        if (!firstLesson?.recipeId) {
+          res.status(400).json({ error: 'Class has no valid lessons with recipes' });
+          return;
+        }
+
+        const { sessionId } = await startRecipeUseCase.execute(firstLesson.recipeId, userId);
+        const interaction = (await orchestrateUseCase.interact(
+          sessionId,
+          '',
+        )) as DemoInteractionOutput;
+
+        res.status(200).json({
+          sessionId,
+          recipeId: firstLesson.recipeId,
+          title: firstLesson.recipe?.title ?? null,
+          pedagogicalState: interaction.pedagogicalState,
+          voiceText: interaction.voiceText,
+          meta: interaction.meta,
+          isRepeat: interaction.isRepeat ?? false,
+          lessonProgress: interaction.lessonProgress,
+          contentSteps: interaction.contentSteps,
         });
-        return;
+      } catch (error) {
+        next(error);
       }
-
-      const lessons = await classLessonRepository.findByClassId(classId);
-      const firstLesson = lessons.find((l) => l.recipeId);
-
-      if (!firstLesson?.recipeId) {
-        res.status(400).json({ error: 'Class has no valid lessons with recipes' });
-        return;
-      }
-
-      const { sessionId } = await startRecipeUseCase.execute(firstLesson.recipeId, userId);
-      const interaction = (await orchestrateUseCase.interact(
-        sessionId,
-        '',
-      )) as DemoInteractionOutput;
-
-      res.status(200).json({
-        sessionId,
-        recipeId: firstLesson.recipeId,
-        title: firstLesson.recipe?.title ?? null,
-        pedagogicalState: interaction.pedagogicalState,
-        voiceText: interaction.voiceText,
-        meta: interaction.meta,
-        isRepeat: interaction.isRepeat ?? false,
-        lessonProgress: interaction.lessonProgress,
-        contentSteps: interaction.contentSteps,
-      });
-    } catch (error) {
-      next(error);
-    }
-  });
+    },
+  );
 
   router.get(
     '/lessons/:lessonId/class',
     async (req: AppRequest, res: Response, next: NextFunction) => {
       try {
         const { lessonId } = req.params;
+        const userId = req.user!.id;
+        const userRole = req.user!.role;
 
         const classId = await classLessonRepository.findClassIdByLessonId(lessonId as string);
         if (!classId) throw new LessonNotFoundError(lessonId as string);
 
-        await checkEnrollment(req, classService, classId);
+        const canAccess = await contentAccessService.canAccessClass(userId, userRole, classId);
+        if (!canAccess) {
+          throw new ClassEnrollmentError(classId, userId);
+        }
         const lesson = await classService.getLesson(classId, lessonId as string);
         res.status(200).json(lesson);
       } catch (error) {
@@ -195,6 +188,7 @@ export function createClassRouter(deps: ClassRouterDependencies): Router {
   // PATCH /:id/lessons/reorder - Reorder lessons (MUST be before /:lessonId)
   router.patch(
     '/:id/lessons/reorder',
+    requireRole('TEACHER', 'ADMIN'),
     validate(ReorderLessonsSchema),
     async (req: AppRequest, res: Response, next: NextFunction) => {
       try {
@@ -209,6 +203,7 @@ export function createClassRouter(deps: ClassRouterDependencies): Router {
 
   router.patch(
     '/:id/lessons/:lessonId',
+    requireRole('TEACHER', 'ADMIN'),
     validate(UpdateLessonSchema),
     async (req: AppRequest, res: Response, next: NextFunction) => {
       try {
@@ -230,6 +225,7 @@ export function createClassRouter(deps: ClassRouterDependencies): Router {
   // POST /:id/lessons - Add lesson to class
   router.post(
     '/:id/lessons',
+    requireRole('TEACHER', 'ADMIN'),
     validate(AddLessonSchema),
     async (req: AppRequest, res: Response, next: NextFunction) => {
       try {
@@ -245,6 +241,7 @@ export function createClassRouter(deps: ClassRouterDependencies): Router {
   // DELETE /:id/lessons/:lessonId - Remove lesson from class
   router.delete(
     '/:id/lessons/:lessonId',
+    requireRole('TEACHER', 'ADMIN'),
     async (req: AppRequest, res: Response, next: NextFunction) => {
       try {
         const classId = req.params.id as string;
@@ -260,6 +257,7 @@ export function createClassRouter(deps: ClassRouterDependencies): Router {
   // PATCH /:id/lessons/reorder - Reorder lessons
   router.patch(
     '/:id/lessons/reorder',
+    requireRole('TEACHER', 'ADMIN'),
     validate(ReorderLessonsSchema),
     async (req: AppRequest, res: Response, next: NextFunction) => {
       try {
@@ -271,9 +269,52 @@ export function createClassRouter(deps: ClassRouterDependencies): Router {
     },
   );
 
+  router.get('/:id', async (req: AppRequest, res: Response, next: NextFunction) => {
+    try {
+      const classId = req.params.id as string;
+      const userId = req.user!.id;
+      const userRole = req.user?.role;
+
+      if (userRole === 'STUDENT') {
+        const canAccess = await contentAccessService.canAccessClass(userId, userRole, classId);
+        if (!canAccess) {
+          throw new ClassEnrollmentError(classId, userId);
+        }
+      } else {
+        await checkOwnership(req, classService, classId);
+      }
+
+      const classEntity = await classService.getClass(classId);
+      res.status(200).json(classEntity);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // GET / - List classes (TEACHER/ADMIN only - use ContentAccessService for students)
+  router.get(
+    '/',
+    requireRole('TEACHER', 'ADMIN'),
+    validate(ClassListQuerySchema),
+    async (req: AppRequest, res: Response, next: NextFunction) => {
+      try {
+        const { status, page = 1, limit = 20 } = req.query;
+        const result = await classService.listClasses(req.user!.id, {
+          status: status as string,
+          page: Number(page),
+          limit: Number(limit),
+        });
+        res.status(200).json(result);
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
   // POST /:id/publish - Publish class
   router.post(
     '/:id/publish',
+    requireRole('TEACHER', 'ADMIN'),
     validate(PublishClassSchema),
     async (req: AppRequest, res: Response, next: NextFunction) => {
       try {
@@ -287,15 +328,19 @@ export function createClassRouter(deps: ClassRouterDependencies): Router {
   );
 
   // POST /:id/unpublish - Unpublish class
-  router.post('/:id/unpublish', async (req: AppRequest, res: Response, next: NextFunction) => {
-    try {
-      const classId = req.params.id as string;
-      const classEntity = await classService.unpublishClass(classId, req.user!.id);
-      res.status(200).json(classEntity);
-    } catch (error) {
-      next(error);
-    }
-  });
+  router.post(
+    '/:id/unpublish',
+    requireRole('TEACHER', 'ADMIN'),
+    async (req: AppRequest, res: Response, next: NextFunction) => {
+      try {
+        const classId = req.params.id as string;
+        const classEntity = await classService.unpublishClass(classId, req.user!.id);
+        res.status(200).json(classEntity);
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
 
   return router;
 }
@@ -305,19 +350,31 @@ export interface StudentRouterDependencies {
   classLessonRepository: IClassLessonRepository;
   startRecipeUseCase: StartRecipeUseCase;
   orchestrateUseCase: any;
+  contentAccessService: ContentAccessService;
 }
 
 export function createClassLessonStudentRouter(deps: StudentRouterDependencies): Router {
-  const { classService, classLessonRepository, startRecipeUseCase, orchestrateUseCase } = deps;
+  const {
+    classService,
+    classLessonRepository,
+    startRecipeUseCase,
+    orchestrateUseCase,
+    contentAccessService,
+  } = deps;
   const router = Router();
 
-  // POST /:id/demo - Start class demo (student with enrollment)
-  router.post('/:id/demo', async (req: AppRequest, res: Response, next: NextFunction) => {
+  // POST /:id/start - Start class (student with enrollment)
+  router.post('/:id/start', async (req: AppRequest, res: Response, next: NextFunction) => {
     try {
       const classId = req.params.id as string;
       const userId = req.user!.id;
+      const userRole = req.user!.role;
 
-      await checkEnrollment(req, classService, classId);
+      // Validar acceso con ContentAccessService inyectado
+      const canAccess = await contentAccessService.canAccessClass(userId, userRole, classId);
+      if (!canAccess) {
+        throw new ClassEnrollmentError(classId, userId);
+      }
       const classEntity = await classService.getClass(classId);
       if (!classEntity) {
         res.status(404).json({ error: 'Class not found' });
@@ -357,7 +414,15 @@ export function createClassLessonStudentRouter(deps: StudentRouterDependencies):
   // GET /:id - Get class by ID (student)
   router.get('/:id', async (req: AppRequest, res: Response, next: NextFunction) => {
     try {
-      const classEntity = await classService.getClass(req.params.id);
+      const classId = req.params.id as string;
+      const userId = req.user!.id;
+      const userRole = req.user!.role;
+
+      const canAccess = await contentAccessService.canAccessClass(userId, userRole, classId);
+      if (!canAccess) {
+        throw new ClassEnrollmentError(classId, userId);
+      }
+      const classEntity = await classService.getClass(classId);
       if (!classEntity) {
         res.status(404).json({ error: 'Class not found' });
         return;
@@ -384,9 +449,16 @@ export function createClassLessonStudentRouter(deps: StudentRouterDependencies):
     async (req: AppRequest, res: Response, next: NextFunction) => {
       try {
         const { lessonId } = req.params;
+        const userId = req.user!.id;
+        const userRole = req.user!.role;
+
         const classId = await classLessonRepository.findClassIdByLessonId(lessonId as string);
         if (!classId) throw new LessonNotFoundError(lessonId as string);
-        await checkEnrollment(req, classService, classId);
+
+        const canAccess = await contentAccessService.canAccessClass(userId, userRole, classId);
+        if (!canAccess) {
+          throw new ClassEnrollmentError(classId, userId);
+        }
         const lesson = await classService.getLesson(classId, lessonId as string);
         res.status(200).json(lesson);
       } catch (error) {

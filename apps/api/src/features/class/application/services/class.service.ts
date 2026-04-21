@@ -470,7 +470,17 @@ export class ClassService {
     await this.lessonRepo.reorder(classId, lessonIds);
   }
 
+  /**
+   * Checks if a user is enrolled in a class.
+   * @deprecated Use ContentAccessService.canAccessClass instead.
+   * @param userId The user ID
+   * @param classId The class ID
+   * @returns True if enrolled, false otherwise
+   */
   async isUserEnrolledInClass(userId: string, classId: string): Promise<boolean> {
+    console.warn(
+      `[DEPRECATION] ClassService.isUserEnrolledInClass is deprecated. Use ContentAccessService.canAccessClass instead.`,
+    );
     console.log(`[DEBUG] Verificando acceso: classId=${classId}, userId=${userId}`);
 
     // 1. Verificar si la clase existe (sin importar el estado)

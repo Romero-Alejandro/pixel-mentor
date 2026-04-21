@@ -1,22 +1,31 @@
 import type { AppRequest } from '@/shared/types/express.d';
-import type {
-  ClassService,
+import {
   ClassEnrollmentError,
   ClassOwnershipError,
 } from '@/features/class/application/services/class.service';
+import type { ClassService } from '@/features/class/application/services/class.service';
+import { ContentAccessService } from '@/features/group/application/services/content-access.service.js';
 
 /**
  * Middleware to check if a user is enrolled in a class.
  * @throws {ClassEnrollmentError} If the user is not enrolled and is not an ADMIN.
+ * @deprecated Use ContentAccessService.canAccessClass instead.
  */
 export const checkEnrollment = async (
   req: AppRequest,
-  classService: ClassService,
+  _classService: ClassService,
   classId: string,
 ): Promise<boolean> => {
   const userId = req.user!.id;
-  const isEnrolled = await classService.isUserEnrolledInClass(userId, classId);
-  if (!isEnrolled && req.user?.role !== 'ADMIN') {
+  const userRole = req.user?.role ?? 'STUDENT';
+
+  console.warn(
+    `[DEPRECATION] checkEnrollment in class-middleware.ts is deprecated. Use ContentAccessService.canAccessClass instead.`,
+  );
+
+  const contentAccessService = new ContentAccessService();
+  const canAccess = await contentAccessService.canAccessClass(userId, userRole, classId);
+  if (!canAccess) {
     throw new ClassEnrollmentError(classId, userId);
   }
   return true;

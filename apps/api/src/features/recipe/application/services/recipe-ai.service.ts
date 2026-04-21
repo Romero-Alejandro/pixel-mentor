@@ -97,10 +97,10 @@ ${objectives}
 
 ## REGLAS IMPORTANTES:
 
-1. **LÍMITES DE TEXTO** (MUY IMPORTANTE):
-   - Cada texto debe ser BREVE y CONCISO (máximo 100 caracteres por texto)
-   - Los ejemplos deben ser cortos (máximo 80 caracteres)
-   - NO generes textos muy largos o fallará la base de datos
+1. **CALIDAD Y REALISMO** (MUY IMPORTANTE):
+   - Genera contenido EDUCATIVO y DESCRIPTIVO (mínimo 100-300 caracteres por texto)
+   - Los ejemplos deben ser ricos y contextualizados
+   - Evita textos vacíos, genéricos o muy cortos - el contenido debe ser realista
 
 2. **Actividades (activity)**: Debe tener instruction como OBJETO {text: "..."}, opciones (options) y feedback
 3. **Preguntas (question)**: Debe tener question como OBJETO {text: "..."}, expectedAnswer y feedback  
@@ -308,8 +308,16 @@ Devuelve SOLO JSON válido, sin texto adicional.`;
     if (!script || typeof script !== 'object') return this.getDefaultScript(stepType);
     const s = script as Record<string, unknown>;
 
-    // Activity: asegurar options
+    // Activity: asegurar estructura completa con transition
     if (stepType === 'activity') {
+      const transition = s.transition;
+      let transitionObj = { text: '¡Vamos a practicar!' };
+      if (typeof transition === 'string') transitionObj = { text: transition };
+      else if (transition && typeof transition === 'object') {
+        const t = transition as { text?: string };
+        transitionObj = { text: t.text || '¡Vamos a practicar!' };
+      }
+
       const instruction = s.instruction;
       let instructionObj = { text: 'Realiza la actividad' };
       if (typeof instruction === 'string') instructionObj = { text: instruction };
@@ -337,6 +345,7 @@ Devuelve SOLO JSON válido, sin texto adicional.`;
       const feedback = (s.feedback as Record<string, string>) || {};
       return {
         kind: 'activity',
+        transition: transitionObj,
         instruction: instructionObj,
         options: optionsArr,
         feedback: {
@@ -346,8 +355,16 @@ Devuelve SOLO JSON válido, sin texto adicional.`;
       };
     }
 
-    // Question
+    // Question: asegurar estructura completa con transition
     if (stepType === 'question') {
+      const transition = s.transition;
+      let transitionObj = { text: '¡Responde la pregunta!' };
+      if (typeof transition === 'string') transitionObj = { text: transition };
+      else if (transition && typeof transition === 'object') {
+        const t = transition as { text?: string };
+        transitionObj = { text: t.text || '¡Responde la pregunta!' };
+      }
+
       const question = s.question;
       let questionObj = { text: '¿Qué aprendiste?' };
       if (typeof question === 'string') questionObj = { text: question };
@@ -358,11 +375,14 @@ Devuelve SOLO JSON válido, sin texto adicional.`;
 
       const feedback = (s.feedback as Record<string, string>) || {};
       const expectedAnswer = (s.expectedAnswer as string) || 'Una respuesta';
+      const hint = typeof s.hint === 'string' ? s.hint : (s.hint as { text?: string })?.text;
 
       return {
         kind: 'question',
+        transition: transitionObj,
         question: questionObj,
         expectedAnswer,
+        hint,
         feedback: {
           correct: feedback.correct || '¡Correcto!',
           incorrect: feedback.incorrect || 'Pista: piensa en el tema',
@@ -377,6 +397,7 @@ Devuelve SOLO JSON válido, sin texto adicional.`;
     if (stepType === 'activity') {
       return {
         kind: 'activity',
+        transition: { text: '¡Vamos a practicar!' },
         instruction: { text: 'Realiza la actividad' },
         options: [
           { text: 'Opción A', isCorrect: true },
@@ -388,6 +409,7 @@ Devuelve SOLO JSON válido, sin texto adicional.`;
     if (stepType === 'question') {
       return {
         kind: 'question',
+        transition: { text: '¡Responde la pregunta!' },
         question: { text: '¿Qué aprendiste?' },
         expectedAnswer: 'Una respuesta',
         feedback: { correct: '¡Correcto!', incorrect: 'Pista: pensa en...' },

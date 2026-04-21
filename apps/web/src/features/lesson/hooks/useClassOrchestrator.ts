@@ -376,7 +376,7 @@ export function useClassOrchestrator() {
         if (!classId) {
           throw new Error('No se encontró la clase asociada a esta lección');
         }
-        const result = await api.startClassDemo(classId);
+        const result = await api.startClass(classId);
         sessionIdRef.current = result.sessionId;
         store.setSessionId(result.sessionId);
         store.setIsRepeat(!!result.isRepeat);

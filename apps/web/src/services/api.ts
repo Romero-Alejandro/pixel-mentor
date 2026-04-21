@@ -126,8 +126,8 @@ export const api = {
     );
     return SessionSchema.array().parse(data);
   },
-  startClassDemo: async (classId: string) => {
-    const { data } = await apiClient.post(`/api/classes/${classId}/demo`);
+  startClass: async (classId: string) => {
+    const { data } = await apiClient.post(`/api/student/classes/${classId}/start`);
     return {
       sessionId: data.sessionId,
       pedagogicalState: data.pedagogicalState,
