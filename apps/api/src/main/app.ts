@@ -28,7 +28,7 @@ import {
 import { createClassTemplateRouter } from '@/features/class/infrastructure/http/class-templates.routes.js';
 import { createRecipeAIRouter } from '@/features/recipe/infrastructure/http/recipe-ai.routes.js';
 import { GroupService } from '@/features/group/application/services/group.service.js';
-import { setupGroupRoutes } from './app.group-routes.js';
+import { setupGroupRoutes, getContentAccessService } from './app.group-routes.js';
 import { createAdminRouter } from '@/shared/http/admin.routes.js';
 import { createLLMGovernanceRouter } from '@/shared/http/llm-governance.routes.js';
 
@@ -272,20 +272,25 @@ export function createApp(deps: AppDependencies): Express {
   // Get recipe use cases from global (must be before routes that use them)
   const startRecipeUseCase = (globalThis as any).__startRecipeUseCase;
 
+  // Group routes (protected, requires TEACHER or ADMIN role) - MUST be before createClassLessonStudentRouter
+  setupGroupRoutes(app, protectedMiddleware, requireRole);
+
   // Student-facing class lesson routes (protected, requires auth only)
   app.use(
-    '/api/classes',
+    '/api/student/classes',
     protectedMiddleware,
     createClassLessonStudentRouter({
       classService: classContainer.classService,
       classLessonRepository: classContainer.classLessonRepository,
       startRecipeUseCase,
       orchestrateUseCase,
+      contentAccessService: getContentAccessService(),
     }),
   );
 
-  // Class routes (protected, requires TEACHER or ADMIN role)
-  const classMiddleware = [protectedMiddleware, requireRole('TEACHER', 'ADMIN')];
+  // Class routes (protected, requires auth - route-level authorization in routes)
+  // NOTE: Removed requireRole('TEACHER', 'ADMIN') to allow students to access via checkEnrollment
+  const classMiddleware = [protectedMiddleware];
   console.log('🔍 Debug classMiddleware:', classMiddleware);
 
   app.use(
@@ -296,6 +301,7 @@ export function createApp(deps: AppDependencies): Express {
       classLessonRepository: classContainer.classLessonRepository,
       startRecipeUseCase,
       orchestrateUseCase,
+      contentAccessService: getContentAccessService(),
     }),
   );
   app.use(
@@ -313,9 +319,6 @@ export function createApp(deps: AppDependencies): Express {
     ...classMiddleware,
     createClassTemplateRouter({ classTemplateService: classContainer.classTemplateService }),
   );
-
-  // Group routes (protected, requires TEACHER or ADMIN role)
-  setupGroupRoutes(app, protectedMiddleware, requireRole);
 
   // Admin routes (protected, requires ADMIN role)
   const adminMiddleware = [protectedMiddleware, requireRole('ADMIN')] as const;

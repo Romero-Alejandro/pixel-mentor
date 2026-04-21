@@ -10,6 +10,12 @@ import {
 import { createGroupRoutes } from '@/features/group/infrastructure/http/group.routes.js';
 import { createContentAccessRoutes } from '@/features/group/infrastructure/http/content-access.routes.js';
 
+let _contentAccessService: ContentAccessService;
+
+export function getContentAccessService(): ContentAccessService {
+  return _contentAccessService;
+}
+
 export function setupGroupRoutes(
   app: Express,
   protectedMiddleware: (req: any, res: any, next: any) => void,
@@ -20,6 +26,7 @@ export function setupGroupRoutes(
   const classRepo = new PrismaGroupClassRepository();
   const groupService = new GroupService(groupRepo, memberRepo, classRepo);
   const contentAccessService = new ContentAccessService(memberRepo, classRepo);
+  _contentAccessService = contentAccessService;
 
   const groupMiddleware = [protectedMiddleware, requireRole('TEACHER', 'ADMIN')] as const;
 

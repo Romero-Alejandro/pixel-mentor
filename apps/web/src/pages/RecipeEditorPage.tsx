@@ -57,11 +57,10 @@ const transformAIScript = (stepType: string, script: any): Record<string, unknow
   };
 
   if (stepType === 'activity') {
-    // Activity NO necesita content, examples, closure - solo instruction y options
+    // Activity: Zod schema espera instruction como STRING (no objeto), options, feedback
     return {
-      transition: { text: getT(script.transition) || '¡Vamos!' },
-      kind: 'activity',
-      instruction: { text: getT(script.instruction) || 'Realiza la actividad' },
+      // instruction debe ser string según ActivityContentSchema
+      instruction: getT(script.instruction) || 'Realiza la actividad',
       options: (script.options || []).map((o: any) => ({
         text: getT(o.text || o),
         isCorrect: typeof o.isCorrect === 'boolean' ? o.isCorrect : false,
@@ -74,18 +73,19 @@ const transformAIScript = (stepType: string, script: any): Record<string, unknow
   }
 
   if (stepType === 'question') {
-    // Question NO necesita content, examples, closure - solo question y feedback
-    const hintText = getT(script.hint);
+    // Question: Schema expects both 'question' AND 'answer' at top level
     return {
-      transition: { text: getT(script.transition) || '¡Vamos!' },
-      kind: 'question',
+      // 'question' field - string or {text: string}
       question: { text: getT(script.question) || '¿Qué aprendiste?' },
-      expectedAnswer: getT(script.expectedAnswer) || 'Una respuesta',
-      feedback: {
-        correct: getT(script.feedback?.correct) || '¡Correcto!',
-        incorrect: getT(script.feedback?.incorrect) || 'Pista: revisa lo aprendido',
+      // 'answer' field - object with question, expectedAnswer, feedback
+      answer: {
+        question: { text: getT(script.question) || '¿Qué aprendiste?' },
+        expectedAnswer: getT(script.expectedAnswer) || 'Una respuesta',
+        feedback: {
+          correct: getT(script.feedback?.correct) || '¡Correcto!',
+          incorrect: getT(script.feedback?.incorrect) || 'Pista: revisa lo aprendido',
+        },
       },
-      hint: hintText,
     };
   }
 
@@ -95,11 +95,20 @@ const transformAIScript = (stepType: string, script: any): Record<string, unknow
 // --- Sub-componente de Paso (Memorizado) ---
 
 const StepItem = memo(({ step, index, isLast, onMove, onEdit, onDelete }: any) => {
+  const script = (step as any).script;
+  const stepType = step.stepType;
+  const kind = script?.kind;
+  
   const title = extractText(
-    (step as any).script?.content ||
-      (step as any).activity?.instruction ||
-      (step as any).question?.question,
-  );
+    // Content/intro/closure: use content.text
+    script?.content ||
+    // Activity: use script.instruction (kind === 'activity')
+    (kind === 'activity' ? script?.instruction : undefined) ||
+    // Question: use script.question (kind === 'question')
+    (kind === 'question' ? script?.question : undefined) ||
+    // Fallback: use step's order
+    undefined
+  ) || `Paso ${step.order}`;
 
   const colors: Record<string, string> = {
     content: 'bg-sky-100 text-sky-700 border-sky-200',
@@ -180,6 +189,7 @@ export function RecipeEditorPage() {
     updateStep,
     deleteStep,
     reorderSteps,
+    setCurrentRecipe,
   } = useRecipeStore(
     useShallow((s) => ({
       currentRecipe: s.currentRecipe,
@@ -192,6 +202,7 @@ export function RecipeEditorPage() {
       updateStep: s.updateStep,
       deleteStep: s.deleteStep,
       reorderSteps: s.reorderSteps,
+      setCurrentRecipe: s.setCurrentRecipe,
     })),
   );
 
@@ -210,8 +221,13 @@ export function RecipeEditorPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
-    if (!isNew && recipeId) fetchRecipe(recipeId);
-  }, [recipeId, isNew, fetchRecipe]);
+    // Reset currentRecipe when entering "new" mode to avoid stale cached data
+    if (isNew) {
+      setCurrentRecipe(null);
+    } else if (recipeId) {
+      fetchRecipe(recipeId);
+    }
+  }, [recipeId, isNew, fetchRecipe, setCurrentRecipe]);
 
   useEffect(() => {
     if (isNew) setForm({ title: '', description: '', expectedDuration: '', published: false });
@@ -273,11 +289,34 @@ export function RecipeEditorPage() {
 
       // Transformar TODOS los steps ANTES de enviar al backend
       const transformedSteps =
-        draft.steps?.map((step: any) => ({
-          order: step.order,
-          stepType: step.stepType,
-          script: transformAIScript(step.stepType, step.script),
-        })) || [];
+        draft.steps?.map((step: any) => {
+          const stepType = step.stepType;
+          const script = transformAIScript(step.stepType, step.script);
+          
+          // Activity/Question necesitan campos separados para el backend
+          if (stepType === 'activity') {
+            return {
+              order: step.order,
+              stepType,
+              activity: script, // Backend espera campo activity para activity steps
+              script: undefined,
+            };
+          }
+          if (stepType === 'question') {
+            return {
+              order: step.order,
+              stepType,
+              question: script, // Backend espera campo question para question steps
+              script: undefined,
+            };
+          }
+          // Content/intro/closure usan script normalmente
+          return {
+            order: step.order,
+            stepType,
+            script,
+          };
+        }) || [];
 
       if (isNew) {
         const res = await createRecipe({

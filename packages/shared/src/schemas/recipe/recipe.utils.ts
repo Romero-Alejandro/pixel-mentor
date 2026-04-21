@@ -93,7 +93,7 @@ export function normalizeStepData(input: StepDataInput): StepDataInput {
     const kind = (script as { kind?: string }).kind;
 
     if (kind === 'activity') {
-      // Normalizar activity desde formato UI
+      // Normalizar activity desde formato UI - esquema espera strings, NO objetos {text}
       const instruction = extractText(script.instruction);
       const options = (script.options as Array<{ text: string; isCorrect: boolean }>) || [];
       const feedback = (script.feedback as Record<string, string>) || {};
@@ -102,7 +102,7 @@ export function normalizeStepData(input: StepDataInput): StepDataInput {
         ...rest,
         stepType: stepType || 'activity',
         activity: {
-          instruction: { text: instruction },
+          instruction, // string directo, NO {text: instruction}
           options: options.map((o) => ({ text: o.text, isCorrect: o.isCorrect })),
           feedback: {
             correct: feedback.correct || '¡Correcto!',
@@ -114,7 +114,7 @@ export function normalizeStepData(input: StepDataInput): StepDataInput {
     }
 
     if (kind === 'question') {
-      // Normalizar question desde formato UI
+      // Normalizar question desde formato UI - esquema espera string para question
       const questionText = extractText(script.question);
       const expectedAnswer = (script.expectedAnswer as string) || '';
       const feedback = (script.feedback as Record<string, string>) || {};
@@ -124,13 +124,15 @@ export function normalizeStepData(input: StepDataInput): StepDataInput {
         ...rest,
         stepType: stepType || 'question',
         question: {
-          question: { text: questionText },
-          expectedAnswer: { text: expectedAnswer },
-          feedback: {
-            correct: feedback.correct || '¡Muy bien!',
-            incorrect: feedback.incorrect || 'Casi, intentá de nuevo',
+          question: questionText, // string directo, NO {text: questionText}
+          answer: {
+            question: questionText,
+            expectedAnswer,
+            feedback: {
+              correct: feedback.correct || '¡Muy bien!',
+              incorrect: feedback.incorrect || 'Casi, intentá de nuevo',
+            },
           },
-          hint: { text: hint },
         },
         script: undefined,
       };

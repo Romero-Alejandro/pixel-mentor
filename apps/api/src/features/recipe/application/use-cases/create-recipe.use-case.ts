@@ -83,6 +83,18 @@ export class CreateRecipeUseCase {
       stepData.question,
     );
 
+    // For activity/question steps, the content is in activity/question fields, not script
+    const stepScript =
+      stepData.stepType === 'activity' || stepData.stepType === 'question'
+        ? undefined
+        : stepData.script;
+
+    // Activity data for activity steps - guardamos en activityData field (DB column)
+    const stepActivityData = stepData.stepType === 'activity' ? stepData.activity : undefined;
+
+    // Question data for question steps - guardamos en question field (DB column)
+    const stepQuestionData = stepData.stepType === 'question' ? stepData.question : undefined;
+
     const step = await this.recipeRepository.createStep({
       id: crypto.randomUUID(),
       recipeId,
@@ -92,7 +104,9 @@ export class CreateRecipeUseCase {
       onCondition: undefined,
       conceptId: stepData.conceptId || undefined,
       activityId: stepData.activityId || undefined,
-      script: stepData.script,
+      script: stepScript,
+      activityData: stepActivityData,
+      question: stepQuestionData,
       stepType: stepData.stepType || 'content',
     });
 
@@ -122,28 +136,32 @@ export class CreateRecipeUseCase {
     activity?: Record<string, unknown>,
     question?: Record<string, unknown>,
   ): Promise<string> {
-    let content: Record<string, unknown> | undefined;
+    // Extract only minimal info for Atom title - don't store full content to avoid DB size issues
     let atomTitle = `Atom ${stepType}`;
 
     switch (stepType) {
       case 'content':
       case 'intro':
       case 'closure':
-        content = script;
-        if (script?.content) atomTitle = (script.content as { text?: string }).text || atomTitle;
+        if (script?.content)
+          atomTitle =
+            String((script.content as { text?: string }).text || '').substring(0, 50) || atomTitle;
         break;
       case 'activity':
-        content = activity;
         if (activity?.instruction)
-          atomTitle = (activity.instruction as { text?: string }).text || atomTitle;
+          atomTitle =
+            String((activity.instruction as { text?: string }).text || '').substring(0, 50) ||
+            atomTitle;
         break;
       case 'question':
-        content = question;
         if (question?.question)
-          atomTitle = (question.question as { text?: string }).text || atomTitle;
+          atomTitle =
+            String((question.question as { text?: string }).text || '').substring(0, 50) ||
+            atomTitle;
         break;
     }
 
+    // Don't store full content in Atom - RecipeStep already has it. Atom is just a placeholder.
     const newAtom = await this.atomRepository.create({
       id: crypto.randomUUID(),
       canonicalId: CanonicalId.sanitize(atomTitle) + '-' + crypto.randomUUID().slice(0, 8),
@@ -151,7 +169,7 @@ export class CreateRecipeUseCase {
       description: `Auto-generated atom for ${stepType} step.`,
       type: AtomType.MICROLECTURE,
       ssmlChunks: undefined,
-      content: content ? { ...content, type: stepType } : undefined,
+      content: undefined, // RecipeStep has the full content, no need to duplicate
       locale: 'es-AR',
       difficulty: 1,
       version: '1.0.0',
