@@ -392,6 +392,23 @@ export const api = {
     const { data } = await apiClient.patch(`/api/recipes/${recipeId}/steps/reorder`, { stepIds });
     return data;
   },
+  // ==================== Recipe Demo ====================
+  startRecipeDemo: async (recipeId: string) => {
+    api.validateId(recipeId, 'Recipe');
+    const { data } = await apiClient.post('/api/sessions/start-recipe', { recipeId });
+    return {
+      sessionId: data.sessionId,
+      classLessonId: data.classLessonId ?? null,
+      pedagogicalState: data.pedagogicalState,
+      voiceText: data.voiceText,
+      meta: data.meta,
+      isRepeat: data.isRepeat,
+      lessonProgress: data.lessonProgress,
+      contentSteps: data.contentSteps,
+      recipeId: data.recipeId,
+      title: data.title,
+    };
+  },
   // ==================== Admin ====================
   listUsers: async (options?: {
     role?: string;

@@ -15,6 +15,8 @@ export function useAutoStart(
   const { maxRetries = 3, baseDelayMs = 1000, maxDelayMs = 5000, autoStart = true } = config;
 
   const [isStarting, setIsStarting] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
 
@@ -39,6 +41,11 @@ export function useAutoStart(
     abortControllerRef.current = new AbortController();
     const signal = abortControllerRef.current.signal;
 
+    // Only set isInitializing on the very first start (before any content has loaded)
+    if (!hasStartedRef.current) {
+      setIsInitializing(true);
+    }
+
     hasStartedRef.current = true;
     setIsStarting(true);
     setError(null);
@@ -55,6 +62,7 @@ export function useAutoStart(
         if (isMountedRef.current) {
           setRetryCount(0);
           setIsStarting(false);
+          setIsInitializing(false);
           setError(null);
         }
       } catch (err) {
@@ -66,7 +74,7 @@ export function useAutoStart(
           const delay = getBackoffDelay(attemptNumber);
           setRetryCount(attemptNumber + 1);
           setError(`${errorMessage}. Reintentando en ${Math.round(delay / 1000)}s...`);
-          setIsStarting(false);
+          setIsTransitioning(true);
 
           retryTimeoutRef.current = setTimeout(() => attempt(attemptNumber + 1), delay);
         } else {
@@ -82,8 +90,9 @@ export function useAutoStart(
   const resetStarted = useCallback(() => {
     hasStartedRef.current = false;
     setIsStarting(false);
+    setIsInitializing(false);
+    setIsTransitioning(false);
     setError(null);
-    // Importante: También iniciar automáticamente después de reset
     startWithRetry();
   }, [startWithRetry]);
 
@@ -103,5 +112,15 @@ export function useAutoStart(
     };
   }, [lessonId, autoStart, startWithRetry, cleanup]);
 
-  return { isStarting, error, retryCount, retry, resetStarted };
+  return {
+    isStarting,
+    isInitializing,
+    isTransitioning,
+    error,
+    retryCount,
+    retry,
+    resetStarted,
+    setIsTransitioning,
+    setIsInitializing: (val: boolean) => setIsInitializing(val),
+  };
 }

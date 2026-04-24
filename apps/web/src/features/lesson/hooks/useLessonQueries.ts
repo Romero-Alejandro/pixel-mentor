@@ -4,11 +4,7 @@ import {
   type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query';
-import {
-  type Recipe,
-  type StartRecipeOutput,
-  type InteractRecipeOutput,
-} from '@pixel-mentor/shared';
+import { type Recipe, type InteractRecipeOutput } from '@pixel-mentor/shared';
 
 import { api } from '../../../services/api';
 
@@ -28,7 +24,7 @@ export function useRecipes(activeOnly = true): UseQueryResult<Recipe[]> {
 // Alias for backwards compatibility
 export const useLessons = useRecipes;
 
-export function useStartClassDemo(): UseMutationResult<
+export function useStartRecipeDemo(): UseMutationResult<
   {
     sessionId: string;
     pedagogicalState: any;
@@ -43,12 +39,12 @@ export function useStartClassDemo(): UseMutationResult<
   string
 > {
   return useMutation({
-    mutationFn: (classId: string) => api.startClassDemo(classId),
+    mutationFn: (recipeId: string) => api.startRecipeDemo(recipeId),
   });
 }
 
 // Alias for backwards compatibility
-export const useStartLesson = useStartClassDemo;
+export const useStartLesson = useStartRecipeDemo;
 
 export function useRecipeInteraction(): UseMutationResult<
   InteractRecipeOutput,

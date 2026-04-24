@@ -1530,10 +1530,21 @@ export class OrchestrateRecipeUseCase {
         stepType === 'ACTIVITY' ||
         stepType === 'EXAM'
       ) {
-        // Use deterministic comparison for activity steps (MCQ)
+        if (!script) {
+          orchestrateLogger.error(
+            { stepIndex: currentIdx, stepType },
+            '[ACTIVITY_WAIT] Script is null for activity/exam step',
+          );
+          return {
+            voiceText: 'Error: Activity script not found. Please contact support.',
+            pedagogicalState: 'ACTIVITY_WAIT' as PedagogicalState,
+            staticContent: this.extractStaticContent(currentStep),
+            lessonProgress: { currentStep: currentIdx, totalSteps: steps.length },
+          };
+        }
         const as = script as ActivityScript;
         const norm = studentInput.trim().toLowerCase();
-        const correct = as.options.find((o) => o.isCorrect);
+        const correct = as.options?.find((o) => o.isCorrect);
         const isCorrect = !!correct && norm === correct.text.trim().toLowerCase();
 
         orchestrateLogger.info(
@@ -1634,9 +1645,21 @@ export class OrchestrateRecipeUseCase {
             nextState = this.applyStateTransition('EVALUATION', evalEvent);
           }
         } else if (isActivityScript(script)) {
+          if (!script) {
+            orchestrateLogger.error(
+              { stepIndex: currentIdx },
+              '[EVALUATION] Script is null for activity/exam step',
+            );
+            return {
+              voiceText: 'Error: Activity script not found. Please contact support.',
+              pedagogicalState: 'EVALUATION' as PedagogicalState,
+              staticContent: this.extractStaticContent(currentStep),
+              lessonProgress: { currentStep: currentIdx, totalSteps: steps.length },
+            };
+          }
           const as = script as ActivityScript;
           const norm = studentInput.trim().toLowerCase();
-          const correct = as.options.find((o) => o.isCorrect);
+          const correct = as.options?.find((o) => o.isCorrect);
           const isCorrect = !!correct && norm === correct.text.trim().toLowerCase();
           voiceText = isCorrect ? as.feedback.correct : as.feedback.incorrect;
           responseFeedback = voiceText;
@@ -1897,6 +1920,18 @@ export class OrchestrateRecipeUseCase {
         stepType === 'ACTIVITY' ||
         stepType === 'EXAM'
       ) {
+        if (!script) {
+          orchestrateLogger.error(
+            { stepIndex: currentIdx, stepType },
+            '[interactStream] Script is null for activity/exam step',
+          );
+          return {
+            voiceText: 'Error: Activity script not found. Please contact support.',
+            pedagogicalState: 'ACTIVITY_WAIT' as PedagogicalState,
+            staticContent: this.extractStaticContent(currentStep),
+            lessonProgress: { currentStep: currentIdx, totalSteps: steps.length },
+          };
+        }
         // MCQ: deterministic comparison (NO LLM)
         const as = script as ActivityScript;
         const norm = studentInput.trim().toLowerCase();
@@ -2321,9 +2356,21 @@ export class OrchestrateRecipeUseCase {
         stepType === 'ACTIVITY' ||
         stepType === 'EXAM'
       ) {
+        if (!script) {
+          orchestrateLogger.error(
+            { stepIndex: currentIdx, stepType },
+            '[stream] Script is null for activity/exam step',
+          );
+          return {
+            voiceText: 'Error: Activity script not found. Please contact support.',
+            pedagogicalState: 'ACTIVITY_WAIT' as PedagogicalState,
+            staticContent: this.extractStaticContent(currentStep),
+            lessonProgress: { currentStep: currentIdx, totalSteps: steps.length },
+          };
+        }
         const as = script as ActivityScript;
         const norm = studentInput.trim().toLowerCase();
-        const correct = as.options.find((o) => o.isCorrect);
+        const correct = as.options?.find((o) => o.isCorrect);
         const isCorrect = !!correct && norm === correct.text.trim().toLowerCase();
 
         orchestrateLogger.info(
@@ -2413,9 +2460,21 @@ export class OrchestrateRecipeUseCase {
                 : 'EVALUATION';
           }
         } else if (isActivityScript(script)) {
+          if (!script) {
+            orchestrateLogger.error(
+              { stepIndex: currentIdx },
+              '[stream] Script is null for activity/exam step',
+            );
+            return {
+              voiceText: 'Error: Activity script not found. Please contact support.',
+              pedagogicalState: 'EVALUATION' as PedagogicalState,
+              staticContent: this.extractStaticContent(currentStep),
+              lessonProgress: { currentStep: currentIdx, totalSteps: steps.length },
+            };
+          }
           const as = script as ActivityScript;
           const norm = studentInput.trim().toLowerCase();
-          const correct = as.options.find((o) => o.isCorrect);
+          const correct = as.options?.find((o) => o.isCorrect);
           const isCorrect = !!correct && norm === correct.text.trim().toLowerCase();
           voiceText = isCorrect ? as.feedback.correct : as.feedback.incorrect;
 

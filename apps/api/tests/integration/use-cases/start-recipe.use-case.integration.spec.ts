@@ -75,12 +75,23 @@ const mockRecipeRepo = (): any => ({
   findStepsByRecipeId: jest.fn(),
 });
 
+const mockClassLessonRepo = (): any => ({
+  findByRecipeId: jest.fn().mockResolvedValue([]),
+  findById: jest.fn(),
+  findByClassId: jest.fn(),
+  findClassIdByLessonId: jest.fn(),
+  create: jest.fn(),
+  update: jest.fn(),
+  delete: jest.fn(),
+});
+
 // =============== Tests ===============
 
 describe('StartRecipeUseCase - Integration', () => {
   let useCase: StartRecipeUseCase;
   let sessionRepo: any;
   let recipeRepo: any;
+  let classLessonRepo: any;
 
   const recipeId = uuid();
   const studentId = uuid();
@@ -88,7 +99,8 @@ describe('StartRecipeUseCase - Integration', () => {
   beforeEach(() => {
     sessionRepo = mockSessionRepo();
     recipeRepo = mockRecipeRepo();
-    useCase = new StartRecipeUseCase(recipeRepo, sessionRepo);
+    classLessonRepo = mockClassLessonRepo();
+    useCase = new StartRecipeUseCase(recipeRepo, sessionRepo, classLessonRepo);
   });
 
   afterEach(() => {

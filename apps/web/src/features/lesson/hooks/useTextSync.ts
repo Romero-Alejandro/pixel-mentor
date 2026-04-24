@@ -26,11 +26,29 @@ export function useTextSync({
   const wordsRef = useRef<string[]>([]);
   const fullTextRef = useRef<string>('');
   const prevSpeakingRef = useRef<boolean | undefined>(undefined);
+  const isListeningRef = useRef(false);
+  const rafIdRef = useRef<number | null>(null);
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Memoize audio element reference to prevent getter instability
+  const audioElementRef = useRef<HTMLAudioElement | null>(null);
+  const getAudioElement = useCallback(() => {
+    if (audioElementRef.current) {
+      return audioElementRef.current;
+    }
+    if (audioElementGetter) {
+      audioElementRef.current = audioElementGetter();
+      return audioElementRef.current;
+    }
+    return null;
+  }, [audioElementGetter]);
 
   // Store words and fullText in refs
   useEffect(() => {
     wordsRef.current = fullText.trim() ? fullText.trim().split(/\s+/) : [];
     fullTextRef.current = fullText;
+    // Clear previous audio reference when fullText changes (new audio loaded)
+    audioElementRef.current = null;
   }, [fullText]);
 
   // Sync effect - re-runs when fullText or isSpeaking changes
@@ -41,9 +59,6 @@ export function useTextSync({
     if (wordCount === 0) {
       return;
     }
-
-    let rafId: number | null = null;
-    let isListening = false;
 
     // Reset state when isSpeaking transitions from false to true (new audio started)
     const speakingJustStarted = isSpeaking && prevSpeakingRef.current === false;
@@ -58,12 +73,12 @@ export function useTextSync({
     prevSpeakingRef.current = isSpeaking;
 
     const syncAudio = () => {
-      // Skip if already listening
-      if (isListening) {
+      // Guard: Prevent concurrent sync loops
+      if (isListeningRef.current) {
         return;
       }
 
-      const audio = audioElementGetter?.();
+      const audio = getAudioElement();
 
       if (!audio) {
         return;
@@ -73,7 +88,7 @@ export function useTextSync({
         return;
       }
 
-      isListening = true;
+      isListeningRef.current = true;
 
       // Determine words-per-second
       // For streaming audio, duration might not be available immediately
@@ -95,9 +110,9 @@ export function useTextSync({
 
         // If audio has ended, mark as complete
         if (audio.ended) {
-          if (rafId !== null) {
-            cancelAnimationFrame(rafId);
-            rafId = null;
+          if (rafIdRef.current !== null) {
+            cancelAnimationFrame(rafIdRef.current);
+            rafIdRef.current = null;
           }
           setState({
             visibleText: fullTextRef.current,
@@ -105,7 +120,7 @@ export function useTextSync({
             progress: 1,
             isSynced: true,
           });
-          isListening = false;
+          isListeningRef.current = false;
           return;
         }
 
@@ -145,20 +160,20 @@ export function useTextSync({
           return prev;
         });
 
-        rafId = requestAnimationFrame(loop);
+        rafIdRef.current = requestAnimationFrame(loop);
       };
 
       // Start the loop if audio is already playing and hasn't ended
       if (!audio.paused && !audio.ended) {
-        rafId = requestAnimationFrame(loop);
+        rafIdRef.current = requestAnimationFrame(loop);
       }
 
       // Cleanup function
       return () => {
-        isListening = false;
-        if (rafId !== null) {
-          cancelAnimationFrame(rafId);
-          rafId = null;
+        isListeningRef.current = false;
+        if (rafIdRef.current !== null) {
+          cancelAnimationFrame(rafIdRef.current);
+          rafIdRef.current = null;
         }
       };
     };
@@ -168,9 +183,9 @@ export function useTextSync({
 
     // Also set up polling for when audio becomes available
     let pollCount = 0;
-    const pollInterval = setInterval(() => {
+    pollIntervalRef.current = setInterval(() => {
       pollCount++;
-      const audio = audioElementGetter?.();
+      const audio = getAudioElement();
 
       // Only attempt sync if:
       // 1. Audio exists
@@ -179,21 +194,31 @@ export function useTextSync({
       if (audio && !audio.paused && !audio.ended && pollCount < 30) {
         const clean = syncAudio();
         if (clean) {
-          clearInterval(pollInterval);
+          if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current);
+          }
         }
       }
 
       // Stop polling after ~15 seconds
       if (pollCount >= 30) {
-        clearInterval(pollInterval);
+        if (pollIntervalRef.current) {
+          clearInterval(pollIntervalRef.current);
+        }
       }
     }, 500);
 
     return () => {
-      clearInterval(pollInterval);
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+      }
+      isListeningRef.current = false;
       if (cleanupImmediate) cleanupImmediate();
     };
-  }, [fullText, audioElementGetter, playbackRate, wordsPerSecond, isSpeaking]);
+  }, [fullText, getAudioElement, playbackRate, wordsPerSecond, isSpeaking]);
 
   const reset = useCallback(() => {
     setState({ visibleText: '', currentWordIndex: 0, progress: 0, isSynced: false });

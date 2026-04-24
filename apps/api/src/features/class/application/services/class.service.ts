@@ -494,13 +494,14 @@ export class ClassService {
 
     console.log(`[DEBUG] Estado de la clase: ${classEntity.status}`);
 
-    // 2. Verificar si el usuario es miembro de un grupo que tiene acceso a la clase
+    // 2. Verificar si el usuario es miembro ACTIVO de un grupo que tiene acceso a la clase
+    // FIX: Must filter by status: 'ACTIVE' to match ContentAccessService behavior
     const groupClass = await prisma.groupClass.findFirst({
       where: {
         classId,
         group: {
           memberships: {
-            some: { studentId: userId },
+            some: { studentId: userId, status: 'ACTIVE' },
           },
         },
       },

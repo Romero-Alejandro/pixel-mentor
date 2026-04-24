@@ -9,6 +9,8 @@ interface TextSectionProps {
   containerClassName: string;
   wordClassName: string;
   activeWordClassName: string;
+  /** Offset to calculate actual word index within this section */
+  wordOffset?: number;
 }
 
 const TextSection = memo(
@@ -19,18 +21,20 @@ const TextSection = memo(
     containerClassName,
     wordClassName,
     activeWordClassName,
+    wordOffset,
   }: TextSectionProps) => {
     if (visibleCount === 0 || words.length === 0) return null;
 
     return (
       <span className={containerClassName}>
         {words.slice(0, visibleCount).map((word, idx) => (
-          <span
+          <mark
             key={`${word}-${idx}`}
+            data-word-index={wordOffset !== undefined ? wordOffset + idx : idx}
             className={cn(wordClassName, idx === activeIndex && activeWordClassName)}
           >
             {word}{' '}
-          </span>
+          </mark>
         ))}
       </span>
     );
@@ -78,16 +82,6 @@ export function ConcentrationPanel({
     };
   }, [transitionText, contentText, closureText]);
 
-  // Auto-scroll suave
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTo({
-        top: scrollRef.current.scrollHeight,
-        behavior: 'smooth',
-      });
-    }
-  }, [currentWordIndex]);
-
   // Always show full text content - users should be able to read while listening
   // The current word tracking (activeT, activeC, activeL) still works for karaoke highlight
   const showAllContent = true;
@@ -98,12 +92,28 @@ export function ConcentrationPanel({
     ? lLen
     : Math.max(0, Math.min(currentWordIndex - tLen - cLen, lLen));
 
-  // Active word index for karaoke highlight - only disable when showAllContent is false
-  const activeT = showAllContent ? currentWordIndex - 1 : currentWordIndex - 1;
-  const activeC = showAllContent ? currentWordIndex - 1 - tLen : currentWordIndex - 1 - tLen;
-  const activeL = showAllContent
-    ? currentWordIndex - 1 - tLen - cLen
-    : currentWordIndex - 1 - tLen - cLen;
+  const activeIndex = currentWordIndex - 1;
+
+  // Auto-scroll to highlighted word - must be defined before the return statement
+  useEffect(() => {
+    if (currentWordIndex <= 0 || !scrollRef.current) {
+      return;
+    }
+
+    // Find the currently highlighted word element using data-word-index
+    const activeMarks = scrollRef.current.querySelectorAll('mark');
+    const activeMark = Array.from(activeMarks).find((mark) => {
+      const idx = mark.getAttribute('data-word-index');
+      return idx && parseInt(idx, 10) === activeIndex;
+    });
+
+    if (activeMark) {
+      activeMark.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }
+  }, [currentWordIndex, activeIndex]);
 
   return (
     <div className="flex-1 flex flex-col items-center p-6 sm:p-8 gap-6 w-full h-full min-h-0 animate-bounce-in">
@@ -115,7 +125,8 @@ export function ConcentrationPanel({
           <TextSection
             words={transitionWords}
             visibleCount={visibleT}
-            activeIndex={activeT}
+            activeIndex={activeIndex >= 0 && activeIndex < tLen ? activeIndex : -1}
+            wordOffset={0}
             containerClassName="block mb-6 text-sky-600/80 font-bold"
             wordClassName="transition-colors duration-200"
             activeWordClassName="bg-sky-100 text-sky-800 rounded-xl px-2 py-0.5 shadow-sm"
@@ -123,7 +134,8 @@ export function ConcentrationPanel({
           <TextSection
             words={contentWords}
             visibleCount={visibleC}
-            activeIndex={activeC}
+            activeIndex={activeIndex >= tLen && activeIndex < tLen + cLen ? activeIndex - tLen : -1}
+            wordOffset={tLen}
             containerClassName="block mb-6 text-slate-800 font-bold"
             wordClassName="transition-colors duration-200"
             activeWordClassName="bg-amber-100 text-amber-900 rounded-xl px-2 py-0.5 shadow-sm"
@@ -131,7 +143,8 @@ export function ConcentrationPanel({
           <TextSection
             words={closureWords}
             visibleCount={visibleL}
-            activeIndex={activeL}
+            activeIndex={activeIndex >= tLen + cLen ? activeIndex - tLen - cLen : -1}
+            wordOffset={tLen + cLen}
             containerClassName="block text-emerald-600 font-black"
             wordClassName="transition-colors duration-200"
             activeWordClassName="bg-emerald-100 text-emerald-900 rounded-xl px-2 py-0.5 shadow-sm"

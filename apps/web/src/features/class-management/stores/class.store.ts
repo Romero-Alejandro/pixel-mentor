@@ -49,11 +49,6 @@ interface ClassState {
   // AI Generation
   generateClassDraft: (input: GenerateClassDraftInput) => Promise<GenerateClassDraftOutput>;
 
-  // Demo
-  startClassDemo: (
-    classId: string,
-  ) => Promise<{ sessionId: string; recipeId: string; title: string }>;
-
   // Error handling
   clearError: () => void;
 }
@@ -341,19 +336,6 @@ export const useClassStore = create<ClassState>()(
           return result;
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : 'Failed to generate class draft';
-          set({ error: message, isLoading: false });
-          throw err;
-        }
-      },
-
-      startClassDemo: async (classId: string) => {
-        set({ isLoading: true, error: null });
-        try {
-          const result = await api.startClassDemo(classId);
-          set({ isLoading: false });
-          return result;
-        } catch (err: unknown) {
-          const message = err instanceof Error ? err.message : 'Failed to start demo session';
           set({ error: message, isLoading: false });
           throw err;
         }

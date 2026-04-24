@@ -6,10 +6,6 @@ import { buildContainer } from './main/container.js';
 import { createApp } from './main/app.js';
 
 import { config, getFeatureFlagService } from '@/shared/config';
-import {
-  requireRole,
-  authMiddleware,
-} from '@/features/auth/infrastructure/http/auth.middleware.js';
 import { prisma } from '@/database/client.js';
 import { runStagingValidation } from '@/shared/monitoring/staging-validation.js';
 import { initializeAIServices } from '@/shared/ai/ai-service.provider.js';
@@ -110,10 +106,11 @@ async function bootstrap(): Promise<void> {
     container.activity.activityAttemptRepository,
   );
 
-  // Create start recipe use case
+  // Create start recipe use case (requires classLessonRepository to find linked ClassLesson for recipe)
   const startRecipeUseCase = new StartRecipeUseCase(
     container.recipe.recipeRepository,
     container.session.sessionRepository,
+    container.class.classLessonRepository,
   );
 
   // Expose these globally for the app to use (temporary solution)

@@ -55,10 +55,15 @@ export function LessonPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activityCorrect, setActivityCorrect] = useState<boolean | null>(null);
 
-  const { isStarting, error, retryCount, retry, resetStarted } = useAutoStart(
-    lessonId || null,
-    orchestrator.startClass,
-  );
+  const {
+    isInitializing,
+    isTransitioning,
+    error,
+    retryCount,
+    retry,
+    resetStarted,
+    setIsTransitioning,
+  } = useAutoStart(lessonId || null, orchestrator.startClass);
 
   const handleRestart = async () => {
     await orchestrator.reset();
@@ -72,13 +77,25 @@ export function LessonPage() {
   });
 
   const prevQ = useRef<string>('');
+
   useEffect(() => {
     if (orchestrator.questionText !== prevQ.current) {
+      // Step transition detected - set transitioning state
+      if (prevQ.current && orchestrator.questionText) {
+        setIsTransitioning(true);
+      }
       prevQ.current = orchestrator.questionText;
       setSelectedId(null);
       setActivityCorrect(null);
     }
-  }, [orchestrator.questionText]);
+  }, [orchestrator.questionText, setIsTransitioning]);
+
+  useEffect(() => {
+    // Clear transitioning when content becomes available
+    if (isTransitioning && orchestrator.contentText) {
+      setIsTransitioning(false);
+    }
+  }, [isTransitioning, orchestrator.contentText, setIsTransitioning]);
 
   useEffect(() => {
     if (orchestrator.feedbackData) {
@@ -104,7 +121,8 @@ export function LessonPage() {
   };
 
   const isIdle = orchestrator.uiState === UI_STATES.IDLE;
-  const isLoading = isStarting && !orchestrator.contentText && !error;
+  const isLoading = isInitializing && !orchestrator.contentText && !error;
+  const showFullLoadingScreen = isLoading && !orchestrator.isTransitioning;
 
   const renderActivePanel = () => {
     switch (orchestrator.uiState) {
@@ -186,7 +204,7 @@ export function LessonPage() {
     );
   }
 
-  if (isLoading) {
+  if (showFullLoadingScreen) {
     return (
       <div className="min-h-screen bg-[#f0f9ff] flex flex-col items-center justify-center p-6 relative overflow-hidden">
         <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-sky-200 rounded-full blur-3xl opacity-50 animate-pulse" />

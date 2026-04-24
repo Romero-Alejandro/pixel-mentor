@@ -8,25 +8,31 @@ import {
   startSession,
   createSession,
 } from '@/features/session/domain/entities/session.entity';
+import type { IClassLessonRepository } from '@/features/class/domain/ports/class.repository.port';
 
 export class StartRecipeUseCase {
   constructor(
     private recipeRepo: RecipeRepository,
     private sessionRepo: SessionRepository,
+    private classLessonRepo: IClassLessonRepository,
   ) {}
 
   async execute(
     recipeId: string,
     studentId: string,
-  ): Promise<{ sessionId: string; resumed: boolean }> {
+  ): Promise<{ sessionId: string; resumed: boolean; classLessonId: string | null }> {
     const recipe = await this.recipeRepo.findById(recipeId);
     if (!recipe) throw new RecipeNotFoundError(recipeId);
+
+    // Fetch the ClassLesson linked to this recipe (used by LessonPage to call /api/classes/lessons/{id}/class)
+    const classLessons = await this.classLessonRepo.findByRecipeId(recipeId);
+    const classLessonId = classLessons.length > 0 ? classLessons[0].id : null;
 
     const existing = await this.sessionRepo.findByStudentAndRecipe(studentId, recipeId);
 
     // If existing session is in non-terminal status, resume it
     if (existing && !isTerminalStatus(existing.status)) {
-      return { sessionId: existing.id, resumed: true };
+      return { sessionId: existing.id, resumed: true, classLessonId };
     }
 
     // Create new session (either no existing session or existing session is terminal)
@@ -47,6 +53,6 @@ export class StartRecipeUseCase {
     newSession = startSession(newSession); // Transition: IDLE -> ACTIVE
     await this.sessionRepo.create(newSession);
 
-    return { sessionId, resumed: false };
+    return { sessionId, resumed: false, classLessonId };
   }
 }

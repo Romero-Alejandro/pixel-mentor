@@ -50,7 +50,6 @@ export function ClassEditorPage() {
     addLesson,
     removeLesson,
     reorderLessons,
-    startClassDemo,
     updateLesson,
   } = useClassStore(
     useShallow((state) => ({
@@ -64,7 +63,6 @@ export function ClassEditorPage() {
       addLesson: state.addLesson,
       removeLesson: state.removeLesson,
       reorderLessons: state.reorderLessons,
-      startClassDemo: state.startClassDemo,
       updateLesson: state.updateLesson,
     })),
   );
@@ -153,22 +151,6 @@ export function ClassEditorPage() {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error al despublicar la clase';
       await alert({ title: 'Error', message, variant: 'error' });
-    }
-  };
-
-  const handleStartDemo = async () => {
-    if (!currentClass || !classId) return;
-    playClick();
-    try {
-      const result = await startClassDemo(classId);
-      console.log('[DEBUG] Result from startClassDemo:', result);
-      console.log('[DEBUG] result.id for navigation:', result.id);
-      if (result?.recipeId) {
-        playToastSuccess();
-        navigate(`/lesson/${result.id}`);
-      }
-    } catch {
-      // Error handled in store
     }
   };
 
@@ -322,31 +304,6 @@ export function ClassEditorPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Button
-              onClick={handleStartDemo}
-              variant={hasDemoLesson ? 'primary' : 'secondary'}
-              disabled={isLoading || !hasDemoLesson}
-              className="flex relative"
-              title={
-                !hasDemoLesson
-                  ? 'Necesitas al menos una lección con unidad para iniciar la demo'
-                  : undefined
-              }
-            >
-              {isLoading ? (
-                <Spinner size="sm" className="text-white" />
-              ) : (
-                <>
-                  <IconPlayerPlay className="w-5 h-5 mr-2" />
-                  Iniciar Demo
-                </>
-              )}
-              {!hasDemoLesson ? (
-                <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-200">
-                  Necesita unidad
-                </span>
-              ) : null}
-            </Button>
             {currentClass.status === 'PUBLISHED' ? (
               <Button onClick={handleUnpublish} variant="danger" disabled={isLoading}>
                 <IconSend className="w-5 h-5 mr-2" />

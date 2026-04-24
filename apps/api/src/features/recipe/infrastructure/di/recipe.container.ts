@@ -5,6 +5,7 @@ import { PrismaRecipeTagRepository } from '@/features/recipe/infrastructure/pers
 import { FileSystemPromptRepository } from '@/features/recipe/infrastructure/persistence/file-system-prompt.repository.js';
 import { PrismaAtomRepository } from '@/features/knowledge/infrastructure/persistence/prisma-atom.repository.js';
 import { PrismaSessionRepository } from '@/features/session/infrastructure/persistence/prisma-session.repository.js';
+import { PrismaClassLessonRepository } from '@/features/class/infrastructure/persistence/prisma-class-lesson.repository.js';
 import { RecipeAIService } from '@/features/recipe/application/services/recipe-ai.service.js';
 import { GetRecipeUseCase } from '@/features/recipe/application/use-cases/get-recipe.use-case.js';
 import { ListRecipesUseCase } from '@/features/recipe/application/use-cases/list-recipes.use-case.js';
@@ -18,6 +19,7 @@ import { UpdateStepUseCase } from '@/features/recipe/application/use-cases/updat
 import { DeleteStepUseCase } from '@/features/recipe/application/use-cases/delete-step.use-case.js';
 import { ReorderStepsUseCase } from '@/features/recipe/application/use-cases/reorder-steps.use-case.js';
 import type { AIService } from '@/features/recipe/domain/ports/ai-service.port.js';
+import type { IClassLessonRepository } from '@/features/class/domain/ports/class.repository.port.js';
 
 export interface RecipeContainer {
   recipeRepository: PrismaRecipeRepository;
@@ -27,6 +29,7 @@ export interface RecipeContainer {
   promptRepository: FileSystemPromptRepository;
   atomRepository: PrismaAtomRepository;
   sessionRepository: PrismaSessionRepository;
+  classLessonRepository: PrismaClassLessonRepository;
   recipeAIService: RecipeAIService;
   getRecipeUseCase: GetRecipeUseCase;
   listRecipesUseCase: ListRecipesUseCase;
@@ -49,6 +52,7 @@ export function buildRecipeContainer(aiModel: AIService): RecipeContainer {
   const promptRepository = new FileSystemPromptRepository();
   const atomRepository = new PrismaAtomRepository();
   const sessionRepository = new PrismaSessionRepository();
+  const classLessonRepository = new PrismaClassLessonRepository();
 
   const recipeAIService = new RecipeAIService(aiModel);
 
@@ -60,10 +64,15 @@ export function buildRecipeContainer(aiModel: AIService): RecipeContainer {
     promptRepository,
     atomRepository,
     sessionRepository,
+    classLessonRepository,
     recipeAIService,
     getRecipeUseCase: new GetRecipeUseCase(recipeRepository),
     listRecipesUseCase: new ListRecipesUseCase(recipeRepository),
-    startRecipeUseCase: new StartRecipeUseCase(recipeRepository, sessionRepository),
+    startRecipeUseCase: new StartRecipeUseCase(
+      recipeRepository,
+      sessionRepository,
+      classLessonRepository,
+    ),
     questionAnsweringUseCase: new QuestionAnsweringUseCase(
       recipeRepository,
       aiModel,

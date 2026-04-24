@@ -1,40 +1,34 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import { z } from 'zod';
-import type pino from 'pino';
 
 import type { GetSessionUseCase } from '@/features/session/application/use-cases/get-session.use-case';
 import type { ListSessionsUseCase } from '@/features/session/application/use-cases/list-sessions.use-case';
 import type { ResetSessionUseCase } from '@/features/session/application/use-cases/reset-session.use-case';
 import type { CompleteSessionUseCase } from '@/features/session/application/use-cases/complete-session.use-case';
-import type { StartRecipeUseCase } from '@/features/recipe/application/use-cases/start-recipe.use-case'; // New Import
-import type { ClassService } from '@/features/class/application/services/class.service'; // New Import
-import type { IClassLessonRepository } from '@/features/class/domain/ports/class.repository.port'; // New Import
+import type { AppRequest } from '@/shared/types/express.d.js';
+import type { StartRecipeUseCase } from '@/features/recipe/application/use-cases/start-recipe.use-case';
+import type { IClassLessonRepository } from '@/features/class/domain/ports/class.repository.port';
+import type { ContentAccessService } from '@/features/group/application/services/content-access.service';
 import {
   LessonNotFoundError,
   ClassEnrollmentError,
-} from '@/features/class/application/services/class.service'; // New Import
+} from '@/features/class/application/services/class.service';
+import { RecipeNotFoundError } from '@/features/recipe/domain/ports/recipe.repository.port';
 import {
   GetSessionInputSchema,
   ListSessionsInputSchema,
   ReplaySessionParamsSchema,
   CompleteSessionParamsSchema,
 } from '@/shared/dto/index';
-import type { AppRequest } from '@/shared/types/express.d.js'; // New Import
-
-export interface AppRequest extends Request {
-  logger?: pino.Logger;
-  requestId?: string;
-  startTime?: number;
-}
 
 export function createSessionsRouter(
   getSessionUseCase: GetSessionUseCase,
   listSessionsUseCase: ListSessionsUseCase,
   resetSessionUseCase: ResetSessionUseCase,
   completeSessionUseCase: CompleteSessionUseCase,
-  startRecipeUseCase: StartRecipeUseCase, // New Dependency
-  classService: ClassService, // New Dependency
-  classLessonRepository: IClassLessonRepository, // New Dependency
+  startRecipeUseCase: StartRecipeUseCase,
+  contentAccessService: ContentAccessService,
+  classLessonRepository: IClassLessonRepository,
 ): Router {
   const router = Router();
 
@@ -139,10 +133,45 @@ export function createSessionsRouter(
   );
 
   router.post(
+    '/start-recipe',
+    async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+      const appRequest = request as AppRequest;
+      const studentId = appRequest.user!.id;
+
+      const StartRecipeSchema = z.object({
+        recipeId: z.string().uuid(),
+      });
+
+      try {
+        const validated = StartRecipeSchema.parse(appRequest.body);
+        const { recipeId } = validated;
+
+        const { sessionId, resumed, classLessonId } = await startRecipeUseCase.execute(
+          recipeId,
+          studentId,
+        );
+
+        response.status(200).json({ sessionId, resumed, classLessonId });
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          response.status(400).json({ error: 'Validation error', details: error.issues });
+          return;
+        }
+        if (error instanceof RecipeNotFoundError) {
+          response.status(404).json({ error: 'Recipe not found', code: 'RECIPE_NOT_FOUND' });
+          return;
+        }
+        next(error);
+      }
+    },
+  );
+
+  router.post(
     '/start-lesson',
     async (request: Request, response: Response, next: NextFunction): Promise<void> => {
       const appRequest = request as AppRequest;
-      const studentId = appRequest.user!.id; // Authenticated user
+      const studentId = appRequest.user!.id;
+      const userRole = appRequest.user!.role as 'STUDENT' | 'TEACHER' | 'ADMIN';
 
       const StartLessonSchema = z.object({
         lessonId: z.string().min(1),
@@ -158,9 +187,9 @@ export function createSessionsRouter(
           throw new LessonNotFoundError(lessonId);
         }
 
-        // 2. Check if student is enrolled in the class
-        const isEnrolled = await classService.isUserEnrolledInClass(studentId, classId);
-        if (!isEnrolled) {
+        // 2. Check if student has access to the class using ContentAccessService
+        const canAccess = await contentAccessService.canAccessClass(studentId, userRole, classId);
+        if (!canAccess) {
           throw new ClassEnrollmentError(classId, studentId);
         }
 
@@ -174,7 +203,7 @@ export function createSessionsRouter(
         // 4. Start the recipe session
         const { sessionId, resumed } = await startRecipeUseCase.execute(recipeId, studentId);
 
-        response.status(200).json({ sessionId, resumed });
+        response.status(200).json({ sessionId, resumed, classLessonId: lessonId });
       } catch (error) {
         if (error instanceof LessonNotFoundError || error instanceof ClassEnrollmentError) {
           response.status(403).json({ error: error.message, code: error.code });

@@ -12,6 +12,7 @@ import {
   IconSparkles,
   IconDeviceFloppy,
   IconRocket,
+  IconPlayerPlay,
 } from '@tabler/icons-react';
 import type { RecipeStep } from '@pixel-mentor/shared';
 
@@ -98,17 +99,18 @@ const StepItem = memo(({ step, index, isLast, onMove, onEdit, onDelete }: any) =
   const script = (step as any).script;
   const stepType = step.stepType;
   const kind = script?.kind;
-  
-  const title = extractText(
-    // Content/intro/closure: use content.text
-    script?.content ||
-    // Activity: use script.instruction (kind === 'activity')
-    (kind === 'activity' ? script?.instruction : undefined) ||
-    // Question: use script.question (kind === 'question')
-    (kind === 'question' ? script?.question : undefined) ||
-    // Fallback: use step's order
-    undefined
-  ) || `Paso ${step.order}`;
+
+  const title =
+    extractText(
+      // Content/intro/closure: use content.text
+      script?.content ||
+        // Activity: use script.instruction (kind === 'activity')
+        (kind === 'activity' ? script?.instruction : undefined) ||
+        // Question: use script.question (kind === 'question')
+        (kind === 'question' ? script?.question : undefined) ||
+        // Fallback: use step's order
+        undefined,
+    ) || `Paso ${step.order}`;
 
   const colors: Record<string, string> = {
     content: 'bg-sky-100 text-sky-700 border-sky-200',
@@ -190,6 +192,7 @@ export function RecipeEditorPage() {
     deleteStep,
     reorderSteps,
     setCurrentRecipe,
+    startRecipeDemo,
   } = useRecipeStore(
     useShallow((s) => ({
       currentRecipe: s.currentRecipe,
@@ -203,6 +206,7 @@ export function RecipeEditorPage() {
       deleteStep: s.deleteStep,
       reorderSteps: s.reorderSteps,
       setCurrentRecipe: s.setCurrentRecipe,
+      startRecipeDemo: s.startRecipeDemo,
     })),
   );
 
@@ -283,6 +287,21 @@ export function RecipeEditorPage() {
     }
   };
 
+  const handleStartDemo = async () => {
+    if (!currentRecipe || !recipeId) return;
+    playClick();
+    try {
+      const result = await startRecipeDemo(recipeId);
+      console.log('[DEBUG] Result from startRecipeDemo:', result);
+      if (result?.classLessonId) {
+        playToastSuccess();
+        window.location.href = `/lesson/${result.classLessonId}`;
+      }
+    } catch {
+      // Error handled in store
+    }
+  };
+
   const handleAIGenerated = async (draft: any) => {
     try {
       let id = recipeId;
@@ -292,7 +311,7 @@ export function RecipeEditorPage() {
         draft.steps?.map((step: any) => {
           const stepType = step.stepType;
           const script = transformAIScript(step.stepType, step.script);
-          
+
           // Activity/Question necesitan campos separados para el backend
           if (stepType === 'activity') {
             return {
@@ -406,6 +425,17 @@ export function RecipeEditorPage() {
             </Badge>
           </div>
           <div className="flex items-center gap-3">
+            {!isNew && currentRecipe && currentRecipe.steps && currentRecipe.steps.length > 0 ? (
+              <Button
+                onClick={handleStartDemo}
+                variant="primary"
+                disabled={isLoading}
+                className="flex relative"
+                title="Iniciar demo con esta unidad"
+              >
+                <IconPlayerPlay size={20} /> Demo
+              </Button>
+            ) : null}
             <Button onClick={() => setIsAIGeneratorOpen(true)} variant="secondary">
               <IconSparkles size={20} /> IA
             </Button>

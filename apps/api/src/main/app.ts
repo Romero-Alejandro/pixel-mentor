@@ -228,10 +228,9 @@ export function createApp(deps: AppDependencies): Express {
       session.listSessionsUseCase,
       session.resetSessionUseCase,
       session.completeSessionUseCase,
-      // New dependencies for start-lesson endpoint
-      (globalThis as any).__startRecipeUseCase, // startRecipeUseCase from globalThis
-      classContainer.classService, // classService from class container
-      classContainer.classLessonRepository, // classLessonRepository from class container
+      (globalThis as any).__startRecipeUseCase,
+      getContentAccessService(),
+      classContainer.classLessonRepository,
     ),
   );
 

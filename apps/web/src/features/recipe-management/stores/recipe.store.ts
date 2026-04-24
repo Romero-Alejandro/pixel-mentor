@@ -77,9 +77,12 @@ interface RecipeState {
   // Utility
   setCurrentRecipe: (recipe: Recipe | null) => void;
   clearError: () => void;
-}
 
-import { RecipeSchema } from '@pixel-mentor/shared';
+  // Demo
+  startRecipeDemo: (
+    recipeId: string,
+  ) => Promise<{ sessionId: string; classLessonId: string | null }>;
+}
 
 export const useRecipeStore = create<RecipeState>()(
   persist(
@@ -320,6 +323,22 @@ export const useRecipeStore = create<RecipeState>()(
       setCurrentRecipe: (recipe) => set({ currentRecipe: recipe }),
 
       clearError: () => set({ error: null }),
+
+      startRecipeDemo: async (recipeId: string) => {
+        set({ isLoading: true, error: null });
+        try {
+          const result = await api.startRecipeDemo(recipeId);
+          set({ isLoading: false });
+          // Navigate to lesson page with classLessonId (needed for /api/classes/lessons/{id}/class)
+          const lessonId = result.classLessonId ?? result.sessionId;
+          window.location.href = `/lesson/${lessonId}`;
+          return result;
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : 'Failed to start demo session';
+          set({ error: message, isLoading: false });
+          throw err;
+        }
+      },
     }),
     {
       name: 'recipe-storage',
