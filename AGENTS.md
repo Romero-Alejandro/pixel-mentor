@@ -1,48 +1,101 @@
-# Pixel Mentor
+<project_map>
 
-## Monorepo Map
+- Backend: `apps/api/` (@pixel-mentor/api) | Node.js, Express 5, Prisma (Hexagonal Architecture)
+- Frontend: `apps/web/` (@pixel-mentor/web) | React 19, Zustand 5, Tailwind 4 (NO Next.js)
+- Shared: `packages/shared/`
+- Tests: Colocated (`*.spec.ts`, `*.test.ts`)
+- Quality Standards: See `.atl/skill-registry.md`
 
-- **Backend**: `apps/api/` (@pixel-mentor/api)
-- **Frontend**: `apps/web/` (@pixel-mentor/web)
-- **Shared**: `packages/shared/`
-- **Tests**: Alongside source (`*.spec.ts`, `*.test.ts`).
+</project_map>
 
-## Terminal & Execution Protocols
+<execution_protocols>
 
-- **Anti-Noise Policy**: PROHIBITED massive log dumping. ALWAYS pipe long outputs: `| head -n 50`.
-- **Targeted Execution**: PROHIBITED running global suites. Use `--filter` or target specific files.
-- **Sequential Batching**: Execute bash commands in logical sequences to prevent terminal lockups.
+- NOISE CONTROL: NEVER dump massive logs. MUST pipe: `| head -n 50`.
+- TARGETING: NEVER run global suites. MUST target specific files or use `--filter`.
+- BASE COMMANDS: `pnpm --filter @pixel-mentor/<api|web> <lint|typecheck|test -- file>`
+- DB OPS (API ONLY): `pnpm --filter @pixel-mentor/api db:<generate|push|migrate>`
 
-### Command Quick-Ref
+</execution_protocols>
 
-| Task      | Backend Command                                                | Frontend Command                                 |
-| :-------- | :------------------------------------------------------------- | :----------------------------------------------- |
-| Lint      | `pnpm --filter @pixel-mentor/api lint`                         | `pnpm --filter @pixel-mentor/web lint`           |
-| Typecheck | `pnpm --filter @pixel-mentor/api typecheck`                    | `pnpm --filter @pixel-mentor/web typecheck`      |
-| Test      | `pnpm --filter @pixel-mentor/api test -- <file>`               | `pnpm --filter @pixel-mentor/web test -- <file>` |
-| DB Ops    | `pnpm --filter @pixel-mentor/api db:[generate\|push\|migrate]` | N/A                                              |
+<shared_guardrails target="all-agents">
 
-## Agentic Workflow (Orchestrator Logic)
+<navigation_and_reading>
 
-- **Planning**: MANDATORY: Every response MUST start with `[Audit/Plan]: <logical step>`.
-- **Read Logic**: PROHIBITED reading files >200 lines. Extract skeleton first: `grep -E '^(import|export|class|function|interface)'`.
-- **Delegation**: Use `delegate` for parallel/background triage. Use `task` for blocking synchronous needs.
-- **Context Integrity**: PROHIBITED scope drift. If a task is "Fix A", do not refactor "B" unless explicitly ordered.
+- STRUCTURAL READING: NEVER read files >200 lines blindly. Extract skeleton first via `grep`. - DB SCHEMA: MUST read `schema.prisma` before querying repositories. NEVER guess models. - BLIND IMPORTS: NEVER guess import paths. If unsure, `grep` exports first.
 
-## Project Conventions
+</navigation_and_reading>
 
-- **Naming:** Files: `kebab-case`. Components: `PascalCase`. Constants: `SCREAMING_SNAKE_CASE`.
-- **Imports:** Absolute only via `@/` alias.
-- **Commits:** English, Conventional Commits format.
+<git_workflow>
 
-## Stack & Architecture Map
+- ZERO DATA LOSS: NEVER use `git restore <file>`, `git checkout -- <file>`, `git reset --hard`, or `git stash drop` to bypass an error or "clean" the workspace. Preserving uncommitted work is infinitely more important than completing a task. If stuck, STOP and report the error.
+- ANTI-CORRUPTION: STRICTLY PROHIBITED from executing `rm -f .git/index.lock`. If you hit a lock error, it means another process is writing. Wait 5 seconds and retry, or STOP. Do NOT delete lock files.
+- CHAINING REQUIREMENT: You MUST execute staging and committing in a SINGLE bash call using the AND operator to prevent lock collisions: `git add <files> && git commit -m "..."`. NEVER run them as separate sequential tool calls.
+- LOCAL ONLY: STRICTLY PROHIBITED from `git push`, `pull`, `fetch`, or `remote`.
+- PRE-COMMIT: MUST run `git diff` before staging. NEVER blindly use `git add .`.
+- NO SECRETS: NEVER stage `.env` or keys. If accidental, immediately `git restore --staged <file>`.
+- ATOMIC COMMITS: Group changes into logical units.
+- COMMIT MESSAGES: English ONLY. Follow Conventional Commits exactly (`type(scope): subject`).
 
-- **Frontend**: React 19, Zustand 5, Tailwind 4. (No Next.js).
-- **Backend**: Node.js, Express 5, Prisma. Hexagonal Architecture (Domain/Application/Infrastructure).
-- **Quality**: Rules for code excellence are delegated to the `.atl/skill-registry.md`.
+</git_workflow>
 
-## Git & Delivery Protocol
+</shared_guardrails>
 
-- **Pre-flight**: MANDATORY `lint` and tests in the affected workspace BEFORE committing.
-- **Commits**: English ONLY. Conventional Commits (`feat:`, `fix:`, `chore:`). Atomic logical groups.
-- **Security**: PROHIBITED secrets in stage. Use `.env` files only.
+<executor_guardrails target="sub-agents">
+
+<code_generation>
+
+- ANTI-ELISION: NEVER use comments like `// ... rest of the code`. Output the complete, functional block.
+- STRICT TYPING: PROHIBITED use of `any`. Use `unknown` and type guards. - DEPENDENCY LOCK: NEVER `npm install` or `pnpm add` without explicit user permission.
+
+</code_generation>
+
+<hexagonal_strictness>
+
+- CONTROLLERS: ONLY handle HTTP (req/res, status codes, DTO validation).
+- SERVICES: ONLY handle business logic. NEVER import Express or Prisma directly.
+- REPOSITORIES: The ONLY layer allowed to import and use `PrismaClient`.
+  </hexagonal_strictness>
+
+<error_recovery>
+
+- TEST FAILURES: DO NOT rewrite the whole file. Isolate and patch ONLY the failing condition.
+- 3-STRIKE RULE: Bug persists after 2 fix attempts → STOP. Output: "Architectural Failure".
+  </error_recovery>
+
+</executor_guardrails>
+
+<output_dx_standards target="all-agents">
+
+<output_dx_standards target="all-agents">
+
+- ZERO FLUFF: STRICTLY PROHIBITED from using conversational filler (e.g., "I will now...", "Here are the changes...", "Proceeding with...").
+- TERMINATION RULE: You MUST stop generating text immediately after the final closing backticks of the bash block. NO closing remarks, NO summaries.
+- THE DX TEMPLATE: You MUST format EVERY response using EXACTLY this Markdown structure. Replace bracketed content [...] with actual data. Do not deviate.
+
+### ⚡ [Action or Tool Name]
+
+`STATUS: [✅ SUCCESS | 🛑 BLOCKED | ⚠️ WARNING | 🔍 ANALYSIS]`
+
+> **Summary:** [1-2 sentences maximum explaining the result]
+
+**📂 Targets/Files:**
+
+- `path/to/file.ts`
+
+**💻 Terminal Execution:**
+
+```bash
+$ [command run]
+[terse output snippet]
+```
+
+</output_dx_standards>
+
+<delivery_conventions>
+
+- Naming: `kebab-case.ts` (Files), `PascalCase.tsx` (Components), `SCREAMING_SNAKE` (Constants).
+- Imports: Absolute ONLY via `@/` alias.
+- Git Pre-flight: MUST `lint` and `test` affected workspace BEFORE commit.
+- Commits: English ONLY. Conventional Commits (`feat:`, `fix:`, `refactor:`).
+
+</delivery_conventions>
