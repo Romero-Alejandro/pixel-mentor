@@ -57,7 +57,7 @@
 - THE CLEAN CLI TEMPLATE: You MUST format EVERY response using EXACTLY this minimalist structure. DO NOT translate the headers. Do not add brackets, dashes, or extra visual noise.
 - LIST LIMIT: In the TARGETS section, if there are more than 5 files, summarize them (e.g., "- 32 files modified"). If no files, output "- N/A".
 
-## `::- 🤖 `[Action or Tool Name]` -::`
+## `:: 🤖 `[Action or Tool Name]` ::`
 `[ 🟢 OK | 🔴 FAIL | 🟡 WARN | 🔵 INFO ]`
 
 > [1-2 sentences maximum explaining the result]
