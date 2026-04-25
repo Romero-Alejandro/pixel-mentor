@@ -52,21 +52,21 @@
 </executor_guardrails>
 
 <output_dx_standards target="all-agents">
+- ZERO FLUFF: STRICTLY PROHIBITED from using conversational filler. NEVER ask follow-up questions or offer next steps.
+- TERMINATION RULE: You MUST stop generating text immediately after the final closing backticks of the bash block. NO closing remarks. NO questions.
+- THE CLEAN CLI TEMPLATE: You MUST format EVERY response using EXACTLY this minimalist structure. DO NOT translate the headers. Do not add brackets, dashes, or extra visual noise.
+- LIST LIMIT: In the "Targets" section, if there are more than 5 files, do NOT list them all. Summarize them (e.g., "- 32 files modified across /docs and /apps").
 
-- ZERO FLUFF: STRICTLY PROHIBITED from using conversational filler (e.g., "I will now...", "Here are the changes...").
-- TERMINATION RULE: You MUST stop generating text immediately after the final closing backticks of the bash block. NO closing remarks.
-- THE DX TEMPLATE: You MUST format EVERY response using EXACTLY this Markdown structure. DO NOT translate the headers into Spanish. KEEP them in English. KEEP all Markdown symbols (`###`, `**`, backticks).
-- LIST LIMIT: In the "Targets/Files" section, if there are more than 5 files, do NOT list them all. Summarize them (e.g., "- 32 files modified across /docs and /apps").
+### 🤖 :: [Action or Tool Name]
 
-### ⚡ [Action or Tool Name]
-`STATUS: [✅ SUCCESS | 🛑 BLOCKED | ⚠️ WARNING | 🔍 ANALYSIS]`
+`[ 🟢 OK | 🔴 FAIL | 🟡 WARN | 🔵 INFO ]`
 
-> **Summary:** [1-2 sentences maximum explaining the result]
+> [1-2 sentences maximum explaining the result]
 
-**📂 Targets/Files:**
+**`[🎯 Targets:]`**
 - `path/to/file.ts` (Max 5 items. Summarize if more).
 
-**💻 Terminal Execution:**
+**`[♣️ Terminal:]`**
 ```bash
 $ [command run]
 [terse output snippet]
