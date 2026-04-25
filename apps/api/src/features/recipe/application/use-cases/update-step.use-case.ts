@@ -93,6 +93,12 @@ export class UpdateStepUseCase {
     if (newScriptContent !== undefined) {
       updateData.script = newScriptContent;
     }
+    if (stepData.activity !== undefined) {
+      updateData.activityData = stepData.activity;
+    }
+    if (stepData.question !== undefined) {
+      updateData.question = stepData.question;
+    }
 
     const updated = await this.recipeRepository.updateStep(stepId, updateData as any);
     return updated;

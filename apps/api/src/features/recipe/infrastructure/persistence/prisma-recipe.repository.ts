@@ -171,6 +171,8 @@ export class PrismaRecipeRepository implements RecipeRepository {
         stepType: this.normalizeStepTypeForPrisma(step.stepType),
         conceptId: step.conceptId,
         activityId: step.activityId,
+        activityData: (step as any).activityData as never,
+        question: (step as any).question as never,
       },
     });
     return this.mapRecipeStep(raw);
