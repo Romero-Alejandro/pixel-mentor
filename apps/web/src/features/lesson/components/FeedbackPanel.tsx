@@ -3,6 +3,7 @@ import { IconStarFilled, IconAlertTriangleFilled, IconBolt } from '@tabler/icons
 import { useAudio } from '@/contexts/AudioContext';
 import { SpriteAudioEvent } from '@/audio/types/audio-events';
 import { Spinner } from '@/components/ui';
+import { cn } from '@/utils/cn';
 
 interface FeedbackPanelProps {
   fb: { isCorrect: boolean; message: string; encouragement?: string; xpAwarded?: number };
@@ -32,11 +33,12 @@ export function FeedbackPanel({ fb, nextLessonText, isStreaming }: FeedbackPanel
   return (
     <div className="flex-1 flex flex-col items-center p-4 text-center gap-6 w-full h-full animate-bounce-in">
       <div
-        className={`relative w-28 h-28 rounded-full flex items-center justify-center border-[9px] ${
+        className={cn(
+          'relative w-28 h-28 rounded-full flex items-center justify-center border-[9px]',
           fb.isCorrect
             ? 'bg-emerald-100 border-emerald-300 shadow-[0_12px_0_0_#6ee7b7]'
-            : 'bg-amber-100 border-amber-300 shadow-[0_12px_0_0_#fcd34d]'
-        }`}
+            : 'bg-amber-100 border-amber-300 shadow-[0_12px_0_0_#fcd34d]',
+        )}
       >
         <div className="absolute inset-0 rounded-full animate-ping opacity-30 bg-inherit" />
         {fb.isCorrect ? (
@@ -48,7 +50,10 @@ export function FeedbackPanel({ fb, nextLessonText, isStreaming }: FeedbackPanel
 
       <div className="max-w-xl w-full space-y-6">
         <h3
-          className={`text-5xl sm:text-6xl font-black tracking-tight ${fb.isCorrect ? 'text-emerald-600' : 'text-amber-600'}`}
+          className={cn(
+            'text-5xl sm:text-6xl font-black tracking-tight',
+            fb.isCorrect ? 'text-emerald-600' : 'text-amber-600',
+          )}
         >
           {fb.isCorrect ? '¡Excelente!' : '¡Buen intento!'}
         </h3>

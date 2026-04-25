@@ -1,6 +1,5 @@
 import { IconSend, IconMessageCircleQuestion } from '@tabler/icons-react';
 import { useState } from 'react';
-
 import { Spinner } from '@/components/ui';
 
 export function QuestionPanel({
@@ -49,7 +48,7 @@ export function QuestionPanel({
           <button
             onClick={submit}
             disabled={!val.trim() || isProcessing}
-            className="flex items-center gap-2 px-8 py-3 bg-sky-500 text-white text-lg font-black rounded-2xl border-4 border-sky-600 shadow-[0_4px_0_0_#0284c7] hover:bg-sky-400 hover:shadow-[0_6px_0_0_#0284c7] hover:-translate-y-0.5 active:translate-y-1 active:shadow-none disabled:opacity-50 disabled:transform-none disabled:shadow-none transition-all cursor-pointer"
+            className="flex items-center gap-2 px-8 py-3 bg-sky-500 text-white text-lg font-black rounded-2xl border-4 border-sky-600 shadow-[0_4px_0_0_#0284c7] hover:bg-sky-400 hover:shadow-[0_6px_0_0_#0284c7] hover:-translate-y-0.5 active:translate-y-1 active:shadow-none disabled:opacity-50 disabled:transform-none disabled:shadow-none transition-all cursor-pointer focus-visible:ring-4 focus-visible:ring-sky-200"
           >
             {isProcessing ? (
               <Spinner size="sm" />

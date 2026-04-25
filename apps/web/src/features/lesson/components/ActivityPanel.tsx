@@ -1,7 +1,7 @@
 import { IconCheck, IconX, IconTargetArrow, IconHourglassHigh } from '@tabler/icons-react';
-
 import { useAudio } from '@/contexts/AudioContext';
 import { Spinner } from '@/components/ui';
+import { cn } from '@/utils/cn';
 
 interface ActivityOption {
   id: string;
@@ -28,8 +28,9 @@ export function ActivityPanel({
   const answered = selectedId !== null;
 
   function getOptionStateClasses(opt: ActivityOption) {
-    if (!answered)
-      return 'border-slate-200 bg-white hover:border-amber-300 hover:bg-amber-50 hover:-translate-y-1 shadow-[0_6px_0_0_#e2e8f0] hover:shadow-[0_8px_0_0_#fcd34d] text-slate-700 cursor-pointer';
+    if (!answered) {
+      return 'border-slate-200 bg-white hover:border-amber-300 hover:bg-amber-50 hover:-translate-y-1 shadow-[0_6px_0_0_#e2e8f0] hover:shadow-[0_8px_0_0_#fcd34d] text-slate-700 cursor-pointer focus-visible:ring-4 focus-visible:ring-amber-200';
+    }
 
     if (opt.id === selectedId) {
       return isCorrect
@@ -41,17 +42,21 @@ export function ActivityPanel({
       return 'border-emerald-400 bg-emerald-50 text-emerald-800 opacity-90 shadow-none translate-y-1';
     }
 
-    return 'border-slate-100 bg-slate-50 text-slate-400 opacity-50 shadow-none translate-y-1';
+    return 'border-slate-100 bg-slate-50 text-slate-400 opacity-50 shadow-none translate-y-1 cursor-default';
   }
 
   function getLetterBadgeClasses(opt: ActivityOption) {
-    if (!answered)
+    if (!answered) {
       return 'bg-slate-100 text-slate-500 group-hover:bg-amber-400 group-hover:text-white border-slate-200 group-hover:border-amber-500 shadow-sm';
-    if (opt.id === selectedId)
+    }
+    if (opt.id === selectedId) {
       return isCorrect
         ? 'bg-emerald-500 text-white border-emerald-600'
         : 'bg-rose-500 text-white border-rose-600';
-    if (opt.isCorrect && isCorrect === false) return 'bg-emerald-400 text-white border-emerald-500';
+    }
+    if (opt.isCorrect && isCorrect === false) {
+      return 'bg-emerald-400 text-white border-emerald-500';
+    }
     return 'bg-slate-100 text-slate-400 border-slate-200';
   }
 
@@ -64,7 +69,7 @@ export function ActivityPanel({
         <p className="text-2xl sm:text-3xl font-black text-amber-950 leading-snug">{question}</p>
       </div>
 
-      <div className="space-y-5 mt-2">
+      <div className="space-y-5 mt-2 flex-1">
         {options.map((opt, i) => (
           <button
             key={opt.id}
@@ -76,10 +81,16 @@ export function ActivityPanel({
             }}
             onMouseEnter={() => !answered && playHover()}
             disabled={answered || isProcessing}
-            className={`w-full flex items-center gap-5 p-6 rounded-[2rem] text-left border-4 font-bold transition-all duration-200 group outline-none ${getOptionStateClasses(opt)}`}
+            className={cn(
+              'w-full flex items-center gap-5 p-6 rounded-[2rem] text-left border-4 font-bold transition-all duration-200 group outline-none',
+              getOptionStateClasses(opt),
+            )}
           >
             <span
-              className={`w-14 h-14 border-4 flex items-center justify-center rounded-2xl text-2xl font-black transition-colors shrink-0 ${getLetterBadgeClasses(opt)}`}
+              className={cn(
+                'w-14 h-14 border-4 flex items-center justify-center rounded-2xl text-2xl font-black transition-colors shrink-0',
+                getLetterBadgeClasses(opt),
+              )}
             >
               {String.fromCharCode(65 + i)}
             </span>

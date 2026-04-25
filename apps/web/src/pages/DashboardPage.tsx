@@ -9,6 +9,10 @@ import {
   IconListDetails,
   IconUsersGroup,
   IconLogout,
+  IconTarget,
+  IconTrophy,
+  IconFlame,
+  IconStar,
 } from '@tabler/icons-react';
 
 import { useAuth } from '@/features/auth/hooks/useAuth';
@@ -29,12 +33,10 @@ import {
   type DashboardTab,
 } from '@/features/dashboard/constants/dashboard.constants';
 import { useDashboardData } from '@/features/dashboard/hooks/useDashboardData';
-import { MissionMap } from '@/features/dashboard/components/MissionMap';
 
 export function DashboardPage() {
   const navigate = useNavigate();
-  const { playClick, playClickSecondary, playSelect, playStreakMaintained, playModalOpen } =
-    useAudio();
+  const { playClick, playClickSecondary, playStreakMaintained, playModalOpen } = useAudio();
   const toast = useToast();
 
   const { user, logout, isLoggingOut } = useAuth();
@@ -98,6 +100,7 @@ export function DashboardPage() {
       : 100;
 
   const completedCount = sessions.filter((s) => s.status === 'COMPLETED').length;
+  const activeSessions = sessions.filter((s) => s.status !== 'COMPLETED');
   const levelEmoji = LEVEL_EMOJIS[profile?.currentLevel || 1] ?? '🌱';
   const safeStreakHistory = Array.isArray(achievements?.streakHistory)
     ? achievements.streakHistory
@@ -187,7 +190,7 @@ export function DashboardPage() {
         </div>
 
         {isTeacher ? (
-          <>
+          <div className="space-y-6">
             {/* Info banner */}
             <div className="mb-6 bg-white rounded-2xl p-5 border-2 border-sky-100 shadow-sm">
               <div className="flex flex-col sm:flex-row gap-4 sm:gap-8">
@@ -248,7 +251,7 @@ export function DashboardPage() {
                 </div>
               </Link>
             </div>
-          </>
+          </div>
         ) : null}
 
         {!isTeacher ? (
@@ -272,7 +275,9 @@ export function DashboardPage() {
         ) : null}
 
         <div className="flex flex-col lg:flex-row gap-8">
+          {/* Left column: Level & Achievements */}
           <div className="w-full lg:w-1/3 space-y-6">
+            {/* Level Card */}
             <div className="bg-white rounded-[2.5rem] p-6 sm:p-8 border-4 border-amber-200 shadow-[0_8px_0_0_#fde68a] relative overflow-hidden">
               <div className="absolute -top-6 -right-6 text-8xl opacity-10 select-none blur-[2px]">
                 {levelEmoji}
@@ -312,6 +317,7 @@ export function DashboardPage() {
               ) : null}
             </div>
 
+            {/* Achievements Tabs */}
             {achievements ? (
               <div className="bg-white rounded-[2.5rem] p-6 border-4 border-sky-200 shadow-[0_8px_0_0_#bae6fd]">
                 <div className="flex gap-2 mb-6 bg-slate-100 p-2 rounded-[1.5rem] border-2 border-slate-200">
@@ -370,29 +376,166 @@ export function DashboardPage() {
             ) : null}
           </div>
 
-          <div className="w-full lg:w-2/3 bg-white/80 backdrop-blur-md rounded-[3rem] border-4 border-white shadow-[0_8px_32px_rgba(56,189,248,0.15)] p-6 sm:p-10 relative overflow-hidden">
-            <div className="absolute inset-0 bg-[url('/pattern-dots.svg')] bg-repeat opacity-5 pointer-events-none" />
+          {/* Right column: Challenges Section */}
+          <div className="w-full lg:w-2/3">
+            <div className="bg-white/80 backdrop-blur-md rounded-[3rem] border-4 border-violet-200 shadow-[0_8px_32px_rgba(139,92,246,0.15)] p-6 sm:p-10 relative overflow-hidden">
+              <div className="absolute inset-0 bg-[url('/pattern-dots.svg')] bg-repeat opacity-5 pointer-events-none" />
 
-            <h2 className="text-3xl font-black text-sky-900 mb-2 flex items-center gap-3 relative z-10">
-              <IconMap className="w-10 h-10 text-sky-500 drop-shadow-sm" stroke={3} />
-              Mapa de Aventuras
-            </h2>
-            <p className="text-slate-500 font-bold mb-8 text-lg relative z-10">
-              Elige tu próximo desafío y descubre nuevos caminos.
-            </p>
-
-            {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-32 gap-6 relative z-10">
-                <div className="w-24 h-24 bg-sky-100 rounded-full flex items-center justify-center border-4 border-sky-200 shadow-[0_8px_0_0_#bae6fd]">
-                  <Spinner size="lg" className="text-sky-500" />
-                </div>
-                <p className="text-xl font-black text-sky-600 animate-pulse uppercase tracking-widest">
-                  Desplegando el mapa mágico...
+              {/* Header */}
+              <div className="relative z-10 mb-8">
+                <h2 className="text-3xl font-black text-violet-700 mb-2 flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center shadow-[0_4px_0_0_#7c3aed] border-2 border-white">
+                    <IconTarget className="w-6 h-6 text-white" stroke={2.5} />
+                  </div>
+                  Próximos Desafíos
+                </h2>
+                <p className="text-slate-500 font-bold text-lg">
+                  ¡Completa estas misiones para ganar más XP y desbloquear recompensas! 🌟
                 </p>
               </div>
-            ) : (
-              <MissionMap classes={classes} sessions={sessions} onInteract={playSelect} />
-            )}
+
+              {/* Stats Summary */}
+              <div className="grid grid-cols-3 gap-4 mb-8 relative z-10">
+                <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-[1.5rem] p-4 border-2 border-amber-200 text-center">
+                  <IconTrophy className="w-8 h-8 text-amber-500 mx-auto mb-1" />
+                  <p className="text-2xl font-black text-amber-700">{completedCount}</p>
+                  <p className="text-xs font-bold text-amber-600 uppercase">Completadas</p>
+                </div>
+                <div className="bg-gradient-to-br from-sky-50 to-blue-50 rounded-[1.5rem] p-4 border-2 border-sky-200 text-center">
+                  <IconFlame className="w-8 h-8 text-sky-500 mx-auto mb-1" />
+                  <p className="text-2xl font-black text-sky-700">{activeSessions.length}</p>
+                  <p className="text-xs font-bold text-sky-600 uppercase">En Progreso</p>
+                </div>
+                <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-[1.5rem] p-4 border-2 border-emerald-200 text-center">
+                  <IconStar className="w-8 h-8 text-emerald-500 mx-auto mb-1" />
+                  <p className="text-2xl font-black text-emerald-700">{classes.length}</p>
+                  <p className="text-xs font-bold text-emerald-600 uppercase">Disponibles</p>
+                </div>
+              </div>
+
+              {/* Challenge Cards */}
+              <div className="space-y-4 relative z-10">
+                {/* Active Sessions */}
+                {activeSessions.length > 0 ? (
+                  <div className="mb-6">
+                    <h3 className="text-lg font-black text-slate-700 mb-3 flex items-center gap-2">
+                      <IconFlame className="w-5 h-5 text-sky-500" />
+                      Misiones en Progreso
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {activeSessions.slice(0, 4).map((session) => {
+                        const statusLabel =
+                          session.status === 'ACTIVE'
+                            ? 'En progreso'
+                            : session.status === 'PAUSED_FOR_QUESTION'
+                              ? 'Pausado'
+                              : session.status === 'AWAITING_CONFIRMATION'
+                                ? 'Esperando'
+                                : session.status === 'PAUSED_IDLE'
+                                  ? 'Inactivo'
+                                  : session.status === 'ESCALATED'
+                                    ? 'Necesita ayuda'
+                                    : 'Inactivo';
+
+                        return (
+                          <Link
+                            key={session.id}
+                            to={`/recipe/${session.recipeId}`}
+                            className="group outline-none"
+                          >
+                            <div className="bg-gradient-to-br from-sky-50 to-blue-50 rounded-[1.5rem] p-4 border-2 border-sky-200 shadow-[0_4px_0_0_#bae6fd] hover:border-sky-300 hover:shadow-[0_6px_0_0_#7dd3fc] transition-all hover:-translate-y-1 active:translate-y-1 active:shadow-none group-active:scale-95">
+                              <div className="flex items-center gap-3 mb-2">
+                                <div className="w-10 h-10 rounded-xl bg-sky-100 flex items-center justify-center group-hover:bg-sky-200 transition-colors">
+                                  <IconTarget className="w-5 h-5 text-sky-500" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-black text-slate-700 truncate">
+                                    Misión #{session.id.slice(0, 8)}
+                                  </p>
+                                  <p className="text-xs text-sky-600 font-medium">{statusLabel}</p>
+                                </div>
+                              </div>
+                              {session.startedAt ? (
+                                <p className="text-xs text-slate-400 font-medium">
+                                  Iniciada:{' '}
+                                  {new Date(session.startedAt).toLocaleDateString('es-ES')}
+                                </p>
+                              ) : null}
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* Available Classes */}
+                {classes.length > 0 ? (
+                  <div>
+                    <h3 className="text-lg font-black text-slate-700 mb-3 flex items-center gap-2">
+                      <IconMap className="w-5 h-5 text-emerald-500" />
+                      Aventuras Disponibles
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {classes.slice(0, 4).map((cls) => (
+                        <Link key={cls.id} to={`/classes/${cls.id}`} className="group outline-none">
+                          <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-[1.5rem] p-4 border-2 border-emerald-200 shadow-[0_4px_0_0_#a7f3d0] hover:border-emerald-300 hover:shadow-[0_6px_0_0_#6ee7b7] transition-all hover:-translate-y-1 active:translate-y-1 active:shadow-none group-active:scale-95">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center group-hover:bg-emerald-200 transition-colors">
+                                <IconSchool className="w-5 h-5 text-emerald-500" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-black text-slate-700 truncate">
+                                  {cls.title}
+                                </p>
+                                <p className="text-xs text-emerald-600 font-medium">
+                                  {cls.lessons?.length || 0} lecciones
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* Empty State */}
+                {activeSessions.length === 0 && classes.length === 0 && !isTeacher ? (
+                  <div className="flex flex-col items-center justify-center py-12 gap-6">
+                    <div className="w-20 h-20 bg-violet-100 rounded-full flex items-center justify-center border-4 border-violet-200 shadow-[0_6px_0_0_#a78bfa]">
+                      <IconTarget className="w-10 h-10 text-violet-500" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xl font-black text-violet-600 animate-pulse uppercase tracking-widest">
+                        ¡Explora tus clases!
+                      </p>
+                      <p className="text-sm text-slate-500 font-medium mt-2">
+                        Las misiones aparecerán aquí cuando tu profesor te asigne clases.
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* Empty State for Teachers */}
+                {classes.length === 0 && isTeacher ? (
+                  <div className="flex flex-col items-center justify-center py-12 gap-6">
+                    <div className="w-20 h-20 bg-violet-100 rounded-full flex items-center justify-center border-4 border-violet-200 shadow-[0_6px_0_0_#a78bfa]">
+                      <IconTarget className="w-10 h-10 text-violet-500" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xl font-black text-violet-600 animate-pulse uppercase tracking-widest">
+                        ¡Crea tu primera clase!
+                      </p>
+                      <p className="text-sm text-slate-500 font-medium mt-2">
+                        Los desafíos para estudiantes aparecerán aquí cuando tengas clases
+                        publicadas.
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
           </div>
         </div>
       </main>

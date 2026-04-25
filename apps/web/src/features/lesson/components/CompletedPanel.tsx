@@ -14,9 +14,9 @@ import {
 } from '@tabler/icons-react';
 
 import { AccuracyTier, TIER_CONFIG } from '../constants/lesson.constants';
-
 import { useAudio } from '@/contexts/AudioContext';
 import { SpriteAudioEvent } from '@/audio/types/audio-events';
+import { cn } from '@/utils/cn';
 
 const COMPLETION_ITEM_STAGGER_DELAY_MS = 200;
 
@@ -56,7 +56,10 @@ function StarRating({ stars }: { stars: number }) {
           }}
         >
           <IconStar
-            className={`w-12 h-12 sm:w-14 sm:h-14 ${i <= stars ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-200'}`}
+            className={cn(
+              'w-12 h-12 sm:w-14 sm:h-14',
+              i <= stars ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-200',
+            )}
             stroke={2}
           />
         </div>
@@ -77,7 +80,10 @@ function AnswerReviewList({ results }: { results: QuestionResult[] }) {
         {results.map((r, i) => (
           <div
             key={i}
-            className={`flex items-center gap-3 p-3 rounded-xl border-2 ${r.isCorrect ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}
+            className={cn(
+              'flex items-center gap-3 p-3 rounded-xl border-2',
+              r.isCorrect ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200',
+            )}
           >
             <span className="shrink-0">
               {r.isCorrect ? (
@@ -117,13 +123,20 @@ export function CompletedPanel({
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-8 text-center gap-5 w-full h-full animate-bounce-in overflow-y-auto custom-scrollbar">
-      {/* Dynamic Header Badge */}
       <div className="relative w-36 h-36 sm:w-40 sm:h-40">
         <div
-          className={`absolute inset-0 rounded-full animate-ping opacity-40 blur-xl ${isRepeat ? 'bg-sky-200' : 'bg-amber-300'}`}
+          className={cn(
+            'absolute inset-0 rounded-full animate-ping opacity-40 blur-xl',
+            isRepeat ? 'bg-sky-200' : 'bg-amber-300',
+          )}
         />
         <div
-          className={`absolute inset-0 rounded-full border-8 border-white flex items-center justify-center z-10 animate-float ${isRepeat ? 'bg-gradient-to-tr from-sky-400 to-cyan-300 shadow-[0_10px_0_0_#0284c7]' : 'bg-gradient-to-tr from-amber-400 to-yellow-300 shadow-[0_12px_0_0_#d97706]'}`}
+          className={cn(
+            'absolute inset-0 rounded-full border-8 border-white flex items-center justify-center z-10 animate-float',
+            isRepeat
+              ? 'bg-gradient-to-tr from-sky-400 to-cyan-300 shadow-[0_10px_0_0_#0284c7]'
+              : 'bg-gradient-to-tr from-amber-400 to-yellow-300 shadow-[0_12px_0_0_#d97706]',
+          )}
         >
           {isRepeat ? (
             <IconRefresh className="w-20 h-20 text-white drop-shadow-md" />
@@ -148,11 +161,10 @@ export function CompletedPanel({
       {tierConfig ? (
         <div className="flex flex-col items-center gap-2 mt-2">
           <StarRating stars={stars} />
-          <span className={`text-lg font-black ${tierConfig.color}`}>{tierConfig.label}</span>
+          <span className={cn('text-lg font-black', tierConfig.color)}>{tierConfig.label}</span>
         </div>
       ) : null}
 
-      {/* Conditional Gamification Stats */}
       {!isRepeat && accuracy ? (
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full max-w-lg mt-4">
           <div className="flex-1 bg-gradient-to-br from-amber-50 to-yellow-50 border-4 border-amber-200 rounded-[1.5rem] p-4 flex flex-col items-center justify-center relative overflow-hidden">
@@ -194,18 +206,20 @@ export function CompletedPanel({
         </div>
       ) : null}
 
-      {/* Review & Feedback Actions */}
       <AnswerReviewList results={questionResults} />
 
       <div className="flex flex-col sm:flex-row gap-4 mt-6 w-full max-w-xl">
         <button
           onClick={onRestart}
-          className="flex-1 flex items-center justify-center gap-3 px-5 py-4 bg-white text-slate-600 font-black text-lg rounded-[2rem] border-4 border-slate-200 shadow-[0_6px_0_0_#e2e8f0] hover:bg-sky-50 hover:border-sky-300 hover:shadow-[0_6px_0_0_#7dd3fc] hover:text-sky-600 hover:-translate-y-1 active:translate-y-1 active:shadow-none transition-all outline-none"
+          className="flex-1 flex items-center justify-center gap-3 px-5 py-4 bg-white text-slate-600 font-black text-lg rounded-[2rem] border-4 border-slate-200 shadow-[0_6px_0_0_#e2e8f0] hover:bg-sky-50 hover:border-sky-300 hover:shadow-[0_6px_0_0_#7dd3fc] hover:text-sky-600 hover:-translate-y-1 active:translate-y-1 active:shadow-none transition-all outline-none focus-visible:ring-4 focus-visible:ring-sky-200"
         >
           <IconRepeat className="w-6 h-6" stroke={3} />
           Repetir
         </button>
-        <Link to="/dashboard" className="flex-1 outline-none">
+        <Link
+          to="/dashboard"
+          className="flex-1 outline-none focus-visible:ring-4 focus-visible:ring-sky-200 rounded-[2rem]"
+        >
           <button className="w-full flex items-center justify-center gap-3 px-5 py-4 bg-sky-500 text-white font-black text-lg rounded-[2rem] border-4 border-sky-600 shadow-[0_6px_0_0_#0284c7] hover:bg-sky-400 hover:shadow-[0_8px_0_0_#0284c7] hover:-translate-y-1 active:translate-y-1 active:shadow-none transition-all outline-none">
             {isRepeat ? (
               <IconMap className="w-6 h-6" stroke={3} />

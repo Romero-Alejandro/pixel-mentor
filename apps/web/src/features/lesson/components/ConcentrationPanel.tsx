@@ -1,5 +1,6 @@
 import { useEffect, useRef, memo, useMemo } from 'react';
-import { IconRepeat, IconPlayerPlayFilled } from '@tabler/icons-react';
+import { IconRepeat, IconPlayerPlayFilled, IconAlertTriangle } from '@tabler/icons-react';
+import { Spinner } from '@/components/ui';
 import { cn } from '@/utils/cn';
 
 interface TextSectionProps {
@@ -9,7 +10,6 @@ interface TextSectionProps {
   containerClassName: string;
   wordClassName: string;
   activeWordClassName: string;
-  /** Offset to calculate actual word index within this section */
   wordOffset?: number;
 }
 
@@ -31,7 +31,11 @@ const TextSection = memo(
           <mark
             key={`${word}-${idx}`}
             data-word-index={wordOffset !== undefined ? wordOffset + idx : idx}
-            className={cn(wordClassName, idx === activeIndex && activeWordClassName)}
+            className={cn(
+              wordClassName,
+              idx === activeIndex && activeWordClassName,
+              'bg-transparent',
+            )}
           >
             {word}{' '}
           </mark>
@@ -51,6 +55,8 @@ interface ConcentrationPanelProps {
   currentWordIndex: number;
   isSynced: boolean;
   isSpeaking: boolean;
+  isAttemptingSync?: boolean;
+  syncError?: boolean;
   onRepeat: () => void;
 }
 
@@ -63,11 +69,11 @@ export function ConcentrationPanel({
   isSpeaking,
   onRepeat,
   fullVoiceText,
+  isAttemptingSync = false,
+  syncError = false,
 }: ConcentrationPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  // Note: isStreaming prop available via ConcentrationPanelProps for future use
 
-  // Memorizar la división de palabras para no recalcularla en cada frame de audio
   const { transitionWords, contentWords, closureWords, tLen, cLen, lLen } = useMemo(() => {
     const t = transitionText.trim().split(/\s+/).filter(Boolean);
     const c = contentText.trim().split(/\s+/).filter(Boolean);
@@ -82,8 +88,6 @@ export function ConcentrationPanel({
     };
   }, [transitionText, contentText, closureText]);
 
-  // Always show full text content - users should be able to read while listening
-  // The current word tracking (activeT, activeC, activeL) still works for karaoke highlight
   const showAllContent = true;
 
   const visibleT = showAllContent ? tLen : Math.min(currentWordIndex, tLen);
@@ -94,13 +98,9 @@ export function ConcentrationPanel({
 
   const activeIndex = currentWordIndex - 1;
 
-  // Auto-scroll to highlighted word - must be defined before the return statement
   useEffect(() => {
-    if (currentWordIndex <= 0 || !scrollRef.current) {
-      return;
-    }
+    if (currentWordIndex <= 0 || !scrollRef.current) return;
 
-    // Find the currently highlighted word element using data-word-index
     const activeMarks = scrollRef.current.querySelectorAll('mark');
     const activeMark = Array.from(activeMarks).find((mark) => {
       const idx = mark.getAttribute('data-word-index');
@@ -115,8 +115,39 @@ export function ConcentrationPanel({
     }
   }, [currentWordIndex, activeIndex]);
 
+  const showSyncIndicator = !isSynced && (visibleT > 0 || visibleC > 0 || visibleL > 0);
+  const showError = syncError && showSyncIndicator;
+
   return (
     <div className="flex-1 flex flex-col items-center p-6 sm:p-8 gap-6 w-full h-full min-h-0 animate-bounce-in">
+      {showSyncIndicator ? (
+        <div
+          className={cn(
+            'flex items-center gap-2 px-4 py-2 rounded-full border-2 text-sm font-bold transition-all',
+            showError
+              ? 'bg-rose-50 border-rose-300 text-rose-600'
+              : 'bg-sky-50 border-sky-300 text-sky-600',
+          )}
+        >
+          {isAttemptingSync ? (
+            <>
+              <Spinner size="sm" className="text-sky-500" />
+              <span>Sincronizando...</span>
+            </>
+          ) : showError ? (
+            <>
+              <IconAlertTriangle className="w-4 h-4" />
+              <span>Recuperando...</span>
+            </>
+          ) : isSpeaking ? (
+            <>
+              <IconPlayerPlayFilled className="w-4 h-4 animate-pulse" />
+              <span>Reproduciendo</span>
+            </>
+          ) : null}
+        </div>
+      ) : null}
+
       <div
         ref={scrollRef}
         className="bg-white rounded-[2.5rem] border-4 border-sky-100 shadow-[0_8px_0_0_#e0f2fe] p-6 sm:p-10 w-full flex-1 min-h-0 max-h-[40vh] sm:max-h-[50vh] lg:max-h-[55vh] overflow-y-auto custom-scrollbar"
@@ -129,7 +160,7 @@ export function ConcentrationPanel({
             wordOffset={0}
             containerClassName="block mb-6 text-sky-600/80 font-bold"
             wordClassName="transition-colors duration-200"
-            activeWordClassName="bg-sky-100 text-sky-800 rounded-xl px-2 py-0.5 shadow-sm"
+            activeWordClassName="bg-sky-200 text-sky-800 rounded-xl px-2 py-0.5 shadow-sm"
           />
           <TextSection
             words={contentWords}
@@ -138,7 +169,7 @@ export function ConcentrationPanel({
             wordOffset={tLen}
             containerClassName="block mb-6 text-slate-800 font-bold"
             wordClassName="transition-colors duration-200"
-            activeWordClassName="bg-amber-100 text-amber-900 rounded-xl px-2 py-0.5 shadow-sm"
+            activeWordClassName="bg-amber-200 text-amber-900 rounded-xl px-2 py-0.5 shadow-sm"
           />
           <TextSection
             words={closureWords}
@@ -147,12 +178,8 @@ export function ConcentrationPanel({
             wordOffset={tLen + cLen}
             containerClassName="block text-emerald-600 font-black"
             wordClassName="transition-colors duration-200"
-            activeWordClassName="bg-emerald-100 text-emerald-900 rounded-xl px-2 py-0.5 shadow-sm"
+            activeWordClassName="bg-emerald-200 text-emerald-900 rounded-xl px-2 py-0.5 shadow-sm"
           />
-
-          {!isSynced && (visibleT > 0 || visibleC > 0 || visibleL > 0) ? (
-            <span className="inline-block w-4 h-4 ml-2 bg-sky-400 rounded-full animate-pulse" />
-          ) : null}
         </div>
       </div>
 
@@ -167,7 +194,7 @@ export function ConcentrationPanel({
         ) : fullVoiceText ? (
           <button
             onClick={onRepeat}
-            className="flex items-center justify-center gap-3 px-8 py-4 bg-slate-50 text-slate-600 font-black text-lg rounded-[1.5rem] border-4 border-slate-200 shadow-[0_6px_0_0_#e2e8f0] hover:bg-sky-50 hover:text-sky-600 hover:border-sky-300 hover:shadow-[0_6px_0_0_#7dd3fc] active:translate-y-1 active:shadow-none transition-all cursor-pointer outline-none"
+            className="flex items-center justify-center gap-3 px-8 py-4 bg-slate-50 text-slate-600 font-black text-lg rounded-[1.5rem] border-4 border-slate-200 shadow-[0_6px_0_0_#e2e8f0] hover:bg-sky-50 hover:text-sky-600 hover:border-sky-300 hover:shadow-[0_6px_0_0_#7dd3fc] active:translate-y-1 active:shadow-none transition-all cursor-pointer outline-none focus-visible:ring-4 focus-visible:ring-sky-200"
           >
             <IconRepeat className="w-6 h-6" stroke={3} />
             Repetir
