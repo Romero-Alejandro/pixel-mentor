@@ -16,7 +16,21 @@ interface LessonResponse {
   feedback?: string;
   sessionCompleted?: boolean;
   lessonProgress?: { currentStep: number; totalSteps: number };
-  staticContent?: {
+  resolvedStaticContent?: {
+    stepType?: 'content' | 'activity' | 'question' | 'intro' | 'closure';
+    script?: {
+      transition?: string | { text: string };
+      content?: string | { text: string };
+      closure?: string | { text: string };
+      question?: string | { text: string };
+      expectedAnswer?: string;
+    };
+    activity?: {
+      instruction: string | { text: string };
+      options?: Array<{ text: string; isCorrect: boolean }>;
+    };
+  };
+  contentSteps?: {
     stepType?: 'content' | 'activity' | 'question' | 'intro' | 'closure';
     script?: {
       transition?: string | { text: string };
@@ -120,7 +134,6 @@ export function useClassOrchestrator() {
           store.setIsStreaming(true);
           store.setStreamError(null);
           store.clearStream();
-          lessonState.setContentText('');
 
           return await new Promise<LessonResponse>((resolve, reject) => {
             let resolved = false;
@@ -154,7 +167,6 @@ export function useClassOrchestrator() {
                   try {
                     const data = JSON.parse(event.data);
                     fullText += data.text || '';
-                    lessonState.setContentText(fullText);
                   } catch (e) {
                     // Ignorar chunks mal formados silenciosamente para no romper el stream
                   }
@@ -209,7 +221,8 @@ export function useClassOrchestrator() {
       const {
         voiceText = '',
         pedagogicalState = 'EXPLANATION',
-        staticContent,
+        resolvedStaticContent: rawStaticContent,
+        contentSteps,
         isCorrect,
         feedback,
         sessionCompleted,
@@ -217,6 +230,9 @@ export function useClassOrchestrator() {
         xpEarned,
         accuracy,
       } = raw;
+
+      // Support both resolvedStaticContent and contentSteps for backward compatibility
+      const resolvedStaticContent = rawStaticContent || contentSteps;
 
       if (lessonProgress) {
         lessonState.setCurrentStep(lessonProgress.currentStep);
@@ -255,7 +271,7 @@ export function useClassOrchestrator() {
 
       // --- 3. Estado Actividad ---
       if (pedagogicalState === 'ACTIVITY_WAIT') {
-        const { stepType, activity } = staticContent || {};
+        const { stepType, activity } = resolvedStaticContent || {};
         const hasOptions = activity?.options && activity.options.length > 0;
         console.log('[DEBUG] ACTIVITY_WAIT STATE:', {
           stepType,
@@ -282,13 +298,13 @@ export function useClassOrchestrator() {
 
       // --- 4. Estado Pregunta ---
       if (pedagogicalState === 'QUESTION') {
-        const { stepType, script } = staticContent || {};
+        const { stepType, script } = resolvedStaticContent || {};
         const questionText = extractText(script?.question);
         console.log('[DEBUG] QUESTION STATE:', {
           pedagogicalState,
           stepType,
           questionText,
-          staticContent: script,
+          resolvedStaticContent: script,
         });
 
         // Always question panel for QUESTION pedagogical state (open-ended answers)
@@ -304,16 +320,26 @@ export function useClassOrchestrator() {
       // Solo mostrar contenido si NO es un estado que requiere input del usuario
       const statesRequiringInput = ['AWAITING_START', 'ACTIVITY_WAIT', 'QUESTION', 'EVALUATION'];
       if (!statesRequiringInput.includes(pedagogicalState)) {
-        if (staticContent?.script) {
-          setTransitionText(extractText(staticContent.script.transition));
-          lessonState.setContentText(extractText(staticContent.script.content));
-          setClosureText(extractText(staticContent.script.closure));
+        if (resolvedStaticContent?.script) {
+          const transition = extractText(resolvedStaticContent.script.transition);
+          const scriptContent = extractText(resolvedStaticContent.script.content);
+          const closure = extractText(resolvedStaticContent.script.closure);
+
+          const content = scriptContent.trim() || voiceText;
+
+          setTransitionText(transition);
+          lessonState.setContentText(content);
+          setClosureText(closure);
+
+          const combinedText = [transition, content, closure].filter(Boolean).join(' ');
+          setFullVoiceText(combinedText);
+          contentRef.current = combinedText;
         } else {
           lessonState.setContentText(voiceText);
+          setFullVoiceText(voiceText);
+          contentRef.current = voiceText;
         }
 
-        setFullVoiceText(voiceText);
-        contentRef.current = voiceText;
         lessonState.setFeedbackData(null);
         console.log(
           '[DEBUG] Setting uiState to concentration, pedagogicalState:',
@@ -321,7 +347,7 @@ export function useClassOrchestrator() {
         );
         lessonState.setUIState('concentration');
 
-        await speak(voiceText, _voiceSettings);
+          await speak(combinedText, _voiceSettings);
       } else {
         console.log(
           '[DEBUG] Skipping concentration state, pedagogicalState requires input:',

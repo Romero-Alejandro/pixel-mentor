@@ -57,7 +57,6 @@ export function useTextSync({
   const prevSpeakingRef = useRef<boolean | undefined>(undefined);
   const isListeningRef = useRef(false);
   const rafIdRef = useRef<number | null>(null);
-  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Recovery tracking
   const staleCountRef = useRef(0);
@@ -117,38 +116,19 @@ export function useTextSync({
 
     /**
      * Core sync function - tracks audio position and updates word index
+     * Returns cleanup function for event listeners
      */
-    const syncAudio = (): (() => void) | undefined => {
-      // Guard: Prevent concurrent sync loops
-      if (isListeningRef.current && !speakingJustStarted) {
-        return undefined;
-      }
-
+    const syncAudio = (): (() => void) => {
       const audio = getAudioElement();
       if (!audio) {
-        return undefined;
+        return () => {};
       }
 
       if (wordCount === 0) {
-        return undefined;
+        return () => {};
       }
 
       isListeningRef.current = true;
-
-      // Determine words-per-second based on audio duration
-      let wps: number;
-      if (
-        audio.duration &&
-        audio.duration > 0 &&
-        !isNaN(audio.duration) &&
-        audio.duration < MAX_AUDIO_DURATION
-      ) {
-        // Use actual audio duration for accurate timing
-        wps = wordCount / audio.duration;
-      } else {
-        // Fallback: use estimated speech rate, adjusted for playback rate
-        wps = (wordsPerSecond || DEFAULT_WPS) / playbackRate;
-      }
 
       /**
        * Main sync loop using requestAnimationFrame for smooth updates
@@ -186,16 +166,32 @@ export function useTextSync({
         }
 
         // Guard against unreasonable currentTime values
-        const safeCurrentTime = Math.min(currentAudio.currentTime, MAX_AUDIO_DURATION);
-
-        // Calculate current word index based on elapsed time
-        const estimatedIndex = Math.min(
-          Math.floor(safeCurrentTime * wps * playbackRate),
-          wordCount,
+        const safeCurrentTime = Math.min(
+          currentAudio.currentTime,
+          currentAudio.duration && !isNaN(currentAudio.duration)
+            ? currentAudio.duration
+            : MAX_AUDIO_DURATION,
         );
 
+        // Guard: require stable duration before calculating word index
+        const stableDuration =
+          currentAudio.duration &&
+          currentAudio.duration > 0.1 &&
+          !isNaN(currentAudio.duration) &&
+          currentAudio.duration < MAX_AUDIO_DURATION;
+
+        let estimatedIndex: number;
+
+        if (stableDuration) {
+          const wps = wordCount / currentAudio.duration;
+          estimatedIndex = Math.min(Math.floor(safeCurrentTime * wps), wordCount);
+        } else {
+          // Duration not stable yet - don't update
+          rafIdRef.current = requestAnimationFrame(loop);
+          return;
+        }
+
         // Detect sync issues: check if audio time isn't advancing
-        // audioTimeDelta near 0 with small safeCurrentTime indicates stalled audio
         const audioTimeDelta = Math.abs(safeCurrentTime - lastAudioTimeRef.current);
         lastAudioTimeRef.current = safeCurrentTime;
 
@@ -263,6 +259,36 @@ export function useTextSync({
         rafIdRef.current = requestAnimationFrame(loop);
       }
 
+      // Event listener cleanup holder
+      let listenersAttached = false;
+
+      const handlePlaying = (): void => {
+        if (!isListeningRef.current) {
+          isListeningRef.current = true;
+          rafIdRef.current = requestAnimationFrame(loop);
+        }
+      };
+
+      const handleDurationChange = (): void => {
+        if (!audio.paused && !audio.ended && isListeningRef.current) {
+          rafIdRef.current = requestAnimationFrame(loop);
+        }
+      };
+
+      const handleError = (): void => {
+        isListeningRef.current = false;
+        setState((prev) => ({
+          ...prev,
+          syncError: true,
+          isAttemptingSync: false,
+        }));
+      };
+
+      audio.addEventListener('playing', handlePlaying);
+      audio.addEventListener('durationchange', handleDurationChange);
+      audio.addEventListener('error', handleError);
+      listenersAttached = true;
+
       // Cleanup function
       return () => {
         isListeningRef.current = false;
@@ -270,49 +296,18 @@ export function useTextSync({
           cancelAnimationFrame(rafIdRef.current);
           rafIdRef.current = null;
         }
+        if (listenersAttached) {
+          audio.removeEventListener('playing', handlePlaying);
+          audio.removeEventListener('durationchange', handleDurationChange);
+          audio.removeEventListener('error', handleError);
+        }
       };
     };
 
-    // Immediate sync attempt
-    const cleanupImmediate = syncAudio();
+    // Start event-driven sync
+    const cleanup = syncAudio();
 
-    // Polling fallback: wait for audio to become available
-    let pollCount = 0;
-    const maxPolls = 60; // ~30 seconds max polling
-
-    pollIntervalRef.current = setInterval((): void => {
-      pollCount++;
-      const audio = getAudioElement();
-
-      // Attempt sync if audio exists and is playing
-      if (audio && !audio.paused && !audio.ended && pollCount < maxPolls) {
-        const cleanup = syncAudio();
-        if (cleanup) {
-          clearInterval(pollIntervalRef.current!);
-        }
-      }
-
-      // Timeout: mark as error after max polls
-      if (pollCount >= maxPolls) {
-        clearInterval(pollIntervalRef.current!);
-        setState((prev) => ({
-          ...prev,
-          syncError: true,
-          isAttemptingSync: false,
-        }));
-      }
-    }, 500);
-
-    return (): void => {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-      }
-      if (rafIdRef.current !== null) {
-        cancelAnimationFrame(rafIdRef.current);
-      }
-      isListeningRef.current = false;
-      if (cleanupImmediate) cleanupImmediate();
-    };
+    return cleanup;
   }, [fullText, getAudioElement, playbackRate, wordsPerSecond, isSpeaking]);
 
   /**

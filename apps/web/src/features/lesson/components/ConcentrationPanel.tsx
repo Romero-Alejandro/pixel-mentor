@@ -32,9 +32,9 @@ const TextSection = memo(
             key={`${word}-${idx}`}
             data-word-index={wordOffset !== undefined ? wordOffset + idx : idx}
             className={cn(
+              'bg-transparent',
               wordClassName,
               idx === activeIndex && activeWordClassName,
-              'bg-transparent',
             )}
           >
             {word}{' '}
@@ -88,7 +88,9 @@ export function ConcentrationPanel({
     };
   }, [transitionText, contentText, closureText]);
 
-  const showAllContent = true;
+  // Show all text when not synced (sync failed or not attempted yet)
+  // Only use karaoke effect (incremental + highlight) when isSynced is true
+  const showAllContent = !isSynced;
 
   const visibleT = showAllContent ? tLen : Math.min(currentWordIndex, tLen);
   const visibleC = showAllContent ? cLen : Math.max(0, Math.min(currentWordIndex - tLen, cLen));
@@ -108,7 +110,7 @@ export function ConcentrationPanel({
     });
 
     if (activeMark) {
-      activeMark.scrollIntoView({
+      (activeMark as HTMLElement).scrollIntoView({
         behavior: 'smooth',
         block: 'center',
       });

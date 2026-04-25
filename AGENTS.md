@@ -1,80 +1,84 @@
+<!-- project:pixel-mentor -->
+
 <project_map>
-- Backend: `apps/api/` (@pixel-mentor/api) | Node.js, Express 5, Prisma (Hexagonal Architecture)
-- Frontend: `apps/web/` (@pixel-mentor/web) | React 19, Zustand 5, Tailwind 4 (NO Next.js)
-- Shared: `packages/shared/`
-- Tests: Colocated (`*.spec.ts`, `*.test.ts`)
-- Quality Standards: See `.atl/skill-registry.md`
+Backend:  apps/api/ (@pixel-mentor/api) | Node.js, Express 5, Prisma | Hexagonal Architecture
+Frontend: apps/web/ (@pixel-mentor/web) | React 19, Zustand 5, Tailwind 4 | NO Next.js
+Shared:   packages/shared/
+Tests:    Colocated (*.spec.ts, *.test.ts)
+Standards: .atl/skill-registry.md
 </project_map>
 
 <execution_protocols>
-- NOISE CONTROL: NEVER dump massive logs. MUST pipe: `| head -n 50`.
-- TARGETING: NEVER run global suites. MUST target specific files or use `--filter`.
-- BASE COMMANDS: `pnpm --filter @pixel-mentor/<api|web> <lint|typecheck|test -- file>`
-- DB OPS (API ONLY): `pnpm --filter @pixel-mentor/api db:<generate|push|migrate>`
+- NOISE CONTROL: NEVER dump raw output. ALWAYS pipe: | head -n 50
+- TARGETING: NEVER run global suites. ALWAYS target file or workspace.
+- BASE: pnpm --filter @pixel-mentor/<api|web> <lint|typecheck|test -- <file>>
+- DB (API only): pnpm --filter @pixel-mentor/api db:<generate|push|migrate>
 </execution_protocols>
 
 <shared_guardrails target="all-agents">
-    <navigation_and_reading>
-    - STRUCTURAL READING: NEVER read files >200 lines blindly. Extract skeleton first via `grep`.
-    - DB SCHEMA: MUST read `schema.prisma` before querying repositories. NEVER guess models.
-    - BLIND IMPORTS: NEVER guess import paths. If unsure, `grep` exports first.
-    </navigation_and_reading>
 
-    <git_workflow>
-    - ZERO DATA LOSS: NEVER use `git restore <file>`, `git checkout -- <file>`, `git reset --hard`, or `git stash drop` to bypass an error or "clean" the workspace. Preserving uncommitted work is infinitely more important than completing a task. If stuck, STOP and report the error.
-    - ANTI-CORRUPTION: STRICTLY PROHIBITED from executing `rm -f .git/index.lock`. If you hit a lock error, it means another process is writing. Wait 5 seconds and retry, or STOP. Do NOT delete lock files.
-    - CHAINING REQUIREMENT: To prevent `index.lock` collisions, you MUST read changes FIRST (`git diff <files>`), mentally generate the commit message, and THEN execute staging and committing in a SINGLE bash call: `git add <files> && git commit -m "..."`. NEVER run `git add` and `git commit` in separate tool calls.
-    - LOCAL ONLY: STRICTLY PROHIBITED from `git push`, `pull`, `fetch`, or `remote`.
-    - PRE-COMMIT: MUST run `git diff` before staging. NEVER blindly use `git add .`.
-    - NO SECRETS: NEVER stage `.env` or keys. If accidental, immediately `git restore --staged <file>`.
-    - ATOMIC COMMITS: Group changes into logical units.
-    - COMMIT MESSAGES: English ONLY. Follow Conventional Commits strictly (`type(scope): subject`). Use the CORRECT type (`feat` for new features, `fix` for bugs, `docs` for documentation, `chore` for maintenance). Never mix them (e.g., `feat(docs)` is invalid).
-    </git_workflow>
+  <navigation_and_reading>
+  - STRUCTURAL READING: NEVER read files >200 lines directly.
+    1. wc -l {file}
+    2. grep -E '^\s*(import|export|class|interface|type|function|const [A-Z]|@)' {file}
+    3. grep -n -C 20 "targetSymbol" {file}
+  - DB SCHEMA: MUST read schema.prisma BEFORE any repository query. NEVER guess models or fields.
+  - BLIND IMPORTS: NEVER guess paths. grep -rn "export.*Symbol" src/ first.
+  - CIRCUIT BREAKER: grep returns nothing → trace from root or STOP. No blind variations.
+  </navigation_and_reading>
+
+  <git_workflow>
+  - ZERO DATA LOSS: NEVER use git restore, git checkout --, git reset --hard, or git stash drop
+    to bypass errors. Uncommitted work > task completion. If stuck: STOP and report.
+  - ANTI-CORRUPTION: NEVER run rm -f .git/index.lock. Lock = another process writing.
+    Wait 5s and retry, or STOP.
+  - ATOMIC STAGING: git add and git commit MUST be ONE bash call:
+    git add <files> && git commit -m "type(scope): subject"
+  - PRE-COMMIT (in order): git diff → lint → typecheck → test → commit. All must pass.
+  - LOCAL ONLY: NEVER git push, pull, fetch, or any remote op.
+  - NO SECRETS: NEVER stage .env or keys. If accidental: git restore --staged <file> immediately.
+  - COMMITS: English only. Conventional Commits. Valid types: feat|fix|refactor|docs|chore|test|perf
+    One logical change per commit. feat(docs) or mixed types = invalid.
+  </git_workflow>
+
 </shared_guardrails>
 
-<executor_guardrails target="sub-agents">
-    <code_generation>
-    - ANTI-ELISION: NEVER use comments like `// ... rest of the code`. Output the complete, functional block.
-    - STRICT TYPING: PROHIBITED use of `any`. Use `unknown` and type guards.
-    - DEPENDENCY LOCK: NEVER `npm install` or `pnpm add` without explicit user permission.
-    </code_generation>
+<executor_guardrails target="sys-coder,sys-refactor,sys-triage">
 
-    <hexagonal_strictness>
-    - CONTROLLERS: ONLY handle HTTP (req/res, status codes, DTO validation).
-    - SERVICES: ONLY handle business logic. NEVER import Express or Prisma directly.
-    - REPOSITORIES: The ONLY layer allowed to import and use `PrismaClient`.
-    </hexagonal_strictness>
+  <code_generation>
+  - ANTI-ELISION: NEVER use // ... rest of the code. Output the complete functional block.
+  - STRICT TYPING: PROHIBITED from using any. Use unknown + explicit type guards.
+  - ZERO COMMENTS: No explanatory comments, TODOs, or FIXMEs. Name things descriptively instead.
+  - IMPORTS: Absolute via @/ alias ONLY. Relative imports (../../) are prohibited.
+  - DEPENDENCY LOCK: NEVER npm install or pnpm add without explicit user permission.
+  </code_generation>
 
-    <error_recovery>
-    - TEST FAILURES: DO NOT rewrite the whole file. Isolate and patch ONLY the failing condition.
-    - 3-STRIKE RULE: Bug persists after 2 fix attempts → STOP. Output: "Architectural Failure".
-    </error_recovery>
+  <hexagonal_strictness>
+  CONTROLLERS (apps/api/src/**/controllers/):
+    → HTTP only: request parsing, DTO validation, response, status codes.
+    → PROHIBITED: Prisma imports, direct repository calls, business logic.
+  SERVICES (apps/api/src/**/services/):
+    → Business logic and use-case orchestration only.
+    → PROHIBITED: Express imports (req/res/next), PrismaClient imports.
+  REPOSITORIES (apps/api/src/**/repositories/):
+    → ONLY layer allowed to import and use PrismaClient.
+    → PROHIBITED: business logic, HTTP concerns.
+  Boundary violation → STOP. Report as architectural blocker. Do NOT force the change.
+  </hexagonal_strictness>
+
+  <error_recovery>
+  - TEST FAILURES: Isolate and patch ONLY the failing condition. NEVER rewrite the whole file.
+  - 3-STRIKE RULE: Bug persists after 2 attempts → STOP. Envelope: STATUS: BLOCKED. Architectural Failure.
+  - VERIFICATION: NEVER declare success without showing lint/typecheck/test output in the envelope.
+  </error_recovery>
+
 </executor_guardrails>
 
-<output_dx_standards target="all-agents">
-- ZERO FLUFF: STRICTLY PROHIBITED from using conversational filler. NEVER ask follow-up questions or offer next steps.
-- TERMINATION RULE: You MUST stop generating text immediately after the final closing backticks of the bash block. NO closing remarks. NO questions.
-- THE CLEAN CLI TEMPLATE: You MUST format EVERY response using EXACTLY this minimalist structure. DO NOT translate the headers. Do not add brackets, dashes, or extra visual noise.
-- LIST LIMIT: In the TARGETS section, if there are more than 5 files, summarize them (e.g., "- 32 files modified"). If no files, output "- N/A".
-
-## `:: 🤖 `[Action or Tool Name]` ::`
-`[ 🟢 OK | 🔴 FAIL | 🟡 WARN | 🔵 INFO ]`
-
-> [1-2 sentences maximum explaining the result]
-
-### 🎯 `[TARGETS]`
-- `path/to/file.ts` (Max 5 items. Summarize if more).
-
-### 👾 `[TERMINAL]`
-```bash
-$ [command run]
-[terse output snippet]
-```
-</output_dx_standards>
-
 <delivery_conventions>
-Naming: kebab-case.ts (Files), PascalCase.tsx (Components), SCREAMING_SNAKE (Constants).
-Imports: Absolute ONLY via @/ alias.
-Git Pre-flight: MUST lint and test affected workspace BEFORE commit.
-Commits: English ONLY. Conventional Commits (feat:, fix:, refactor:).
+Naming:  kebab-case.ts | PascalCase.tsx | SCREAMING_SNAKE_CASE
+Imports: @/ alias only. No relative paths.
+Styling: Tailwind 4 utilities only. No inline styles. No CSS modules unless pre-existing.
+State:   Zustand 5 (global) | useState (component-scoped ephemeral only).
 </delivery_conventions>
+
+<!-- /project:pixel-mentor -->
