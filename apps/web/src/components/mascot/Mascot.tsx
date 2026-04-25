@@ -148,7 +148,7 @@ export function Mascot({ className = '' }: MascotProps) {
 
       <div
         className={cn(
-          'absolute -bottom-4 right-0 flex items-center gap-2 px-4 py-2 rounded-2xl border-4 border-white bg-white shadow-gummy shadow-slate-200 transition-all duration-500 z-30',
+          'absolute -bottom-4 right-0 flex items-center gap-2 px-4 py-2 rounded-2xl border-4 border-white bg-white shadow-[0_4px_10px_rgba(0,0,0,0.1)] transition-all duration-500 z-30',
           isSpeaking || isListening ? 'scale-110 -translate-y-2' : 'scale-100',
           !isLoaded && 'opacity-0 translate-y-4 scale-75',
         )}

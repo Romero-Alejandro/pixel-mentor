@@ -10,7 +10,6 @@ interface StudentLearningState {
   accessibleContent: StudentClass[];
   loading: boolean;
   error: string | null;
-
   fetchMyGroups: () => Promise<void>;
   fetchAccessibleContent: () => Promise<void>;
   clearError: () => void;
@@ -28,7 +27,9 @@ export const useStudentLearningStore = create<StudentLearningState>((set) => ({
       const groups = await studentLearningApi.getMyGroups();
       set({ groups, loading: false });
     } catch (error) {
-      set({ error: (error as Error).message, loading: false });
+      const errorMessage =
+        error instanceof Error ? error.message : 'Error de conexión al cargar tus grupos';
+      set({ error: errorMessage, loading: false });
     }
   },
 
@@ -38,7 +39,9 @@ export const useStudentLearningStore = create<StudentLearningState>((set) => ({
       const content = await studentLearningApi.getAccessibleContent();
       set({ accessibleContent: content, loading: false });
     } catch (error) {
-      set({ error: (error as Error).message, loading: false });
+      const errorMessage =
+        error instanceof Error ? error.message : 'No pudimos cargar tus misiones en este momento';
+      set({ error: errorMessage, loading: false });
     }
   },
 
