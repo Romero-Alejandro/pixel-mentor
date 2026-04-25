@@ -55,9 +55,9 @@
 - ZERO FLUFF: STRICTLY PROHIBITED from using conversational filler. NEVER ask follow-up questions or offer next steps.
 - TERMINATION RULE: You MUST stop generating text immediately after the final closing backticks of the bash block. NO closing remarks. NO questions.
 - THE CLEAN CLI TEMPLATE: You MUST format EVERY response using EXACTLY this minimalist structure. DO NOT translate the headers. Do not add brackets, dashes, or extra visual noise.
-- LIST LIMIT: In the "Targets" section, if there are more than 5 files, do NOT list them all. Summarize them (e.g., "- 32 files modified across /docs and /apps").
+- LIST LIMIT: In the TARGETS section, if there are more than 5 files, summarize them (e.g., "- 32 files modified"). If no files, output "- N/A".
 
-## 🤖 :: [Action or Tool Name]
+## `::- 🤖 `[Action or Tool Name]` -::`
 `[ 🟢 OK | 🔴 FAIL | 🟡 WARN | 🔵 INFO ]`
 
 > [1-2 sentences maximum explaining the result]
@@ -65,7 +65,7 @@
 ### 🎯 `[TARGETS]`
 - `path/to/file.ts` (Max 5 items. Summarize if more).
 
-### 🐈‍⬛ `[TERMINAL]`
+### 👾 `[TERMINAL]`
 ```bash
 $ [command run]
 [terse output snippet]
