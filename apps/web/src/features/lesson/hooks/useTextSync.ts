@@ -1,19 +1,10 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 
 export interface UseTextSyncOptions {
-  transitionText: string;
-  contentText: string;
-  closureText: string;
+  text: string;
   audioElementGetter?: () => HTMLAudioElement | null;
   /** When audio starts speaking, this should change to trigger re-sync */
   isSpeaking?: boolean;
-}
-
-/** Split words array for each section */
-export interface TextSections {
-  transitionWords: string[];
-  contentWords: string[];
-  closureWords: string[];
 }
 
 interface SyncState {
@@ -33,9 +24,7 @@ const MAX_AUDIO_DURATION = 300;
  * Uses timeupdate event as single source of truth for state updates.
  */
 export function useTextSync({
-  transitionText,
-  contentText,
-  closureText,
+  text,
   audioElementGetter,
   isSpeaking,
 }: UseTextSyncOptions): {
@@ -44,7 +33,7 @@ export function useTextSync({
   isSynced: boolean;
   syncError: boolean;
   isAttemptingSync: boolean;
-  words: TextSections;
+  words: string[];
   reset: () => void;
 } {
   const [state, setState] = useState<SyncState>({
@@ -55,25 +44,8 @@ export function useTextSync({
     isAttemptingSync: false,
   });
 
-  // Split words for each section - memoized from props, always up-to-date during render
-  const transitionWords = useMemo(
-    () => (transitionText.trim() ? transitionText.trim().split(/\s+/) : []),
-    [transitionText]
-  );
-  const contentWords = useMemo(
-    () => (contentText.trim() ? contentText.trim().split(/\s+/) : []),
-    [contentText]
-  );
-  const closureWords = useMemo(
-    () => (closureText.trim() ? closureText.trim().split(/\s+/) : []),
-    [closureText]
-  );
-
-  // Calculate total word count - memoized, always current during render
-  const totalWordCount = useMemo(
-    () => transitionWords.length + contentWords.length + closureWords.length,
-    [transitionWords, contentWords, closureWords]
-  );
+  const words = useMemo(() => (text.trim() ? text.trim().split(/\s+/) : []), [text]);
+  const totalWordCount = words.length;
 
   // Mutable refs for event-driven sync state
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
@@ -95,7 +67,7 @@ export function useTextSync({
   // Reset audio reference when text changes (new audio loaded)
   useEffect(() => {
     audioElementRef.current = null;
-  }, [transitionText, contentText, closureText]);
+  }, [text]);
 
   // Sync effect - runs when text changes or when isSpeaking starts
   useEffect(() => {
@@ -147,10 +119,7 @@ export function useTextSync({
         if (!stableDuration || totalWordCount === 0) return;
 
         const wps = totalWordCount / audioDuration;
-        const estimatedIndex = Math.min(
-          Math.floor(currentAudio.currentTime * wps),
-          totalWordCount
-        );
+        const estimatedIndex = Math.min(Math.floor(currentAudio.currentTime * wps), totalWordCount);
 
         const isAudioNearEnd =
           currentAudio.duration &&
@@ -161,8 +130,7 @@ export function useTextSync({
           estimatedIndex >= totalWordCount || currentAudio.ended || isAudioNearEnd;
 
         setState((prev) => {
-          const shouldBeSynced =
-            isCompleted || (estimatedIndex > 0 && prev.isAttemptingSync);
+          const shouldBeSynced = isCompleted || (estimatedIndex > 0 && prev.isAttemptingSync);
 
           return {
             currentWordIndex: estimatedIndex,
@@ -209,7 +177,7 @@ export function useTextSync({
     const cleanup = syncAudio();
 
     return cleanup;
-  }, [totalWordCount, getAudioElement, isSpeaking, transitionText, contentText, closureText]);
+  }, [totalWordCount, getAudioElement, isSpeaking, text]);
 
   /**
    * Reset sync state - called when replaying audio
@@ -226,11 +194,7 @@ export function useTextSync({
 
   return {
     ...state,
-    words: {
-      transitionWords,
-      contentWords,
-      closureWords,
-    },
+    words,
     reset,
   };
 }
