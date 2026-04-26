@@ -4,7 +4,6 @@ import { Spinner } from '@/components/ui';
 import { cn } from '@/utils/cn';
 
 interface ConcentrationPanelProps {
-  text: string;
   words: string[];
   currentWordIndex: number;
   isSynced: boolean;
@@ -20,7 +19,6 @@ export function ConcentrationPanel({
   isSynced,
   isSpeaking,
   onRepeat,
-  text,
   isAttemptingSync = false,
   syncError = false,
 }: ConcentrationPanelProps) {
@@ -110,7 +108,7 @@ export function ConcentrationPanel({
               Escuchando
             </span>
           </div>
-        ) : text ? (
+        ) : words.length > 0 ? (
           <button
             onClick={onRepeat}
             className="flex items-center justify-center gap-3 px-8 py-4 bg-slate-50 text-slate-600 font-black text-lg rounded-[1.5rem] border-4 border-slate-200 shadow-[0_6px_0_0_#e2e8f0] hover:bg-sky-50 hover:text-sky-600 hover:border-sky-300 hover:shadow-[0_6px_0_0_#7dd3fc] active:translate-y-1 active:shadow-none transition-all cursor-pointer outline-none focus-visible:ring-4 focus-visible:ring-sky-200"
