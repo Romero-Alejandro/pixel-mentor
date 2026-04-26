@@ -1,16 +1,22 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 
 export interface UseTextSyncOptions {
-  fullText: string;
+  transitionText: string;
+  contentText: string;
+  closureText: string;
   audioElementGetter?: () => HTMLAudioElement | null;
-  playbackRate?: number;
-  wordsPerSecond?: number;
   /** When audio starts speaking, this should change to trigger re-sync */
   isSpeaking?: boolean;
 }
 
+/** Split words array for each section */
+export interface TextSections {
+  transitionWords: string[];
+  contentWords: string[];
+  closureWords: string[];
+}
+
 interface SyncState {
-  visibleText: string;
   currentWordIndex: number;
   progress: number;
   isSynced: boolean;
@@ -20,31 +26,28 @@ interface SyncState {
   isAttemptingSync: boolean;
 }
 
-const DEFAULT_WPS = 2.3; // ~138 wpm average speech rate
-const SYNC_RECOVERY_THRESHOLD = 3; // Max consecutive same-index updates before forcing resync
-const MAX_AUDIO_DURATION = 300; // 5 minutes cap
+const MAX_AUDIO_DURATION = 300;
 
 /**
  * Custom hook for synchronizing text highlighting with audio playback.
- * Provides real-time word index tracking, automatic sync recovery, and graceful fallback.
+ * Uses timeupdate event as single source of truth for state updates.
  */
 export function useTextSync({
-  fullText,
+  transitionText,
+  contentText,
+  closureText,
   audioElementGetter,
-  playbackRate = 1.0,
-  wordsPerSecond = DEFAULT_WPS,
   isSpeaking,
 }: UseTextSyncOptions): {
-  visibleText: string;
   currentWordIndex: number;
   progress: number;
   isSynced: boolean;
   syncError: boolean;
   isAttemptingSync: boolean;
+  words: TextSections;
   reset: () => void;
 } {
   const [state, setState] = useState<SyncState>({
-    visibleText: '',
     currentWordIndex: 0,
     progress: 0,
     isSynced: false,
@@ -52,18 +55,32 @@ export function useTextSync({
     isAttemptingSync: false,
   });
 
-  const wordsRef = useRef<string[]>([]);
-  const fullTextRef = useRef<string>('');
+  // Split words for each section - memoized from props, always up-to-date during render
+  const transitionWords = useMemo(
+    () => (transitionText.trim() ? transitionText.trim().split(/\s+/) : []),
+    [transitionText]
+  );
+  const contentWords = useMemo(
+    () => (contentText.trim() ? contentText.trim().split(/\s+/) : []),
+    [contentText]
+  );
+  const closureWords = useMemo(
+    () => (closureText.trim() ? closureText.trim().split(/\s+/) : []),
+    [closureText]
+  );
+
+  // Calculate total word count - memoized, always current during render
+  const totalWordCount = useMemo(
+    () => transitionWords.length + contentWords.length + closureWords.length,
+    [transitionWords, contentWords, closureWords]
+  );
+
+  // Mutable refs for event-driven sync state
+  const audioElementRef = useRef<HTMLAudioElement | null>(null);
   const prevSpeakingRef = useRef<boolean | undefined>(undefined);
   const isListeningRef = useRef(false);
-  const rafIdRef = useRef<number | null>(null);
-
-  // Recovery tracking
-  const staleCountRef = useRef(0);
-  const lastAudioTimeRef = useRef(0);
 
   // Memoize audio element reference to prevent getter instability
-  const audioElementRef = useRef<HTMLAudioElement | null>(null);
   const getAudioElement = useCallback(() => {
     if (audioElementRef.current) {
       return audioElementRef.current;
@@ -75,20 +92,14 @@ export function useTextSync({
     return null;
   }, [audioElementGetter]);
 
-  // Store words and fullText in refs - only update when fullText changes
+  // Reset audio reference when text changes (new audio loaded)
   useEffect(() => {
-    wordsRef.current = fullText.trim() ? fullText.trim().split(/\s+/) : [];
-    fullTextRef.current = fullText;
-    // Reset audio reference when text changes (new audio loaded)
     audioElementRef.current = null;
-  }, [fullText]);
+  }, [transitionText, contentText, closureText]);
 
   // Sync effect - runs when text changes or when isSpeaking starts
   useEffect(() => {
-    const wordCount = wordsRef.current.length;
-
-    // Don't proceed if no words
-    if (wordCount === 0) {
+    if (totalWordCount === 0) {
       setState((prev) => ({
         ...prev,
         syncError: false,
@@ -101,178 +112,66 @@ export function useTextSync({
     const speakingJustStarted = isSpeaking && prevSpeakingRef.current === false;
     if (speakingJustStarted) {
       setState({
-        visibleText: '',
         currentWordIndex: 0,
         progress: 0,
         isSynced: false,
         syncError: false,
         isAttemptingSync: true,
       });
-      // Reset recovery tracking
-      staleCountRef.current = 0;
-      lastAudioTimeRef.current = 0;
     }
     prevSpeakingRef.current = isSpeaking;
 
-    /**
-     * Core sync function - tracks audio position and updates word index
-     * Returns cleanup function for event listeners
-     */
     const syncAudio = (): (() => void) => {
       const audio = getAudioElement();
       if (!audio) {
         return () => {};
       }
 
-      if (wordCount === 0) {
+      if (totalWordCount === 0) {
         return () => {};
       }
 
       isListeningRef.current = true;
 
-      /**
-       * Main sync loop using requestAnimationFrame for smooth updates
-       */
-      const loop = (): void => {
+      const handleTimeUpdate = (): void => {
         const currentAudio = getAudioElement();
+        if (!currentAudio) return;
 
-        // Guard: audio element may have changed
-        if (!currentAudio) {
-          isListeningRef.current = false;
-          return;
-        }
+        const audioDuration = currentAudio.duration;
+        const stableDuration =
+          audioDuration &&
+          audioDuration > 0.1 &&
+          !isNaN(audioDuration) &&
+          audioDuration < MAX_AUDIO_DURATION;
 
-        // Check if we should stop the loop
-        if (currentAudio.paused) {
-          return;
-        }
+        if (!stableDuration || totalWordCount === 0) return;
 
-        // If audio has ended, mark as complete
-        if (currentAudio.ended) {
-          if (rafIdRef.current !== null) {
-            cancelAnimationFrame(rafIdRef.current);
-            rafIdRef.current = null;
-          }
-          setState({
-            visibleText: fullTextRef.current,
-            currentWordIndex: wordCount,
-            progress: 1,
-            isSynced: true,
-            syncError: false,
-            isAttemptingSync: false,
-          });
-          isListeningRef.current = false;
-          return;
-        }
-
-        // Guard against unreasonable currentTime values
-        const safeCurrentTime = Math.min(
-          currentAudio.currentTime,
-          currentAudio.duration && !isNaN(currentAudio.duration)
-            ? currentAudio.duration
-            : MAX_AUDIO_DURATION,
+        const wps = totalWordCount / audioDuration;
+        const estimatedIndex = Math.min(
+          Math.floor(currentAudio.currentTime * wps),
+          totalWordCount
         );
 
-        // Guard: require stable duration before calculating word index
-        const stableDuration =
-          currentAudio.duration &&
-          currentAudio.duration > 0.1 &&
-          !isNaN(currentAudio.duration) &&
-          currentAudio.duration < MAX_AUDIO_DURATION;
-
-        let estimatedIndex: number;
-
-        if (stableDuration) {
-          const wps = wordCount / currentAudio.duration;
-          estimatedIndex = Math.min(Math.floor(safeCurrentTime * wps), wordCount);
-        } else {
-          // Duration not stable yet - don't update
-          rafIdRef.current = requestAnimationFrame(loop);
-          return;
-        }
-
-        // Detect sync issues: check if audio time isn't advancing
-        const audioTimeDelta = Math.abs(safeCurrentTime - lastAudioTimeRef.current);
-        lastAudioTimeRef.current = safeCurrentTime;
-
-        // If audio is advancing slowly (delta < 0.1s over 2 frames), consider it stalled
-        const isAudioStalled =
-          audioTimeDelta < 0.1 &&
-          safeCurrentTime > 0 &&
-          safeCurrentTime < currentAudio.duration - 1;
-
-        // Guard against jumping to end unexpectedly
         const isAudioNearEnd =
           currentAudio.duration &&
           !isNaN(currentAudio.duration) &&
           currentAudio.currentTime > currentAudio.duration - 0.5;
 
+        const isCompleted =
+          estimatedIndex >= totalWordCount || currentAudio.ended || isAudioNearEnd;
+
         setState((prev) => {
-          let newIndex = estimatedIndex;
-          let newSyncError = prev.syncError;
-
-          // Recovery: if estimated index jumped to end but audio hasn't ended,
-          // OR if audio is stalled (not advancing), cap progress and trigger recovery flag
-          if (
-            (estimatedIndex >= wordCount && !isAudioNearEnd && !currentAudio.ended) ||
-            isAudioStalled
-          ) {
-            newIndex = Math.min(prev.currentWordIndex + 1, wordCount);
-            staleCountRef.current += 1;
-
-            // After threshold, flag sync error for recovery
-            if (staleCountRef.current >= SYNC_RECOVERY_THRESHOLD) {
-              newSyncError = true;
-            }
-          } else {
-            // Reset stale count when progress is normal
-            staleCountRef.current = 0;
-            newSyncError = false;
-          }
-
-          // Only update if index changed
-          if (newIndex !== prev.currentWordIndex) {
-            const isCompleted = newIndex >= wordCount;
-            return {
-              visibleText: isCompleted
-                ? fullTextRef.current
-                : wordsRef.current.slice(0, newIndex).join(' ') + '...',
-              currentWordIndex: newIndex,
-              progress: newIndex / (wordCount || 1),
-              isSynced: isCompleted,
-              syncError: newSyncError,
-              isAttemptingSync: !isCompleted,
-            };
-          }
+          const shouldBeSynced =
+            isCompleted || (estimatedIndex > 0 && prev.isAttemptingSync);
 
           return {
-            ...prev,
-            isAttemptingSync: prev.isSynced ? false : true,
+            currentWordIndex: estimatedIndex,
+            progress: estimatedIndex / (totalWordCount || 1),
+            isSynced: shouldBeSynced,
+            syncError: false,
+            isAttemptingSync: !shouldBeSynced,
           };
         });
-
-        rafIdRef.current = requestAnimationFrame(loop);
-      };
-
-      // Start the loop if audio is playing
-      if (!audio.paused && !audio.ended) {
-        rafIdRef.current = requestAnimationFrame(loop);
-      }
-
-      // Event listener cleanup holder
-      let listenersAttached = false;
-
-      const handlePlaying = (): void => {
-        if (!isListeningRef.current) {
-          isListeningRef.current = true;
-          rafIdRef.current = requestAnimationFrame(loop);
-        }
-      };
-
-      const handleDurationChange = (): void => {
-        if (!audio.paused && !audio.ended && isListeningRef.current) {
-          rafIdRef.current = requestAnimationFrame(loop);
-        }
       };
 
       const handleError = (): void => {
@@ -284,47 +183,54 @@ export function useTextSync({
         }));
       };
 
-      audio.addEventListener('playing', handlePlaying);
-      audio.addEventListener('durationchange', handleDurationChange);
-      audio.addEventListener('error', handleError);
-      listenersAttached = true;
+      const handleEnded = (): void => {
+        setState({
+          currentWordIndex: totalWordCount,
+          progress: 1,
+          isSynced: true,
+          syncError: false,
+          isAttemptingSync: false,
+        });
+        isListeningRef.current = false;
+      };
 
-      // Cleanup function
+      audio.addEventListener('timeupdate', handleTimeUpdate);
+      audio.addEventListener('error', handleError);
+      audio.addEventListener('ended', handleEnded);
+
       return () => {
         isListeningRef.current = false;
-        if (rafIdRef.current !== null) {
-          cancelAnimationFrame(rafIdRef.current);
-          rafIdRef.current = null;
-        }
-        if (listenersAttached) {
-          audio.removeEventListener('playing', handlePlaying);
-          audio.removeEventListener('durationchange', handleDurationChange);
-          audio.removeEventListener('error', handleError);
-        }
+        audio.removeEventListener('timeupdate', handleTimeUpdate);
+        audio.removeEventListener('error', handleError);
+        audio.removeEventListener('ended', handleEnded);
       };
     };
 
-    // Start event-driven sync
     const cleanup = syncAudio();
 
     return cleanup;
-  }, [fullText, getAudioElement, playbackRate, wordsPerSecond, isSpeaking]);
+  }, [totalWordCount, getAudioElement, isSpeaking, transitionText, contentText, closureText]);
 
   /**
    * Reset sync state - called when replaying audio
    */
   const reset = useCallback(() => {
     setState({
-      visibleText: '',
       currentWordIndex: 0,
       progress: 0,
       isSynced: false,
       syncError: false,
       isAttemptingSync: false,
     });
-    staleCountRef.current = 0;
-    lastAudioTimeRef.current = 0;
   }, []);
 
-  return { ...state, reset };
+  return {
+    ...state,
+    words: {
+      transitionWords,
+      contentWords,
+      closureWords,
+    },
+    reset,
+  };
 }
