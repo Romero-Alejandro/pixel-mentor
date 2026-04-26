@@ -44,7 +44,13 @@ export function useTextSync({
     isAttemptingSync: false,
   });
 
-  const words = useMemo(() => (text.trim() ? text.trim().split(/\s+/) : []), [text]);
+  const words = useMemo(() => {
+    if (!text.trim()) return [];
+    // Split by sentences using lookbehind assertion
+    const sentences = text.trim().split(/(?<=[.!?])\s+/g);
+    // Fallback to words if no sentence boundaries found
+    return sentences.length > 1 ? sentences : text.trim().split(/\s+/);
+  }, [text]);
   const totalWordCount = words.length;
 
   // Mutable refs for event-driven sync state
@@ -118,8 +124,14 @@ export function useTextSync({
 
         if (!stableDuration || totalWordCount === 0) return;
 
-        const wps = totalWordCount / audioDuration;
-        const estimatedIndex = Math.min(Math.floor(currentAudio.currentTime * wps), totalWordCount);
+         // For sentence-based segmentation, we need a different approach
+         // Each sentence should be displayed for a proportion of the total duration
+         const timePerSegment = audioDuration / totalWordCount;
+         // Use round instead of floor to be more permissive with segment transitions
+         const estimatedIndex = Math.min(
+           Math.round(currentAudio.currentTime / timePerSegment),
+           totalWordCount - 1
+         );
 
         const isAudioNearEnd =
           currentAudio.duration &&
