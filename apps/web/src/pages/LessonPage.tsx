@@ -74,9 +74,10 @@ export function LessonPage() {
   };
 
   const textSync = useTextSync({
-    fullText: orchestrator.fullVoiceText,
+    transitionText: orchestrator.transitionText,
+    contentText: orchestrator.contentText,
+    closureText: orchestrator.closureText,
     audioElementGetter: orchestrator.getCurrentAudioElement,
-    playbackRate: voiceSettings.speakingRate,
     isSpeaking: isSpeaking,
   });
 
@@ -161,9 +162,7 @@ export function LessonPage() {
         return (
           <ConcentrationPanel
             fullVoiceText={orchestrator.fullVoiceText}
-            transitionText={orchestrator.transitionText}
-            contentText={orchestrator.contentText}
-            closureText={orchestrator.closureText}
+            words={textSync.words}
             currentWordIndex={textSync.currentWordIndex}
             isSynced={textSync.isSynced}
             isSpeaking={isSpeaking}
