@@ -79,6 +79,12 @@ export function LessonPage() {
     isSpeaking: isSpeaking,
   });
 
+  console.debug('[KARAOKE-DEBUG] LessonPage -> useTextSync props:', JSON.stringify({
+    isSpeaking,
+    textLength: orchestrator.fullVoiceText?.length,
+    isAttemptingSync: textSync.isAttemptingSync,
+  }));
+
   // BUGFIX: Reset sync if text is empty
   useEffect(() => {
     if (!orchestrator.fullVoiceText && textSync.isAttemptingSync) {

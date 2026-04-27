@@ -78,6 +78,7 @@ export function useTextSync({
     }
 
     const speakingJustStarted = isSpeaking && !prevSpeakingRef.current;
+    console.debug('[KARAOKE-DEBUG] useTextSync: SyncTriggered', JSON.stringify({ isSpeaking }));
     if (speakingJustStarted) {
       setState((prev) => ({
         ...prev,
@@ -96,6 +97,9 @@ export function useTextSync({
     }
 
     const audio = getAudioElement();
+    console.debug('[KARAOKE-DEBUG] useTextSync: AudioElementCheck', JSON.stringify({
+      isAudioNull: !getAudioElement(),
+    }));
     if (!audio) {
       // Audio element isn't ready. The effect will re-run on the next render.
       // The `isAttemptingSync` state remains true, showing the user a loading state.

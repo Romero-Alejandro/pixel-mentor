@@ -273,11 +273,6 @@ export function useClassOrchestrator() {
       if (pedagogicalState === 'ACTIVITY_WAIT') {
         const { stepType, activity } = resolvedStaticContent || {};
         const hasOptions = activity?.options && activity.options.length > 0;
-        console.log('[DEBUG] ACTIVITY_WAIT STATE:', {
-          stepType,
-          activity,
-          hasOptions,
-        });
 
         lessonState.setQuestionText(extractText(activity?.instruction));
         lessonState.setOptions(
@@ -300,12 +295,6 @@ export function useClassOrchestrator() {
       if (pedagogicalState === 'QUESTION') {
         const { stepType, script } = resolvedStaticContent || {};
         const questionText = extractText(script?.question);
-        console.log('[DEBUG] QUESTION STATE:', {
-          pedagogicalState,
-          stepType,
-          questionText,
-          resolvedStaticContent: script,
-        });
 
         // Always question panel for QUESTION pedagogical state (open-ended answers)
         lessonState.setQuestionText(questionText);
@@ -320,25 +309,38 @@ export function useClassOrchestrator() {
       // Solo mostrar contenido si NO es un estado que requiere input del usuario
       const statesRequiringInput = ['AWAITING_START', 'ACTIVITY_WAIT', 'QUESTION', 'EVALUATION'];
       if (!statesRequiringInput.includes(pedagogicalState)) {
+        let transition = '';
+        let content = '';
+        let closure = '';
+
         if (resolvedStaticContent?.script) {
-          const transition = extractText(resolvedStaticContent.script.transition);
-          const scriptContent = extractText(resolvedStaticContent.script.content);
-          const closure = extractText(resolvedStaticContent.script.closure);
+          transition = extractText(resolvedStaticContent.script.transition) || '';
+          const scriptContent = extractText(resolvedStaticContent.script.content) || '';
+          closure = extractText(resolvedStaticContent.script.closure) || '';
 
-          const content = scriptContent.trim() || voiceText;
-
-          setTransitionText(transition);
-          lessonState.setContentText(content);
-          setClosureText(closure);
-
-          const combinedText = [transition, content, closure].filter(Boolean).join(' ');
-          setFullVoiceText(combinedText);
-          contentRef.current = combinedText;
+          content = scriptContent.trim() || voiceText || '';
         } else {
-          lessonState.setContentText(voiceText);
-          setFullVoiceText(voiceText);
-          contentRef.current = voiceText;
+          content = voiceText || '';
         }
+
+        // Validar que los valores no sean undefined o vacíos
+        transition = transition || '';
+        content = content || '';
+        closure = closure || '';
+
+        setTransitionText(transition);
+        lessonState.setContentText(content);
+        setClosureText(closure);
+
+        const combinedText = [transition, content, closure].filter(Boolean).join(' ');
+        setFullVoiceText(combinedText);
+        console.debug(
+          '[KARAOKE-DEBUG] useClassOrchestrator: TextSet',
+          JSON.stringify({
+            text: combinedText,
+          }),
+        );
+        contentRef.current = combinedText;
 
         lessonState.setFeedbackData(null);
         console.log(
@@ -347,7 +349,8 @@ export function useClassOrchestrator() {
         );
         lessonState.setUIState('concentration');
 
-          await speak(combinedText, _voiceSettings);
+        console.debug('[KARAOKE-DEBUG] useClassOrchestrator: SpeakCommandIssued');
+        await speak(combinedText, _voiceSettings);
       } else {
         console.log(
           '[DEBUG] Skipping concentration state, pedagogicalState requires input:',
@@ -377,7 +380,6 @@ export function useClassOrchestrator() {
         if (next) await processResponse(next, false);
       } else if (pedagogicalState === 'AWAITING_START') {
         if (isInteractingRef.current) {
-          console.log('[DEBUG] Waiting for previous interaction to complete before auto-start...');
           let waitCount = 0;
           while (isInteractingRef.current && waitCount < 50) {
             await new Promise((r) => setTimeout(r, 100));
