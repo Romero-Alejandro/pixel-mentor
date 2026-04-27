@@ -73,11 +73,44 @@ export function LessonPage() {
     resetStarted();
   };
 
+  // [EDD-PROBE-START] Telemetry for useTextSync input props
+  useEffect(() => {
+    console.log('[EDD] useTextSync INPUT props', {
+      text: orchestrator.fullVoiceText,
+      textLength: orchestrator.fullVoiceText?.length ?? 0,
+      audioElementGetter: !!orchestrator.getCurrentAudioElement,
+      isSpeaking,
+      timestamp: new Date().toISOString(),
+    });
+  }, [orchestrator.fullVoiceText, orchestrator.getCurrentAudioElement, isSpeaking]);
+  // [EDD-PROBE-END]
+
   const textSync = useTextSync({
     text: orchestrator.fullVoiceText,
     audioElementGetter: orchestrator.getCurrentAudioElement,
     isSpeaking: isSpeaking,
   });
+
+  // [EDD-PROBE-START] Telemetry for useTextSync output props
+  useEffect(() => {
+    console.log('[EDD] useTextSync OUTPUT props', {
+      currentWordIndex: textSync.currentWordIndex,
+      progress: textSync.progress,
+      isSynced: textSync.isSynced,
+      syncError: textSync.syncError,
+      isAttemptingSync: textSync.isAttemptingSync,
+      wordsCount: textSync.words.length,
+      timestamp: new Date().toISOString(),
+    });
+  }, [
+    textSync.currentWordIndex,
+    textSync.progress,
+    textSync.isSynced,
+    textSync.syncError,
+    textSync.isAttemptingSync,
+    textSync.words.length,
+  ]);
+  // [EDD-PROBE-END]
 
   const prevQ = useRef<string>('');
 
@@ -158,16 +191,15 @@ export function LessonPage() {
 
       case UI_STATES.CONCENTRATION:
         return (
-          <ConcentrationPanel
-            text={orchestrator.fullVoiceText}
-            words={textSync.words}
-            currentWordIndex={textSync.currentWordIndex}
-            isSynced={textSync.isSynced}
-            isSpeaking={isSpeaking}
-            isAttemptingSync={textSync.isAttemptingSync}
-            syncError={textSync.syncError}
-            onRepeat={handleRepeatContent}
-          />
+           <ConcentrationPanel
+             words={textSync.words}
+             currentWordIndex={textSync.currentWordIndex}
+             isSynced={textSync.isSynced}
+             isSpeaking={isSpeaking}
+             isAttemptingSync={textSync.isAttemptingSync}
+             syncError={textSync.syncError}
+             onRepeat={handleRepeatContent}
+           />
         );
 
       case UI_STATES.QUESTION:
