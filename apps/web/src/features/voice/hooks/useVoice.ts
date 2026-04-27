@@ -431,12 +431,14 @@ export function useVoice(): UseVoiceReturn {
           } catch (e) {}
         }
         audioQueueRef.current = [];
-        if (currentAudioRef.current) {
+         if (currentAudioRef.current) {
           try {
             currentAudioRef.current.element.pause();
             URL.revokeObjectURL(currentAudioRef.current.url);
           } catch (e) {}
-          currentAudioRef.current = null;
+          // NOTE: Do NOT set currentAudioRef.current to null here.
+          // This cleanup happens too early and causes race conditions with useTextSync.
+          // The reference will be cleared in stopSpeaking() when appropriate.
         }
       };
 
@@ -477,20 +479,19 @@ export function useVoice(): UseVoiceReturn {
 
               audio.onended = () => {
                 URL.revokeObjectURL(audioUrl);
-                // If this was the current audio, clear it and play next
-                if (currentAudioRef.current && currentAudioRef.current.url === audioUrl) {
-                  currentAudioRef.current = null;
-                }
-                // If queue has items, play next
+                // If another chunk is queued, set it as current and play it
                 if (audioQueueRef.current.length > 0) {
                   const next = audioQueueRef.current.shift()!;
                   currentAudioRef.current = next;
                   next.element.play().catch((e) => console.error('Play error', e));
                 } else if (streamEndedRef.current) {
-                  // No more queued and stream ended, resolve
+                  // Final chunk finished - clear ref and resolve
+                  currentAudioRef.current = null;
                   cleanupStreamingResources();
                   resolve();
                 }
+                // Otherwise: chunk ended but queue not empty yet (shouldn't happen normally)
+                // Keep currentAudioRef pointing to this finished chunk until queue delivers next
               };
 
               audio.onerror = (e) => {
@@ -755,15 +756,8 @@ export function useVoice(): UseVoiceReturn {
   }, []);
 
   const getCurrentAudioElement = useCallback((): HTMLAudioElement | null => {
-    // Return the currently playing audio element
-    // Priority: streaming (currentAudioRef) > HTTP (httpAudioRef)
-    if (currentAudioRef.current) {
-      return currentAudioRef.current.element;
-    }
-    if (httpAudioRef.current) {
-      return httpAudioRef.current;
-    }
-    return null;
+    const element = currentAudioRef.current?.element || httpAudioRef.current || null;
+    return element;
   }, []);
 
   return {
