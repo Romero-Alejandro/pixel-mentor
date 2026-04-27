@@ -73,44 +73,18 @@ export function LessonPage() {
     resetStarted();
   };
 
-  // [EDD-PROBE-START] Telemetry for useTextSync input props
-  useEffect(() => {
-    console.log('[EDD] useTextSync INPUT props', {
-      text: orchestrator.fullVoiceText,
-      textLength: orchestrator.fullVoiceText?.length ?? 0,
-      audioElementGetter: !!orchestrator.getCurrentAudioElement,
-      isSpeaking,
-      timestamp: new Date().toISOString(),
-    });
-  }, [orchestrator.fullVoiceText, orchestrator.getCurrentAudioElement, isSpeaking]);
-  // [EDD-PROBE-END]
-
   const textSync = useTextSync({
     text: orchestrator.fullVoiceText,
     audioElementGetter: orchestrator.getCurrentAudioElement,
     isSpeaking: isSpeaking,
   });
 
-  // [EDD-PROBE-START] Telemetry for useTextSync output props
+  // BUGFIX: Reset sync if text is empty
   useEffect(() => {
-    console.log('[EDD] useTextSync OUTPUT props', {
-      currentWordIndex: textSync.currentWordIndex,
-      progress: textSync.progress,
-      isSynced: textSync.isSynced,
-      syncError: textSync.syncError,
-      isAttemptingSync: textSync.isAttemptingSync,
-      wordsCount: textSync.words.length,
-      timestamp: new Date().toISOString(),
-    });
-  }, [
-    textSync.currentWordIndex,
-    textSync.progress,
-    textSync.isSynced,
-    textSync.syncError,
-    textSync.isAttemptingSync,
-    textSync.words.length,
-  ]);
-  // [EDD-PROBE-END]
+    if (!orchestrator.fullVoiceText && textSync.isAttemptingSync) {
+      textSync.reset();
+    }
+  }, [orchestrator.fullVoiceText, textSync.isAttemptingSync, textSync]);
 
   const prevQ = useRef<string>('');
 

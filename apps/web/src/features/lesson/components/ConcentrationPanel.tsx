@@ -24,6 +24,11 @@ export function ConcentrationPanel({
 }: ConcentrationPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // BUGFIX: Debug logging for sync state changes
+  useEffect(() => {
+    console.log('[ConcentrationPanel] Sync state:', { isAttemptingSync, isSynced, wordsLength: words.length });
+  }, [isAttemptingSync, isSynced, words.length]);
+
   // Show all text when not synced (sync failed or not attempted yet)
   // Only use karaoke effect (incremental + highlight) when isSynced is true
   const showAllContent = !isSynced;

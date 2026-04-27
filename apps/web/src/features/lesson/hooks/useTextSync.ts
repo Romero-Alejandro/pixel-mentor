@@ -111,6 +111,14 @@ export function useTextSync({
       if (!currentAudio) return;
 
       const audioDuration = currentAudio.duration;
+
+      // BUGFIX: Check for NaN duration
+      if (isNaN(audioDuration) || !audioDuration || audioDuration <= 0.1) {
+        setState((prev) => ({ ...prev, isAttemptingSync: false }));
+        console.error('[useTextSync] Invalid audio duration:', audioDuration);
+        return;
+      }
+
       const stableDuration =
         audioDuration &&
         audioDuration > 0.1 &&
