@@ -46,154 +46,126 @@ export function useTextSync({
 
   const words = useMemo(() => {
     if (!text.trim()) return [];
-    // Split by sentences using lookbehind assertion
-    const sentences = text.trim().split(/(?<=[.!?])\s+/g);
-    // Fallback to words if no sentence boundaries found
+    const sentences = text.trim().match(/[^.!?]+[.!?]*/g) || [];
+    // BUGFIX: Use > 1 to ensure it only uses sentences if there are multiple.
+    // This allows the fallback to word splitting to work for single sentences.
     return sentences.length > 1 ? sentences : text.trim().split(/\s+/);
   }, [text]);
   const totalWordCount = words.length;
 
-  // Mutable refs for event-driven sync state
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
   const prevSpeakingRef = useRef<boolean | undefined>(undefined);
   const isListeningRef = useRef(false);
 
-  // Memoize audio element reference to prevent getter instability
   const getAudioElement = useCallback(() => {
-    if (audioElementRef.current) {
-      return audioElementRef.current;
-    }
     if (audioElementGetter) {
+      // Always re-fetch the element from the getter to avoid stale references
       audioElementRef.current = audioElementGetter();
       return audioElementRef.current;
     }
     return null;
   }, [audioElementGetter]);
 
-  // Reset audio reference when text changes (new audio loaded)
   useEffect(() => {
     audioElementRef.current = null;
   }, [text]);
 
-  // Sync effect - runs when text changes or when isSpeaking starts
+  // BUGFIX: This entire effect is replaced to be more robust against race conditions
+  // where the audio element is not immediately available when `isSpeaking` becomes true.
   useEffect(() => {
     if (totalWordCount === 0) {
-      setState((prev) => ({
-        ...prev,
-        syncError: false,
-        isAttemptingSync: false,
-      }));
       return;
     }
 
-    // Reset state when isSpeaking transitions from false to true (new audio started)
-    const speakingJustStarted = isSpeaking && prevSpeakingRef.current === false;
+    const speakingJustStarted = isSpeaking && !prevSpeakingRef.current;
     if (speakingJustStarted) {
-      setState({
+      setState((prev) => ({
+        ...prev,
         currentWordIndex: 0,
         progress: 0,
         isSynced: false,
         syncError: false,
         isAttemptingSync: true,
-      });
+      }));
     }
     prevSpeakingRef.current = isSpeaking;
 
-    const syncAudio = (): (() => void) => {
-      const audio = getAudioElement();
-      if (!audio) {
-        return () => {};
-      }
+    if (!isSpeaking) {
+      if (isListeningRef.current) isListeningRef.current = false;
+      return;
+    }
 
-      if (totalWordCount === 0) {
-        return () => {};
-      }
+    const audio = getAudioElement();
+    if (!audio) {
+      // Audio element isn't ready. The effect will re-run on the next render.
+      // The `isAttemptingSync` state remains true, showing the user a loading state.
+      return;
+    }
 
-      isListeningRef.current = true;
+    if (isListeningRef.current) {
+      return;
+    }
 
-      const handleTimeUpdate = (): void => {
-        const currentAudio = getAudioElement();
-        if (!currentAudio) return;
+    const handleTimeUpdate = (): void => {
+      const currentAudio = getAudioElement();
+      if (!currentAudio) return;
 
-        const audioDuration = currentAudio.duration;
-        const stableDuration =
-          audioDuration &&
-          audioDuration > 0.1 &&
-          !isNaN(audioDuration) &&
-          audioDuration < MAX_AUDIO_DURATION;
+      const audioDuration = currentAudio.duration;
+      const stableDuration =
+        audioDuration &&
+        audioDuration > 0.1 &&
+        !isNaN(audioDuration) &&
+        audioDuration < MAX_AUDIO_DURATION;
 
-        if (!stableDuration || totalWordCount === 0) return;
+      if (!stableDuration || totalWordCount === 0) return;
 
-         // For sentence-based segmentation, we need a different approach
-         // Each sentence should be displayed for a proportion of the total duration
-         const timePerSegment = audioDuration / totalWordCount;
-         // Use round instead of floor to be more permissive with segment transitions
-         const estimatedIndex = Math.min(
-           Math.round(currentAudio.currentTime / timePerSegment),
-           totalWordCount - 1
-         );
+      const timePerSegment = audioDuration / totalWordCount;
+      const estimatedIndex = Math.min(
+        Math.round(currentAudio.currentTime / timePerSegment),
+        totalWordCount - 1
+      );
 
-        const isAudioNearEnd =
-          currentAudio.duration &&
-          !isNaN(currentAudio.duration) &&
-          currentAudio.currentTime > currentAudio.duration - 0.5;
-
-        const isCompleted =
-          estimatedIndex >= totalWordCount || currentAudio.ended || isAudioNearEnd;
-
-        setState((prev) => {
-          const shouldBeSynced = isCompleted || (estimatedIndex > 0 && prev.isAttemptingSync);
-
-          return {
-            currentWordIndex: estimatedIndex,
-            progress: estimatedIndex / (totalWordCount || 1),
-            isSynced: shouldBeSynced,
-            syncError: false,
-            isAttemptingSync: !shouldBeSynced,
-          };
-        });
-      };
-
-      const handleError = (): void => {
-        isListeningRef.current = false;
-        setState((prev) => ({
-          ...prev,
-          syncError: true,
-          isAttemptingSync: false,
-        }));
-      };
-
-      const handleEnded = (): void => {
-        setState({
-          currentWordIndex: totalWordCount,
-          progress: 1,
-          isSynced: true,
+      setState((prev) => {
+        const nowSynced = prev.isSynced || (prev.isAttemptingSync && estimatedIndex >= 0);
+        return {
+          currentWordIndex: estimatedIndex,
+          progress: estimatedIndex / (totalWordCount || 1),
+          isSynced: nowSynced,
           syncError: false,
-          isAttemptingSync: false,
-        });
-        isListeningRef.current = false;
-      };
-
-      audio.addEventListener('timeupdate', handleTimeUpdate);
-      audio.addEventListener('error', handleError);
-      audio.addEventListener('ended', handleEnded);
-
-      return () => {
-        isListeningRef.current = false;
-        audio.removeEventListener('timeupdate', handleTimeUpdate);
-        audio.removeEventListener('error', handleError);
-        audio.removeEventListener('ended', handleEnded);
-      };
+          isAttemptingSync: prev.isAttemptingSync ? !nowSynced : false,
+        };
+      });
     };
 
-    const cleanup = syncAudio();
+    const handleError = (): void => {
+      isListeningRef.current = false;
+      setState((prev) => ({ ...prev, syncError: true, isAttemptingSync: false }));
+    };
 
-    return cleanup;
-  }, [totalWordCount, getAudioElement, isSpeaking, text]);
+    const handleEnded = (): void => {
+      isListeningRef.current = false;
+      setState({
+        currentWordIndex: totalWordCount,
+        progress: 1,
+        isSynced: true,
+        syncError: false,
+        isAttemptingSync: false,
+      });
+    };
 
-  /**
-   * Reset sync state - called when replaying audio
-   */
+    isListeningRef.current = true;
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    audio.addEventListener('error', handleError);
+    audio.addEventListener('ended', handleEnded);
+
+    return () => {
+      isListeningRef.current = false;
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+      audio.removeEventListener('error', handleError);
+      audio.removeEventListener('ended', handleEnded);
+    };
+  }, [isSpeaking, totalWordCount, getAudioElement, text]);
+
   const reset = useCallback(() => {
     setState({
       currentWordIndex: 0,
