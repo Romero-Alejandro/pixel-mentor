@@ -1,8 +1,4 @@
-// [EDD-PROBE-START]
-let audioIdCounter = 0;
-const eddLog = (message: string, ...args: unknown[]) =>
-  console.log(`%c[EDD-PROBE] ${message}`, 'color: #7c3aed;', ...args);
-// [EDD-PROBE-END]
+
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import type { TTSAudioMessageData, TTSErrorMessageData } from '@pixel-mentor/shared';
@@ -263,35 +259,19 @@ export function useTTS(): UseTTSReturn {
         const audioBlob = new Blob([audioBytes], { type: 'audio/mpeg' });
         const audioUrl = URL.createObjectURL(audioBlob);
         httpAudioUrlRef.current = audioUrl;
-        // [EDD-PROBE-START]
-        const httpAudioId = ++audioIdCounter;
-        eddLog(`speakHTTP: CREATED audio element [ID=${httpAudioId}]`);
-        // [EDD-PROBE-END]
         const audio = new Audio(audioUrl);
-        // [EDD-PROBE-START]
-        (audio as any).eddId = httpAudioId;
-        // [EDD-PROBE-END]
         httpAudioRef.current = audio;
 
-        // [EDD-PROBE-START]
         audio
           .play()
-          .then(() => {
-            eddLog(`speakHTTP: PLAYING audio element [ID=${(audio as any).eddId}]`);
-          })
           .catch((e) => {
-            eddLog(`speakHTTP: PLAYBACK FAILED for [ID=${(audio as any).eddId}]`, e);
             audio.onerror?.(new Event('playback-failed'));
           });
-        // [EDD-PROBE-END]
         debugLog('HTTP TTS started successfully!');
 
         // Wait for audio to actually finish playing
         return new Promise<boolean>((resolve) => {
           audio.onended = () => {
-            // [EDD-PROBE-START]
-            eddLog(`speakHTTP: ENDED audio element [ID=${(audio as any).eddId}]`);
-            // [EDD-PROBE-END]
             debugLog('HTTP TTS ended');
             setIsSpeaking(false);
             httpAudioRef.current = null;
@@ -302,9 +282,6 @@ export function useTTS(): UseTTSReturn {
             resolve(true);
           };
           audio.onerror = () => {
-            // [EDD-PROBE-START]
-            eddLog(`speakHTTP: ERROR on audio element [ID=${(audio as any).eddId}]`);
-            // [EDD-PROBE-END]
             debugError('Audio playback error');
             setError('Error al reproducir audio');
             setIsSpeaking(false);
@@ -471,17 +448,9 @@ export function useTTS(): UseTTSReturn {
               const audioBlob = base64ToBlob(data.audioBase64, 'audio/mpeg');
               const audioUrl = URL.createObjectURL(audioBlob);
               const audio = new Audio(audioUrl);
-              // [EDD-PROBE-START]
-              const streamAudioId = ++audioIdCounter;
-              (audio as any).eddId = streamAudioId;
-              eddLog(`speakStream: CREATED audio chunk [ID=${streamAudioId}]`);
-              // [EDD-PROBE-END]
               const queueItem = { element: audio, url: audioUrl };
 
               audio.onended = () => {
-                // [EDD-PROBE-START]
-                eddLog(`speakStream: ENDED audio chunk [ID=${(audio as any).eddId}]`);
-                // [EDD-PROBE-END]
                 debugLog('Chunk playback ended');
                 URL.revokeObjectURL(audioUrl);
                 // If this was the current audio, clear it and play next
@@ -492,17 +461,11 @@ export function useTTS(): UseTTSReturn {
                 if (audioQueueRef.current.length > 0) {
                   const next = audioQueueRef.current.shift()!;
                   currentAudioRef.current = next;
-                  // [EDD-PROBE-START]
                   next.element
                     .play()
-                    .then(() => {
-                      eddLog(`speakStream: PLAYING NEXT audio chunk [ID=${(next.element as any).eddId}] from queue`);
-                    })
                     .catch((e) => {
-                      eddLog(`speakStream: PLAYBACK FAILED for next chunk [ID=${(next.element as any).eddId}]`, e);
                       next.element.onerror?.(new Event('playback-failed'));
                     });
-                  // [EDD-PROBE-END]
                 } else if (streamEndedRef.current) {
                   // No more queued and stream ended, set speaking complete and resolve
                   setIsSpeaking(false);
@@ -512,9 +475,6 @@ export function useTTS(): UseTTSReturn {
               };
 
               audio.onerror = (e) => {
-                // [EDD-PROBE-START]
-                eddLog(`speakStream: ERROR on audio chunk [ID=${(audio as any).eddId}]`);
-                // [EDD-PROBE-END]
                 debugError('Chunk playback error', e);
                 URL.revokeObjectURL(audioUrl);
                 if (currentAudioRef.current && currentAudioRef.current.url === audioUrl) {
@@ -534,17 +494,11 @@ export function useTTS(): UseTTSReturn {
 
               if (!currentAudioRef.current) {
                 currentAudioRef.current = queueItem;
-                // [EDD-PROBE-START]
                 audio
                   .play()
-                  .then(() => {
-                    eddLog(`speakStream: PLAYING FIRST audio chunk [ID=${(audio as any).eddId}]`);
-                  })
                   .catch((e) => {
-                    eddLog(`speakStream: PLAYBACK FAILED for first chunk [ID=${(audio as any).eddId}]`, e);
                     audio.onerror?.(new Event('playback-failed'));
                   });
-                // [EDD-PROBE-END]
               } else {
                 audioQueueRef.current.push(queueItem);
               }
