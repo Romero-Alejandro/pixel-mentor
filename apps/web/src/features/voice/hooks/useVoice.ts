@@ -252,10 +252,6 @@ export function useVoice(): UseVoiceReturn {
 
     setIsSpeaking(false);
     setError(null);
-    console.log(
-      '[KARAOKE-DEBUG] useVoice: stopSpeaking called',
-      JSON.stringify({ action: 'reset', timestamp: Date.now() }),
-    );
     setAudioElementReady(false);
     // Reset the audio ready flag to allow re-firing on restart
     audioReadyFiredRef.current = false;
@@ -776,14 +772,6 @@ export function useVoice(): UseVoiceReturn {
 
   // Notify consumers when the audio element becomes available
   const notifyAudioReady = useCallback(() => {
-    console.log(
-      '[KARAOKE-DEBUG] useVoice: audioElementReady State',
-      JSON.stringify({
-        action: 'notify',
-        alreadyFired: audioReadyFiredRef.current,
-        timestamp: Date.now(),
-      }),
-    );
     if (!audioReadyFiredRef.current) {
       audioReadyFiredRef.current = true;
       setAudioElementReady(true);

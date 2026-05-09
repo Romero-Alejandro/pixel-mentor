@@ -146,7 +146,6 @@ export function useClassOrchestrator() {
             };
             const timeout = setTimeout(() => {
               if (!resolved) {
-                console.warn('[DEBUG] Stream timeout, using fallback response');
                 resolve(fallbackState);
               }
             }, 5000);
@@ -180,7 +179,6 @@ export function useClassOrchestrator() {
               onClose: () => {
                 clearTimeout(timeout);
                 if (!resolved) {
-                  console.warn('[DEBUG] Stream closed before receiving end event, using fallback');
                   resolve(fallbackState);
                 }
                 isInteractingRef.current = false;
@@ -335,28 +333,13 @@ export function useClassOrchestrator() {
 
         const combinedText = [transition, content, closure].filter(Boolean).join(' ');
         setFullVoiceText(combinedText);
-        console.log(
-          '[KARAOKE-DEBUG] useClassOrchestrator: TextSet',
-          JSON.stringify({
-            text: combinedText,
-          }),
-        );
         contentRef.current = combinedText;
 
         lessonState.setFeedbackData(null);
-        console.log(
-          '[DEBUG] Setting uiState to concentration, pedagogicalState:',
-          pedagogicalState,
-        );
         lessonState.setUIState('concentration');
 
-        console.log('[KARAOKE-DEBUG] useClassOrchestrator: SpeakCommandIssued');
         await speak(combinedText, _voiceSettings);
       } else {
-        console.log(
-          '[DEBUG] Skipping concentration state, pedagogicalState requires input:',
-          pedagogicalState,
-        );
         // Para estados que requieren input, no llamamos a speak aquí - el auto-avance lo manejará
       }
 
@@ -368,9 +351,7 @@ export function useClassOrchestrator() {
 
       if (canAutoAdvance && voiceText.trim()) {
         if (isInteractingRef.current) {
-          console.log(
-            '[DEBUG] Waiting for previous interaction to complete before auto-advancing...',
-          );
+          // Wait for previous interaction to complete before auto-advancing
           let waitCount = 0;
           while (isInteractingRef.current && waitCount < 50) {
             await new Promise((r) => setTimeout(r, 100));
@@ -438,25 +419,9 @@ export function useClassOrchestrator() {
     },
     speakContent: () => contentRef.current && speak(contentRef.current, _voiceSettings),
     reset: async (onResetComplete?: () => void) => {
-      console.log(
-        '[KARAOKE-DEBUG] useClassOrchestrator: Reset Flow',
-        JSON.stringify({
-          step: 'start',
-          sessionId: sessionIdRef.current,
-          timestamp: Date.now(),
-        }),
-      );
       // Step 1: Stop audio and reset voice state (includes audioElementReady)
       voiceStop();
       stopStream();
-
-      console.log(
-        '[KARAOKE-DEBUG] useClassOrchestrator: Reset Flow',
-        JSON.stringify({
-          step: 'after voiceStop',
-          timestamp: Date.now(),
-        }),
-      );
 
       // Wait for audio to be ready before resetting text sync
       let waitedMs = 0;
@@ -464,11 +429,6 @@ export function useClassOrchestrator() {
       while (!audioElementReady && waitedMs < timeout) {
         await new Promise((r) => setTimeout(r, 100));
         waitedMs += 100;
-      }
-      if (!audioElementReady) {
-        console.warn(
-          '[KARAOKE-DEBUG] useClassOrchestrator: audioElementReady timeout, proceeding anyway',
-        );
       }
 
       // Llamar al backend para reiniciar la sesión
@@ -499,13 +459,6 @@ export function useClassOrchestrator() {
       // Step 2: Clean up text sync listeners (e.g., remove event handlers from audio element)
       if (onResetComplete) {
         onResetComplete();
-        console.log(
-          '[KARAOKE-DEBUG] useClassOrchestrator: Reset Flow',
-          JSON.stringify({
-            step: 'after textSync.reset',
-            timestamp: Date.now(),
-          }),
-        );
       }
 
       // Step 3: Reset global state
@@ -513,14 +466,6 @@ export function useClassOrchestrator() {
       // Forzar uiState a 'idle' explícitamente para mostrar la vista inicial correcta
       lessonState.setUIState('idle');
       store.reset();
-
-      console.log(
-        '[KARAOKE-DEBUG] useClassOrchestrator: Reset Flow',
-        JSON.stringify({
-          step: 'complete',
-          timestamp: Date.now(),
-        }),
-      );
     },
     stopSpeaking: voiceStop,
     getCurrentAudioElement: getAudio,

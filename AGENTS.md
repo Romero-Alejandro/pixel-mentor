@@ -38,10 +38,14 @@
 
 ### Git & GitHub Workflow
 
+**STRICT LANGUAGE RULE:** ALL Git-related messages (commits, PRs, issues, branch names) **MUST** be written in **English**. Non-English messages will be rejected by skills and hooks.
+
+**LOCAL-ONLY GIT RULE:** Agents are **ONLY** permitted to execute Git operations **locally** (e.g., `commit`, `branch`, `merge`, `stash`). **Remote operations** (e.g., `push`, `pull`, `fetch`) **MUST** be performed manually by the user. Agents will **never** push to remote repositories unless explicitly authorized for that specific session.
+
 **DELEGATE TO SKILLS:** All Git and PR operations MUST be managed through the loaded skills. Do not bypass them with raw Git commands.
 
-- **Commits & Staging:** Use the `git-commit` skill. It automatically enforces safety rules (Zero Data Loss, Anti-corruption, No Secrets) and standardizes English Conventional Commits.
+- **Commits & Staging:** Use the `git-commit` skill. It automatically enforces safety rules (Zero Data Loss, Anti-corruption, No Secrets) and standardizes **English** Conventional Commits.
 - **Commit Planning:** Use the `work-unit-commits` skill to structure logical changes and keep tests/docs together.
-- **Pull Requests:** Use the `branch-pr` skill to manage branches and open PRs (requires an approved issue).
+- **Pull Requests:** Use the `branch-pr` skill to manage branches and open PRs (requires an approved issue). **Title and description must be in English.**
 - **Large PRs:** Use the `chained-pr` skill to split changes that exceed 400 lines.
 - **Safe Rollback (Exception):** `git checkout -- <path>` is the **only** permitted manual destructive command, strictly to revert files you just modified after a failed verification.
