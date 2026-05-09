@@ -52,6 +52,7 @@ blob-report/
 *.swp
 *.swo
 *~
+.zed
 
 # OS files
 .DS_Store
@@ -86,5 +87,5 @@ apps/api/prisma/*.db
 apps/api/src/infrastructure/adapters/database/generated/
 
 # OpenCode
-.agents/
 .opencode/
+skills-lock.json

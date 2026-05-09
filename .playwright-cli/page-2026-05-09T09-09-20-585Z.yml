@@ -1,0 +1,74 @@
+- generic [ref=e34]:
+  - banner [ref=e35]:
+    - generic [ref=e36]:
+      - heading "PixelMentor" [level=1] [ref=e37]:
+        - img [ref=e38]
+        - text: PixelMentor
+      - generic [ref=e41]:
+        - navigation [ref=e42]:
+          - link "Mi Aprendizaje" [ref=e43] [cursor=pointer]:
+            - /url: /my-learning
+            - img [ref=e44]
+            - text: Mi Aprendizaje
+        - link "Nivel 1, racha de 1 días, 0 insignias" [ref=e46] [cursor=pointer]:
+          - /url: /achievements
+          - generic [ref=e47]:
+            - generic [ref=e48]: 🌱
+            - generic [ref=e49]: "1"
+          - generic [ref=e50]:
+            - generic [ref=e51]: 🔥
+            - generic [ref=e52]: "1"
+          - generic [ref=e53]:
+            - generic [ref=e54]: 🎖️
+            - generic [ref=e55]: "0"
+        - button "Silenciar" [ref=e57]:
+          - img [ref=e58]
+        - button "Salir" [ref=e61]:
+          - img [ref=e62]
+          - text: Salir
+  - main [ref=e66]:
+    - generic [ref=e67]:
+      - heading "¡Buenos días, Valentina! 👋" [level=2] [ref=e68]
+      - paragraph [ref=e69]: ¡Tu aventura está por comenzar!
+    - link "Mi Camino de Aprendizaje Ver tus grupos y clases asignadas" [ref=e71] [cursor=pointer]:
+      - /url: /my-learning
+      - generic [ref=e73]:
+        - img [ref=e75]
+        - generic [ref=e77]:
+          - heading "Mi Camino de Aprendizaje" [level=3] [ref=e78]
+          - paragraph [ref=e79]: Ver tus grupos y clases asignadas
+    - generic [ref=e80]:
+      - generic [ref=e82]:
+        - generic [ref=e83]: 🌱
+        - generic [ref=e84]:
+          - generic [ref=e85]: 🌱
+          - generic [ref=e86]:
+            - paragraph [ref=e87]: Nivel 1
+            - heading "Semilla" [level=2] [ref=e88]
+        - generic [ref=e90]:
+          - generic [ref=e91]: 10 XP Ganados
+          - generic [ref=e92]: ¡Nivel Máximo! 🎉
+      - generic [ref=e96]:
+        - generic [ref=e97]:
+          - heading "Próximos Desafíos" [level=2] [ref=e98]:
+            - img [ref=e100]
+            - text: Próximos Desafíos
+          - paragraph [ref=e104]: ¡Completa estas misiones para ganar más XP y desbloquear recompensas! 🌟
+        - generic [ref=e105]:
+          - generic [ref=e106]:
+            - img [ref=e107]
+            - paragraph [ref=e111]: "0"
+            - paragraph [ref=e112]: Completadas
+          - generic [ref=e113]:
+            - img [ref=e114]
+            - paragraph [ref=e116]: "0"
+            - paragraph [ref=e117]: En Progreso
+          - generic [ref=e118]:
+            - img [ref=e119]
+            - paragraph [ref=e121]: "0"
+            - paragraph [ref=e122]: Disponibles
+        - generic [ref=e124]:
+          - img [ref=e126]
+          - generic [ref=e130]:
+            - paragraph [ref=e131]: ¡Explora tus clases!
+            - paragraph [ref=e132]: Las misiones aparecerán aquí cuando tu profesor te asigne clases.

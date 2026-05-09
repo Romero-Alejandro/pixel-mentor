@@ -5,6 +5,8 @@ export interface UseTextSyncOptions {
   audioElementGetter?: () => HTMLAudioElement | null;
   /** When audio starts speaking, this should change to trigger re-sync */
   isSpeaking?: boolean;
+  /** Block sync attempts until the audio element is confirmed ready. */
+  audioElementReady?: boolean;
 }
 
 interface SyncState {
@@ -23,11 +25,7 @@ const MAX_AUDIO_DURATION = 300;
  * Custom hook for synchronizing text highlighting with audio playback.
  * Uses timeupdate event as single source of truth for state updates.
  */
-export function useTextSync({
-  text,
-  audioElementGetter,
-  isSpeaking,
-}: UseTextSyncOptions): {
+export function useTextSync({ text, audioElementGetter, isSpeaking, audioElementReady = true }: UseTextSyncOptions): {
   currentWordIndex: number;
   progress: number;
   isSynced: boolean;
@@ -96,15 +94,24 @@ export function useTextSync({
       return;
     }
 
+    // Guard: wait for audio element to be ready on initial sync attempt only.
+    // Once sync has started (isListeningRef.current = true), keep trying even if
+    // audioElementReady flips later (handles the case where audio becomes available
+    // while the effect is already running).
+    if (speakingJustStarted && !audioElementReady) {
+      console.debug('[KARAOKE-DEBUG] useTextSync: waiting for audioElementReady');
+      return;
+    }
+
     const audio = getAudioElement();
-    console.debug('[KARAOKE-DEBUG] useTextSync: AudioElementCheck', JSON.stringify({
-      isAudioNull: !getAudioElement(),
-    }));
     if (!audio) {
       // Audio element isn't ready. The effect will re-run on the next render.
       // The `isAttemptingSync` state remains true, showing the user a loading state.
+      console.debug('[KARAOKE-DEBUG] useTextSync: AudioElementCheck', JSON.stringify({ isAudioNull: true }));
       return;
     }
+
+    console.debug('[KARAOKE-DEBUG] useTextSync: AudioElementCheck', JSON.stringify({ isAudioNull: false }));
 
     if (isListeningRef.current) {
       return;
@@ -134,7 +141,7 @@ export function useTextSync({
       const timePerSegment = audioDuration / totalWordCount;
       const estimatedIndex = Math.min(
         Math.round(currentAudio.currentTime / timePerSegment),
-        totalWordCount - 1
+        totalWordCount - 1,
       );
 
       setState((prev) => {
@@ -176,7 +183,7 @@ export function useTextSync({
       audio.removeEventListener('error', handleError);
       audio.removeEventListener('ended', handleEnded);
     };
-  }, [isSpeaking, totalWordCount, getAudioElement, text]);
+  }, [isSpeaking, totalWordCount, getAudioElement, text, audioElementReady]);
 
   const reset = useCallback(() => {
     setState({

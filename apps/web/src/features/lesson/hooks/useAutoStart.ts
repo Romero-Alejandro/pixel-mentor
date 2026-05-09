@@ -56,6 +56,10 @@ export function useAutoStart(
       try {
         setIsStarting(true);
         const result = await onStartClass(lessonId);
+        console.log(
+          `[EDD-PROBE] | frontend-${lessonId} | ${Date.now()} | useAutoStart:onStartClass result | Full Response:`,
+          JSON.stringify(result.data, null, 2),
+        );
 
         if (!result.ok) throw result.error || new Error('Falla en el inicio');
 

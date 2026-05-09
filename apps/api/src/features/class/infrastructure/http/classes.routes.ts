@@ -395,7 +395,7 @@ export function createClassLessonStudentRouter(deps: StudentRouterDependencies):
         '',
       )) as DemoInteractionOutput;
 
-      res.status(200).json({
+      const response = {
         sessionId,
         recipeId: firstLesson.recipeId,
         title: firstLesson.recipe?.title ?? null,
@@ -405,7 +405,12 @@ export function createClassLessonStudentRouter(deps: StudentRouterDependencies):
         isRepeat: interaction.isRepeat ?? false,
         lessonProgress: interaction.lessonProgress,
         contentSteps: interaction.contentSteps,
-      });
+      };
+      res.status(200).json(response);
+      console.log(
+        `[EDD-PROBE] | ${req.requestId || 'noid'} | ${Date.now()} | API:student/classes/:id/start | Full Response:`,
+        JSON.stringify(response, null, 2),
+      );
     } catch (error) {
       next(error);
     }

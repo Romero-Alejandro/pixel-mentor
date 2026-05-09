@@ -26,7 +26,11 @@ export function ConcentrationPanel({
 
   // BUGFIX: Debug logging for sync state changes
   useEffect(() => {
-    console.log('[ConcentrationPanel] Sync state:', { isAttemptingSync, isSynced, wordsLength: words.length });
+    console.log('[ConcentrationPanel] Sync state:', {
+      isAttemptingSync,
+      isSynced,
+      wordsLength: words.length,
+    });
   }, [isAttemptingSync, isSynced, words.length]);
 
   // Show all text when not synced (sync failed or not attempted yet)
@@ -96,7 +100,8 @@ export function ConcentrationPanel({
               data-word-index={idx}
               className={cn(
                 'bg-transparent transition-colors duration-200',
-                idx === activeIndex && 'bg-amber-200 text-amber-900 rounded-xl px-2 py-0.5 shadow-sm',
+                idx === activeIndex &&
+                  'bg-amber-200 text-amber-900 rounded-xl px-2 py-0.5 shadow-sm',
               )}
             >
               {word}{' '}

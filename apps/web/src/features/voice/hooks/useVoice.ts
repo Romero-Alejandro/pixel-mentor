@@ -43,6 +43,8 @@ export interface UseVoiceReturn {
   isSpeechSupported: boolean;
   isRecognitionSupported: boolean;
   getCurrentAudioElement: () => HTMLAudioElement | null;
+  /** Signals that the audio element is available for sync. */
+  audioElementReady: boolean;
 }
 
 // Debug logging
@@ -61,6 +63,8 @@ export function useVoice(): UseVoiceReturn {
   const [confidence, setConfidence] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+  /** Signals that the audio element is available for sync hooks. Triggers re-render. */
+  const [audioElementReady, setAudioElementReady] = useState(false);
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
 
@@ -72,6 +76,7 @@ export function useVoice(): UseVoiceReturn {
   const httpAudioRef = useRef<HTMLAudioElement | null>(null);
   const httpAudioUrlRef = useRef<string | null>(null);
   const streamEndedRef = useRef(false);
+  const audioReadyFiredRef = useRef(false);
 
   // Check browser support
   const isSpeechSupported = typeof window !== 'undefined' && 'speechSynthesis' in window;
@@ -247,6 +252,7 @@ export function useVoice(): UseVoiceReturn {
 
     setIsSpeaking(false);
     setError(null);
+    setAudioElementReady(false);
   }, [isSpeechSupported, setIsSpeaking, setError]);
 
   const speakHTTP = useCallback(
@@ -293,6 +299,7 @@ export function useVoice(): UseVoiceReturn {
 
         await audio.play();
         debugLog('HTTP TTS started successfully!');
+        notifyAudioReady();
 
         // Wait for audio to actually finish playing
         return new Promise<boolean>((resolve) => {
@@ -431,7 +438,7 @@ export function useVoice(): UseVoiceReturn {
           } catch (e) {}
         }
         audioQueueRef.current = [];
-         if (currentAudioRef.current) {
+        if (currentAudioRef.current) {
           try {
             currentAudioRef.current.element.pause();
             URL.revokeObjectURL(currentAudioRef.current.url);
@@ -513,6 +520,7 @@ export function useVoice(): UseVoiceReturn {
               if (!currentAudioRef.current) {
                 currentAudioRef.current = queueItem;
                 audio.play().catch((e) => console.error('Failed to play chunk', e));
+                notifyAudioReady();
               } else {
                 audioQueueRef.current.push(queueItem);
               }
@@ -760,6 +768,14 @@ export function useVoice(): UseVoiceReturn {
     return element;
   }, []);
 
+  // Notify consumers when the audio element becomes available
+  const notifyAudioReady = useCallback(() => {
+    if (!audioReadyFiredRef.current) {
+      audioReadyFiredRef.current = true;
+      setAudioElementReady(true);
+    }
+  }, []);
+
   return {
     isSpeaking,
     speak,
@@ -776,6 +792,7 @@ export function useVoice(): UseVoiceReturn {
     isSpeechSupported,
     isRecognitionSupported,
     getCurrentAudioElement,
+    audioElementReady,
   };
 }
 

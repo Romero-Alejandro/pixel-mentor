@@ -119,29 +119,31 @@ describe('useTextSync', () => {
         pause: vi.fn(),
       };
 
-      let getterCallCount = 0;
-      const getAudioElement = (): HTMLAudioElement | null => {
-        getterCallCount++;
-        return getterCallCount === 1 ? (mockAudio as unknown as HTMLAudioElement) : null;
-      };
+      // Stable getter: simulates the real scenario where audioElementReady gates sync.
+      // With audioElementReady=true, the guard passes and sync starts.
+      const getAudioElement = (): HTMLAudioElement | null => mockAudio as unknown as HTMLAudioElement;
 
       const { result } = renderHook(
         ({
           audioElementGetter,
           isSpeaking,
+          audioElementReady,
         }: {
           audioElementGetter: () => HTMLAudioElement | null;
           isSpeaking?: boolean;
+          audioElementReady?: boolean;
         }) =>
           useTextSync({
             text: 'Hola mundo esto es contenido',
             audioElementGetter,
             isSpeaking,
+            audioElementReady,
           }),
         {
           initialProps: {
             audioElementGetter: getAudioElement,
             isSpeaking: true,
+            audioElementReady: true,
           },
         },
       );

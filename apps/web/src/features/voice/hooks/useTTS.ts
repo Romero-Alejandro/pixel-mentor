@@ -1,5 +1,3 @@
-
-
 import { useState, useRef, useCallback, useEffect } from 'react';
 import type { TTSAudioMessageData, TTSErrorMessageData } from '@pixel-mentor/shared';
 
@@ -262,11 +260,9 @@ export function useTTS(): UseTTSReturn {
         const audio = new Audio(audioUrl);
         httpAudioRef.current = audio;
 
-        audio
-          .play()
-          .catch((e) => {
-            audio.onerror?.(new Event('playback-failed'));
-          });
+        audio.play().catch((e) => {
+          audio.onerror?.(new Event('playback-failed'));
+        });
         debugLog('HTTP TTS started successfully!');
 
         // Wait for audio to actually finish playing
@@ -461,11 +457,9 @@ export function useTTS(): UseTTSReturn {
                 if (audioQueueRef.current.length > 0) {
                   const next = audioQueueRef.current.shift()!;
                   currentAudioRef.current = next;
-                  next.element
-                    .play()
-                    .catch((e) => {
-                      next.element.onerror?.(new Event('playback-failed'));
-                    });
+                  next.element.play().catch((e) => {
+                    next.element.onerror?.(new Event('playback-failed'));
+                  });
                 } else if (streamEndedRef.current) {
                   // No more queued and stream ended, set speaking complete and resolve
                   setIsSpeaking(false);
@@ -494,11 +488,9 @@ export function useTTS(): UseTTSReturn {
 
               if (!currentAudioRef.current) {
                 currentAudioRef.current = queueItem;
-                audio
-                  .play()
-                  .catch((e) => {
-                    audio.onerror?.(new Event('playback-failed'));
-                  });
+                audio.play().catch((e) => {
+                  audio.onerror?.(new Event('playback-failed'));
+                });
               } else {
                 audioQueueRef.current.push(queueItem);
               }

@@ -88,6 +88,7 @@ export function useClassOrchestrator() {
     stopSpeaking: voiceStop,
     isSpeaking,
     getCurrentAudioElement: getAudio,
+    audioElementReady,
   } = useVoice();
   const lessonState = useLessonState();
 
@@ -474,5 +475,6 @@ export function useClassOrchestrator() {
     },
     stopSpeaking: voiceStop,
     getCurrentAudioElement: getAudio,
+    audioElementReady,
   };
 }

@@ -67,6 +67,7 @@ export function LessonPage() {
     lessonId || null,
     orchestrator.startClass,
   );
+  const { audioElementReady } = orchestrator;
 
   const handleRestart = async () => {
     await orchestrator.reset();
@@ -77,13 +78,17 @@ export function LessonPage() {
     text: orchestrator.fullVoiceText,
     audioElementGetter: orchestrator.getCurrentAudioElement,
     isSpeaking: isSpeaking,
+    audioElementReady,
   });
 
-  console.debug('[KARAOKE-DEBUG] LessonPage -> useTextSync props:', JSON.stringify({
-    isSpeaking,
-    textLength: orchestrator.fullVoiceText?.length,
-    isAttemptingSync: textSync.isAttemptingSync,
-  }));
+  console.debug(
+    '[KARAOKE-DEBUG] LessonPage -> useTextSync props:',
+    JSON.stringify({
+      isSpeaking,
+      textLength: orchestrator.fullVoiceText?.length,
+      isAttemptingSync: textSync.isAttemptingSync,
+    }),
+  );
 
   // BUGFIX: Reset sync if text is empty
   useEffect(() => {
@@ -171,15 +176,15 @@ export function LessonPage() {
 
       case UI_STATES.CONCENTRATION:
         return (
-           <ConcentrationPanel
-             words={textSync.words}
-             currentWordIndex={textSync.currentWordIndex}
-             isSynced={textSync.isSynced}
-             isSpeaking={isSpeaking}
-             isAttemptingSync={textSync.isAttemptingSync}
-             syncError={textSync.syncError}
-             onRepeat={handleRepeatContent}
-           />
+          <ConcentrationPanel
+            words={textSync.words}
+            currentWordIndex={textSync.currentWordIndex}
+            isSynced={textSync.isSynced}
+            isSpeaking={isSpeaking}
+            isAttemptingSync={textSync.isAttemptingSync}
+            syncError={textSync.syncError}
+            onRepeat={handleRepeatContent}
+          />
         );
 
       case UI_STATES.QUESTION:

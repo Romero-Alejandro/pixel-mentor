@@ -115,9 +115,12 @@ export const useLessonStore = create<LessonState>()(
       setContentText: (text) => set({ contentText: text }),
       setIsListening: (listening) => set({ isListening: listening }),
       setIsSpeaking: (speaking) => {
-        console.debug('[KARAOKE-DEBUG] lesson.store: isSpeakingChanged', JSON.stringify({
-          isSpeaking: speaking,
-        }));
+        console.debug(
+          '[KARAOKE-DEBUG] lesson.store: isSpeakingChanged',
+          JSON.stringify({
+            isSpeaking: speaking,
+          }),
+        );
         set({ isSpeaking: speaking });
       },
       setConfig: (config) => set({ config }),
