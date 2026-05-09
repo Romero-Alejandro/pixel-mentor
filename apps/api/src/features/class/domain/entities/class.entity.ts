@@ -15,6 +15,11 @@ export interface ClassLessonEntity {
     readonly id: string;
     readonly title: string;
     readonly expectedDurationMinutes: number | null;
+    readonly steps?: readonly {
+      readonly id: string;
+      readonly order: number;
+      readonly script?: Record<string, unknown>;
+    }[];
   };
 }
 

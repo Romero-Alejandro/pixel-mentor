@@ -16,7 +16,21 @@ interface LessonResponse {
   feedback?: string;
   sessionCompleted?: boolean;
   lessonProgress?: { currentStep: number; totalSteps: number };
-  staticContent?: {
+  resolvedStaticContent?: {
+    stepType?: 'content' | 'activity' | 'question' | 'intro' | 'closure';
+    script?: {
+      transition?: string | { text: string };
+      content?: string | { text: string };
+      closure?: string | { text: string };
+      question?: string | { text: string };
+      expectedAnswer?: string;
+    };
+    activity?: {
+      instruction: string | { text: string };
+      options?: Array<{ text: string; isCorrect: boolean }>;
+    };
+  };
+  contentSteps?: {
     stepType?: 'content' | 'activity' | 'question' | 'intro' | 'closure';
     script?: {
       transition?: string | { text: string };
@@ -74,6 +88,7 @@ export function useClassOrchestrator() {
     stopSpeaking: voiceStop,
     isSpeaking,
     getCurrentAudioElement: getAudio,
+    audioElementReady,
   } = useVoice();
   const lessonState = useLessonState();
 
@@ -120,7 +135,6 @@ export function useClassOrchestrator() {
           store.setIsStreaming(true);
           store.setStreamError(null);
           store.clearStream();
-          lessonState.setContentText('');
 
           return await new Promise<LessonResponse>((resolve, reject) => {
             let resolved = false;
@@ -154,7 +168,6 @@ export function useClassOrchestrator() {
                   try {
                     const data = JSON.parse(event.data);
                     fullText += data.text || '';
-                    lessonState.setContentText(fullText);
                   } catch (e) {
                     // Ignorar chunks mal formados silenciosamente para no romper el stream
                   }
@@ -209,7 +222,8 @@ export function useClassOrchestrator() {
       const {
         voiceText = '',
         pedagogicalState = 'EXPLANATION',
-        staticContent,
+        resolvedStaticContent: rawStaticContent,
+        contentSteps,
         isCorrect,
         feedback,
         sessionCompleted,
@@ -217,6 +231,9 @@ export function useClassOrchestrator() {
         xpEarned,
         accuracy,
       } = raw;
+
+      // Support both resolvedStaticContent and contentSteps for backward compatibility
+      const resolvedStaticContent = rawStaticContent || contentSteps;
 
       if (lessonProgress) {
         lessonState.setCurrentStep(lessonProgress.currentStep);
@@ -255,13 +272,8 @@ export function useClassOrchestrator() {
 
       // --- 3. Estado Actividad ---
       if (pedagogicalState === 'ACTIVITY_WAIT') {
-        const { stepType, activity } = staticContent || {};
+        const { stepType, activity } = resolvedStaticContent || {};
         const hasOptions = activity?.options && activity.options.length > 0;
-        console.log('[DEBUG] ACTIVITY_WAIT STATE:', {
-          stepType,
-          activity,
-          hasOptions,
-        });
 
         lessonState.setQuestionText(extractText(activity?.instruction));
         lessonState.setOptions(
@@ -282,14 +294,8 @@ export function useClassOrchestrator() {
 
       // --- 4. Estado Pregunta ---
       if (pedagogicalState === 'QUESTION') {
-        const { stepType, script } = staticContent || {};
+        const { script } = resolvedStaticContent || {};
         const questionText = extractText(script?.question);
-        console.log('[DEBUG] QUESTION STATE:', {
-          pedagogicalState,
-          stepType,
-          questionText,
-          staticContent: script,
-        });
 
         // Always question panel for QUESTION pedagogical state (open-ended answers)
         lessonState.setQuestionText(questionText);
@@ -304,16 +310,39 @@ export function useClassOrchestrator() {
       // Solo mostrar contenido si NO es un estado que requiere input del usuario
       const statesRequiringInput = ['AWAITING_START', 'ACTIVITY_WAIT', 'QUESTION', 'EVALUATION'];
       if (!statesRequiringInput.includes(pedagogicalState)) {
-        if (staticContent?.script) {
-          setTransitionText(extractText(staticContent.script.transition));
-          lessonState.setContentText(extractText(staticContent.script.content));
-          setClosureText(extractText(staticContent.script.closure));
+        let transition = '';
+        let content = '';
+        let closure = '';
+
+        if (resolvedStaticContent?.script) {
+          transition = extractText(resolvedStaticContent.script.transition) || '';
+          const scriptContent = extractText(resolvedStaticContent.script.content) || '';
+          closure = extractText(resolvedStaticContent.script.closure) || '';
+
+          content = scriptContent.trim() || voiceText || '';
         } else {
-          lessonState.setContentText(voiceText);
+          content = voiceText || '';
         }
 
-        setFullVoiceText(voiceText);
-        contentRef.current = voiceText;
+        // Validar que los valores no sean undefined o vacíos
+        transition = transition || '';
+        content = content || '';
+        closure = closure || '';
+
+        setTransitionText(transition);
+        lessonState.setContentText(content);
+        setClosureText(closure);
+
+        const combinedText = [transition, content, closure].filter(Boolean).join(' ');
+        setFullVoiceText(combinedText);
+        console.log(
+          '[KARAOKE-DEBUG] useClassOrchestrator: TextSet',
+          JSON.stringify({
+            text: combinedText,
+          }),
+        );
+        contentRef.current = combinedText;
+
         lessonState.setFeedbackData(null);
         console.log(
           '[DEBUG] Setting uiState to concentration, pedagogicalState:',
@@ -321,7 +350,8 @@ export function useClassOrchestrator() {
         );
         lessonState.setUIState('concentration');
 
-        await speak(voiceText, _voiceSettings);
+        console.log('[KARAOKE-DEBUG] useClassOrchestrator: SpeakCommandIssued');
+        await speak(combinedText, _voiceSettings);
       } else {
         console.log(
           '[DEBUG] Skipping concentration state, pedagogicalState requires input:',
@@ -351,7 +381,6 @@ export function useClassOrchestrator() {
         if (next) await processResponse(next, false);
       } else if (pedagogicalState === 'AWAITING_START') {
         if (isInteractingRef.current) {
-          console.log('[DEBUG] Waiting for previous interaction to complete before auto-start...');
           let waitCount = 0;
           while (isInteractingRef.current && waitCount < 50) {
             await new Promise((r) => setTimeout(r, 100));
@@ -408,10 +437,39 @@ export function useClassOrchestrator() {
       }
     },
     speakContent: () => contentRef.current && speak(contentRef.current, _voiceSettings),
-    reset: async () => {
-      // Detener todos los streams de audio primero
+    reset: async (onResetComplete?: () => void) => {
+      console.log(
+        '[KARAOKE-DEBUG] useClassOrchestrator: Reset Flow',
+        JSON.stringify({
+          step: 'start',
+          sessionId: sessionIdRef.current,
+          timestamp: Date.now(),
+        }),
+      );
+      // Step 1: Stop audio and reset voice state (includes audioElementReady)
       voiceStop();
       stopStream();
+
+      console.log(
+        '[KARAOKE-DEBUG] useClassOrchestrator: Reset Flow',
+        JSON.stringify({
+          step: 'after voiceStop',
+          timestamp: Date.now(),
+        }),
+      );
+
+      // Wait for audio to be ready before resetting text sync
+      let waitedMs = 0;
+      const timeout = 5000;
+      while (!audioElementReady && waitedMs < timeout) {
+        await new Promise((r) => setTimeout(r, 100));
+        waitedMs += 100;
+      }
+      if (!audioElementReady) {
+        console.warn(
+          '[KARAOKE-DEBUG] useClassOrchestrator: audioElementReady timeout, proceeding anyway',
+        );
+      }
 
       // Llamar al backend para reiniciar la sesión
       if (sessionIdRef.current) {
@@ -431,20 +489,41 @@ export function useClassOrchestrator() {
       // IMPORTANTE: Resetear el flag de interacción para permitir nuevas interacciones
       isInteractingRef.current = false;
 
-      // Resetear store y state
+      // Resetear estado local del orquestador
       sessionIdRef.current = null;
+      setTransitionText('');
+      setClosureText('');
+      setFullVoiceText('');
+      contentRef.current = '';
+
+      // Step 2: Clean up text sync listeners (e.g., remove event handlers from audio element)
+      if (onResetComplete) {
+        onResetComplete();
+        console.log(
+          '[KARAOKE-DEBUG] useClassOrchestrator: Reset Flow',
+          JSON.stringify({
+            step: 'after textSync.reset',
+            timestamp: Date.now(),
+          }),
+        );
+      }
+
+      // Step 3: Reset global state
       lessonState.resetState();
       // Forzar uiState a 'idle' explícitamente para mostrar la vista inicial correcta
       lessonState.setUIState('idle');
       store.reset();
 
-      // Limpiar el estado local del orquestador que no está en el store
-      setTransitionText('');
-      setClosureText('');
-      setFullVoiceText('');
-      contentRef.current = '';
+      console.log(
+        '[KARAOKE-DEBUG] useClassOrchestrator: Reset Flow',
+        JSON.stringify({
+          step: 'complete',
+          timestamp: Date.now(),
+        }),
+      );
     },
     stopSpeaking: voiceStop,
     getCurrentAudioElement: getAudio,
+    audioElementReady,
   };
 }

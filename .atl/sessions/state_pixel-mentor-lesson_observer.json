@@ -1,0 +1,18 @@
+{
+  "cookies": [],
+  "origins": [
+    {
+      "origin": "http://localhost:5173",
+      "localStorage": [
+        {
+          "name": "token",
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI1YTc2OGRhYS1kOGU1LTQ3YmQtOWM5Mi02YzlhNjkxZDk4ZmYiLCJlbWFpbCI6InN0dWRlbnRAdGVzdC5waXhlbC1tZW50b3IubG9jYWwiLCJyb2xlIjoiU1RVREVOVCIsImlhdCI6MTc3ODMxNzc1OCwiZXhwIjoxNzc4MzE4NjU4fQ.bXlwO_DYfeLS7KZOz6Ckxk5gju-oJXg9h_0uUgY9GpQ"
+        },
+        {
+          "name": "audio-settings",
+          "value": "{\"state\":{\"volume\":0.8,\"isMuted\":false,\"isInitialized\":true},\"version\":0}"
+        }
+      ]
+    }
+  ]
+}

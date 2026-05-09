@@ -260,7 +260,9 @@ export function useTTS(): UseTTSReturn {
         const audio = new Audio(audioUrl);
         httpAudioRef.current = audio;
 
-        await audio.play();
+        audio.play().catch((e) => {
+          audio.onerror?.(new Event('playback-failed'));
+        });
         debugLog('HTTP TTS started successfully!');
 
         // Wait for audio to actually finish playing
@@ -455,7 +457,9 @@ export function useTTS(): UseTTSReturn {
                 if (audioQueueRef.current.length > 0) {
                   const next = audioQueueRef.current.shift()!;
                   currentAudioRef.current = next;
-                  next.element.play().catch((e) => console.error('Play error', e));
+                  next.element.play().catch((e) => {
+                    next.element.onerror?.(new Event('playback-failed'));
+                  });
                 } else if (streamEndedRef.current) {
                   // No more queued and stream ended, set speaking complete and resolve
                   setIsSpeaking(false);
@@ -484,7 +488,9 @@ export function useTTS(): UseTTSReturn {
 
               if (!currentAudioRef.current) {
                 currentAudioRef.current = queueItem;
-                audio.play().catch((e) => console.error('Failed to play chunk', e));
+                audio.play().catch((e) => {
+                  audio.onerror?.(new Event('playback-failed'));
+                });
               } else {
                 audioQueueRef.current.push(queueItem);
               }

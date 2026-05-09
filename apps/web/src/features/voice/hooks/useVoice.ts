@@ -43,6 +43,8 @@ export interface UseVoiceReturn {
   isSpeechSupported: boolean;
   isRecognitionSupported: boolean;
   getCurrentAudioElement: () => HTMLAudioElement | null;
+  /** Signals that the audio element is available for sync. */
+  audioElementReady: boolean;
 }
 
 // Debug logging
@@ -61,6 +63,8 @@ export function useVoice(): UseVoiceReturn {
   const [confidence, setConfidence] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+  /** Signals that the audio element is available for sync hooks. Triggers re-render. */
+  const [audioElementReady, setAudioElementReady] = useState(false);
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
 
@@ -72,6 +76,7 @@ export function useVoice(): UseVoiceReturn {
   const httpAudioRef = useRef<HTMLAudioElement | null>(null);
   const httpAudioUrlRef = useRef<string | null>(null);
   const streamEndedRef = useRef(false);
+  const audioReadyFiredRef = useRef(false);
 
   // Check browser support
   const isSpeechSupported = typeof window !== 'undefined' && 'speechSynthesis' in window;
@@ -247,6 +252,13 @@ export function useVoice(): UseVoiceReturn {
 
     setIsSpeaking(false);
     setError(null);
+    console.log(
+      '[KARAOKE-DEBUG] useVoice: stopSpeaking called',
+      JSON.stringify({ action: 'reset', timestamp: Date.now() }),
+    );
+    setAudioElementReady(false);
+    // Reset the audio ready flag to allow re-firing on restart
+    audioReadyFiredRef.current = false;
   }, [isSpeechSupported, setIsSpeaking, setError]);
 
   const speakHTTP = useCallback(
@@ -293,6 +305,7 @@ export function useVoice(): UseVoiceReturn {
 
         await audio.play();
         debugLog('HTTP TTS started successfully!');
+        notifyAudioReady();
 
         // Wait for audio to actually finish playing
         return new Promise<boolean>((resolve) => {
@@ -436,7 +449,9 @@ export function useVoice(): UseVoiceReturn {
             currentAudioRef.current.element.pause();
             URL.revokeObjectURL(currentAudioRef.current.url);
           } catch (e) {}
-          currentAudioRef.current = null;
+          // NOTE: Do NOT set currentAudioRef.current to null here.
+          // This cleanup happens too early and causes race conditions with useTextSync.
+          // The reference will be cleared in stopSpeaking() when appropriate.
         }
       };
 
@@ -477,20 +492,19 @@ export function useVoice(): UseVoiceReturn {
 
               audio.onended = () => {
                 URL.revokeObjectURL(audioUrl);
-                // If this was the current audio, clear it and play next
-                if (currentAudioRef.current && currentAudioRef.current.url === audioUrl) {
-                  currentAudioRef.current = null;
-                }
-                // If queue has items, play next
+                // If another chunk is queued, set it as current and play it
                 if (audioQueueRef.current.length > 0) {
                   const next = audioQueueRef.current.shift()!;
                   currentAudioRef.current = next;
                   next.element.play().catch((e) => console.error('Play error', e));
                 } else if (streamEndedRef.current) {
-                  // No more queued and stream ended, resolve
+                  // Final chunk finished - clear ref and resolve
+                  currentAudioRef.current = null;
                   cleanupStreamingResources();
                   resolve();
                 }
+                // Otherwise: chunk ended but queue not empty yet (shouldn't happen normally)
+                // Keep currentAudioRef pointing to this finished chunk until queue delivers next
               };
 
               audio.onerror = (e) => {
@@ -512,6 +526,7 @@ export function useVoice(): UseVoiceReturn {
               if (!currentAudioRef.current) {
                 currentAudioRef.current = queueItem;
                 audio.play().catch((e) => console.error('Failed to play chunk', e));
+                notifyAudioReady();
               } else {
                 audioQueueRef.current.push(queueItem);
               }
@@ -755,15 +770,24 @@ export function useVoice(): UseVoiceReturn {
   }, []);
 
   const getCurrentAudioElement = useCallback((): HTMLAudioElement | null => {
-    // Return the currently playing audio element
-    // Priority: streaming (currentAudioRef) > HTTP (httpAudioRef)
-    if (currentAudioRef.current) {
-      return currentAudioRef.current.element;
+    const element = currentAudioRef.current?.element || httpAudioRef.current || null;
+    return element;
+  }, []);
+
+  // Notify consumers when the audio element becomes available
+  const notifyAudioReady = useCallback(() => {
+    console.log(
+      '[KARAOKE-DEBUG] useVoice: audioElementReady State',
+      JSON.stringify({
+        action: 'notify',
+        alreadyFired: audioReadyFiredRef.current,
+        timestamp: Date.now(),
+      }),
+    );
+    if (!audioReadyFiredRef.current) {
+      audioReadyFiredRef.current = true;
+      setAudioElementReady(true);
     }
-    if (httpAudioRef.current) {
-      return httpAudioRef.current;
-    }
-    return null;
   }, []);
 
   return {
@@ -782,6 +806,7 @@ export function useVoice(): UseVoiceReturn {
     isSpeechSupported,
     isRecognitionSupported,
     getCurrentAudioElement,
+    audioElementReady,
   };
 }
 

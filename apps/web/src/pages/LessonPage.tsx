@@ -67,17 +67,41 @@ export function LessonPage() {
     lessonId || null,
     orchestrator.startClass,
   );
+  const { audioElementReady } = orchestrator;
 
   const handleRestart = async () => {
-    await orchestrator.reset();
+    console.log(
+      '[KARAOKE-DEBUG] LessonPage: Restart Button Clicked',
+      JSON.stringify({
+        timestamp: Date.now(),
+      }),
+    );
+    await orchestrator.reset(() => textSync.reset());
     resetStarted();
   };
 
   const textSync = useTextSync({
-    fullText: orchestrator.fullVoiceText,
+    text: orchestrator.fullVoiceText,
     audioElementGetter: orchestrator.getCurrentAudioElement,
-    playbackRate: voiceSettings.speakingRate,
+    isSpeaking: isSpeaking,
+    audioElementReady,
   });
+
+  console.log(
+    '[KARAOKE-DEBUG] LessonPage -> useTextSync props:',
+    JSON.stringify({
+      isSpeaking,
+      textLength: orchestrator.fullVoiceText?.length,
+      isAttemptingSync: textSync.isAttemptingSync,
+    }),
+  );
+
+  // BUGFIX: Reset sync if text is empty
+  useEffect(() => {
+    if (!orchestrator.fullVoiceText && textSync.isAttemptingSync) {
+      textSync.reset();
+    }
+  }, [orchestrator.fullVoiceText, textSync.isAttemptingSync, textSync]);
 
   const prevQ = useRef<string>('');
 
@@ -93,10 +117,13 @@ export function LessonPage() {
   }, [orchestrator.questionText]);
 
   useEffect(() => {
-    if (isTransitioning && orchestrator.contentText) {
+    if (
+      isTransitioning &&
+      (orchestrator.contentText || orchestrator.uiState !== UI_STATES.CONCENTRATION)
+    ) {
       setIsTransitioning(false);
     }
-  }, [isTransitioning, orchestrator.contentText]);
+  }, [isTransitioning, orchestrator.contentText, orchestrator.uiState]);
 
   useEffect(() => {
     if (orchestrator.feedbackData) {
@@ -156,10 +183,7 @@ export function LessonPage() {
       case UI_STATES.CONCENTRATION:
         return (
           <ConcentrationPanel
-            fullVoiceText={orchestrator.fullVoiceText}
-            transitionText={orchestrator.transitionText}
-            contentText={orchestrator.contentText}
-            closureText={orchestrator.closureText}
+            words={textSync.words}
             currentWordIndex={textSync.currentWordIndex}
             isSynced={textSync.isSynced}
             isSpeaking={isSpeaking}
@@ -275,7 +299,7 @@ export function LessonPage() {
   }
 
   return (
-    <div className="h-[100dvh] bg-sky-50 font-sans text-slate-800 flex flex-col overflow-hidden relative">
+    <div className="min-h-screen bg-sky-50 font-sans text-slate-800 flex flex-col relative">
       <div className="absolute top-0 left-0 w-[40rem] h-[40rem] bg-sky-200 rounded-full blur-[100px] opacity-30 -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
       <div className="absolute bottom-0 right-0 w-[40rem] h-[40rem] bg-amber-200 rounded-full blur-[100px] opacity-20 translate-x-1/2 translate-y-1/2 pointer-events-none" />
 

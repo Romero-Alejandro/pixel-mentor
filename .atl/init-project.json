@@ -1,0 +1,31 @@
+{
+  "urls": {
+    "base_url": "http://localhost:5173",
+    "api_url": "http://localhost:3001",
+    "login_url": "/login",
+    "success_url": "/dashboard"
+  },
+  "ui_mapping": {
+    "username_selector": "Usuario o Correo",
+    "password_selector": "Contraseña secreta",
+    "submit_button_selector": "¡Entrar a la Academia!"
+  },
+  "api_mapping": {
+    "login_payload_keys": [
+      "identifier",
+      "password"
+    ]
+  },
+  "hydration": "localStorage",
+  "credentials": {
+    "admin_username": "env:ADMIN_USERNAME",
+    "admin_password": "env:ADMIN_PASSWORD",
+    "student_username": "env:TEST_STUDENT_USERNAME",
+    "student_password": "env:TEST_STUDENT_PASSWORD",
+    "teacher_username": "env:TEST_TEACHER_USERNAME",
+    "teacher_password": "env:TEST_TEACHER_PASSWORD"
+  },
+  "test_entities": {
+      "lesson_id": "env:TEST_ID_LESSON"
+  }
+}

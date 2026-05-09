@@ -15,7 +15,16 @@ function mapPrismaToClassLessonEntity(prismaLesson: {
   order: number;
   createdAt: Date;
   updatedAt: Date;
-  recipe?: { id: string; title: string; expectedDurationMinutes: number | null } | null;
+  recipe?: {
+    id: string;
+    title: string;
+    expectedDurationMinutes: number | null;
+    steps?: Array<{
+      id: string;
+      order: number;
+      script?: unknown;
+    }>;
+  } | null;
 }): ClassLessonEntity {
   return {
     id: prismaLesson.id,
@@ -25,7 +34,15 @@ function mapPrismaToClassLessonEntity(prismaLesson: {
     order: prismaLesson.order,
     createdAt: prismaLesson.createdAt,
     updatedAt: prismaLesson.updatedAt,
-    recipe: prismaLesson.recipe ?? undefined,
+    recipe: prismaLesson.recipe
+      ? {
+          ...prismaLesson.recipe,
+          steps: prismaLesson.recipe.steps?.map((s) => ({
+            ...s,
+            script: s.script as Record<string, unknown> | undefined,
+          })),
+        }
+      : undefined,
   };
 }
 
@@ -34,7 +51,16 @@ export class PrismaClassLessonRepository implements IClassLessonRepository {
     const lessons = await prisma.classLesson.findMany({
       where: { classId },
       orderBy: { order: 'asc' },
-      include: { recipe: { select: { id: true, title: true, expectedDurationMinutes: true } } },
+      include: {
+        recipe: {
+          select: {
+            id: true,
+            title: true,
+            expectedDurationMinutes: true,
+            steps: { select: { id: true, order: true, script: true } },
+          },
+        },
+      },
     });
     return lessons.map(mapPrismaToClassLessonEntity);
   }
@@ -42,7 +68,16 @@ export class PrismaClassLessonRepository implements IClassLessonRepository {
   async findById(id: string): Promise<ClassLessonEntity | null> {
     const lesson = await prisma.classLesson.findUnique({
       where: { id },
-      include: { recipe: { select: { id: true, title: true, expectedDurationMinutes: true } } },
+      include: {
+        recipe: {
+          select: {
+            id: true,
+            title: true,
+            expectedDurationMinutes: true,
+            steps: { select: { id: true, order: true, script: true } },
+          },
+        },
+      },
     });
     return lesson ? mapPrismaToClassLessonEntity(lesson) : null;
   }
@@ -66,7 +101,16 @@ export class PrismaClassLessonRepository implements IClassLessonRepository {
   async findByRecipeId(recipeId: string): Promise<ClassLessonEntity[]> {
     const lessons = await prisma.classLesson.findMany({
       where: { recipeId },
-      include: { recipe: { select: { id: true, title: true, expectedDurationMinutes: true } } },
+      include: {
+        recipe: {
+          select: {
+            id: true,
+            title: true,
+            expectedDurationMinutes: true,
+            steps: { select: { id: true, order: true, script: true } },
+          },
+        },
+      },
     });
     return lessons.map(mapPrismaToClassLessonEntity);
   }
@@ -78,7 +122,16 @@ export class PrismaClassLessonRepository implements IClassLessonRepository {
           tutorId: userId,
         },
       },
-      include: { recipe: { select: { id: true, title: true, expectedDurationMinutes: true } } },
+      include: {
+        recipe: {
+          select: {
+            id: true,
+            title: true,
+            expectedDurationMinutes: true,
+            steps: { select: { id: true, order: true, script: true } },
+          },
+        },
+      },
     });
     return lessons.map(mapPrismaToClassLessonEntity);
   }

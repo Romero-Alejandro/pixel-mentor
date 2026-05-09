@@ -20,6 +20,9 @@ apiClient.interceptors.response.use(
       localStorage.removeItem('token');
       window.dispatchEvent(new CustomEvent('auth:logout'));
     }
+    if (error.response?.data?.error) {
+      error.message = error.response.data.error;
+    }
     return Promise.reject(error);
   },
 );

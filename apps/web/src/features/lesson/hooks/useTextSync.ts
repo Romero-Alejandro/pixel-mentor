@@ -1,16 +1,15 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 
 export interface UseTextSyncOptions {
-  fullText: string;
+  text: string;
   audioElementGetter?: () => HTMLAudioElement | null;
-  playbackRate?: number;
-  wordsPerSecond?: number;
   /** When audio starts speaking, this should change to trigger re-sync */
   isSpeaking?: boolean;
+  /** Block sync attempts until the audio element is confirmed ready. */
+  audioElementReady?: boolean;
 }
 
 interface SyncState {
-  visibleText: string;
   currentWordIndex: number;
   progress: number;
   isSynced: boolean;
@@ -20,31 +19,68 @@ interface SyncState {
   isAttemptingSync: boolean;
 }
 
-const DEFAULT_WPS = 2.3; // ~138 wpm average speech rate
-const SYNC_RECOVERY_THRESHOLD = 3; // Max consecutive same-index updates before forcing resync
-const MAX_AUDIO_DURATION = 300; // 5 minutes cap
+const MAX_AUDIO_DURATION = 300;
+
+/**
+ * Calculates the current word index based on audio playback time using a
+ * heuristic that accounts for variable word durations (longer words take more time).
+ *
+ * @param currentTime - Current audio playback time in seconds
+ * @param audioDuration - Total audio duration in seconds
+ * @param words - Array of words to synchronize with
+ * @returns The index of the word currently being spoken
+ */
+function calculateWordIndexByTime(
+  currentTime: number,
+  audioDuration: number,
+  words: string[],
+): number {
+  if (words.length === 0 || audioDuration <= 0) return 0;
+
+  // Calculate total character count (excluding spaces) for weighted timing
+  const totalChars = words.reduce((sum, word) => sum + word.length, 0);
+  if (totalChars === 0) {
+    // Fallback to linear if no characters
+    const timePerWord = audioDuration / words.length;
+    return Math.min(Math.floor(currentTime / timePerWord), words.length - 1);
+  }
+
+  // Calculate average time per character
+  const timePerChar = audioDuration / totalChars;
+
+  // Find the word being spoken by accumulating word durations
+  let accumulatedTime = 0;
+  for (let i = 0; i < words.length; i++) {
+    const wordDuration = words[i].length * timePerChar;
+    if (currentTime < accumulatedTime + wordDuration) {
+      return i;
+    }
+    accumulatedTime += wordDuration;
+  }
+
+  // If past all words, return the last word index
+  return words.length - 1;
+}
 
 /**
  * Custom hook for synchronizing text highlighting with audio playback.
- * Provides real-time word index tracking, automatic sync recovery, and graceful fallback.
+ * Uses timeupdate event as single source of truth for state updates.
  */
 export function useTextSync({
-  fullText,
+  text,
   audioElementGetter,
-  playbackRate = 1.0,
-  wordsPerSecond = DEFAULT_WPS,
   isSpeaking,
+  audioElementReady = true,
 }: UseTextSyncOptions): {
-  visibleText: string;
   currentWordIndex: number;
   progress: number;
   isSynced: boolean;
   syncError: boolean;
   isAttemptingSync: boolean;
+  words: string[];
   reset: () => void;
 } {
   const [state, setState] = useState<SyncState>({
-    visibleText: '',
     currentWordIndex: 0,
     progress: 0,
     isSynced: false,
@@ -52,284 +88,292 @@ export function useTextSync({
     isAttemptingSync: false,
   });
 
-  const wordsRef = useRef<string[]>([]);
-  const fullTextRef = useRef<string>('');
+  const words = useMemo(() => {
+    if (!text.trim()) return [];
+    // Always split by words for karaoke highlighting
+    return text.trim().split(/\s+/);
+  }, [text]);
+  const totalWordCount = words.length;
+
+  const audioElementRef = useRef<HTMLAudioElement | null>(null);
   const prevSpeakingRef = useRef<boolean | undefined>(undefined);
   const isListeningRef = useRef(false);
-  const rafIdRef = useRef<number | null>(null);
-  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Store handler references so they can be removed during reset
+  type AudioEventHandler = (this: HTMLAudioElement, ev: Event) => void;
+  type ErrorEventHandler = (this: HTMLAudioElement, ev: ErrorEvent) => void;
+  const handleTimeUpdateRef = useRef<AudioEventHandler | null>(null);
+  const handleEndedRef = useRef<AudioEventHandler | null>(null);
+  const handleErrorRef = useRef<ErrorEventHandler | null>(null);
 
-  // Recovery tracking
-  const staleCountRef = useRef(0);
-  const lastAudioTimeRef = useRef(0);
-
-  // Memoize audio element reference to prevent getter instability
-  const audioElementRef = useRef<HTMLAudioElement | null>(null);
   const getAudioElement = useCallback(() => {
-    if (audioElementRef.current) {
-      return audioElementRef.current;
-    }
     if (audioElementGetter) {
+      // Always re-fetch the element from the getter to avoid stale references
       audioElementRef.current = audioElementGetter();
       return audioElementRef.current;
     }
     return null;
   }, [audioElementGetter]);
 
-  // Store words and fullText in refs - only update when fullText changes
   useEffect(() => {
-    wordsRef.current = fullText.trim() ? fullText.trim().split(/\s+/) : [];
-    fullTextRef.current = fullText;
-    // Reset audio reference when text changes (new audio loaded)
     audioElementRef.current = null;
-  }, [fullText]);
+  }, [text]);
 
-  // Sync effect - runs when text changes or when isSpeaking starts
+  // BUGFIX: This entire effect is replaced to be more robust against race conditions
+  // where the audio element is not immediately available when `isSpeaking` becomes true.
   useEffect(() => {
-    const wordCount = wordsRef.current.length;
-
-    // Don't proceed if no words
-    if (wordCount === 0) {
-      setState((prev) => ({
-        ...prev,
-        syncError: false,
-        isAttemptingSync: false,
-      }));
+    if (totalWordCount === 0) {
       return;
     }
 
-    // Reset state when isSpeaking transitions from false to true (new audio started)
-    const speakingJustStarted = isSpeaking && prevSpeakingRef.current === false;
+    const speakingJustStarted = isSpeaking && !prevSpeakingRef.current;
+    console.log('[KARAOKE-DEBUG] useTextSync: SyncTriggered', JSON.stringify({ isSpeaking }));
     if (speakingJustStarted) {
-      setState({
-        visibleText: '',
+      setState((prev) => ({
+        ...prev,
         currentWordIndex: 0,
         progress: 0,
         isSynced: false,
         syncError: false,
         isAttemptingSync: true,
-      });
-      // Reset recovery tracking
-      staleCountRef.current = 0;
-      lastAudioTimeRef.current = 0;
+      }));
     }
     prevSpeakingRef.current = isSpeaking;
 
-    /**
-     * Core sync function - tracks audio position and updates word index
-     */
-    const syncAudio = (): (() => void) | undefined => {
-      // Guard: Prevent concurrent sync loops
-      if (isListeningRef.current && !speakingJustStarted) {
-        return undefined;
+    if (!isSpeaking) {
+      if (isListeningRef.current) isListeningRef.current = false;
+      return;
+    }
+
+    // Guard: wait for audio element to be ready on initial sync attempt only.
+    // Once sync has started (isListeningRef.current = true), keep trying even if
+    // audioElementReady flips later (handles the case where audio becomes available
+    // while the effect is already running).
+    if (speakingJustStarted && !audioElementReady) {
+      console.log('[KARAOKE-DEBUG] useTextSync: waiting for audioElementReady');
+      return;
+    }
+
+    const audio = getAudioElement();
+    if (!audio) {
+      // Audio element isn't ready. The effect will re-run on the next render.
+      // The `isAttemptingSync` state remains true, showing the user a loading state.
+      console.log(
+        '[KARAOKE-DEBUG] useTextSync: AudioElementCheck',
+        JSON.stringify({ isAudioNull: true }),
+      );
+      return;
+    }
+
+    console.log(
+      '[KARAOKE-DEBUG] useTextSync: AudioElementCheck',
+      JSON.stringify({ isAudioNull: false }),
+    );
+
+    if (isListeningRef.current) {
+      return;
+    }
+
+    const handleTimeUpdate = (): void => {
+      const currentAudio = getAudioElement();
+      if (!currentAudio) return;
+
+      const audioDuration = currentAudio.duration;
+
+      // BUGFIX: Check for NaN duration
+      if (isNaN(audioDuration) || !audioDuration || audioDuration <= 0.1) {
+        setState((prev) => ({ ...prev, isAttemptingSync: false }));
+        console.error('[useTextSync] Invalid audio duration:', audioDuration);
+        return;
       }
 
+      const stableDuration =
+        audioDuration &&
+        audioDuration > 0.1 &&
+        !isNaN(audioDuration) &&
+        audioDuration < MAX_AUDIO_DURATION;
+
+      if (!stableDuration || totalWordCount === 0) return;
+
+      // Use word-length-based heuristic for more accurate highlighting
+      const estimatedIndex = calculateWordIndexByTime(
+        currentAudio.currentTime,
+        audioDuration,
+        words,
+      );
+
+      setState((prev) => {
+        const nowSynced = prev.isSynced || (prev.isAttemptingSync && estimatedIndex >= 0);
+        return {
+          currentWordIndex: estimatedIndex,
+          progress: estimatedIndex / (totalWordCount || 1),
+          isSynced: nowSynced,
+          syncError: false,
+          isAttemptingSync: prev.isAttemptingSync ? !nowSynced : false,
+        };
+      });
+    };
+
+    const handleError = (): void => {
+      isListeningRef.current = false;
+      setState((prev) => ({ ...prev, syncError: true, isAttemptingSync: false }));
+    };
+
+    const handleEnded = (): void => {
+      isListeningRef.current = false;
+      setState({
+        currentWordIndex: totalWordCount,
+        progress: 1,
+        isSynced: true,
+        syncError: false,
+        isAttemptingSync: false,
+      });
+    };
+
+    isListeningRef.current = true;
+    handleTimeUpdateRef.current = handleTimeUpdate;
+    handleEndedRef.current = handleEnded;
+    handleErrorRef.current = handleError;
+    console.log(
+      '[KARAOKE-DEBUG] useTextSync: Event Listener Action',
+      JSON.stringify({
+        action: 'attach',
+        audioElement: !!audio,
+        timeupdate: true,
+        error: true,
+        ended: true,
+        timestamp: Date.now(),
+      }),
+    );
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    audio.addEventListener('error', handleError);
+    audio.addEventListener('ended', handleEnded);
+
+    return () => {
+      console.log(
+        '[KARAOKE-DEBUG] useTextSync: Event Listener Action',
+        JSON.stringify({
+          action: 'detach',
+          audioElement: !!audio,
+          timestamp: Date.now(),
+        }),
+      );
+      isListeningRef.current = false;
+      handleTimeUpdateRef.current = null;
+      handleEndedRef.current = null;
+      handleErrorRef.current = null;
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+      audio.removeEventListener('error', handleError);
+      audio.removeEventListener('ended', handleEnded);
+    };
+  }, [isSpeaking, totalWordCount, getAudioElement, text, audioElementReady]);
+
+  // Retry attach: if isAttemptingSync is true but we couldn't attach listeners
+  // (because audioElementReady was false at the time), re-attach once it becomes ready.
+  useEffect(() => {
+    if (state.isAttemptingSync && !state.isSynced && audioElementReady) {
       const audio = getAudioElement();
-      if (!audio) {
-        return undefined;
-      }
-
-      if (wordCount === 0) {
-        return undefined;
-      }
-
-      isListeningRef.current = true;
-
-      // Determine words-per-second based on audio duration
-      let wps: number;
-      if (
-        audio.duration &&
-        audio.duration > 0 &&
-        !isNaN(audio.duration) &&
-        audio.duration < MAX_AUDIO_DURATION
-      ) {
-        // Use actual audio duration for accurate timing
-        wps = wordCount / audio.duration;
-      } else {
-        // Fallback: use estimated speech rate, adjusted for playback rate
-        wps = (wordsPerSecond || DEFAULT_WPS) / playbackRate;
-      }
-
-      /**
-       * Main sync loop using requestAnimationFrame for smooth updates
-       */
-      const loop = (): void => {
-        const currentAudio = getAudioElement();
-
-        // Guard: audio element may have changed
-        if (!currentAudio) {
-          isListeningRef.current = false;
-          return;
-        }
-
-        // Check if we should stop the loop
-        if (currentAudio.paused) {
-          return;
-        }
-
-        // If audio has ended, mark as complete
-        if (currentAudio.ended) {
-          if (rafIdRef.current !== null) {
-            cancelAnimationFrame(rafIdRef.current);
-            rafIdRef.current = null;
+      if (audio && !isListeningRef.current) {
+        const handleTimeUpdate = (): void => {
+          const currentAudio = getAudioElement();
+          if (!currentAudio) return;
+          const audioDuration = currentAudio.duration;
+          if (isNaN(audioDuration) || !audioDuration || audioDuration <= 0.1) {
+            setState((prev) => ({ ...prev, isAttemptingSync: false }));
+            return;
           }
+          const stableDuration =
+            audioDuration > 0.1 && !isNaN(audioDuration) && audioDuration < MAX_AUDIO_DURATION;
+          if (!stableDuration || totalWordCount === 0) return;
+          // Use word-length-based heuristic for more accurate highlighting
+          const estimatedIndex = calculateWordIndexByTime(
+            currentAudio.currentTime,
+            audioDuration,
+            words,
+          );
+          setState((prev) => {
+            const nowSynced = prev.isSynced || (prev.isAttemptingSync && estimatedIndex >= 0);
+            return {
+              currentWordIndex: estimatedIndex,
+              progress: estimatedIndex / (totalWordCount || 1),
+              isSynced: nowSynced,
+              syncError: false,
+              isAttemptingSync: prev.isAttemptingSync ? !nowSynced : false,
+            };
+          });
+        };
+
+        const handleError = (): void => {
+          isListeningRef.current = false;
+          setState((prev) => ({ ...prev, syncError: true, isAttemptingSync: false }));
+        };
+
+        const handleEnded = (): void => {
+          isListeningRef.current = false;
           setState({
-            visibleText: fullTextRef.current,
-            currentWordIndex: wordCount,
+            currentWordIndex: totalWordCount,
             progress: 1,
             isSynced: true,
             syncError: false,
             isAttemptingSync: false,
           });
-          isListeningRef.current = false;
-          return;
-        }
+        };
 
-        // Guard against unreasonable currentTime values
-        const safeCurrentTime = Math.min(currentAudio.currentTime, MAX_AUDIO_DURATION);
-
-        // Calculate current word index based on elapsed time
-        const estimatedIndex = Math.min(
-          Math.floor(safeCurrentTime * wps * playbackRate),
-          wordCount,
+        isListeningRef.current = true;
+        handleTimeUpdateRef.current = handleTimeUpdate;
+        handleEndedRef.current = handleEnded;
+        handleErrorRef.current = handleError;
+        console.log(
+          '[KARAOKE-DEBUG] useTextSync: Event Listener Action',
+          JSON.stringify({ action: 'retry_attach', audioElement: !!audio, timestamp: Date.now() }),
         );
-
-        // Detect sync issues: check if audio time isn't advancing
-        // audioTimeDelta near 0 with small safeCurrentTime indicates stalled audio
-        const audioTimeDelta = Math.abs(safeCurrentTime - lastAudioTimeRef.current);
-        lastAudioTimeRef.current = safeCurrentTime;
-
-        // If audio is advancing slowly (delta < 0.1s over 2 frames), consider it stalled
-        const isAudioStalled =
-          audioTimeDelta < 0.1 &&
-          safeCurrentTime > 0 &&
-          safeCurrentTime < currentAudio.duration - 1;
-
-        // Guard against jumping to end unexpectedly
-        const isAudioNearEnd =
-          currentAudio.duration &&
-          !isNaN(currentAudio.duration) &&
-          currentAudio.currentTime > currentAudio.duration - 0.5;
-
-        setState((prev) => {
-          let newIndex = estimatedIndex;
-          let newSyncError = prev.syncError;
-
-          // Recovery: if estimated index jumped to end but audio hasn't ended,
-          // OR if audio is stalled (not advancing), cap progress and trigger recovery flag
-          if (
-            (estimatedIndex >= wordCount && !isAudioNearEnd && !currentAudio.ended) ||
-            isAudioStalled
-          ) {
-            newIndex = Math.min(prev.currentWordIndex + 1, wordCount);
-            staleCountRef.current += 1;
-
-            // After threshold, flag sync error for recovery
-            if (staleCountRef.current >= SYNC_RECOVERY_THRESHOLD) {
-              newSyncError = true;
-            }
-          } else {
-            // Reset stale count when progress is normal
-            staleCountRef.current = 0;
-            newSyncError = false;
-          }
-
-          // Only update if index changed
-          if (newIndex !== prev.currentWordIndex) {
-            const isCompleted = newIndex >= wordCount;
-            return {
-              visibleText: isCompleted
-                ? fullTextRef.current
-                : wordsRef.current.slice(0, newIndex).join(' ') + '...',
-              currentWordIndex: newIndex,
-              progress: newIndex / (wordCount || 1),
-              isSynced: isCompleted,
-              syncError: newSyncError,
-              isAttemptingSync: !isCompleted,
-            };
-          }
-
-          return {
-            ...prev,
-            isAttemptingSync: prev.isSynced ? false : true,
-          };
-        });
-
-        rafIdRef.current = requestAnimationFrame(loop);
-      };
-
-      // Start the loop if audio is playing
-      if (!audio.paused && !audio.ended) {
-        rafIdRef.current = requestAnimationFrame(loop);
+        audio.addEventListener('timeupdate', handleTimeUpdate);
+        audio.addEventListener('error', handleError);
+        audio.addEventListener('ended', handleEnded);
       }
+    }
+  }, [audioElementReady, state.isAttemptingSync, state.isSynced, getAudioElement, totalWordCount]);
 
-      // Cleanup function
-      return () => {
-        isListeningRef.current = false;
-        if (rafIdRef.current !== null) {
-          cancelAnimationFrame(rafIdRef.current);
-          rafIdRef.current = null;
-        }
-      };
-    };
-
-    // Immediate sync attempt
-    const cleanupImmediate = syncAudio();
-
-    // Polling fallback: wait for audio to become available
-    let pollCount = 0;
-    const maxPolls = 60; // ~30 seconds max polling
-
-    pollIntervalRef.current = setInterval((): void => {
-      pollCount++;
-      const audio = getAudioElement();
-
-      // Attempt sync if audio exists and is playing
-      if (audio && !audio.paused && !audio.ended && pollCount < maxPolls) {
-        const cleanup = syncAudio();
-        if (cleanup) {
-          clearInterval(pollIntervalRef.current!);
-        }
-      }
-
-      // Timeout: mark as error after max polls
-      if (pollCount >= maxPolls) {
-        clearInterval(pollIntervalRef.current!);
-        setState((prev) => ({
-          ...prev,
-          syncError: true,
-          isAttemptingSync: false,
-        }));
-      }
-    }, 500);
-
-    return (): void => {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-      }
-      if (rafIdRef.current !== null) {
-        cancelAnimationFrame(rafIdRef.current);
-      }
-      isListeningRef.current = false;
-      if (cleanupImmediate) cleanupImmediate();
-    };
-  }, [fullText, getAudioElement, playbackRate, wordsPerSecond, isSpeaking]);
-
-  /**
-   * Reset sync state - called when replaying audio
-   */
-  const reset = useCallback(() => {
+  const reset = useCallback((): void => {
+    // Clean up event listeners on the audio element to prevent stale handlers
+    const audio = getAudioElement();
+    if (audio) {
+      console.log(
+        '[KARAOKE-DEBUG] useTextSync: Reset Function',
+        JSON.stringify({
+          action: 'cleanup_listeners',
+          audioExists: true,
+          hasTimeUpdate: !!handleTimeUpdateRef.current,
+          hasEnded: !!handleEndedRef.current,
+          hasError: !!handleErrorRef.current,
+          timestamp: Date.now(),
+        }),
+      );
+      const tUpdate = handleTimeUpdateRef.current;
+      const tEnded = handleEndedRef.current;
+      const tError = handleErrorRef.current;
+      if (tUpdate) audio.removeEventListener('timeupdate', tUpdate);
+      if (tEnded) audio.removeEventListener('ended', tEnded);
+      if (tError) audio.removeEventListener('error', tError);
+    } else {
+      console.log(
+        '[KARAOKE-DEBUG] useTextSync: Reset Function',
+        JSON.stringify({ action: 'cleanup_listeners', audioExists: false, timestamp: Date.now() }),
+      );
+    }
+    isListeningRef.current = false;
+    prevSpeakingRef.current = undefined;
     setState({
-      visibleText: '',
       currentWordIndex: 0,
       progress: 0,
       isSynced: false,
       syncError: false,
       isAttemptingSync: false,
     });
-    staleCountRef.current = 0;
-    lastAudioTimeRef.current = 0;
-  }, []);
+  }, [getAudioElement]);
 
-  return { ...state, reset };
+  return {
+    ...state,
+    words,
+    reset,
+  };
 }

@@ -36,7 +36,7 @@ export function LessonHeader({
   onReset,
 }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-30 h-20 w-full border-b-4 border-sky-100 bg-white/80 px-4 backdrop-blur-md">
+    <header className="top-0 z-30 h-20 w-full border-b-4 border-sky-100 bg-white/80 px-4 backdrop-blur-md">
       <div className="mx-auto flex h-full max-w-7xl items-center justify-between">
         <div className="flex flex-1 items-center">
           <Link
