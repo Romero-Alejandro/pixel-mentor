@@ -438,7 +438,7 @@ export function useClassOrchestrator() {
     },
     speakContent: () => contentRef.current && speak(contentRef.current, _voiceSettings),
     reset: async (onResetComplete?: () => void) => {
-      // Detener todos los streams de audio primero
+      // Step 1: Stop audio and reset voice state (includes audioElementReady)
       voiceStop();
       stopStream();
 
@@ -460,23 +460,23 @@ export function useClassOrchestrator() {
       // IMPORTANTE: Resetear el flag de interacción para permitir nuevas interacciones
       isInteractingRef.current = false;
 
-      // Resetear store y state
+      // Resetear estado local del orquestador
       sessionIdRef.current = null;
-      lessonState.resetState();
-      // Forzar uiState a 'idle' explícitamente para mostrar la vista inicial correcta
-      lessonState.setUIState('idle');
-      store.reset();
-
-      // Limpiar el estado local del orquestador que no está en el store
       setTransitionText('');
       setClosureText('');
       setFullVoiceText('');
       contentRef.current = '';
 
-      // Execute callback for additional cleanup (e.g., textSync reset)
+      // Step 2: Clean up text sync listeners (e.g., remove event handlers from audio element)
       if (onResetComplete) {
         onResetComplete();
       }
+
+      // Step 3: Reset global state
+      lessonState.resetState();
+      // Forzar uiState a 'idle' explícitamente para mostrar la vista inicial correcta
+      lessonState.setUIState('idle');
+      store.reset();
     },
     stopSpeaking: voiceStop,
     getCurrentAudioElement: getAudio,

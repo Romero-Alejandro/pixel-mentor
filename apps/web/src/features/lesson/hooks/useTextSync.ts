@@ -57,6 +57,12 @@ export function useTextSync({
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
   const prevSpeakingRef = useRef<boolean | undefined>(undefined);
   const isListeningRef = useRef(false);
+  // Store handler references so they can be removed during reset
+  type AudioEventHandler = (this: HTMLAudioElement, ev: Event) => void;
+  type ErrorEventHandler = (this: HTMLAudioElement, ev: ErrorEvent) => void;
+  const handleTimeUpdateRef = useRef<AudioEventHandler | null>(null);
+  const handleEndedRef = useRef<AudioEventHandler | null>(null);
+  const handleErrorRef = useRef<ErrorEventHandler | null>(null);
 
   const getAudioElement = useCallback(() => {
     if (audioElementGetter) {
@@ -182,12 +188,18 @@ export function useTextSync({
     };
 
     isListeningRef.current = true;
+    handleTimeUpdateRef.current = handleTimeUpdate;
+    handleEndedRef.current = handleEnded;
+    handleErrorRef.current = handleError;
     audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('error', handleError);
     audio.addEventListener('ended', handleEnded);
 
     return () => {
       isListeningRef.current = false;
+      handleTimeUpdateRef.current = null;
+      handleEndedRef.current = null;
+      handleErrorRef.current = null;
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('error', handleError);
       audio.removeEventListener('ended', handleEnded);
@@ -195,6 +207,16 @@ export function useTextSync({
   }, [isSpeaking, totalWordCount, getAudioElement, text, audioElementReady]);
 
   const reset = useCallback((): void => {
+    // Clean up event listeners on the audio element to prevent stale handlers
+    const audio = getAudioElement();
+    if (audio) {
+      const tUpdate = handleTimeUpdateRef.current;
+      const tEnded = handleEndedRef.current;
+      const tError = handleErrorRef.current;
+      if (tUpdate) audio.removeEventListener('timeupdate', tUpdate);
+      if (tEnded) audio.removeEventListener('ended', tEnded);
+      if (tError) audio.removeEventListener('error', tError);
+    }
     // Clean up internal refs
     isListeningRef.current = false;
     prevSpeakingRef.current = undefined;
@@ -206,7 +228,7 @@ export function useTextSync({
       syncError: false,
       isAttemptingSync: false,
     });
-  }, []);
+  }, [getAudioElement]);
 
   return {
     ...state,
