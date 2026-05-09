@@ -121,7 +121,8 @@ describe('useTextSync', () => {
 
       // Stable getter: simulates the real scenario where audioElementReady gates sync.
       // With audioElementReady=true, the guard passes and sync starts.
-      const getAudioElement = (): HTMLAudioElement | null => mockAudio as unknown as HTMLAudioElement;
+      const getAudioElement = (): HTMLAudioElement | null =>
+        mockAudio as unknown as HTMLAudioElement;
 
       const { result } = renderHook(
         ({

@@ -70,7 +70,7 @@ export function LessonPage() {
   const { audioElementReady } = orchestrator;
 
   const handleRestart = async () => {
-    await orchestrator.reset();
+    await orchestrator.reset(() => textSync.reset());
     resetStarted();
   };
 
