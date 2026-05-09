@@ -466,7 +466,9 @@ export function useClassOrchestrator() {
         waitedMs += 100;
       }
       if (!audioElementReady) {
-        console.warn('[KARAOKE-DEBUG] useClassOrchestrator: audioElementReady timeout, proceeding anyway');
+        console.warn(
+          '[KARAOKE-DEBUG] useClassOrchestrator: audioElementReady timeout, proceeding anyway',
+        );
       }
 
       // Llamar al backend para reiniciar la sesión

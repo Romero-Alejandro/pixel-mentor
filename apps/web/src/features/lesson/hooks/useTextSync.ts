@@ -22,6 +22,47 @@ interface SyncState {
 const MAX_AUDIO_DURATION = 300;
 
 /**
+ * Calculates the current word index based on audio playback time using a
+ * heuristic that accounts for variable word durations (longer words take more time).
+ *
+ * @param currentTime - Current audio playback time in seconds
+ * @param audioDuration - Total audio duration in seconds
+ * @param words - Array of words to synchronize with
+ * @returns The index of the word currently being spoken
+ */
+function calculateWordIndexByTime(
+  currentTime: number,
+  audioDuration: number,
+  words: string[],
+): number {
+  if (words.length === 0 || audioDuration <= 0) return 0;
+
+  // Calculate total character count (excluding spaces) for weighted timing
+  const totalChars = words.reduce((sum, word) => sum + word.length, 0);
+  if (totalChars === 0) {
+    // Fallback to linear if no characters
+    const timePerWord = audioDuration / words.length;
+    return Math.min(Math.floor(currentTime / timePerWord), words.length - 1);
+  }
+
+  // Calculate average time per character
+  const timePerChar = audioDuration / totalChars;
+
+  // Find the word being spoken by accumulating word durations
+  let accumulatedTime = 0;
+  for (let i = 0; i < words.length; i++) {
+    const wordDuration = words[i].length * timePerChar;
+    if (currentTime < accumulatedTime + wordDuration) {
+      return i;
+    }
+    accumulatedTime += wordDuration;
+  }
+
+  // If past all words, return the last word index
+  return words.length - 1;
+}
+
+/**
  * Custom hook for synchronizing text highlighting with audio playback.
  * Uses timeupdate event as single source of truth for state updates.
  */
@@ -153,10 +194,11 @@ export function useTextSync({
 
       if (!stableDuration || totalWordCount === 0) return;
 
-      const timePerSegment = audioDuration / totalWordCount;
-      const estimatedIndex = Math.min(
-        Math.round(currentAudio.currentTime / timePerSegment),
-        totalWordCount - 1,
+      // Use word-length-based heuristic for more accurate highlighting
+      const estimatedIndex = calculateWordIndexByTime(
+        currentAudio.currentTime,
+        audioDuration,
+        words,
       );
 
       setState((prev) => {
@@ -242,10 +284,11 @@ export function useTextSync({
           const stableDuration =
             audioDuration > 0.1 && !isNaN(audioDuration) && audioDuration < MAX_AUDIO_DURATION;
           if (!stableDuration || totalWordCount === 0) return;
-          const timePerSegment = audioDuration / totalWordCount;
-          const estimatedIndex = Math.min(
-            Math.round(currentAudio.currentTime / timePerSegment),
-            totalWordCount - 1,
+          // Use word-length-based heuristic for more accurate highlighting
+          const estimatedIndex = calculateWordIndexByTime(
+            currentAudio.currentTime,
+            audioDuration,
+            words,
           );
           setState((prev) => {
             const nowSynced = prev.isSynced || (prev.isAttemptingSync && estimatedIndex >= 0);

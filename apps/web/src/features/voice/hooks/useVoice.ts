@@ -257,6 +257,8 @@ export function useVoice(): UseVoiceReturn {
       JSON.stringify({ action: 'reset', timestamp: Date.now() }),
     );
     setAudioElementReady(false);
+    // Reset the audio ready flag to allow re-firing on restart
+    audioReadyFiredRef.current = false;
   }, [isSpeechSupported, setIsSpeaking, setError]);
 
   const speakHTTP = useCallback(
