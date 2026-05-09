@@ -294,7 +294,7 @@ export function useClassOrchestrator() {
 
       // --- 4. Estado Pregunta ---
       if (pedagogicalState === 'QUESTION') {
-        const { stepType, script } = resolvedStaticContent || {};
+        const { script } = resolvedStaticContent || {};
         const questionText = extractText(script?.question);
 
         // Always question panel for QUESTION pedagogical state (open-ended answers)
@@ -457,6 +457,17 @@ export function useClassOrchestrator() {
           timestamp: Date.now(),
         }),
       );
+
+      // Wait for audio to be ready before resetting text sync
+      let waitedMs = 0;
+      const timeout = 5000;
+      while (!audioElementReady && waitedMs < timeout) {
+        await new Promise((r) => setTimeout(r, 100));
+        waitedMs += 100;
+      }
+      if (!audioElementReady) {
+        console.warn('[KARAOKE-DEBUG] useClassOrchestrator: audioElementReady timeout, proceeding anyway');
+      }
 
       // Llamar al backend para reiniciar la sesión
       if (sessionIdRef.current) {

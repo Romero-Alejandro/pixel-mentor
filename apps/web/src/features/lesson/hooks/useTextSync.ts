@@ -225,6 +225,71 @@ export function useTextSync({
     };
   }, [isSpeaking, totalWordCount, getAudioElement, text, audioElementReady]);
 
+  // Retry attach: if isAttemptingSync is true but we couldn't attach listeners
+  // (because audioElementReady was false at the time), re-attach once it becomes ready.
+  useEffect(() => {
+    if (state.isAttemptingSync && !state.isSynced && audioElementReady) {
+      const audio = getAudioElement();
+      if (audio && !isListeningRef.current) {
+        const handleTimeUpdate = (): void => {
+          const currentAudio = getAudioElement();
+          if (!currentAudio) return;
+          const audioDuration = currentAudio.duration;
+          if (isNaN(audioDuration) || !audioDuration || audioDuration <= 0.1) {
+            setState((prev) => ({ ...prev, isAttemptingSync: false }));
+            return;
+          }
+          const stableDuration =
+            audioDuration > 0.1 && !isNaN(audioDuration) && audioDuration < MAX_AUDIO_DURATION;
+          if (!stableDuration || totalWordCount === 0) return;
+          const timePerSegment = audioDuration / totalWordCount;
+          const estimatedIndex = Math.min(
+            Math.round(currentAudio.currentTime / timePerSegment),
+            totalWordCount - 1,
+          );
+          setState((prev) => {
+            const nowSynced = prev.isSynced || (prev.isAttemptingSync && estimatedIndex >= 0);
+            return {
+              currentWordIndex: estimatedIndex,
+              progress: estimatedIndex / (totalWordCount || 1),
+              isSynced: nowSynced,
+              syncError: false,
+              isAttemptingSync: prev.isAttemptingSync ? !nowSynced : false,
+            };
+          });
+        };
+
+        const handleError = (): void => {
+          isListeningRef.current = false;
+          setState((prev) => ({ ...prev, syncError: true, isAttemptingSync: false }));
+        };
+
+        const handleEnded = (): void => {
+          isListeningRef.current = false;
+          setState({
+            currentWordIndex: totalWordCount,
+            progress: 1,
+            isSynced: true,
+            syncError: false,
+            isAttemptingSync: false,
+          });
+        };
+
+        isListeningRef.current = true;
+        handleTimeUpdateRef.current = handleTimeUpdate;
+        handleEndedRef.current = handleEnded;
+        handleErrorRef.current = handleError;
+        console.log(
+          '[KARAOKE-DEBUG] useTextSync: Event Listener Action',
+          JSON.stringify({ action: 'retry_attach', audioElement: !!audio, timestamp: Date.now() }),
+        );
+        audio.addEventListener('timeupdate', handleTimeUpdate);
+        audio.addEventListener('error', handleError);
+        audio.addEventListener('ended', handleEnded);
+      }
+    }
+  }, [audioElementReady, state.isAttemptingSync, state.isSynced, getAudioElement, totalWordCount]);
+
   const reset = useCallback((): void => {
     // Clean up event listeners on the audio element to prevent stale handlers
     const audio = getAudioElement();
@@ -249,17 +314,11 @@ export function useTextSync({
     } else {
       console.log(
         '[KARAOKE-DEBUG] useTextSync: Reset Function',
-        JSON.stringify({
-          action: 'cleanup_listeners',
-          audioExists: false,
-          timestamp: Date.now(),
-        }),
+        JSON.stringify({ action: 'cleanup_listeners', audioExists: false, timestamp: Date.now() }),
       );
     }
-    // Clean up internal refs
     isListeningRef.current = false;
     prevSpeakingRef.current = undefined;
-
     setState({
       currentWordIndex: 0,
       progress: 0,
