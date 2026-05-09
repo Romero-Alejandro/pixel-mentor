@@ -139,9 +139,22 @@ export const useLessonStore = create<LessonState>()(
       setStreamError: (error) => set({ streamError: error }),
       clearStream: () => set({ streamingChunks: [], isStreaming: false, streamError: null }),
       reset: () =>
-        set({
-          ...initialState,
-          config: get().config,
+        set((state) => {
+          console.debug(
+            '[KARAOKE-DEBUG] lesson.store: State Transition',
+            JSON.stringify({
+              action: 'reset',
+              isSpeaking: state.isSpeaking,
+              currentState: state.currentState,
+              contentText: state.contentText,
+              configPreserved: !!state.config,
+              timestamp: Date.now(),
+            }),
+          );
+          return {
+            ...initialState,
+            config: state.config,
+          };
         }),
     }),
     {

@@ -438,9 +438,25 @@ export function useClassOrchestrator() {
     },
     speakContent: () => contentRef.current && speak(contentRef.current, _voiceSettings),
     reset: async (onResetComplete?: () => void) => {
+      console.debug(
+        '[KARAOKE-DEBUG] useClassOrchestrator: Reset Flow',
+        JSON.stringify({
+          step: 'start',
+          sessionId: sessionIdRef.current,
+          timestamp: Date.now(),
+        }),
+      );
       // Step 1: Stop audio and reset voice state (includes audioElementReady)
       voiceStop();
       stopStream();
+
+      console.debug(
+        '[KARAOKE-DEBUG] useClassOrchestrator: Reset Flow',
+        JSON.stringify({
+          step: 'after voiceStop',
+          timestamp: Date.now(),
+        }),
+      );
 
       // Llamar al backend para reiniciar la sesión
       if (sessionIdRef.current) {
@@ -470,6 +486,13 @@ export function useClassOrchestrator() {
       // Step 2: Clean up text sync listeners (e.g., remove event handlers from audio element)
       if (onResetComplete) {
         onResetComplete();
+        console.debug(
+          '[KARAOKE-DEBUG] useClassOrchestrator: Reset Flow',
+          JSON.stringify({
+            step: 'after textSync.reset',
+            timestamp: Date.now(),
+          }),
+        );
       }
 
       // Step 3: Reset global state
@@ -477,6 +500,14 @@ export function useClassOrchestrator() {
       // Forzar uiState a 'idle' explícitamente para mostrar la vista inicial correcta
       lessonState.setUIState('idle');
       store.reset();
+
+      console.debug(
+        '[KARAOKE-DEBUG] useClassOrchestrator: Reset Flow',
+        JSON.stringify({
+          step: 'complete',
+          timestamp: Date.now(),
+        }),
+      );
     },
     stopSpeaking: voiceStop,
     getCurrentAudioElement: getAudio,

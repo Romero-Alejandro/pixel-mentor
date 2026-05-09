@@ -191,11 +191,30 @@ export function useTextSync({
     handleTimeUpdateRef.current = handleTimeUpdate;
     handleEndedRef.current = handleEnded;
     handleErrorRef.current = handleError;
+    console.debug(
+      '[KARAOKE-DEBUG] useTextSync: Event Listener Action',
+      JSON.stringify({
+        action: 'attach',
+        audioElement: !!audio,
+        timeupdate: true,
+        error: true,
+        ended: true,
+        timestamp: Date.now(),
+      }),
+    );
     audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('error', handleError);
     audio.addEventListener('ended', handleEnded);
 
     return () => {
+      console.debug(
+        '[KARAOKE-DEBUG] useTextSync: Event Listener Action',
+        JSON.stringify({
+          action: 'detach',
+          audioElement: !!audio,
+          timestamp: Date.now(),
+        }),
+      );
       isListeningRef.current = false;
       handleTimeUpdateRef.current = null;
       handleEndedRef.current = null;
@@ -210,12 +229,32 @@ export function useTextSync({
     // Clean up event listeners on the audio element to prevent stale handlers
     const audio = getAudioElement();
     if (audio) {
+      console.debug(
+        '[KARAOKE-DEBUG] useTextSync: Reset Function',
+        JSON.stringify({
+          action: 'cleanup_listeners',
+          audioExists: true,
+          hasTimeUpdate: !!handleTimeUpdateRef.current,
+          hasEnded: !!handleEndedRef.current,
+          hasError: !!handleErrorRef.current,
+          timestamp: Date.now(),
+        }),
+      );
       const tUpdate = handleTimeUpdateRef.current;
       const tEnded = handleEndedRef.current;
       const tError = handleErrorRef.current;
       if (tUpdate) audio.removeEventListener('timeupdate', tUpdate);
       if (tEnded) audio.removeEventListener('ended', tEnded);
       if (tError) audio.removeEventListener('error', tError);
+    } else {
+      console.debug(
+        '[KARAOKE-DEBUG] useTextSync: Reset Function',
+        JSON.stringify({
+          action: 'cleanup_listeners',
+          audioExists: false,
+          timestamp: Date.now(),
+        }),
+      );
     }
     // Clean up internal refs
     isListeningRef.current = false;

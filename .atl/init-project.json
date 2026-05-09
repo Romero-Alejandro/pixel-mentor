@@ -25,5 +25,7 @@
     "teacher_username": "env:TEST_TEACHER_USERNAME",
     "teacher_password": "env:TEST_TEACHER_PASSWORD"
   },
-  "test_entities": {}
+  "test_entities": {
+      "lesson_id": "env:TEST_ID_LESSON"
+  }
 }

@@ -70,6 +70,12 @@ export function LessonPage() {
   const { audioElementReady } = orchestrator;
 
   const handleRestart = async () => {
+    console.debug(
+      '[KARAOKE-DEBUG] LessonPage: Restart Button Clicked',
+      JSON.stringify({
+        timestamp: Date.now(),
+      }),
+    );
     await orchestrator.reset(() => textSync.reset());
     resetStarted();
   };
