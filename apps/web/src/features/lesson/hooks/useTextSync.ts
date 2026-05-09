@@ -25,7 +25,12 @@ const MAX_AUDIO_DURATION = 300;
  * Custom hook for synchronizing text highlighting with audio playback.
  * Uses timeupdate event as single source of truth for state updates.
  */
-export function useTextSync({ text, audioElementGetter, isSpeaking, audioElementReady = true }: UseTextSyncOptions): {
+export function useTextSync({
+  text,
+  audioElementGetter,
+  isSpeaking,
+  audioElementReady = true,
+}: UseTextSyncOptions): {
   currentWordIndex: number;
   progress: number;
   isSynced: boolean;
@@ -44,10 +49,8 @@ export function useTextSync({ text, audioElementGetter, isSpeaking, audioElement
 
   const words = useMemo(() => {
     if (!text.trim()) return [];
-    const sentences = text.trim().match(/[^.!?]+[.!?]*/g) || [];
-    // BUGFIX: Use > 1 to ensure it only uses sentences if there are multiple.
-    // This allows the fallback to word splitting to work for single sentences.
-    return sentences.length > 1 ? sentences : text.trim().split(/\s+/);
+    // Always split by words for karaoke highlighting
+    return text.trim().split(/\s+/);
   }, [text]);
   const totalWordCount = words.length;
 
@@ -107,11 +110,17 @@ export function useTextSync({ text, audioElementGetter, isSpeaking, audioElement
     if (!audio) {
       // Audio element isn't ready. The effect will re-run on the next render.
       // The `isAttemptingSync` state remains true, showing the user a loading state.
-      console.debug('[KARAOKE-DEBUG] useTextSync: AudioElementCheck', JSON.stringify({ isAudioNull: true }));
+      console.debug(
+        '[KARAOKE-DEBUG] useTextSync: AudioElementCheck',
+        JSON.stringify({ isAudioNull: true }),
+      );
       return;
     }
 
-    console.debug('[KARAOKE-DEBUG] useTextSync: AudioElementCheck', JSON.stringify({ isAudioNull: false }));
+    console.debug(
+      '[KARAOKE-DEBUG] useTextSync: AudioElementCheck',
+      JSON.stringify({ isAudioNull: false }),
+    );
 
     if (isListeningRef.current) {
       return;
@@ -185,7 +194,11 @@ export function useTextSync({ text, audioElementGetter, isSpeaking, audioElement
     };
   }, [isSpeaking, totalWordCount, getAudioElement, text, audioElementReady]);
 
-  const reset = useCallback(() => {
+  const reset = useCallback((): void => {
+    // Clean up internal refs
+    isListeningRef.current = false;
+    prevSpeakingRef.current = undefined;
+
     setState({
       currentWordIndex: 0,
       progress: 0,

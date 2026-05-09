@@ -437,7 +437,7 @@ export function useClassOrchestrator() {
       }
     },
     speakContent: () => contentRef.current && speak(contentRef.current, _voiceSettings),
-    reset: async () => {
+    reset: async (onResetComplete?: () => void) => {
       // Detener todos los streams de audio primero
       voiceStop();
       stopStream();
@@ -472,6 +472,11 @@ export function useClassOrchestrator() {
       setClosureText('');
       setFullVoiceText('');
       contentRef.current = '';
+
+      // Execute callback for additional cleanup (e.g., textSync reset)
+      if (onResetComplete) {
+        onResetComplete();
+      }
     },
     stopSpeaking: voiceStop,
     getCurrentAudioElement: getAudio,
