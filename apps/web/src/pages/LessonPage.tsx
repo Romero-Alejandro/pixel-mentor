@@ -70,7 +70,7 @@ export function LessonPage() {
   const { audioElementReady } = orchestrator;
 
   const handleRestart = async () => {
-    console.debug(
+    console.log(
       '[KARAOKE-DEBUG] LessonPage: Restart Button Clicked',
       JSON.stringify({
         timestamp: Date.now(),
@@ -87,7 +87,7 @@ export function LessonPage() {
     audioElementReady,
   });
 
-  console.debug(
+  console.log(
     '[KARAOKE-DEBUG] LessonPage -> useTextSync props:',
     JSON.stringify({
       isSpeaking,

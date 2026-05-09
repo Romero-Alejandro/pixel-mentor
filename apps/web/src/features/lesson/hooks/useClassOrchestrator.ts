@@ -335,7 +335,7 @@ export function useClassOrchestrator() {
 
         const combinedText = [transition, content, closure].filter(Boolean).join(' ');
         setFullVoiceText(combinedText);
-        console.debug(
+        console.log(
           '[KARAOKE-DEBUG] useClassOrchestrator: TextSet',
           JSON.stringify({
             text: combinedText,
@@ -350,7 +350,7 @@ export function useClassOrchestrator() {
         );
         lessonState.setUIState('concentration');
 
-        console.debug('[KARAOKE-DEBUG] useClassOrchestrator: SpeakCommandIssued');
+        console.log('[KARAOKE-DEBUG] useClassOrchestrator: SpeakCommandIssued');
         await speak(combinedText, _voiceSettings);
       } else {
         console.log(
@@ -438,7 +438,7 @@ export function useClassOrchestrator() {
     },
     speakContent: () => contentRef.current && speak(contentRef.current, _voiceSettings),
     reset: async (onResetComplete?: () => void) => {
-      console.debug(
+      console.log(
         '[KARAOKE-DEBUG] useClassOrchestrator: Reset Flow',
         JSON.stringify({
           step: 'start',
@@ -450,7 +450,7 @@ export function useClassOrchestrator() {
       voiceStop();
       stopStream();
 
-      console.debug(
+      console.log(
         '[KARAOKE-DEBUG] useClassOrchestrator: Reset Flow',
         JSON.stringify({
           step: 'after voiceStop',
@@ -486,7 +486,7 @@ export function useClassOrchestrator() {
       // Step 2: Clean up text sync listeners (e.g., remove event handlers from audio element)
       if (onResetComplete) {
         onResetComplete();
-        console.debug(
+        console.log(
           '[KARAOKE-DEBUG] useClassOrchestrator: Reset Flow',
           JSON.stringify({
             step: 'after textSync.reset',
@@ -501,7 +501,7 @@ export function useClassOrchestrator() {
       lessonState.setUIState('idle');
       store.reset();
 
-      console.debug(
+      console.log(
         '[KARAOKE-DEBUG] useClassOrchestrator: Reset Flow',
         JSON.stringify({
           step: 'complete',

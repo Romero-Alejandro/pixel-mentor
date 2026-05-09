@@ -115,7 +115,7 @@ export const useLessonStore = create<LessonState>()(
       setContentText: (text) => set({ contentText: text }),
       setIsListening: (listening) => set({ isListening: listening }),
       setIsSpeaking: (speaking) => {
-        console.debug(
+        console.log(
           '[KARAOKE-DEBUG] lesson.store: isSpeakingChanged',
           JSON.stringify({
             isSpeaking: speaking,
@@ -140,7 +140,7 @@ export const useLessonStore = create<LessonState>()(
       clearStream: () => set({ streamingChunks: [], isStreaming: false, streamError: null }),
       reset: () =>
         set((state) => {
-          console.debug(
+          console.log(
             '[KARAOKE-DEBUG] lesson.store: State Transition',
             JSON.stringify({
               action: 'reset',
