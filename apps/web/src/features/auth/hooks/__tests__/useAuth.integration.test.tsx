@@ -2,12 +2,12 @@
 
 /**
  * Auth Integration Tests - Bug de Redirección a /login
- * 
+ *
  * This test file validates the authentication flow including:
  * 1. Token refresh when access token expires
  * 2. Redirect to /login when refresh token is invalid
  * 3. No auth attempt when no token exists
- * 
+ *
  * PROBES INJECTED:
  * - Mock de authApi.getCurrentUser
  * - Mock de authApi.refreshToken
@@ -24,18 +24,18 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 // HOISTED MOCKS - Probes injected
 // ============================================
 
-const { 
-  mockGetCurrentUser, 
-  mockRefreshToken, 
-  mockLogin, 
-  mockRegister, 
+const {
+  mockGetCurrentUser,
+  mockRefreshToken,
+  mockLogin,
+  mockRegister,
   mockLogout,
   mockSetToken,
   mockGetToken,
   mockClearToken,
   mockSetRefreshToken,
   mockGetRefreshToken,
-  mockClearRefreshToken
+  mockClearRefreshToken,
 } = vi.hoisted(() => ({
   mockGetCurrentUser: vi.fn(),
   mockRefreshToken: vi.fn(),
@@ -141,7 +141,9 @@ beforeEach(() => {
 
 Object.defineProperty(window, 'location', {
   value: {
-    get href() { return mockLocationHref; },
+    get href() {
+      return mockLocationHref;
+    },
     assign: locationAssignMock,
   },
   writable: true,
@@ -180,7 +182,7 @@ describe('Auth Integration Tests - Bug de Redirección a /login', () => {
     localStorageStore['refreshToken'] = 'valid.refresh.token';
 
     const mockUser = { id: '1', email: 'test@test.com', name: 'Test', role: 'student' };
-    
+
     // PROBE CONFIGURATION:
     // - getCurrentUser fails with 401 on first call (expired token)
     // - refreshToken succeeds (returns new tokens)
@@ -201,10 +203,7 @@ describe('Auth Integration Tests - Bug de Redirección a /login', () => {
     const { result } = renderHook(() => useAuth(), { wrapper });
 
     // Wait for auth query to complete
-    await waitFor(
-      () => result.current.isLoading === false,
-      { timeout: 5000 }
-    );
+    await waitFor(() => result.current.isLoading === false, { timeout: 5000 });
 
     // VERIFICATION (PROBE OUTPUT):
     console.log('========== ESCENARIO 1 RESULTS ==========');
@@ -217,11 +216,11 @@ describe('Auth Integration Tests - Bug de Redirección a /login', () => {
     // ASSERTIONS:
     // getCurrentUser debe haber sido llamado
     expect(mockGetCurrentUser.mock.calls.length).toBeGreaterThan(0);
-    
+
     // NOTE: En el entorno de test, el interceptor de axios no se activa automáticamente
-    // Por lo que el refreshToken no se llama en el contexto del test. 
+    // Por lo que el refreshToken no se llama en el contexto del test.
     // El bug real o la solución solo puede verificarse en un test E2E real.
-    
+
     if (mockRefreshToken.mock.calls.length > 0) {
       // Si el refresh funciona (bug arreglado o integración real)
       expect(localStorageStore['token']).toBe('new.access.token');
@@ -257,10 +256,7 @@ describe('Auth Integration Tests - Bug de Redirección a /login', () => {
 
     const { result } = renderHook(() => useAuth(), { wrapper });
 
-    await waitFor(
-      () => result.current.isLoading === false,
-      { timeout: 5000 }
-    );
+    await waitFor(() => result.current.isLoading === false, { timeout: 5000 });
 
     console.log('========== ESCENARIO 2 RESULTS ==========');
     console.log('refreshToken called:', mockRefreshToken.mock.calls.length > 0);
@@ -293,11 +289,11 @@ describe('Auth Integration Tests - Bug de Redirección a /login', () => {
     // VERIFICATION:
     // - getCurrentUser NO debe ser llamado (query disabled)
     expect(mockGetCurrentUser).not.toHaveBeenCalled();
-    
+
     // - isAuthenticated debe ser false
     expect(result.current.isAuthenticated).toBe(false);
     expect(result.current.isLoading).toBe(false);
-    
+
     console.log('========== ESCENARIO 3 RESULTS ==========');
     console.log('getCurrentUser called: false (correct - query disabled)');
     console.log('isAuthenticated:', result.current.isAuthenticated);

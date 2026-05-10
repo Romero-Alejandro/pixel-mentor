@@ -114,6 +114,25 @@ export default function App() {
   const { isAuthenticated } = useAuth();
   useGamificationSSE(isAuthenticated);
 
+  // [EDD-TEMP] Register page unload/refresh telemetry
+  if (import.meta.env.DEV) {
+    const handleBeforeUnload = (_event: BeforeUnloadEvent) => {
+      const token = localStorage.getItem('token');
+      const refreshToken = localStorage.getItem('refreshToken');
+
+      console.debug(`[EDD] [${new Date().toISOString()}] [App]`, `PAGE UNLOAD/REFRESH`, {
+        isAuthenticated,
+        hasToken: !!token,
+        hasRefreshToken: !!refreshToken,
+        tokenStartsWith: token ? token.substring(0, 10) : null,
+        currentRoute: window.location.pathname,
+      });
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handleBeforeUnload);
+  }
+
   return (
     <ErrorBoundary>
       <Routes>

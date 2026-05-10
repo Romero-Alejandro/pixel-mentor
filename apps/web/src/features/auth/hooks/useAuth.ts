@@ -22,16 +22,71 @@ interface AuthResponse {
 export function useAuth() {
   const queryClient = useQueryClient();
 
+  // [EDD-TEMP] Log session recovery attempt
+  if (import.meta.env.DEV) {
+    const token = getToken();
+    const refreshToken = getRefreshToken();
+    console.debug(`[EDD] [${new Date().toISOString()}] [useAuth]`, `Session recovery attempt`, {
+      hasToken: !!token,
+      tokenStartsWith: token ? token.substring(0, 10) : null,
+      hasRefreshToken: !!refreshToken,
+      currentRoute: window.location.pathname,
+    });
+  }
+
   const userQuery = useQuery({
     queryKey: ['user'],
     queryFn: async () => {
       const token = getToken();
-      if (!token) return null;
+      // [EDD-TEMP] Log queryFn start
+      if (import.meta.env.DEV) {
+        console.debug(`[EDD] [${new Date().toISOString()}] [useAuth]`, `queryFn start`, {
+          hasToken: !!token,
+        });
+      }
+
+      if (!token) {
+        // [EDD-TEMP] Log no token found
+        if (import.meta.env.DEV) {
+          console.debug(
+            `[EDD] [${new Date().toISOString()}] [useAuth]`,
+            `No token, returning null`,
+          );
+        }
+        return null;
+      }
+
+      // [EDD-TEMP] Log before API call
+      if (import.meta.env.DEV) {
+        console.debug(
+          `[EDD] [${new Date().toISOString()}] [useAuth]`,
+          `Calling getCurrentUser API`,
+        );
+      }
+
       // The try/catch block was removed to allow the Axios interceptor to handle auth errors.
       // Previously, catching the error and returning null caused a race condition where
       // the app would redirect to /login before the token could be refreshed.
-      const { user } = await authApi.getCurrentUser();
-      return user;
+      try {
+        const { user } = await authApi.getCurrentUser();
+        // [EDD-TEMP] Log API success
+        if (import.meta.env.DEV) {
+          console.debug(`[EDD] [${new Date().toISOString()}] [useAuth]`, `getCurrentUser SUCCESS`, {
+            userId: user.id,
+            userRole: user.role,
+          });
+        }
+        return user;
+      } catch (err) {
+        // [EDD-TEMP] Log API error
+        if (import.meta.env.DEV) {
+          console.debug(`[EDD] [${new Date().toISOString()}] [useAuth]`, `getCurrentUser ERROR`, {
+            error: err,
+            stack: new Error().stack,
+          });
+        }
+        throw err;
+      }
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: (failureCount, error: any) => {
@@ -47,13 +102,33 @@ export function useAuth() {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: { identifier: string; password: string }) => {
+      // [EDD-TEMP] Log login attempt
+      if (import.meta.env.DEV) {
+        console.debug(`[EDD] [${new Date().toISOString()}] [useAuth]`, `Login mutation start`);
+      }
       const result = await authApi.login(credentials);
       return result as AuthResponse;
     },
     onSuccess: (data) => {
+      // [EDD-TEMP] Log login success
+      if (import.meta.env.DEV) {
+        console.debug(`[EDD] [${new Date().toISOString()}] [useAuth]`, `Login SUCCESS`, {
+          userId: data.user.id,
+          userRole: data.user.role,
+        });
+      }
       setToken(data.accessToken);
       setRefreshToken(data.refreshToken);
       queryClient.setQueryData(['user'], data.user);
+    },
+    onError: (error) => {
+      // [EDD-TEMP] Log login error
+      if (import.meta.env.DEV) {
+        console.debug(`[EDD] [${new Date().toISOString()}] [useAuth]`, `Login ERROR`, {
+          error,
+          stack: new Error().stack,
+        });
+      }
     },
   });
 
@@ -93,17 +168,40 @@ export function useAuth() {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
+      // [EDD-TEMP] Log logout start
+      if (import.meta.env.DEV) {
+        console.debug(`[EDD] [${new Date().toISOString()}] [useAuth]`, `Logout mutation start`);
+      }
       const refreshToken = getRefreshToken();
       const user = userQuery.data;
       if (refreshToken && user) {
         try {
           await authApi.logout({ userId: user.id, refreshToken });
+          // [EDD-TEMP] Log logout API success
+          if (import.meta.env.DEV) {
+            console.debug(`[EDD] [${new Date().toISOString()}] [useAuth]`, `Logout API success`);
+          }
         } catch (error) {
           logger.error('Logout API call failed', error);
+          // [EDD-TEMP] Log logout API error (non-blocking)
+          if (import.meta.env.DEV) {
+            console.debug(
+              `[EDD] [${new Date().toISOString()}] [useAuth]`,
+              `Logout API error (non-blocking)`,
+              { error },
+            );
+          }
         }
       }
     },
     onSettled: () => {
+      // [EDD-TEMP] Log cleanup user state
+      if (import.meta.env.DEV) {
+        console.debug(
+          `[EDD] [${new Date().toISOString()}] [useAuth]`,
+          `Logout: cleanupUserState executed`,
+        );
+      }
       cleanupUserState();
     },
   });
