@@ -2,6 +2,7 @@ import type pino from 'pino';
 
 import { RegisterUseCase } from '@/features/auth/application/use-cases/register.use-case.js';
 import { LoginUseCase } from '@/features/auth/application/use-cases/login.use-case.js';
+import { LogoutUseCase } from '@/features/auth/application/use-cases/logout.use-case.js';
 import { VerifyTokenUseCase } from '@/features/auth/application/use-cases/verify-token.use-case.js';
 import { AdminUserService } from '@/features/auth/application/services/admin-user.service.js';
 import { RefreshTokenUseCase } from '@/features/auth/application/use-cases/refresh-token.use-case.js';
@@ -19,6 +20,7 @@ import {
 export interface AuthContainer {
   registerUseCase: RegisterUseCase;
   loginUseCase: LoginUseCase;
+  logoutUseCase: LogoutUseCase;
   verifyTokenUseCase: VerifyTokenUseCase;
   refreshTokenUseCase: RefreshTokenUseCase;
   resolveUserByEmailUseCase: ResolveUserByEmailUseCase;
@@ -42,14 +44,28 @@ export function buildAuthContainer(_logger: pino.Logger): AuthContainer {
   const refreshTokenService = new JwtRefreshTokenService();
 
   return {
-    registerUseCase: new RegisterUseCase(userRepository, hashingService, accessTokenService),
-    loginUseCase: new LoginUseCase(userRepository, hashingService, accessTokenService),
+    registerUseCase: new RegisterUseCase(
+      userRepository,
+      hashingService,
+      accessTokenService,
+      refreshTokenRepository,
+      refreshTokenService
+    ),
+    loginUseCase: new LoginUseCase(
+        userRepository, 
+        hashingService, 
+        accessTokenService,
+        refreshTokenRepository,
+        refreshTokenService
+    ),
+    logoutUseCase: new LogoutUseCase(refreshTokenRepository, hashingService),
     verifyTokenUseCase: new VerifyTokenUseCase(userRepository, accessTokenService),
     refreshTokenUseCase: new RefreshTokenUseCase(
       userRepository,
       refreshTokenRepository,
       accessTokenService,
       refreshTokenService,
+      hashingService
     ),
     resolveUserByEmailUseCase: new ResolveUserByEmailUseCase(userRepository),
     adminUserService: new AdminUserService(userRepository, hashingService),
@@ -62,3 +78,4 @@ export function buildAuthContainer(_logger: pino.Logger): AuthContainer {
     refreshTokenService,
   };
 }
+

@@ -1,0 +1,85 @@
+- generic [ref=e658]:
+  - banner [ref=e659]:
+    - generic [ref=e660]:
+      - generic [ref=e661]:
+        - button [ref=e662]:
+          - img [ref=e663]
+        - heading "Editar Unidad" [level=1] [ref=e666]
+        - generic [ref=e667]: Borrador
+      - generic [ref=e668]:
+        - button "Demo" [ref=e763] [cursor=pointer]:
+          - img [ref=e764]
+          - text: Demo
+        - button "IA" [ref=e669] [cursor=pointer]:
+          - img [ref=e670]
+          - text: IA
+        - button [ref=e672] [cursor=pointer]:
+          - img [ref=e673]
+        - button "Publicar" [ref=e676] [cursor=pointer]
+        - button "Guardar" [ref=e677] [cursor=pointer]:
+          - img [ref=e895]
+          - text: Guardar
+  - main [ref=e682]:
+    - generic [ref=e683]:
+      - generic [ref=e684]:
+        - heading "Información de la Unidad" [level=2] [ref=e685]
+        - generic [ref=e686]:
+          - generic [ref=e687]:
+            - generic [ref=e688]: Título *
+            - 'textbox "Ej: Los Dinosaurios 🦖" [ref=e690]': Los Dinosaurios
+          - generic [ref=e691]:
+            - generic [ref=e692]: Descripción
+            - textbox "¿Qué vamos a aprender hoy?" [ref=e694]: Las increíbles criaturas del pasado
+          - generic [ref=e695]:
+            - generic [ref=e696]: Duración (minutos)
+            - spinbutton [ref=e698]: "2"
+      - generic [ref=e699]:
+        - heading "Pasos de la Unidad" [level=2] [ref=e700]:
+          - img [ref=e701]
+          - text: Pasos de la Unidad
+        - generic [ref=e702]:
+          - generic [ref=e766]:
+            - generic [ref=e767]:
+              - button [disabled] [ref=e768]:
+                - img [ref=e769]
+              - button [ref=e772]:
+                - img [ref=e773]
+            - generic [ref=e776]: "1"
+            - generic [ref=e777]:
+              - generic [ref=e778]: INTRO
+              - paragraph [ref=e779]: Contenido
+            - generic [ref=e780]:
+              - button [ref=e781]:
+                - img [ref=e782]
+              - button [ref=e786]:
+                - img [ref=e787]
+          - generic [ref=e832]:
+            - generic [ref=e833]:
+              - button [ref=e834]:
+                - img [ref=e835]
+              - button [disabled] [ref=e838]:
+                - img [ref=e839]
+            - generic [ref=e842]: "2"
+            - generic [ref=e843]:
+              - generic [ref=e844]: INTRO
+              - paragraph [ref=e845]: This is the introduction step content.
+            - generic [ref=e846]:
+              - button [ref=e847]:
+                - img [ref=e848]
+              - button [ref=e852]:
+                - img [ref=e853]
+          - button "Añadir Nuevo Paso" [ref=e705] [cursor=pointer]:
+            - img [ref=e706]
+            - text: Añadir Nuevo Paso
+    - complementary [ref=e707]:
+      - generic [ref=e708]:
+        - heading "Resumen" [level=2] [ref=e709]:
+          - img [ref=e710]
+          - text: Resumen
+        - generic [ref=e714]:
+          - generic [ref=e715]:
+            - generic [ref=e716]: "Pasos:"
+            - generic [ref=e717]: "2"
+          - generic [ref=e718]:
+            - generic [ref=e719]: "Tiempo:"
+            - generic [ref=e720]: 2 min

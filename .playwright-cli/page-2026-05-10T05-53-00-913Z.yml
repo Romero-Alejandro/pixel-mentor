@@ -1,0 +1,240 @@
+- generic [ref=e365]:
+  - banner [ref=e366]:
+    - generic [ref=e367]:
+      - heading "PixelMentor" [level=1] [ref=e368]:
+        - img [ref=e369]
+        - text: PixelMentor
+      - generic [ref=e372]:
+        - navigation [ref=e373]:
+          - link "Clases" [ref=e374] [cursor=pointer]:
+            - /url: /classes
+            - img [ref=e375]
+            - text: Clases
+          - link "Unidades" [ref=e378] [cursor=pointer]:
+            - /url: /units
+            - img [ref=e379]
+            - text: Unidades
+          - link "Grupos" [ref=e382] [cursor=pointer]:
+            - /url: /groups
+            - img [ref=e383]
+            - text: Grupos
+        - link "Nivel 1, racha de 1 días, 0 insignias" [ref=e390] [cursor=pointer]:
+          - /url: /achievements
+          - generic [ref=e391]:
+            - generic [ref=e392]: 🌱
+            - generic [ref=e393]: "1"
+          - generic [ref=e394]:
+            - generic [ref=e395]: 🔥
+            - generic [ref=e396]: "1"
+          - generic [ref=e397]:
+            - generic [ref=e398]: 🎖️
+            - generic [ref=e399]: "0"
+        - button "Silenciar" [ref=e401]:
+          - img [ref=e402]
+        - button "Salir" [ref=e405]:
+          - img [ref=e406]
+          - text: Salir
+  - main [ref=e410]:
+    - generic [ref=e411]:
+      - heading "¡Buenos días, Profe García! 👋" [level=2] [ref=e412]
+      - paragraph [ref=e413]: Panel de profesor
+    - generic [ref=e414]:
+      - generic [ref=e416]:
+        - generic [ref=e417]:
+          - generic [ref=e418]:
+            - img [ref=e419]
+            - heading "Clases" [level=3] [ref=e422]
+          - paragraph [ref=e423]: Agrupan lecciones para tus estudiantes. Cada clase contiene lecciones ordenadas que usan unidades como contenido.
+        - generic [ref=e425]:
+          - generic [ref=e426]:
+            - img [ref=e427]
+            - heading "Unidades" [level=3] [ref=e430]
+          - paragraph [ref=e431]: Contenido pedagógico con pasos (intro, contenido, actividades, preguntas). Se reutilizan en múltiples clases.
+      - generic [ref=e432]:
+        - link "Mis Clases Crear y gestionar clases para estudiantes" [ref=e433] [cursor=pointer]:
+          - /url: /classes
+          - generic [ref=e435]:
+            - img [ref=e437]
+            - generic [ref=e440]:
+              - heading "Mis Clases" [level=3] [ref=e441]
+              - paragraph [ref=e442]: Crear y gestionar clases para estudiantes
+        - link "Unidades de Aprendizaje Crear contenido para tus clases" [ref=e443] [cursor=pointer]:
+          - /url: /units
+          - generic [ref=e445]:
+            - img [ref=e447]
+            - generic [ref=e450]:
+              - heading "Unidades de Aprendizaje" [level=3] [ref=e451]
+              - paragraph [ref=e452]: Crear contenido para tus clases
+    - generic [ref=e453]:
+      - generic [ref=e454]:
+        - generic [ref=e455]:
+          - generic [ref=e456]: 🌱
+          - generic [ref=e457]:
+            - generic [ref=e458]: 🌱
+            - generic [ref=e459]:
+              - paragraph [ref=e460]: Nivel 1
+              - heading "Semilla" [level=2] [ref=e461]
+          - generic [ref=e463]:
+            - generic [ref=e464]: 0 XP Ganados
+            - generic [ref=e465]: ¡Nivel Máximo! 🎉
+        - generic [ref=e468]:
+          - generic [ref=e469]:
+            - button "🔥 Racha" [ref=e470]
+            - button "🏅 Medallas" [ref=e471]
+            - button "📊 Avance" [ref=e472]
+          - generic [ref=e474]:
+            - status "Racha actual de 1 días" [ref=e475]:
+              - heading "Tu Racha" [level=3] [ref=e476]
+              - generic [ref=e477]:
+                - generic [ref=e478]: 🔥
+                - generic [ref=e479]: "1"
+                - generic [ref=e480]: día seguido!
+              - generic [ref=e481]:
+                - generic [ref=e482]:
+                  - generic [ref=e483]: L
+                  - 'generic "L: completado" [ref=e484]': ✓
+                - generic [ref=e485]:
+                  - generic [ref=e486]: M
+                  - 'generic "M: pendiente" [ref=e487]'
+                - generic [ref=e488]:
+                  - generic [ref=e489]: X
+                  - 'generic "X: pendiente" [ref=e490]'
+                - generic [ref=e491]:
+                  - generic [ref=e492]: J
+                  - 'generic "J: pendiente" [ref=e493]'
+                - generic [ref=e494]:
+                  - generic [ref=e495]: V
+                  - 'generic "V: pendiente" [ref=e496]'
+                - generic [ref=e497]:
+                  - generic [ref=e498]: S
+                  - 'generic "S: pendiente" [ref=e499]'
+                - generic [ref=e500]:
+                  - generic [ref=e501]: D
+                  - 'generic "D: pendiente" [ref=e502]'
+              - paragraph [ref=e503]:
+                - text: "Racha más larga:"
+                - generic [ref=e504]: 3 días
+            - generic [ref=e505]:
+              - generic [ref=e506]:
+                - generic [ref=e507]: L
+                - generic [ref=e508]: M
+                - generic [ref=e509]: X
+                - generic [ref=e510]: J
+                - generic [ref=e511]: V
+                - generic [ref=e512]: S
+                - generic [ref=e513]: D
+              - generic [ref=e514]:
+                - generic "2026-04-27" [ref=e515]:
+                  - generic [ref=e516]: "26"
+                  - img [ref=e518]
+                - generic "2026-04-28" [ref=e520]:
+                  - generic [ref=e521]: "27"
+                  - img [ref=e523]
+                - generic "2026-04-29" [ref=e524]:
+                  - generic [ref=e525]: "28"
+                  - img [ref=e527]
+                - generic "2026-04-30" [ref=e529]:
+                  - generic [ref=e530]: "29"
+                  - img [ref=e532]
+                - generic "2026-05-01" [ref=e534]:
+                  - generic [ref=e535]: "30"
+                  - img [ref=e537]
+                - generic "2026-05-02" [ref=e538]:
+                  - generic [ref=e539]: "1"
+                  - img [ref=e541]
+                - generic "2026-05-03" [ref=e542]:
+                  - generic [ref=e543]: "2"
+                  - img [ref=e545]
+                - generic "2026-05-04" [ref=e546]:
+                  - generic [ref=e547]: "3"
+                  - img [ref=e549]
+                - generic "2026-05-05" [ref=e550]:
+                  - generic [ref=e551]: "4"
+                  - img [ref=e553]
+                - generic "2026-05-06" [ref=e554]:
+                  - generic [ref=e555]: "5"
+                  - img [ref=e557]
+                - generic "2026-05-07" [ref=e559]:
+                  - generic [ref=e560]: "6"
+                  - img [ref=e562]
+                - generic "2026-05-08" [ref=e564]:
+                  - generic [ref=e565]: "7"
+                  - img [ref=e567]
+                - generic "2026-05-09" [ref=e569]:
+                  - generic [ref=e570]: "8"
+                  - img [ref=e572]
+                - generic "2026-05-10" [ref=e574]:
+                  - generic [ref=e575]: "9"
+                  - img [ref=e577]
+      - generic [ref=e580]:
+        - generic [ref=e581]:
+          - heading "Próximos Desafíos" [level=2] [ref=e582]:
+            - img [ref=e584]
+            - text: Próximos Desafíos
+          - paragraph [ref=e588]: ¡Completa estas misiones para ganar más XP y desbloquear recompensas! 🌟
+        - generic [ref=e589]:
+          - generic [ref=e590]:
+            - img [ref=e591]
+            - paragraph [ref=e595]: "0"
+            - paragraph [ref=e596]: Completadas
+          - generic [ref=e597]:
+            - img [ref=e598]
+            - paragraph [ref=e600]: "4"
+            - paragraph [ref=e601]: En Progreso
+          - generic [ref=e602]:
+            - img [ref=e603]
+            - paragraph [ref=e605]: "1"
+            - paragraph [ref=e606]: Disponibles
+        - generic [ref=e607]:
+          - generic [ref=e608]:
+            - heading "Misiones en Progreso" [level=3] [ref=e609]:
+              - img [ref=e610]
+              - text: Misiones en Progreso
+            - generic [ref=e612]:
+              - 'link "Misión #dccfd8f4 En progreso Iniciada: 27/4/2026" [ref=e613] [cursor=pointer]':
+                - /url: /recipe/fc32b515-bbd4-4be1-9daa-68af58e6955a
+                - generic [ref=e614]:
+                  - generic [ref=e615]:
+                    - img [ref=e617]
+                    - generic [ref=e621]:
+                      - paragraph [ref=e622]: "Misión #dccfd8f4"
+                      - paragraph [ref=e623]: En progreso
+                  - paragraph [ref=e624]: "Iniciada: 27/4/2026"
+              - 'link "Misión #e0a72019 En progreso Iniciada: 23/4/2026" [ref=e625] [cursor=pointer]':
+                - /url: /recipe/d12a5ad0-c801-4545-abb7-df315bee25a9
+                - generic [ref=e626]:
+                  - generic [ref=e627]:
+                    - img [ref=e629]
+                    - generic [ref=e633]:
+                      - paragraph [ref=e634]: "Misión #e0a72019"
+                      - paragraph [ref=e635]: En progreso
+                  - paragraph [ref=e636]: "Iniciada: 23/4/2026"
+              - 'link "Misión #0f663914 En progreso Iniciada: 23/4/2026" [ref=e637] [cursor=pointer]':
+                - /url: /recipe/ade9e3bf-f577-4fbb-8152-e97d7b8d0536
+                - generic [ref=e638]:
+                  - generic [ref=e639]:
+                    - img [ref=e641]
+                    - generic [ref=e645]:
+                      - paragraph [ref=e646]: "Misión #0f663914"
+                      - paragraph [ref=e647]: En progreso
+                  - paragraph [ref=e648]: "Iniciada: 23/4/2026"
+              - 'link "Misión #46226257 En progreso Iniciada: 22/4/2026" [ref=e649] [cursor=pointer]':
+                - /url: /recipe/66718a33-ad24-4b34-8733-ad54c6e7ad30
+                - generic [ref=e650]:
+                  - generic [ref=e651]:
+                    - img [ref=e653]
+                    - generic [ref=e657]:
+                      - paragraph [ref=e658]: "Misión #46226257"
+                      - paragraph [ref=e659]: En progreso
+                  - paragraph [ref=e660]: "Iniciada: 22/4/2026"
+          - generic [ref=e661]:
+            - heading "Aventuras Disponibles" [level=3] [ref=e662]:
+              - img [ref=e663]
+              - text: Aventuras Disponibles
+            - link "Nueva clase Test 5 lecciones" [ref=e666] [cursor=pointer]:
+              - /url: /classes/7078a54b-8d8a-4f06-a1cb-df15393e4cbe
+              - generic [ref=e668]:
+                - img [ref=e670]
+                - generic [ref=e673]:
+                  - paragraph [ref=e674]: Nueva clase Test
+                  - paragraph [ref=e675]: 5 lecciones

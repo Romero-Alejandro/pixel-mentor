@@ -20,4 +20,14 @@ export const authApi = {
     const { data } = await apiClient.get('/api/auth/me');
     return { user: UserSchema.parse(data.user) };
   },
+
+  refreshToken: async (data: { refreshToken: string }) => {
+    const { data: res } = await apiClient.post('/api/auth/refresh', data);
+    // The refresh endpoint returns accessToken and refreshToken, but not the full AuthResponse
+    return res as { accessToken: string; refreshToken: string };
+  },
+
+  logout: async (data: { userId: string; refreshToken: string }) => {
+    await apiClient.post('/api/auth/logout', data);
+  },
 };

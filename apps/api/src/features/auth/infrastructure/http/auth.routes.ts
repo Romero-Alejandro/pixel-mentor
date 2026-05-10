@@ -3,18 +3,19 @@ import {
   type Request,
   type Response,
   type NextFunction,
-  type RequestHandler,
 } from 'express';
 import { z } from 'zod';
 
-import { requireRole } from './auth.middleware.js';
+import { requireRole, authMiddleware } from './auth.middleware.js';
 
 import type { IUserRepository } from '@/features/auth/domain/ports/user.repository.port.js';
 import {
   type RegisterUseCase,
   type LoginUseCase,
+  type LogoutUseCase,
   type RefreshTokenUseCase,
   type ResolveUserByEmailUseCase,
+  type VerifyTokenUseCase,
 } from '@/features/auth/application/use-cases/index.js';
 import type { AuthError } from '@/features/auth/domain/auth.errors.js';
 
@@ -35,6 +36,10 @@ const RefreshTokenBodySchema = z.object({
   refreshToken: z.string().min(1, 'Refresh token is required'),
 });
 
+const LogoutBodySchema = z.object({
+    refreshToken: z.string().min(1, 'Refresh token is required'),
+});
+
 const ResolveUserQuerySchema = z.object({
   email: z.string().email('Email inválido'),
 });
@@ -44,6 +49,7 @@ export class AuthController {
     private userRepo: IUserRepository,
     private registerUseCase: RegisterUseCase,
     private loginUseCase: LoginUseCase,
+    private logoutUseCase: LogoutUseCase,
     private refreshTokenUseCase: RefreshTokenUseCase,
     private resolveUserByEmailUseCase: ResolveUserByEmailUseCase,
   ) {}
@@ -62,7 +68,8 @@ export class AuthController {
 
       res.status(201).json({
         user: result.user,
-        accessToken: result.token,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -86,7 +93,8 @@ export class AuthController {
 
       res.status(200).json({
         user: result.user,
-        accessToken: result.token,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -104,6 +112,21 @@ export class AuthController {
         return;
       }
       next(error);
+    }
+  }
+
+  async logout(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+        const validated = LogoutBodySchema.parse(req.body);
+        await this.logoutUseCase.execute({ refreshToken: validated.refreshToken });
+        res.status(204).send();
+    } catch (error) {
+        // Even if logout fails, we proceed. Client will clear tokens anyway.
+        if (error instanceof z.ZodError) {
+            res.status(400).json({ error: 'Bad Request', code: 'VALIDATION_ERROR', details: error.issues });
+            return;
+        }
+        next(error);
     }
   }
 
@@ -127,7 +150,7 @@ export class AuthController {
         return;
       }
       if (error instanceof Error) {
-        if (error.message.includes('revoked') || error.message.includes('expired')) {
+        if (error.message.includes('revoked') || error.message.includes('expired') || error.message.includes('Invalid')) {
           res.status(401).json({
             error: error.message,
             code: 'TOKEN_INVALID',
@@ -196,21 +219,24 @@ export function createAuthRouter(
   userRepo: IUserRepository,
   registerUseCase: RegisterUseCase,
   loginUseCase: LoginUseCase,
+  logoutUseCase: LogoutUseCase,
   refreshTokenUseCase: RefreshTokenUseCase,
   resolveUserByEmailUseCase: ResolveUserByEmailUseCase,
-  protectedMiddleware: RequestHandler,
+  verifyTokenUseCase: VerifyTokenUseCase,
 ) {
+  const protectedMiddleware = authMiddleware(userRepo, verifyTokenUseCase);
+
   const controller = new AuthController(
     userRepo,
     registerUseCase,
     loginUseCase,
+    logoutUseCase,
     refreshTokenUseCase,
     resolveUserByEmailUseCase,
   );
 
   const router = Router();
 
-  // Public routes - no auth required
   router.post('/register', (req: Request, res: Response, next: NextFunction) =>
     controller.register(req, res, next),
   );
@@ -220,13 +246,14 @@ export function createAuthRouter(
   router.post('/refresh', (req: Request, res: Response, next: NextFunction) =>
     controller.refresh(req, res, next),
   );
+  router.post('/logout', (req: Request, res: Response, next: NextFunction) =>
+    controller.logout(req, res, next),
+  );
 
-  // Protected routes - auth required
   router.get('/me', protectedMiddleware, (req: Request, res: Response, next: NextFunction) =>
     controller.me(req, res, next),
   );
 
-  // Protected route - auth + teacher role required
   router.get(
     '/users/resolve',
     protectedMiddleware,
@@ -236,3 +263,4 @@ export function createAuthRouter(
 
   return router;
 }
+
