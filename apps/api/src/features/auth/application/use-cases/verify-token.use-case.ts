@@ -13,20 +13,29 @@ export interface AuthTokenPayload {
   role: UserRole;
 }
 
+export interface VerifyTokenResult {
+  payload: AuthTokenPayload;
+  user: {
+    id: string;
+    email: string;
+    role: UserRole;
+  };
+}
+
 export class VerifyTokenUseCase {
   constructor(
     private userRepo: IUserRepository,
     private tokenService: ITokenService,
   ) {}
 
-  async execute(token: string): Promise<AuthTokenPayload> {
+  async execute(token: string): Promise<VerifyTokenResult> {
     try {
       const payload = this.tokenService.verifyToken(token) as AuthTokenPayload;
       const user = await this.userRepo.findById(payload.userId);
       if (!user) {
         throw new UserNotFoundError(payload.userId);
       }
-      return payload;
+      return { payload, user };
     } catch (error) {
       if (error instanceof UserNotFoundError) {
         throw error;

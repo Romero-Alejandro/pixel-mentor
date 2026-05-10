@@ -5,7 +5,7 @@ import type { ITokenService } from '@/features/auth/domain/ports/token.service.p
 import type { IRefreshTokenRepository } from '@/features/auth/domain/ports/refresh-token.repository.port.js';
 import type { User } from '@/features/auth/domain/entities/user.entity.js';
 import { DEFAULT_COHORT } from '@/features/auth/domain/entities/user.entity.js';
-import { randomBytes } from 'crypto';
+import { randomBytes } from 'node:crypto';
 
 export interface RegisterInput {
   email: string;
@@ -82,19 +82,21 @@ export class RegisterUseCase {
       counter++;
     }
   }
-  
-  private async generateAndStoreTokens(user: User): Promise<{ accessToken: string; refreshToken: string; }> {
+
+  private async generateAndStoreTokens(
+    user: User,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
     const payload = {
       userId: user.id,
       email: user.email,
       role: user.role,
     };
     const accessToken = this.accessTokenService.generateToken(payload);
-    
+
     const refreshTokenString = randomBytes(32).toString('hex');
     const refreshTokenPayload = { ...payload, jti: refreshTokenString };
     const refreshToken = this.refreshTokenService.generateToken(refreshTokenPayload);
-    
+
     const hashedRefreshToken = await this.hashingService.hash(refreshTokenString);
 
     const expiresAt = new Date();
@@ -114,4 +116,3 @@ export class RegisterUseCase {
     return sanitized;
   }
 }
-

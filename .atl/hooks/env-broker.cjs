@@ -11,7 +11,7 @@ const findEnvFiles = (dir, depth = 0) => {
       if (e.isDirectory()) { files = files.concat(findEnvFiles(fullPath, depth + 1)); }
       else if (e.name.startsWith('.env')) { files.push(fullPath); }
     }
-  } catch (e) {}
+  } catch (_e) {}
   return files;
 };
 const envFiles = findEnvFiles(process.cwd());

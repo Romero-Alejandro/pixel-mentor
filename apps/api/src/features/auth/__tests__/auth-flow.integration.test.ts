@@ -79,7 +79,7 @@ describe('Auth Flow - Integration Test', () => {
     const oldRefreshToken = loginOutput.refreshToken;
 
     // Wait 1 second to ensure new tokens are different
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise((r) => setTimeout(r, 1000));
 
     const refreshOutput = await refreshTokenUseCase.execute({
       refreshToken: oldRefreshToken,
@@ -92,13 +92,13 @@ describe('Auth Flow - Integration Test', () => {
 
     // Verify the old token is revoked
     const oldDbToken = await prisma.refreshToken.findFirst({
-        where: { userId, revoked: true },
+      where: { userId, revoked: true },
     });
     expect(oldDbToken).not.toBeNull();
 
     // Verify a new one exists
     const newDbToken = await prisma.refreshToken.findFirst({
-        where: { userId, revoked: false },
+      where: { userId, revoked: false },
     });
     expect(newDbToken).not.toBeNull();
   });
@@ -117,7 +117,7 @@ describe('Auth Flow - Integration Test', () => {
 
     // Try to use it again
     await expect(refreshTokenUseCase.execute({ refreshToken })).rejects.toThrow(
-      'Invalid refresh token'
+      'Invalid refresh token',
     );
   });
 
@@ -133,13 +133,13 @@ describe('Auth Flow - Integration Test', () => {
       where: { userId, revoked: false },
     });
     expect(tokenBeforeLogout).not.toBeNull();
-    
+
     // The logout use case needs the raw token to hash and find
     // But my implementation hashes a random string, not the token itself.
     // The logout use case I wrote is flawed. Let's fix it.
     // It should take the token, decode it, get the jti, hash the jti, and delete that.
     // For this test, I'll just check that the token is deleted. I will need to fix the logout use case.
-    
+
     // I will skip the logout test for now as the implementation is flawed and I cannot fix it in the verify phase.
     // This will be reported as an issue.
   });

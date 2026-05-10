@@ -2,7 +2,7 @@ import type { IUserRepository } from '@/features/auth/domain/ports/user.reposito
 import type { IRefreshTokenRepository } from '@/features/auth/domain/ports/refresh-token.repository.port.js';
 import type { IHashingService } from '@/features/auth/domain/ports/hashing.service.port.js';
 import type { ITokenService } from '@/features/auth/domain/ports/token.service.port.js';
-import { randomBytes } from 'crypto';
+import { randomBytes } from 'node:crypto';
 
 export interface RefreshTokenInput {
   refreshToken: string;
@@ -31,9 +31,9 @@ export class RefreshTokenUseCase {
     if (!payload.userId || !payload.jti) {
       throw new Error('Invalid refresh token payload');
     }
-    
-    const tokenHash = await this.hashingService.hash(payload.jti);
-    const storedToken = await this.refreshTokenRepo.findByTokenHash(tokenHash);
+
+    // Find the stored token by userId
+    const storedToken = await this.refreshTokenRepo.findByUserId(payload.userId);
 
     if (!storedToken) {
       // If the token is not in the DB, it might be a replay attack
@@ -41,9 +41,16 @@ export class RefreshTokenUseCase {
       await this.refreshTokenRepo.deleteByUserId(payload.userId);
       throw new Error('Invalid refresh token');
     }
-    
+
+    // Verify the JTI against the stored hash using compare (not re-hashing)
+    const isValidJti = await this.hashingService.compare(payload.jti, storedToken.tokenHash);
+    if (!isValidJti) {
+      await this.refreshTokenRepo.deleteByUserId(payload.userId);
+      throw new Error('Invalid refresh token: JTI mismatch');
+    }
+
     if (storedToken.revoked) {
-        throw new Error('Refresh token has been revoked');
+      throw new Error('Refresh token has been revoked');
     }
 
     if (new Date() > storedToken.expiresAt) {
@@ -65,11 +72,11 @@ export class RefreshTokenUseCase {
       email: user.email,
       role: user.role,
     });
-    
+
     const newRefreshTokenString = randomBytes(32).toString('hex');
     const newRefreshTokenPayload = { userId: user.id, jti: newRefreshTokenString };
     const newRefreshToken = this.refreshTokenService.generateToken(newRefreshTokenPayload);
-    
+
     const newHashedRefreshToken = await this.hashingService.hash(newRefreshTokenString);
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
@@ -86,4 +93,3 @@ export class RefreshTokenUseCase {
     };
   }
 }
-

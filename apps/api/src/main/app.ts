@@ -158,7 +158,7 @@ export function createApp(deps: AppDependencies): Express {
   });
 
   // Protected middleware setup
-  const protectedMiddleware = authMiddleware(auth.userRepository, auth.verifyTokenUseCase);
+  const protectedMiddleware = authMiddleware(auth.verifyTokenUseCase);
 
   // Auth routes (rate limited, public endpoints)
   app.use(
@@ -168,6 +168,7 @@ export function createApp(deps: AppDependencies): Express {
       auth.userRepository,
       auth.registerUseCase,
       auth.loginUseCase,
+      auth.logoutUseCase,
       auth.refreshTokenUseCase,
       auth.resolveUserByEmailUseCase,
       protectedMiddleware,

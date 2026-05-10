@@ -4,7 +4,7 @@ import type { ITokenService } from '@/features/auth/domain/ports/token.service.p
 import type { IRefreshTokenRepository } from '@/features/auth/domain/ports/refresh-token.repository.port.js';
 import type { User } from '@/features/auth/domain/entities/user.entity.js';
 import { InvalidCredentialsError } from '@/features/auth/domain/auth.errors.js';
-import { randomBytes } from 'crypto';
+import { randomBytes } from 'node:crypto';
 
 export interface LoginInput {
   identifier: string; // email OR username
@@ -46,19 +46,21 @@ export class LoginUseCase {
     };
   }
 
-  private async generateAndStoreTokens(user: User): Promise<{ accessToken: string; refreshToken: string; }> {
+  private async generateAndStoreTokens(
+    user: User,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
     const payload = {
       userId: user.id,
       email: user.email,
       role: user.role,
     };
     const accessToken = this.accessTokenService.generateToken(payload);
-    
+
     // For refresh tokens, we generate a simple random string. The JWT will be created by refreshTokenService
     const refreshTokenString = randomBytes(32).toString('hex');
     const refreshTokenPayload = { ...payload, jti: refreshTokenString }; // jti is jwt id
     const refreshToken = this.refreshTokenService.generateToken(refreshTokenPayload);
-    
+
     // Hash the token for storage
     const hashedRefreshToken = await this.hashingService.hash(refreshTokenString);
 
@@ -81,4 +83,3 @@ export class LoginUseCase {
     return sanitized;
   }
 }
-

@@ -19,8 +19,7 @@ export default defineConfig({
       '@pixel-mentor/web': path.resolve(__dirname, './src'),
     },
   },
-    server: {
-
+  server: {
     port: 5173,
     proxy: {
       '/api': {

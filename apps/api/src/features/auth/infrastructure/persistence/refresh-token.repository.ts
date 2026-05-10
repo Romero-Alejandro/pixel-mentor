@@ -38,6 +38,14 @@ export class PrismaRefreshTokenRepository implements IRefreshTokenRepository {
     return token ? mapToDomain(token) : null;
   }
 
+  async findByUserId(userId: string): Promise<RefreshToken | null> {
+    const token = await prisma.refreshToken.findFirst({
+      where: { userId, revoked: false },
+      orderBy: { createdAt: 'desc' },
+    });
+    return token ? mapToDomain(token) : null;
+  }
+
   async revoke(tokenId: string): Promise<RefreshToken> {
     const updated = await prisma.refreshToken.update({
       where: { id: tokenId },
@@ -50,12 +58,17 @@ export class PrismaRefreshTokenRepository implements IRefreshTokenRepository {
     try {
       await prisma.refreshToken.delete({ where: { id: tokenId } });
     } catch (error) {
-        // handlePrismaError doesn't exist yet, but let's assume it would be a generic helper
-        // For now, we can ignore not-found errors on delete.
-        if (typeof error === 'object' && error !== null && 'code' in error && (error as any).code === 'P2025') {
-            return;
-        }
-        throw error;
+      // handlePrismaError doesn't exist yet, but let's assume it would be a generic helper
+      // For now, we can ignore not-found errors on delete.
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        (error as any).code === 'P2025'
+      ) {
+        return;
+      }
+      throw error;
     }
   }
 
@@ -63,12 +76,5 @@ export class PrismaRefreshTokenRepository implements IRefreshTokenRepository {
     await prisma.refreshToken.deleteMany({
       where: { userId },
     });
-  }
-
-  async findByTokenHash(tokenHash: string): Promise<RefreshToken | null> {
-    const token = await prisma.refreshToken.findUnique({
-      where: { tokenHash },
-    });
-    return token ? mapToDomain(token) : null;
   }
 }

@@ -49,14 +49,14 @@ export function buildAuthContainer(_logger: pino.Logger): AuthContainer {
       hashingService,
       accessTokenService,
       refreshTokenRepository,
-      refreshTokenService
+      refreshTokenService,
     ),
     loginUseCase: new LoginUseCase(
-        userRepository, 
-        hashingService, 
-        accessTokenService,
-        refreshTokenRepository,
-        refreshTokenService
+      userRepository,
+      hashingService,
+      accessTokenService,
+      refreshTokenRepository,
+      refreshTokenService,
     ),
     logoutUseCase: new LogoutUseCase(refreshTokenRepository, hashingService),
     verifyTokenUseCase: new VerifyTokenUseCase(userRepository, accessTokenService),
@@ -65,7 +65,7 @@ export function buildAuthContainer(_logger: pino.Logger): AuthContainer {
       refreshTokenRepository,
       accessTokenService,
       refreshTokenService,
-      hashingService
+      hashingService,
     ),
     resolveUserByEmailUseCase: new ResolveUserByEmailUseCase(userRepository),
     adminUserService: new AdminUserService(userRepository, hashingService),
@@ -78,4 +78,3 @@ export function buildAuthContainer(_logger: pino.Logger): AuthContainer {
     refreshTokenService,
   };
 }
-

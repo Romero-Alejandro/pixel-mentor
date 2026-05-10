@@ -1,12 +1,7 @@
-import {
-  Router,
-  type Request,
-  type Response,
-  type NextFunction,
-} from 'express';
+import { Router, type Request, type Response, type NextFunction } from 'express';
 import { z } from 'zod';
 
-import { requireRole, authMiddleware } from './auth.middleware.js';
+import { requireRole } from './auth.middleware.js';
 
 import type { IUserRepository } from '@/features/auth/domain/ports/user.repository.port.js';
 import {
@@ -15,7 +10,6 @@ import {
   type LogoutUseCase,
   type RefreshTokenUseCase,
   type ResolveUserByEmailUseCase,
-  type VerifyTokenUseCase,
 } from '@/features/auth/application/use-cases/index.js';
 import type { AuthError } from '@/features/auth/domain/auth.errors.js';
 
@@ -37,7 +31,7 @@ const RefreshTokenBodySchema = z.object({
 });
 
 const LogoutBodySchema = z.object({
-    refreshToken: z.string().min(1, 'Refresh token is required'),
+  refreshToken: z.string().min(1, 'Refresh token is required'),
 });
 
 const ResolveUserQuerySchema = z.object({
@@ -117,16 +111,18 @@ export class AuthController {
 
   async logout(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-        const validated = LogoutBodySchema.parse(req.body);
-        await this.logoutUseCase.execute({ refreshToken: validated.refreshToken });
-        res.status(204).send();
+      const validated = LogoutBodySchema.parse(req.body);
+      await this.logoutUseCase.execute({ refreshToken: validated.refreshToken });
+      res.status(204).send();
     } catch (error) {
-        // Even if logout fails, we proceed. Client will clear tokens anyway.
-        if (error instanceof z.ZodError) {
-            res.status(400).json({ error: 'Bad Request', code: 'VALIDATION_ERROR', details: error.issues });
-            return;
-        }
-        next(error);
+      // Even if logout fails, we proceed. Client will clear tokens anyway.
+      if (error instanceof z.ZodError) {
+        res
+          .status(400)
+          .json({ error: 'Bad Request', code: 'VALIDATION_ERROR', details: error.issues });
+        return;
+      }
+      next(error);
     }
   }
 
@@ -150,7 +146,11 @@ export class AuthController {
         return;
       }
       if (error instanceof Error) {
-        if (error.message.includes('revoked') || error.message.includes('expired') || error.message.includes('Invalid')) {
+        if (
+          error.message.includes('revoked') ||
+          error.message.includes('expired') ||
+          error.message.includes('Invalid')
+        ) {
           res.status(401).json({
             error: error.message,
             code: 'TOKEN_INVALID',
@@ -177,13 +177,14 @@ export class AuthController {
         return;
       }
 
-      const user = await this.userRepo.findById(authReq.user.id);
-      if (!user) {
-        res.status(404).json({ error: 'Usuario no encontrado', code: 'USER_NOT_FOUND' });
-        return;
-      }
-
-      res.json({ user });
+      // User data already loaded by authMiddleware via VerifyTokenUseCase
+      res.json({
+        user: {
+          id: authReq.user.id,
+          email: authReq.user.email,
+          role: authReq.user.role,
+        },
+      });
     } catch (error) {
       next(error);
     }
@@ -222,10 +223,8 @@ export function createAuthRouter(
   logoutUseCase: LogoutUseCase,
   refreshTokenUseCase: RefreshTokenUseCase,
   resolveUserByEmailUseCase: ResolveUserByEmailUseCase,
-  verifyTokenUseCase: VerifyTokenUseCase,
+  protectedMiddleware: (req: Request, res: Response, next: NextFunction) => void,
 ) {
-  const protectedMiddleware = authMiddleware(userRepo, verifyTokenUseCase);
-
   const controller = new AuthController(
     userRepo,
     registerUseCase,
@@ -263,4 +262,3 @@ export function createAuthRouter(
 
   return router;
 }
-

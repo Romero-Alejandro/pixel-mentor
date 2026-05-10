@@ -1,9 +1,12 @@
 import type { Request, Response, NextFunction } from 'express';
 
 import { config } from '@/shared/config/index.js';
-import type { IUserRepository } from '@/features/auth/domain/ports/user.repository.port.js';
 import type { VerifyTokenUseCase } from '@/features/auth/application/use-cases/verify-token.use-case.js';
-import { TokenInvalidError, TokenExpiredError } from '@/features/auth/domain/auth.errors.js';
+import {
+  TokenInvalidError,
+  TokenExpiredError,
+  UserNotFoundError,
+} from '@/features/auth/domain/auth.errors.js';
 
 export interface AuthRequest extends Request {
   user?: {
@@ -13,7 +16,7 @@ export interface AuthRequest extends Request {
   };
 }
 
-export function authMiddleware(userRepo: IUserRepository, verifyTokenUseCase: VerifyTokenUseCase) {
+export function authMiddleware(verifyTokenUseCase: VerifyTokenUseCase) {
   return async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       let token: string | null = null;
@@ -38,19 +41,9 @@ export function authMiddleware(userRepo: IUserRepository, verifyTokenUseCase: Ve
         return;
       }
 
-      const payload = await verifyTokenUseCase.execute(token);
+      const { user } = await verifyTokenUseCase.execute(token);
 
-      const user = await userRepo.findById(payload.userId);
-      if (!user) {
-        res.status(401).json({ error: 'Usuario no encontrado', code: 'USER_NOT_FOUND' });
-        return;
-      }
-
-      req.user = {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-      };
+      req.user = user;
       next();
     } catch (error) {
       if (error instanceof TokenInvalidError) {
@@ -59,6 +52,10 @@ export function authMiddleware(userRepo: IUserRepository, verifyTokenUseCase: Ve
       }
       if (error instanceof TokenExpiredError) {
         res.status(401).json({ error: 'La sesión ha expirado', code: 'TOKEN_EXPIRED' });
+        return;
+      }
+      if (error instanceof UserNotFoundError) {
+        res.status(401).json({ error: 'Usuario no encontrado', code: 'USER_NOT_FOUND' });
         return;
       }
       next(error);

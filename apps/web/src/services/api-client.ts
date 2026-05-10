@@ -1,4 +1,4 @@
-import axios, { type AxiosError } from 'axios';
+import axios, { type InternalAxiosRequestConfig, type AxiosError } from 'axios';
 import { authApi } from '@/features/auth/services/auth.api';
 
 export const apiClient = axios.create({
@@ -15,38 +15,45 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-
 let isRefreshing = false;
-let failedQueue: ((token: string) => void)[] = [];
+let failedQueue: ((token: string | null) => void)[] = [];
 
-const processQueue = (error: Error | null, token: string | null = null) => {
-  failedQueue.forEach((prom) => {
+const processQueue = (error: unknown, token: string | null = null) => {
+  for (const prom of failedQueue) {
     if (error) {
       prom(null);
     } else {
       prom(token);
     }
-  });
+  }
   failedQueue = [];
 };
 
 // Response interceptor for handling 401 errors
 apiClient.interceptors.response.use(
   (response) => response,
-  async (error: AxiosError) => {
-    const originalRequest = error.config;
+  async (error: AxiosError<unknown, Record<string, unknown>>) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig | undefined;
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (
+      error.response?.status === 401 &&
+      originalRequest &&
+      !(originalRequest as { _retry?: boolean })._retry
+    ) {
       if (isRefreshing) {
         return new Promise((resolve) => {
-          failedQueue.push((token: string) => {
+          failedQueue.push((token: string | null) => {
+            if (token === null) {
+              resolve(Promise.reject(new Error('Refresh failed')));
+              return;
+            }
             originalRequest.headers.Authorization = `Bearer ${token}`;
-            resolve(apiClient(originalRequest));
+            resolve(apiClient(originalRequest as InternalAxiosRequestConfig));
           });
         });
       }
 
-      originalRequest._retry = true;
+      (originalRequest as { _retry?: boolean })._retry = true;
       isRefreshing = true;
 
       const refreshToken = getRefreshToken();
@@ -56,13 +63,15 @@ apiClient.interceptors.response.use(
       }
 
       try {
-        const { accessToken, refreshToken: newRefreshToken } = await authApi.refreshToken({ refreshToken });
+        const { accessToken, refreshToken: newRefreshToken } = await authApi.refreshToken({
+          refreshToken,
+        });
         setToken(accessToken);
         setRefreshToken(newRefreshToken);
         apiClient.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         processQueue(null, accessToken);
-        return apiClient(originalRequest);
+        return apiClient(originalRequest as InternalAxiosRequestConfig);
       } catch (err) {
         clearToken();
         clearRefreshToken();
@@ -95,18 +104,17 @@ export const clearToken = (): void => {
 };
 
 export const setRefreshToken = (token: string | null): void => {
-    if (token) {
-        localStorage.setItem('refreshToken', token);
-    } else {
-        localStorage.removeItem('refreshToken');
-    }
+  if (token) {
+    localStorage.setItem('refreshToken', token);
+  } else {
+    localStorage.removeItem('refreshToken');
+  }
 };
 
 export const getRefreshToken = (): string | null => {
-    return localStorage.getItem('refreshToken');
+  return localStorage.getItem('refreshToken');
 };
 
 export const clearRefreshToken = (): void => {
-    localStorage.removeItem('refreshToken');
+  localStorage.removeItem('refreshToken');
 };
-
