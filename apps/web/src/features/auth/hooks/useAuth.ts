@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { authApi, type User } from '../services/auth.api';
-import { setToken, getToken, clearToken } from '@/services/api-client';
+import { setToken, getToken, clearToken, setRefreshToken, getRefreshToken, clearRefreshToken } from '@/services/api-client';
 import { useAuthUIStore } from '../stores/auth.store';
 import { closeAudioContext } from '@/audio/micro/zzfx';
 
@@ -9,12 +9,12 @@ import { logger } from '@/utils/logger';
 interface AuthResponse {
   user: User;
   accessToken: string;
+  refreshToken: string;
 }
 
 export function useAuth() {
   const queryClient = useQueryClient();
 
-  // Query for current user - fetches from /auth/me
   const userQuery = useQuery({
     queryKey: ['user'],
     queryFn: async () => {
@@ -23,8 +23,10 @@ export function useAuth() {
       try {
         const { user } = await authApi.getCurrentUser();
         return user;
-      } catch {
+      } catch (error) {
+        // Let Axios interceptor handle token refresh - just clear on error
         clearToken();
+        clearRefreshToken();
         return null;
       }
     },
@@ -33,22 +35,18 @@ export function useAuth() {
     enabled: !!getToken(), // Only run if we have a token
   });
 
-  // Mutation for login
   const loginMutation = useMutation({
     mutationFn: async (credentials: { identifier: string; password: string }) => {
       const result = await authApi.login(credentials);
-      return {
-        user: result.user,
-        accessToken: result.accessToken,
-      } as AuthResponse;
+      return result as AuthResponse;
     },
     onSuccess: (data) => {
       setToken(data.accessToken);
+      setRefreshToken(data.refreshToken);
       queryClient.setQueryData(['user'], data.user);
     },
   });
 
-  // Mutation for register
   const registerMutation = useMutation({
     mutationFn: async (data: {
       email: string;
@@ -57,23 +55,18 @@ export function useAuth() {
       username?: string;
     }) => {
       const result = await authApi.register(data);
-      return {
-        user: result.user,
-        accessToken: result.accessToken,
-      } as AuthResponse;
+      return result as AuthResponse;
     },
     onSuccess: (data) => {
       setToken(data.accessToken);
+      setRefreshToken(data.refreshToken);
       queryClient.setQueryData(['user'], data.user);
     },
   });
 
-  /**
-   * Cleans up all user-specific global state on logout.
-   * Preserves user preferences (volume, muted) that persist across sessions.
-   */
   const cleanupUserState = () => {
     clearToken();
+    clearRefreshToken();
     queryClient.clear();
 
     useAuthUIStore.getState().closeModals();
@@ -88,18 +81,25 @@ export function useAuth() {
     }
   };
 
-  // Logout mutation
   const logoutMutation = useMutation({
-    mutationFn: async () => {},
+    mutationFn: async () => {
+        const refreshToken = getRefreshToken();
+        const user = userQuery.data;
+        if (refreshToken && user) {
+            try {
+                await authApi.logout({ userId: user.id, refreshToken });
+            } catch (error) {
+                logger.error('Logout API call failed', error);
+            }
+        }
+    },
     onSettled: () => {
       cleanupUserState();
     },
   });
 
-  // Combined error for login/register
   const error = loginMutation.error?.message || registerMutation.error?.message || null;
 
-  // Clear error function
   const clearError = () => {
     loginMutation.reset();
     registerMutation.reset();
@@ -123,3 +123,6 @@ export function useAuth() {
     refetchUser: userQuery.refetch,
   };
 }
+
+
+
