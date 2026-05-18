@@ -12,6 +12,7 @@ import { useAuthUIStore } from '../stores/auth.store';
 import { closeAudioContext } from '@/audio/micro/zzfx';
 
 import { logger } from '@/utils/logger';
+import { useState, useEffect } from 'react';
 
 interface AuthResponse {
   user: User;
@@ -19,8 +20,18 @@ interface AuthResponse {
   refreshToken: string;
 }
 
-export function useAuth() {
+interface UseAuthOptions {
+  /** Disable eager user fetching on public routes. Pass false on PublicRoute. */
+  isProtected?: boolean;
+}
+
+export function useAuth(options: UseAuthOptions = {}) {
+  const { isProtected = true } = options;
   const queryClient = useQueryClient();
+
+  // Track initial hydration/completion state to avoid showing spinner prematurely
+  // For non-protected routes (isProtected=false), hydration is immediate since no query runs
+  const [isHydrated, setIsHydrated] = useState(!isProtected);
 
   // [EDD-TEMP] Log session recovery attempt
   if (import.meta.env.DEV) {
@@ -34,71 +45,51 @@ export function useAuth() {
     });
   }
 
+  // Only run the query on protected routes or when isProtected is true.
+  // On public routes (isProtected=false), the query is disabled so:
+  // - If token exists: isLoading=true (shows spinner) → user stays on public route
+  // - If no token: isLoading=false (renders page) → login/register works normally
+  const shouldFetch = isProtected && !!getToken();
+
   const userQuery = useQuery({
     queryKey: ['user'],
     queryFn: async () => {
-      const token = getToken();
-      // [EDD-TEMP] Log queryFn start
-      if (import.meta.env.DEV) {
-        console.debug(`[EDD] [${new Date().toISOString()}] [useAuth]`, `queryFn start`, {
-          hasToken: !!token,
-        });
-      }
-
-      if (!token) {
-        // [EDD-TEMP] Log no token found
-        if (import.meta.env.DEV) {
-          console.debug(
-            `[EDD] [${new Date().toISOString()}] [useAuth]`,
-            `No token, returning null`,
-          );
-        }
-        return null;
-      }
-
-      // [EDD-TEMP] Log before API call
-      if (import.meta.env.DEV) {
-        console.debug(
-          `[EDD] [${new Date().toISOString()}] [useAuth]`,
-          `Calling getCurrentUser API`,
-        );
-      }
-
+      // Mark hydration complete after first successful fetch
+      setIsHydrated(true);
       // The try/catch block was removed to allow the Axios interceptor to handle auth errors.
       // Previously, catching the error and returning null caused a race condition where
       // the app would redirect to /login before the token could be refreshed.
-      try {
-        const { user } = await authApi.getCurrentUser();
-        // [EDD-TEMP] Log API success
-        if (import.meta.env.DEV) {
-          console.debug(`[EDD] [${new Date().toISOString()}] [useAuth]`, `getCurrentUser SUCCESS`, {
-            userId: user.id,
-            userRole: user.role,
-          });
-        }
-        return user;
-      } catch (err) {
-        // [EDD-TEMP] Log API error
-        if (import.meta.env.DEV) {
-          console.debug(`[EDD] [${new Date().toISOString()}] [useAuth]`, `getCurrentUser ERROR`, {
-            error: err,
-            stack: new Error().stack,
-          });
-        }
-        throw err;
-      }
+      const { user } = await authApi.getCurrentUser();
+      return user;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: (failureCount, error: any) => {
-      // The interceptor handles 401s, so we don't need react-query to retry them.
-      // It would just cause a loop. For other server errors, we can retry once.
-      if (error.response?.status === 401) {
-        return false;
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    retry: 0, // Don't retry - let the interceptor handle 401 and redirect
+    enabled: shouldFetch,
+    // Use cached user as initial data to reduce flickering while fetching
+    initialData: () => {
+      const cachedUser = queryClient.getQueryData<User>(['user']);
+      if (cachedUser) {
+        setIsHydrated(true);
       }
-      return failureCount < 1;
+      return cachedUser;
     },
-    enabled: !!getToken(), // Only run if we have a token
   });
+
+  // Mark as hydrated if there's cached data from previous session
+  useEffect(() => {
+    if (userQuery.data && !isHydrated) {
+      setIsHydrated(true);
+    }
+  }, [userQuery.data, isHydrated]);
+
+  // Mark as hydrated if query fails (e.g., 401) - don't keep spinner forever
+  useEffect(() => {
+    if (userQuery.isError && !isHydrated) {
+      setIsHydrated(true);
+    }
+  }, [userQuery.isError, isHydrated]);
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: { identifier: string; password: string }) => {
@@ -216,10 +207,11 @@ export function useAuth() {
   return {
     user: userQuery.data,
     isLoading: userQuery.isLoading,
+    isHydrated,
     isError: userQuery.isError,
-    // A user is authenticated if the query is not in an error state and returns data.
+    // A user is authenticated if the query returned data.
     // This prevents a flicker of unauthenticated state during token refresh.
-    isAuthenticated: !userQuery.isError && !!userQuery.data,
+    isAuthenticated: !!userQuery.data,
     login: loginMutation.mutateAsync,
     register: registerMutation.mutateAsync,
     logout: logoutMutation.mutateAsync,

@@ -169,6 +169,19 @@ apiClient.interceptors.response.use(
         processQueue(err, null);
 
         // [EDD-TEMP] Log forced redirect to /login
+        // Skip redirect if the endpoint is /me to prevent infinite loops
+        const isMeEndpoint = originalRequest.url === '/me';
+        if (isMeEndpoint) {
+          if (import.meta.env.DEV) {
+            console.debug(
+              `[EDD] [${new Date().toISOString()}] [AxiosInterceptor]`,
+              `Skipping redirect for /me endpoint`,
+              { currentRoute: window.location.pathname },
+            );
+          }
+          return Promise.reject(err);
+        }
+
         if (import.meta.env.DEV) {
           console.debug(
             `[EDD] [${new Date().toISOString()}] [AxiosInterceptor]`,

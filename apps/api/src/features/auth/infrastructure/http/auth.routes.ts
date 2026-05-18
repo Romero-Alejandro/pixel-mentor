@@ -146,17 +146,16 @@ export class AuthController {
         return;
       }
       if (error instanceof Error) {
-        if (
-          error.message.includes('revoked') ||
-          error.message.includes('expired') ||
-          error.message.includes('Invalid')
-        ) {
-          res.status(401).json({
-            error: error.message,
-            code: 'TOKEN_INVALID',
-          });
-          return;
+        if (error.message.includes('revoked')) {
+          res.status(401).json({ error: 'Refresh token revoked', code: 'TOKEN_REVOKED' });
+        } else if (error.message.includes('expired')) {
+          res.status(401).json({ error: 'Refresh token expired', code: 'TOKEN_EXPIRED' });
+        } else if (error.message.includes('Invalid') || error.message.includes('payload')) {
+          res.status(401).json({ error: 'Invalid refresh token', code: 'TOKEN_INVALID' });
+        } else {
+          res.status(401).json({ error: 'Authentication failed', code: 'AUTH_FAILED' });
         }
+        return;
       }
       next(error);
     }

@@ -23,12 +23,19 @@ export class RefreshTokenUseCase {
   ) {}
 
   async execute(input: RefreshTokenInput): Promise<RefreshTokenOutput> {
-    const payload = this.refreshTokenService.verifyToken(input.refreshToken) as {
-      userId: string;
-      jti: string;
-    };
+    let payload;
+    try {
+      payload = this.refreshTokenService.verifyToken(input.refreshToken) as {
+        userId: string;
+        jti: string;
+      };
+    } catch (error) {
+      console.error('[RefreshToken] Error verifying token:', error);
+      throw error;
+    }
 
     if (!payload.userId || !payload.jti) {
+      console.error('[RefreshToken] Invalid payload:', { payload });
       throw new Error('Invalid refresh token payload');
     }
 
@@ -36,6 +43,7 @@ export class RefreshTokenUseCase {
     const storedToken = await this.refreshTokenRepo.findByUserId(payload.userId);
 
     if (!storedToken) {
+      console.error('[RefreshToken] Token not found in DB:', { userId: payload.userId });
       // If the token is not in the DB, it might be a replay attack
       // after the token was already used. Invalidate all tokens for the user.
       await this.refreshTokenRepo.deleteByUserId(payload.userId);
@@ -45,15 +53,24 @@ export class RefreshTokenUseCase {
     // Verify the JTI against the stored hash using compare (not re-hashing)
     const isValidJti = await this.hashingService.compare(payload.jti, storedToken.tokenHash);
     if (!isValidJti) {
+      console.error('[RefreshToken] JTI mismatch', {
+        jti: payload.jti,
+        storedHash: storedToken.tokenHash,
+      });
       await this.refreshTokenRepo.deleteByUserId(payload.userId);
       throw new Error('Invalid refresh token: JTI mismatch');
     }
 
     if (storedToken.revoked) {
+      console.error('[RefreshToken] Token revoked:', { tokenId: storedToken.id });
       throw new Error('Refresh token has been revoked');
     }
 
     if (new Date() > storedToken.expiresAt) {
+      console.error('[RefreshToken] Token expired:', {
+        tokenId: storedToken.id,
+        expiresAt: storedToken.expiresAt,
+      });
       await this.refreshTokenRepo.delete(storedToken.id);
       throw new Error('Refresh token has expired');
     }
