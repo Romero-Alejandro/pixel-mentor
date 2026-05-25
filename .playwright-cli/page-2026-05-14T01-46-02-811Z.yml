@@ -1,0 +1,28 @@
+- generic [ref=e3]:
+  - img
+  - img
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - img [ref=e7]
+      - heading "Pixel Mentor" [level=1] [ref=e12]
+      - paragraph [ref=e13]: ¡Tu aventura comienza aquí!
+    - generic [ref=e15]:
+      - generic [ref=e16]:
+        - generic [ref=e17]:
+          - generic [ref=e18]: Usuario o Correo
+          - textbox "Usuario o Correo" [ref=e19]:
+            - /placeholder: tu@email.com o tu apodo
+            - text: testpassword123valentina
+        - generic [ref=e20]:
+          - generic [ref=e21]: Contraseña secreta
+          - textbox "Contraseña secreta" [active] [ref=e22]:
+            - /placeholder: ••••••••
+      - button "¡Entrar a la Academia!" [ref=e23] [cursor=pointer]:
+        - img [ref=e24]
+        - text: ¡Entrar a la Academia!
+    - paragraph [ref=e29]:
+      - text: ¿Aún no tienes tu pase?
+      - link "Crear cuenta" [ref=e30] [cursor=pointer]:
+        - /url: /register
+        - img [ref=e31]
+        - text: Crear cuenta

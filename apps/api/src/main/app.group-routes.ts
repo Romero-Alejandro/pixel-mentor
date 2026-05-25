@@ -18,7 +18,7 @@ export function getContentAccessService(): ContentAccessService {
 
 export function setupGroupRoutes(
   app: Express,
-  protectedMiddleware: (req: any, res: any, next: any) => void,
+  protectedMiddleware: (req , res: any, next: any) => void,
   requireRole: (...roles: string[]) => any,
 ): void {
   const groupRepo = new PrismaGroupRepository();

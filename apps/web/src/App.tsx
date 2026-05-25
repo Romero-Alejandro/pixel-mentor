@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 
 import { useAuth } from './features/auth/hooks/useAuth';
@@ -24,16 +24,31 @@ import { MyLearningPage } from './pages/MyLearningPage';
 import { ClassLessonsPage } from './pages/ClassLessonsPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, isHydrated } = useAuth();
   const { saveRedirectPath } = useAuthRedirect();
   const location = useLocation();
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    // Only save redirect after hydration is complete to avoid false redirects
+    if (isHydrated && !isLoading && !isAuthenticated) {
       saveRedirectPath(location.pathname);
     }
-  }, [isLoading, isAuthenticated, location.pathname, saveRedirectPath]);
+  }, [isHydrated, isLoading, isAuthenticated, location.pathname, saveRedirectPath]);
 
+  // Show minimal placeholder while waiting for hydration
+  // This prevents showing the spinner during the brief moment before Zustand/React Query settles
+  if (!isHydrated) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#f0f9ff]">
+        <div className="text-center">
+          <Spinner size="lg" className="text-sky-500" />
+          <p className="mt-4 text-sky-800 font-bold">Verificando pase de explorador...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show spinner only after hydration but still loading
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#f0f9ff]">
@@ -53,8 +68,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  // isProtected: false means no user query - always hydrated
+  const { isAuthenticated, isLoading } = useAuth({ isProtected: false });
   const { getRedirectPath, clearRedirect } = useAuthRedirect();
+  const navigate = useNavigate();
 
   const redirectPath = getRedirectPath();
 
@@ -62,12 +79,21 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
     redirectPath && !redirectPath.startsWith('/login') && !redirectPath.startsWith('/register'),
   );
 
+  // For public routes, isHydrated is always true since no user query is fetched
   useEffect(() => {
-    if (!isLoading && isAuthenticated && isSafePath) {
+    if (!isLoading && isSafePath) {
       clearRedirect();
     }
-  }, [isLoading, isAuthenticated, isSafePath, clearRedirect]);
+  }, [isLoading, isSafePath, clearRedirect]);
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      const target = isSafePath && redirectPath ? redirectPath : '/dashboard';
+      navigate(target, { replace: true });
+    }
+  }, [isAuthenticated, isSafePath, redirectPath, navigate]);
+
+  // Public routes don't need hydration check since isProtected=false
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#f0f9ff]">
@@ -79,18 +105,23 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (isAuthenticated) {
-    if (isSafePath && redirectPath) {
-      return <Navigate to={redirectPath} replace />;
-    }
-    return <Navigate to="/dashboard" replace />;
-  }
-
   return <>{children}</>;
 }
 
 function TeacherRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading, isHydrated, user } = useAuth();
+
+  // Wait for hydration before showing any loading state
+  if (!isHydrated) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#f0f9ff]">
+        <div className="text-center">
+          <Spinner size="lg" className="text-sky-500" />
+          <p className="mt-4 text-sky-800 font-bold">Verificando...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading || !isAuthenticated) {
     return (
