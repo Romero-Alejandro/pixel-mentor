@@ -1,0 +1,60 @@
+- generic [ref=e34]:
+  - banner [ref=e35]:
+    - generic [ref=e36]:
+      - heading "PixelMentor" [level=1] [ref=e37]:
+        - img [ref=e38]
+        - text: PixelMentor
+      - generic [ref=e41]:
+        - navigation [ref=e42]:
+          - link "Mi Aprendizaje" [ref=e43] [cursor=pointer]:
+            - /url: /my-learning
+            - img [ref=e44]
+            - text: Mi Aprendizaje
+        - button "Silenciar" [ref=e47]:
+          - img [ref=e48]
+        - button "Salir" [ref=e51]:
+          - img [ref=e52]
+          - text: Salir
+  - main [ref=e56]:
+    - generic [ref=e57]:
+      - heading "¡Buenas noches, Valentina! 👋" [level=2] [ref=e58]
+      - paragraph [ref=e59]: ¡Tu aventura está por comenzar!
+    - link "Mi Camino de Aprendizaje Ver tus grupos y clases asignadas" [ref=e61] [cursor=pointer]:
+      - /url: /my-learning
+      - generic [ref=e63]:
+        - img [ref=e65]
+        - generic [ref=e67]:
+          - heading "Mi Camino de Aprendizaje" [level=3] [ref=e68]
+          - paragraph [ref=e69]: Ver tus grupos y clases asignadas
+    - generic [ref=e70]:
+      - generic [ref=e72]:
+        - generic [ref=e73]: 🌱
+        - generic [ref=e74]:
+          - generic [ref=e75]: 🌱
+          - generic [ref=e76]:
+            - paragraph [ref=e77]: Nivel 1
+            - heading "Semilla" [level=2] [ref=e78]
+      - generic [ref=e80]:
+        - generic [ref=e81]:
+          - heading "Próximos Desafíos" [level=2] [ref=e82]:
+            - img [ref=e84]
+            - text: Próximos Desafíos
+          - paragraph [ref=e88]: ¡Completa estas misiones para ganar más XP y desbloquear recompensas! 🌟
+        - generic [ref=e89]:
+          - generic [ref=e90]:
+            - img [ref=e91]
+            - paragraph [ref=e95]: "0"
+            - paragraph [ref=e96]: Completadas
+          - generic [ref=e97]:
+            - img [ref=e98]
+            - paragraph [ref=e100]: "0"
+            - paragraph [ref=e101]: En Progreso
+          - generic [ref=e102]:
+            - img [ref=e103]
+            - paragraph [ref=e105]: "0"
+            - paragraph [ref=e106]: Disponibles
+        - generic [ref=e108]:
+          - img [ref=e110]
+          - generic [ref=e114]:
+            - paragraph [ref=e115]: ¡Explora tus clases!
+            - paragraph [ref=e116]: Las misiones aparecerán aquí cuando tu profesor te asigne clases.

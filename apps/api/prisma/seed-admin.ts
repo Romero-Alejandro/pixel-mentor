@@ -6,8 +6,7 @@
  * SECURITY:
  * - Credentials are read from environment variables
  * - Default password only used in development (NODE_ENV !== 'production')
- * - Script is idempotent — safe to run multiple times
- * - Admin user is only created if no ADMIN role exists in the system
+ * - Script is idempotent — safe to run multiple timeq * - Admin user is only created if no ADMIN role exists in the system
  *
  * Usage:
  *   pnpm db:seed:admin

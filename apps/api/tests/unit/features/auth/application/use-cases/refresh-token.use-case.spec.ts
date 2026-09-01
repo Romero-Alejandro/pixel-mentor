@@ -1,240 +1,176 @@
-import { RefreshTokenUseCase } from '@/features/auth/application/use-cases/refresh-token.use-case.js';
 import type { IUserRepository } from '@/features/auth/domain/ports/user.repository.port.js';
-import type { PrismaRefreshTokenRepository } from '@/features/auth/infrastructure/persistence/refresh-token.repository.js';
-import type {
-  JwtAccessTokenService,
-  JwtRefreshTokenService,
-} from '@/features/auth/infrastructure/token.adapter.js';
-import type { User } from '@/features/auth/domain/entities/user.entity.js';
-
-const createMockUser = (overrides: Partial<User> = {}): User => ({
-  id: 'user-123',
-  email: 'test@example.com',
-  username: 'testuser',
-  name: 'Test User',
-  role: 'STUDENT',
-  age: undefined,
-  quota: 0,
-  cohort: 'default',
-  createdAt: new Date(),
-  updatedAt: new Date(),
-  ...overrides,
-});
-
-const createMockUserRepository = (): jest.Mocked<IUserRepository> => ({
-  findByEmail: jest.fn(),
-  findById: jest.fn(),
-  findByEmailWithPassword: jest.fn(),
-  findByIdentifier: jest.fn(),
-  findByIdentifierWithPassword: jest.fn(),
-  create: jest.fn(),
-  updateRole: jest.fn(),
-  updateQuota: jest.fn(),
-  delete: jest.fn(),
-  findAll: jest.fn(),
-});
-
-const createMockRefreshRepo = () =>
-  ({
-    create: jest.fn(),
-    findByToken: jest.fn(),
-    revoke: jest.fn(),
-    revokeAllForUser: jest.fn(),
-    deleteExpired: jest.fn(),
-  }) as unknown as jest.Mocked<PrismaRefreshTokenRepository>;
-
-const createMockAccessTokenService = () =>
-  ({
-    generateToken: jest.fn().mockReturnValue('new-access-token'),
-    verifyToken: jest.fn(),
-  }) as unknown as jest.Mocked<JwtAccessTokenService>;
-
-const createMockRefreshTokenService = () =>
-  ({
-    generateToken: jest.fn().mockReturnValue('new-refresh-token'),
-    verifyToken: jest.fn(),
-  }) as unknown as jest.Mocked<JwtRefreshTokenService>;
+import type { IRefreshTokenRepository } from '@/features/auth/domain/ports/refresh-token.repository.port.js';
+import type { IHashingService } from '@/features/auth/domain/ports/hashing.service.port.js';
+import type { ITokenService } from '@/features/auth/domain/ports/token.service.port.js';
+import { RefreshTokenUseCase } from '@/features/auth/application/use-cases/refresh-token.use-case.js';
+import type { RefreshToken } from '@/features/auth/domain/entities/refresh-token.entity.js';
 
 describe('RefreshTokenUseCase', () => {
-  let userRepository: jest.Mocked<IUserRepository>;
-  let refreshRepo: jest.Mocked<PrismaRefreshTokenRepository>;
-  let accessTokenService: jest.Mocked<JwtAccessTokenService>;
-  let refreshTokenService: jest.Mocked<JwtRefreshTokenService>;
   let useCase: RefreshTokenUseCase;
+  let mockUserRepository: jest.Mocked<IUserRepository>;
+  let mockRefreshTokenRepo: jest.Mocked<IRefreshTokenRepository>;
+  let mockHashingService: jest.Mocked<IHashingService>;
+  let mockAccessTokenService: jest.Mocked<ITokenService>;
+  let mockRefreshTokenService: jest.Mocked<ITokenService>;
 
   beforeEach(() => {
-    userRepository = createMockUserRepository();
-    refreshRepo = createMockRefreshRepo();
-    accessTokenService = createMockAccessTokenService();
-    refreshTokenService = createMockRefreshTokenService();
+    mockUserRepository = {
+      findById: jest.fn(),
+      findByIdentifierWithPassword: jest.fn(),
+    } as unknown as jest.Mocked<IUserRepository>;
+
+    mockRefreshTokenRepo = {
+      create: jest.fn(),
+      findByTokenHash: jest.fn(),
+      findByUserId: jest.fn(),
+      revoke: jest.fn(),
+      delete: jest.fn(),
+      deleteByUserId: jest.fn(),
+    } as unknown as jest.Mocked<IRefreshTokenRepository>;
+
+    mockHashingService = {
+      hash: jest.fn(),
+      compare: jest.fn(),
+    } as unknown as jest.Mocked<IHashingService>;
+
+    mockAccessTokenService = {
+      generateToken: jest.fn(),
+      verifyToken: jest.fn(),
+    } as unknown as jest.Mocked<ITokenService>;
+
+    mockRefreshTokenService = {
+      generateToken: jest.fn(),
+      verifyToken: jest.fn(),
+    } as unknown as jest.Mocked<ITokenService>;
+
     useCase = new RefreshTokenUseCase(
-      userRepository,
-      refreshRepo,
-      accessTokenService,
-      refreshTokenService,
+      mockUserRepository,
+      mockRefreshTokenRepo,
+      mockAccessTokenService,
+      mockRefreshTokenService,
+      mockHashingService,
     );
   });
 
-  describe('execute', () => {
-    const validRefreshToken = 'valid-refresh-token';
-    const userId = 'user-123';
+  describe('execute()', () => {
+    const validUserId = 'user-123';
+    const validJti = 'abc123def456';
+    const validRefreshToken = 'some-jwt-token';
 
-    it('should successfully rotate tokens: verify → lookup → revoke old → issue new → store new', async () => {
-      // Given
-      const mockUser = createMockUser({ id: userId });
-      const storedToken = {
-        id: 'rt-1',
-        userId,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        revoked: false,
-      };
+    const mockUser = {
+      id: validUserId,
+      email: 'test@example.com',
+      role: 'STUDENT' as const,
+      name: 'Test User',
+      username: 'testuser',
+      quota: 100,
+      cohort: 'default',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
 
-      refreshTokenService.verifyToken.mockReturnValue({ userId });
-      refreshRepo.findByToken.mockResolvedValue(storedToken);
-      userRepository.findById.mockResolvedValue(mockUser);
+    const mockStoredToken: RefreshToken = {
+      id: 'token-1',
+      userId: validUserId,
+      tokenHash: 'hashed-jti-value',
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+      revoked: false,
+      revokedAt: null,
+      createdAt: new Date(),
+    };
 
-      // When
+    it('should succeed with valid JTI', async () => {
+      // Arrange
+      mockRefreshTokenService.verifyToken.mockReturnValue({
+        userId: validUserId,
+        jti: validJti,
+      });
+      mockRefreshTokenRepo.findByUserId.mockResolvedValue(mockStoredToken);
+      mockHashingService.compare.mockResolvedValue(true);
+      mockUserRepository.findById.mockResolvedValue(mockUser);
+      mockAccessTokenService.generateToken.mockReturnValue('new-access-token');
+      mockRefreshTokenService.generateToken.mockReturnValue('new-refresh-token');
+      mockHashingService.hash.mockResolvedValue('new-hashed-token');
+      mockRefreshTokenRepo.create.mockResolvedValue({ ...mockStoredToken, id: 'new-token-id' });
+
+      // Act
       const result = await useCase.execute({ refreshToken: validRefreshToken });
 
-      // Then
-      expect(refreshTokenService.verifyToken).toHaveBeenCalledWith(validRefreshToken);
-      expect(refreshRepo.findByToken).toHaveBeenCalledWith(validRefreshToken);
-      expect(refreshRepo.revoke).toHaveBeenCalledWith(validRefreshToken);
-      expect(userRepository.findById).toHaveBeenCalledWith(userId);
-      expect(accessTokenService.generateToken).toHaveBeenCalledWith({
-        userId: mockUser.id,
-        email: mockUser.email,
-        role: mockUser.role,
-      });
-      expect(refreshTokenService.generateToken).toHaveBeenCalledWith({ userId: mockUser.id });
-      expect(refreshRepo.create).toHaveBeenCalledWith(
-        userId,
-        'new-refresh-token',
-        expect.any(Date),
-      );
-      expect(result).toEqual({
-        accessToken: 'new-access-token',
-        refreshToken: 'new-refresh-token',
-      });
+      // Assert
+      expect(result.accessToken).toBe('new-access-token');
+      expect(result.refreshToken).toBe('new-refresh-token');
+      expect(mockRefreshTokenRepo.revoke).toHaveBeenCalledWith(mockStoredToken.id);
+      expect(mockRefreshTokenRepo.create).toHaveBeenCalled();
     });
 
-    it('should throw error when token signature is invalid (verifyToken throws)', async () => {
-      // Given
-      refreshTokenService.verifyToken.mockImplementation(() => {
-        throw new Error('invalid signature');
+    it('should fail with invalid JTI', async () => {
+      // Arrange
+      mockRefreshTokenService.verifyToken.mockReturnValue({
+        userId: validUserId,
+        jti: 'wrong-jti',
       });
+      mockRefreshTokenRepo.findByUserId.mockResolvedValue(mockStoredToken);
+      mockHashingService.compare.mockResolvedValue(false);
 
-      // When / Then
-      await expect(useCase.execute({ refreshToken: 'bad-token' })).rejects.toThrow(
-        'invalid signature',
+      // Act & Assert
+      await expect(useCase.execute({ refreshToken: validRefreshToken })).rejects.toThrow(
+        'Invalid refresh token: JTI mismatch',
       );
 
-      expect(refreshRepo.findByToken).not.toHaveBeenCalled();
+      expect(mockRefreshTokenRepo.deleteByUserId).toHaveBeenCalledWith(validUserId);
     });
 
-    it('should throw error when token is not found in database', async () => {
-      // Given
-      refreshTokenService.verifyToken.mockReturnValue({ userId });
-      refreshRepo.findByToken.mockResolvedValue(null);
+    it('should fail when no stored token found for user', async () => {
+      // Arrange
+      mockRefreshTokenService.verifyToken.mockReturnValue({
+        userId: validUserId,
+        jti: validJti,
+      });
+      mockRefreshTokenRepo.findByUserId.mockResolvedValue(null);
 
-      // When / Then
+      // Act & Assert
       await expect(useCase.execute({ refreshToken: validRefreshToken })).rejects.toThrow(
         'Invalid refresh token',
       );
+
+      expect(mockRefreshTokenRepo.deleteByUserId).toHaveBeenCalledWith(validUserId);
     });
 
-    it('should throw error and revoke all user tokens when a revoked token is presented (reuse attack detection)', async () => {
-      // Given
-      const storedToken = {
-        id: 'rt-1',
-        userId,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        revoked: true,
-      };
+    it('should fail when token is revoked', async () => {
+      // Arrange
+      const revokedToken = { ...mockStoredToken, revoked: true };
 
-      refreshTokenService.verifyToken.mockReturnValue({ userId });
-      refreshRepo.findByToken.mockResolvedValue(storedToken);
+      mockRefreshTokenService.verifyToken.mockReturnValue({
+        userId: validUserId,
+        jti: validJti,
+      });
+      mockRefreshTokenRepo.findByUserId.mockResolvedValue(revokedToken);
+      mockHashingService.compare.mockResolvedValue(true);
 
-      // When / Then
+      // Act & Assert
       await expect(useCase.execute({ refreshToken: validRefreshToken })).rejects.toThrow(
-        'Refresh token has been revoked. Please log in again.',
+        'Refresh token has been revoked',
       );
-
-      expect(refreshRepo.revokeAllForUser).toHaveBeenCalledWith(userId);
-      expect(refreshRepo.revoke).not.toHaveBeenCalled();
     });
 
-    it('should throw error and revoke token when stored token is expired', async () => {
-      // Given
-      const storedToken = {
-        id: 'rt-1',
-        userId,
-        expiresAt: new Date(Date.now() - 1000), // already expired
-        revoked: false,
+    it('should fail when token is expired', async () => {
+      // Arrange
+      const expiredToken = {
+        ...mockStoredToken,
+        expiresAt: new Date(Date.now() - 1000), // expired
       };
 
-      refreshTokenService.verifyToken.mockReturnValue({ userId });
-      refreshRepo.findByToken.mockResolvedValue(storedToken);
+      mockRefreshTokenService.verifyToken.mockReturnValue({
+        userId: validUserId,
+        jti: validJti,
+      });
+      mockRefreshTokenRepo.findByUserId.mockResolvedValue(expiredToken);
+      mockHashingService.compare.mockResolvedValue(true);
 
-      // When / Then
+      // Act & Assert
       await expect(useCase.execute({ refreshToken: validRefreshToken })).rejects.toThrow(
         'Refresh token has expired',
       );
-
-      expect(refreshRepo.revoke).toHaveBeenCalledWith(validRefreshToken);
-    });
-
-    it('should throw error when user is not found', async () => {
-      // Given
-      const storedToken = {
-        id: 'rt-1',
-        userId,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        revoked: false,
-      };
-
-      refreshTokenService.verifyToken.mockReturnValue({ userId });
-      refreshRepo.findByToken.mockResolvedValue(storedToken);
-      userRepository.findById.mockResolvedValue(null);
-
-      // When / Then
-      await expect(useCase.execute({ refreshToken: validRefreshToken })).rejects.toThrow(
-        'User not found',
-      );
-    });
-
-    it('should throw error when payload is missing userId', async () => {
-      // Given
-      refreshTokenService.verifyToken.mockReturnValue({ someOtherField: 'value' });
-
-      // When / Then
-      await expect(useCase.execute({ refreshToken: validRefreshToken })).rejects.toThrow(
-        'Invalid refresh token: missing userId',
-      );
-    });
-
-    it('should return new accessToken and refreshToken on success', async () => {
-      // Given
-      const mockUser = createMockUser({ id: userId });
-      const storedToken = {
-        id: 'rt-1',
-        userId,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        revoked: false,
-      };
-
-      refreshTokenService.verifyToken.mockReturnValue({ userId });
-      refreshRepo.findByToken.mockResolvedValue(storedToken);
-      userRepository.findById.mockResolvedValue(mockUser);
-
-      // When
-      const result = await useCase.execute({ refreshToken: validRefreshToken });
-
-      // Then
-      expect(result).toHaveProperty('accessToken');
-      expect(result).toHaveProperty('refreshToken');
-      expect(result.accessToken).toBe('new-access-token');
-      expect(result.refreshToken).toBe('new-refresh-token');
     });
   });
 });

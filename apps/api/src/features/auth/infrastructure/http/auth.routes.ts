@@ -1,10 +1,4 @@
-import {
-  Router,
-  type Request,
-  type Response,
-  type NextFunction,
-  type RequestHandler,
-} from 'express';
+import { Router, type Request, type Response, type NextFunction } from 'express';
 import { z } from 'zod';
 
 import { requireRole } from './auth.middleware.js';
@@ -13,6 +7,7 @@ import type { IUserRepository } from '@/features/auth/domain/ports/user.reposito
 import {
   type RegisterUseCase,
   type LoginUseCase,
+  type LogoutUseCase,
   type RefreshTokenUseCase,
   type ResolveUserByEmailUseCase,
 } from '@/features/auth/application/use-cases/index.js';
@@ -35,6 +30,10 @@ const RefreshTokenBodySchema = z.object({
   refreshToken: z.string().min(1, 'Refresh token is required'),
 });
 
+const LogoutBodySchema = z.object({
+  refreshToken: z.string().min(1, 'Refresh token is required'),
+});
+
 const ResolveUserQuerySchema = z.object({
   email: z.string().email('Email inválido'),
 });
@@ -44,6 +43,7 @@ export class AuthController {
     private userRepo: IUserRepository,
     private registerUseCase: RegisterUseCase,
     private loginUseCase: LoginUseCase,
+    private logoutUseCase: LogoutUseCase,
     private refreshTokenUseCase: RefreshTokenUseCase,
     private resolveUserByEmailUseCase: ResolveUserByEmailUseCase,
   ) {}
@@ -62,7 +62,8 @@ export class AuthController {
 
       res.status(201).json({
         user: result.user,
-        accessToken: result.token,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -86,7 +87,8 @@ export class AuthController {
 
       res.status(200).json({
         user: result.user,
-        accessToken: result.token,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -101,6 +103,23 @@ export class AuthController {
         (error as AuthError).code === 'INVALID_CREDENTIALS'
       ) {
         res.status(401).json({ error: 'Credenciales inválidas', code: 'INVALID_CREDENTIALS' });
+        return;
+      }
+      next(error);
+    }
+  }
+
+  async logout(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const validated = LogoutBodySchema.parse(req.body);
+      await this.logoutUseCase.execute({ refreshToken: validated.refreshToken });
+      res.status(204).send();
+    } catch (error) {
+      // Even if logout fails, we proceed. Client will clear tokens anyway.
+      if (error instanceof z.ZodError) {
+        res
+          .status(400)
+          .json({ error: 'Bad Request', code: 'VALIDATION_ERROR', details: error.issues });
         return;
       }
       next(error);
@@ -127,13 +146,16 @@ export class AuthController {
         return;
       }
       if (error instanceof Error) {
-        if (error.message.includes('revoked') || error.message.includes('expired')) {
-          res.status(401).json({
-            error: error.message,
-            code: 'TOKEN_INVALID',
-          });
-          return;
+        if (error.message.includes('revoked')) {
+          res.status(401).json({ error: 'Refresh token revoked', code: 'TOKEN_REVOKED' });
+        } else if (error.message.includes('expired')) {
+          res.status(401).json({ error: 'Refresh token expired', code: 'TOKEN_EXPIRED' });
+        } else if (error.message.includes('Invalid') || error.message.includes('payload')) {
+          res.status(401).json({ error: 'Invalid refresh token', code: 'TOKEN_INVALID' });
+        } else {
+          res.status(401).json({ error: 'Authentication failed', code: 'AUTH_FAILED' });
         }
+        return;
       }
       next(error);
     }
@@ -154,13 +176,14 @@ export class AuthController {
         return;
       }
 
-      const user = await this.userRepo.findById(authReq.user.id);
-      if (!user) {
-        res.status(404).json({ error: 'Usuario no encontrado', code: 'USER_NOT_FOUND' });
-        return;
-      }
-
-      res.json({ user });
+      // User data already loaded by authMiddleware via VerifyTokenUseCase
+      res.json({
+        user: {
+          id: authReq.user.id,
+          email: authReq.user.email,
+          role: authReq.user.role,
+        },
+      });
     } catch (error) {
       next(error);
     }
@@ -196,21 +219,22 @@ export function createAuthRouter(
   userRepo: IUserRepository,
   registerUseCase: RegisterUseCase,
   loginUseCase: LoginUseCase,
+  logoutUseCase: LogoutUseCase,
   refreshTokenUseCase: RefreshTokenUseCase,
   resolveUserByEmailUseCase: ResolveUserByEmailUseCase,
-  protectedMiddleware: RequestHandler,
+  protectedMiddleware: (req: Request, res: Response, next: NextFunction) => void,
 ) {
   const controller = new AuthController(
     userRepo,
     registerUseCase,
     loginUseCase,
+    logoutUseCase,
     refreshTokenUseCase,
     resolveUserByEmailUseCase,
   );
 
   const router = Router();
 
-  // Public routes - no auth required
   router.post('/register', (req: Request, res: Response, next: NextFunction) =>
     controller.register(req, res, next),
   );
@@ -220,13 +244,14 @@ export function createAuthRouter(
   router.post('/refresh', (req: Request, res: Response, next: NextFunction) =>
     controller.refresh(req, res, next),
   );
+  router.post('/logout', (req: Request, res: Response, next: NextFunction) =>
+    controller.logout(req, res, next),
+  );
 
-  // Protected routes - auth required
   router.get('/me', protectedMiddleware, (req: Request, res: Response, next: NextFunction) =>
     controller.me(req, res, next),
   );
 
-  // Protected route - auth + teacher role required
   router.get(
     '/users/resolve',
     protectedMiddleware,

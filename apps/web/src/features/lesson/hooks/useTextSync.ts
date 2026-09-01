@@ -126,7 +126,6 @@ export function useTextSync({
     }
 
     const speakingJustStarted = isSpeaking && !prevSpeakingRef.current;
-    console.log('[KARAOKE-DEBUG] useTextSync: SyncTriggered', JSON.stringify({ isSpeaking }));
     if (speakingJustStarted) {
       setState((prev) => ({
         ...prev,
@@ -149,25 +148,13 @@ export function useTextSync({
     // audioElementReady flips later (handles the case where audio becomes available
     // while the effect is already running).
     if (speakingJustStarted && !audioElementReady) {
-      console.log('[KARAOKE-DEBUG] useTextSync: waiting for audioElementReady');
       return;
     }
 
     const audio = getAudioElement();
     if (!audio) {
-      // Audio element isn't ready. The effect will re-run on the next render.
-      // The `isAttemptingSync` state remains true, showing the user a loading state.
-      console.log(
-        '[KARAOKE-DEBUG] useTextSync: AudioElementCheck',
-        JSON.stringify({ isAudioNull: true }),
-      );
       return;
     }
-
-    console.log(
-      '[KARAOKE-DEBUG] useTextSync: AudioElementCheck',
-      JSON.stringify({ isAudioNull: false }),
-    );
 
     if (isListeningRef.current) {
       return;
@@ -233,30 +220,11 @@ export function useTextSync({
     handleTimeUpdateRef.current = handleTimeUpdate;
     handleEndedRef.current = handleEnded;
     handleErrorRef.current = handleError;
-    console.log(
-      '[KARAOKE-DEBUG] useTextSync: Event Listener Action',
-      JSON.stringify({
-        action: 'attach',
-        audioElement: !!audio,
-        timeupdate: true,
-        error: true,
-        ended: true,
-        timestamp: Date.now(),
-      }),
-    );
     audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('error', handleError);
     audio.addEventListener('ended', handleEnded);
 
     return () => {
-      console.log(
-        '[KARAOKE-DEBUG] useTextSync: Event Listener Action',
-        JSON.stringify({
-          action: 'detach',
-          audioElement: !!audio,
-          timestamp: Date.now(),
-        }),
-      );
       isListeningRef.current = false;
       handleTimeUpdateRef.current = null;
       handleEndedRef.current = null;
@@ -322,10 +290,6 @@ export function useTextSync({
         handleTimeUpdateRef.current = handleTimeUpdate;
         handleEndedRef.current = handleEnded;
         handleErrorRef.current = handleError;
-        console.log(
-          '[KARAOKE-DEBUG] useTextSync: Event Listener Action',
-          JSON.stringify({ action: 'retry_attach', audioElement: !!audio, timestamp: Date.now() }),
-        );
         audio.addEventListener('timeupdate', handleTimeUpdate);
         audio.addEventListener('error', handleError);
         audio.addEventListener('ended', handleEnded);
@@ -337,28 +301,12 @@ export function useTextSync({
     // Clean up event listeners on the audio element to prevent stale handlers
     const audio = getAudioElement();
     if (audio) {
-      console.log(
-        '[KARAOKE-DEBUG] useTextSync: Reset Function',
-        JSON.stringify({
-          action: 'cleanup_listeners',
-          audioExists: true,
-          hasTimeUpdate: !!handleTimeUpdateRef.current,
-          hasEnded: !!handleEndedRef.current,
-          hasError: !!handleErrorRef.current,
-          timestamp: Date.now(),
-        }),
-      );
       const tUpdate = handleTimeUpdateRef.current;
       const tEnded = handleEndedRef.current;
       const tError = handleErrorRef.current;
       if (tUpdate) audio.removeEventListener('timeupdate', tUpdate);
       if (tEnded) audio.removeEventListener('ended', tEnded);
       if (tError) audio.removeEventListener('error', tError);
-    } else {
-      console.log(
-        '[KARAOKE-DEBUG] useTextSync: Reset Function',
-        JSON.stringify({ action: 'cleanup_listeners', audioExists: false, timestamp: Date.now() }),
-      );
     }
     isListeningRef.current = false;
     prevSpeakingRef.current = undefined;

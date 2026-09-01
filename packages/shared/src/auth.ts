@@ -35,6 +35,7 @@ export const RegisterInputSchema = z.object({
 export const AuthResponseSchema = z.object({
   user: UserSchema,
   accessToken: z.string(),
+  refreshToken: z.string(),
 });
 
 // Error response schema

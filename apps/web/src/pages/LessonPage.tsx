@@ -70,12 +70,6 @@ export function LessonPage() {
   const { audioElementReady } = orchestrator;
 
   const handleRestart = async () => {
-    console.log(
-      '[KARAOKE-DEBUG] LessonPage: Restart Button Clicked',
-      JSON.stringify({
-        timestamp: Date.now(),
-      }),
-    );
     await orchestrator.reset(() => textSync.reset());
     resetStarted();
   };
@@ -86,15 +80,6 @@ export function LessonPage() {
     isSpeaking: isSpeaking,
     audioElementReady,
   });
-
-  console.log(
-    '[KARAOKE-DEBUG] LessonPage -> useTextSync props:',
-    JSON.stringify({
-      isSpeaking,
-      textLength: orchestrator.fullVoiceText?.length,
-      isAttemptingSync: textSync.isAttemptingSync,
-    }),
-  );
 
   // BUGFIX: Reset sync if text is empty
   useEffect(() => {

@@ -15,12 +15,15 @@ export class JwtAccessTokenService implements ITokenService {
     } as jwt.SignOptions);
   }
 
-  verifyToken(token: string): object {
+  verifyToken(token: string): { userId: string; jti: string } {
     const decoded = jwt.verify(token, config.JWT_SECRET);
-    if (typeof decoded === 'string') {
-      return {};
+    if (typeof decoded === 'string' || !decoded || !decoded.userId || !decoded.jti) {
+      if (config.NODE_ENV === 'development') {
+        console.debug('[TokenAdapter] Invalid payload:', decoded);
+      }
+      throw new Error('Invalid token payload: missing required fields');
     }
-    return decoded as object;
+    return decoded as { userId: string; jti: string };
   }
 }
 
@@ -43,11 +46,14 @@ export class JwtRefreshTokenService {
     } as jwt.SignOptions);
   }
 
-  verifyToken(token: string): object {
+  verifyToken(token: string): { userId: string; jti: string } {
     const decoded = jwt.verify(token, this.secret);
-    if (typeof decoded === 'string') {
-      return {};
+    if (typeof decoded === 'string' || !decoded || !decoded.userId || !decoded.jti) {
+      if (config.NODE_ENV === 'development') {
+        console.debug('[TokenAdapter] Invalid payload:', decoded);
+      }
+      throw new Error('Invalid token payload: missing required fields');
     }
-    return decoded as object;
+    return decoded as { userId: string; jti: string };
   }
 }

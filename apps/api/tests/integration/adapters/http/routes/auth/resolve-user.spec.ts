@@ -53,10 +53,25 @@ const createApp = (
     next();
   };
 
+  const mockLogoutUseCase = { execute: jest.fn() };
+  const mockVerifyTokenUseCase = { execute: jest.fn() };
+
+  // Mock middleware that directly sets user (simulates successful auth)
+  const mockAuthMiddleware =
+    (user: { id: string; role: string } | null) => (_req: any, res: any, next: any) => {
+      if (!user) {
+        res.status(401).json({ error: 'No autenticado' });
+        return;
+      }
+      _req.user = user;
+      next();
+    };
+
   const router = createAuthRouter(
     userRepo,
     mockRegisterUseCase as any,
     mockLoginUseCase as any,
+    mockLogoutUseCase as any,
     mockRefreshTokenUseCase as any,
     resolveUseCase,
     protectedMiddleware,

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { IconRocket, IconLogin2, IconUserPlus, IconAlertCircleFilled } from '@tabler/icons-react';
 
 import { useAuth } from '../hooks/useAuth';
@@ -8,8 +8,7 @@ import { useAudio } from '@/contexts/AudioContext';
 
 export function LoginForm() {
   const { playFocus, playClick, playClickSecondary } = useAudio();
-  const navigate = useNavigate();
-  const { login, error, clearError, isLoggingIn } = useAuth();
+  const { login, error, clearError, isLoggingIn } = useAuth({ isProtected: false });
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -20,7 +19,6 @@ export function LoginForm() {
     clearError();
     try {
       await login({ identifier, password });
-      navigate('/dashboard');
     } catch {}
   };
 
