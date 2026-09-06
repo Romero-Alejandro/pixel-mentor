@@ -7,9 +7,9 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   plugins: [
     react({
-      babel: {
-        plugins: ['babel-plugin-react-compiler'],
-      },
+      // React Compiler disabled: was causing `reportAllChanges` / `startTime` runtime crash
+      // Re-enable once babel-plugin-react-compiler is verified with React 19.2 + Zustand
+      babel: {},
     }),
     tailwindcss(),
   ],
@@ -19,6 +19,8 @@ export default defineConfig({
       '@pixel-mentor/web': path.resolve(__dirname, './src'),
     },
   },
+  // Emit .riv animation files as hashed cacheable assets (?url imports).
+  assetsInclude: ['**/*.riv'],
   server: {
     port: 5173,
     proxy: {

@@ -22,7 +22,9 @@ import {
   ListRecipesInputSchema,
   CreateRecipeInputSchema,
   UpdateRecipeInputSchema,
+  type UpdateRecipeInput,
   RecipeStepInputSchema,
+  type RecipeStepInput,
   ReorderStepsInputSchema,
   normalizeStepData,
 } from '@/shared/dto/index';
@@ -63,6 +65,18 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
         const validated = GetRecipeInputSchema.parse({ recipeId: request.params.id as string });
 
         const recipe = await getRecipeUseCase.execute(validated.recipeId);
+
+        // Only published recipes are visible to everyone. Drafts are restricted
+        // to their author (teacher) and administrators.
+        const requesterId = request.user?.id;
+        const requesterRole = request.user?.role;
+        if (!recipe.published && recipe.authorId !== requesterId && requesterRole !== 'ADMIN') {
+          response.status(403).json({
+            error: 'No tienes permisos para acceder a esta receta',
+            code: 'FORBIDDEN',
+          });
+          return;
+        }
 
         // Transform domain objects to plain objects for JSON response
         const plainRecipe = {
@@ -230,7 +244,7 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
         const recipeId = request.params.id as string;
         request.logger?.debug({ body: request.body }, '[PATCH recipe] Request body');
 
-        let validated: any;
+        let validated: UpdateRecipeInput;
         try {
           validated = UpdateRecipeInputSchema.parse(request.body);
           request.logger?.debug({ validated }, '[PATCH recipe] Validated');
@@ -359,7 +373,7 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
         console.log('[addStep] Request body:', JSON.stringify(request.body));
         request.logger?.debug({ body: JSON.stringify(request.body) }, '[addStep] Request body');
 
-        let validated: any;
+        let validated: RecipeStepInput;
         try {
           // Normalizar datos del formato UI al formato Zod
           const normalized = normalizeStepData(request.body);

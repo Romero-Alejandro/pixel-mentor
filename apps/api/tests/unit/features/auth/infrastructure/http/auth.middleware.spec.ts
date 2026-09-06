@@ -79,6 +79,8 @@ describe('authMiddleware', () => {
           id: 'user-123',
           email: 'test@example.com',
           role: 'ADMIN',
+          name: 'Test Admin',
+          quota: 10,
         },
       });
 
@@ -91,6 +93,8 @@ describe('authMiddleware', () => {
         id: 'user-123',
         email: 'test@example.com',
         role: 'ADMIN',
+        name: 'Test Admin',
+        quota: 10,
       });
       expect(next).toHaveBeenCalled();
       expect(res.status).not.toHaveBeenCalled();
@@ -210,6 +214,8 @@ describe('authMiddleware', () => {
           id: 'user-123',
           email: 'test@example.com',
           role: 'STUDENT',
+          name: 'Test Student',
+          quota: 0,
         },
       });
 

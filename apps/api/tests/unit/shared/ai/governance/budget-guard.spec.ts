@@ -135,56 +135,65 @@ describe('BudgetGuard', () => {
   });
 
   describe('daily reset', () => {
-    beforeEach(() => {
-      jest.useFakeTimers();
-    });
-
     afterEach(() => {
       jest.useRealTimers();
     });
 
     it('should reset spending when a new day starts', () => {
-      // Record some spending
-      budgetGuard.recordCost(5);
-      expect(budgetGuard.getMetrics().currentSpendUsd).toBe(5);
+      jest.useFakeTimers();
+      const baseTime = Date.now();
+      jest.setSystemTime(baseTime);
+      // Create BudgetGuard AFTER fake timers so budgetDayStart aligns
+      const guard = new BudgetGuard(DAILY_BUDGET);
+      guard.recordCost(5);
+      expect(guard.getMetrics().currentSpendUsd).toBe(5);
 
       // Advance to the next day (past midnight)
-      const now = new Date();
-      const nextDay = new Date(now);
+      const nextDay = new Date(baseTime);
       nextDay.setDate(nextDay.getDate() + 1);
       nextDay.setHours(0, 0, 0, 0);
       jest.setSystemTime(nextDay.getTime());
 
-      const result = budgetGuard.checkBudget();
+      const result = guard.checkBudget();
 
       expect(result.allowed).toBe(true);
       expect(result.currentSpendUsd).toBe(0);
     });
 
     it('should not reset spending within the same day', () => {
-      budgetGuard.recordCost(3);
+      jest.useFakeTimers();
+      // Use a fixed time early in the day so +12h stays within the same calendar day
+      const baseTime = new Date(2026, 0, 15, 6, 0, 0).getTime(); // Jan 15 2026 06:00:00
+      jest.setSystemTime(baseTime);
+      const guard = new BudgetGuard(DAILY_BUDGET);
 
-      // Advance 12 hours (same day)
-      jest.setSystemTime(Date.now() + 12 * 60 * 60 * 1000);
+      guard.recordCost(3);
 
-      const metrics = budgetGuard.getMetrics();
+      // Advance 12 hours (same day — 06:00 → 18:00)
+      jest.setSystemTime(baseTime + 12 * 60 * 60 * 1000);
+
+      const metrics = guard.getMetrics();
       expect(metrics.currentSpendUsd).toBe(3);
     });
 
     it('should allow spending again after daily reset', () => {
+      jest.useFakeTimers();
+      const baseTime = Date.now();
+      jest.setSystemTime(baseTime);
+      const guard = new BudgetGuard(DAILY_BUDGET);
+
       // Exhaust the budget
-      budgetGuard.recordCost(DAILY_BUDGET);
-      expect(budgetGuard.checkBudget().allowed).toBe(false);
+      guard.recordCost(DAILY_BUDGET);
+      expect(guard.checkBudget().allowed).toBe(false);
 
       // Advance to next day
-      const now = new Date();
-      const nextDay = new Date(now);
+      const nextDay = new Date(baseTime);
       nextDay.setDate(nextDay.getDate() + 1);
       nextDay.setHours(0, 0, 0, 0);
       jest.setSystemTime(nextDay.getTime());
 
       // Should be allowed again
-      const result = budgetGuard.checkBudget();
+      const result = guard.checkBudget();
       expect(result.allowed).toBe(true);
       expect(result.budgetUsd).toBe(DAILY_BUDGET);
     });

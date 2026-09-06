@@ -108,42 +108,18 @@ export const useGamificationStore = create<GamificationState>()((set) => ({
     }
   },
 
-  recordActivity: async (type: 'LESSON_COMPLETED' | 'ACTIVITY_ATTEMPT' | 'DAILY_LOGIN') => {
-    // Increment version for race condition detection
+  recordActivity: async (_type: 'LESSON_COMPLETED' | 'ACTIVITY_ATTEMPT' | 'DAILY_LOGIN') => {
+    // XP is awarded server-side via domain events and pushed over SSE.
+    // There is no POST /api/gamification/xp/add endpoint, so this action
+    // only refreshes the profile instead of POSTing to a missing route.
+    // Level-up / badge modals are driven by the SSE event handlers below.
     set((state) => ({ isLoading: true, error: null, requestVersion: state.requestVersion + 1 }));
     try {
-      const result = await gamificationApi.recordActivity({ type });
+      const profile = await gamificationApi.getProfile();
       set({
-        profile: result.profile,
+        profile,
         isLoading: false,
       });
-
-      if (result.levelUp) {
-        set({
-          showLevelUp: true,
-          levelUpData: {
-            userId: result.profile.userId,
-            newLevel: result.profile.currentLevel,
-            newLevelTitle: result.profile.levelTitle,
-            previousLevel: result.profile.currentLevel - 1,
-            totalXP: result.profile.totalXP,
-          },
-        });
-      }
-
-      // Process ALL new badges, not just the first one
-      if (result.newBadges.length > 0) {
-        const allNewBadges = result.newBadges as EarnedBadge[];
-        // Add all to pending toasts queue
-        set((state) => ({
-          pendingToasts: [...state.pendingToasts, ...allNewBadges],
-        }));
-        // Show modal for first badge, rest will appear as toasts
-        set({
-          showBadgeEarned: true,
-          badgeData: allNewBadges[0],
-        });
-      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to record activity';
       set({ error: message, isLoading: false });

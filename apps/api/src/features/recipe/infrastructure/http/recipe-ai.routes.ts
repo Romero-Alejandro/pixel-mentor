@@ -90,7 +90,7 @@ export function createRecipeAIRouter(deps: RecipeAIRouterDependencies): Router {
   router.get('/generate-recipe/stream', (async (
     req: AppRequest,
     res: Response,
-    next: NextFunction,
+    _next: NextFunction,
   ): Promise<void> => {
     try {
       // Check TEACHER role

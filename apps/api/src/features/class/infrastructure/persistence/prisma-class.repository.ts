@@ -92,8 +92,8 @@ export class PrismaClassRepository implements IClassRepository {
   }
 
   async findBySlug(slug: string): Promise<ClassEntity | null> {
-    const classEntity = await prisma.class.findUnique({
-      where: { slug },
+    const classEntity = await prisma.class.findFirst({
+      where: { shortId: slug },
       include: {
         lessons: { orderBy: { order: 'asc' } },
       },

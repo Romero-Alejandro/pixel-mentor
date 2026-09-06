@@ -24,7 +24,6 @@ import {
   type AddLessonInput,
   type UpdateLessonInput,
 } from '@/features/class/application/services/class.service.js';
-import { prisma } from '@/database/client';
 import type {
   IClassRepository,
   IClassLessonRepository,
@@ -62,7 +61,7 @@ const createMockLessonEntity = (overrides: Partial<ClassLessonEntity> = {}): Cla
 // Mock repositories
 const createMockClassRepo = (): jest.Mocked<IClassRepository> => ({
   findById: jest.fn(),
-  findBySlug: jest.fn(),
+  findBySlug: jest.fn() as any,
   findByTutorId: jest.fn(),
   create: jest.fn(),
   update: jest.fn(),
@@ -71,6 +70,8 @@ const createMockClassRepo = (): jest.Mocked<IClassRepository> => ({
 
 const createMockLessonRepo = (): jest.Mocked<IClassLessonRepository> => ({
   findByClassId: jest.fn(),
+  findById: jest.fn(),
+  findClassIdByLessonId: jest.fn(),
   create: jest.fn(),
   update: jest.fn(),
   delete: jest.fn(),
@@ -95,7 +96,7 @@ describe('ClassService', () => {
     classRepo = createMockClassRepo();
     lessonRepo = createMockLessonRepo();
     versionRepo = createMockVersionRepo();
-    service = new ClassService(classRepo, lessonRepo, versionRepo);
+    service = new ClassService(classRepo, lessonRepo as any, versionRepo);
   });
 
   describe('createClass', () => {
@@ -274,19 +275,21 @@ describe('ClassService', () => {
   describe('publishClass', () => {
     it('should publish DRAFT class with lessons (DRAFT->UNDER_REVIEW->PUBLISHED)', async () => {
       // Given
-      const mockClass = createMockClassEntity({ id: 'class-1', status: 'DRAFT', version: 0 });
+      const classId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+      const mockClass = createMockClassEntity({ id: classId, status: 'DRAFT', version: 0 });
       const publishedClass = { ...mockClass, status: 'PUBLISHED' as const, version: 1 };
-      const mockLessons = [createMockLessonEntity({ id: 'lesson-1', classId: 'class-1' })];
+      const mockLessons = [createMockLessonEntity({ id: 'lesson-1', classId })];
 
+      // Valid UUID → _resolveClassIdOrSlug does NOT call findById
       classRepo.findById
-        .mockResolvedValueOnce(mockClass) // Primera llamada: DRAFT
-        .mockResolvedValue(publishedClass); // Llamadas posteriores: PUBLISHED
+        .mockResolvedValueOnce(mockClass) // status check
+        .mockResolvedValue(publishedClass); // final fetch after publish
       lessonRepo.findByClassId.mockResolvedValue(mockLessons);
       versionRepo.create.mockResolvedValue({} as any);
       classRepo.update.mockResolvedValue(publishedClass);
 
       // When
-      const result = await service.publishClass('class-1', 'tutor-1');
+      const result = await service.publishClass(classId, 'tutor-1');
 
       // Then
       expect(classRepo.update).toHaveBeenCalledTimes(2); // DRAFT->UNDER_REVIEW->PUBLISHED
@@ -297,14 +300,13 @@ describe('ClassService', () => {
 
     it('should throw ClassValidationError when no lessons exist', async () => {
       // Given
-      const mockClass = createMockClassEntity({ id: 'class-1', status: 'DRAFT' });
+      const classId2 = 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12';
+      const mockClass = createMockClassEntity({ id: classId2, status: 'DRAFT' });
       classRepo.findById.mockResolvedValue(mockClass);
       lessonRepo.findByClassId.mockResolvedValue([]);
 
       // When/Then
-      await expect(service.publishClass('class-1', 'tutor-1')).rejects.toThrow(
-        ClassValidationError,
-      );
+      await expect(service.publishClass(classId2, 'tutor-1')).rejects.toThrow(ClassValidationError);
     });
 
     it('should throw ClassNotFoundError when class not found', async () => {

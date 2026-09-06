@@ -7,6 +7,7 @@
 import request from 'supertest';
 
 import { createClassRouter } from '@/features/class/infrastructure/http/classes.routes.js';
+import { errorHandler } from '@/shared/http/error-handler.middleware.js';
 import type {
   ClassEntity,
   ClassLessonEntity,
@@ -43,16 +44,19 @@ const createMockLesson = (overrides: Partial<ClassLessonEntity> = {}): ClassLess
 });
 
 // Helper to create app with mocked dependencies
+type DemoUser = { id: string; role: string } | null;
 const createApp = (
   classService: any,
   classLessonRepository: any,
   startRecipeUseCase: any,
-  user: { id: string; role: string } = { id: 'tutor-1', role: 'TEACHER' },
+  user: DemoUser = { id: 'tutor-1', role: 'TEACHER' },
 ) => {
   const router = createClassRouter({
     classService,
     classLessonRepository,
     startRecipeUseCase,
+    orchestrateUseCase: { interact: jest.fn() } as any,
+    contentAccessService: { canAccessClass: jest.fn().mockResolvedValue(true) } as any,
   });
 
   const express = require('express');
@@ -61,11 +65,14 @@ const createApp = (
 
   // Mock auth middleware
   app.use((req: any, _res: any, next: any) => {
-    req.user = user;
+    if (user && user.id) {
+      req.user = user;
+    }
     next();
   });
 
   app.use('/api/classes', router);
+  app.use(errorHandler);
   return app;
 };
 
@@ -156,17 +163,14 @@ describe('POST /api/classes/:id/demo', () => {
   describe('Authentication & Authorization errors', () => {
     it('should return 401 when user not authenticated', async () => {
       // Given: unauthenticated user
-      const app = createApp(classService, classLessonRepository, startRecipeUseCase, {
-        id: '',
-        role: '',
-      } as any);
+      const app = createApp(classService, classLessonRepository, startRecipeUseCase, null);
 
       // When
       const response = await request(app).post('/api/classes/class-1/demo');
 
       // Then
       expect(response.status).toBe(401);
-      expect(response.body.error).toBe('Unauthorized');
+      expect(response.body.error).toBe('No autenticado');
     });
 
     it('should return 403 when non-owner TEACHER attempts access', async () => {
@@ -308,7 +312,7 @@ describe('POST /api/classes/:id/demo', () => {
 
       // Then
       expect(response.status).toBe(500);
-      expect(response.body.error).toBe('Recipe start failed');
+      expect(response.body.error).toBe('Internal server error');
     });
   });
 });

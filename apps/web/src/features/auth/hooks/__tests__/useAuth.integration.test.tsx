@@ -1,19 +1,15 @@
 'use strict';
 
 /**
- * Auth Integration Tests - Bug de Redirección a /login
+ * Auth Integration Tests - Session restore with in-memory access token
  *
- * This test file validates the authentication flow including:
- * 1. Token refresh when access token expires
- * 2. Redirect to /login when refresh token is invalid
- * 3. No auth attempt when no token exists
- *
- * PROBES INJECTED:
- * - Mock de authApi.getCurrentUser
- * - Mock de authApi.refreshToken
- * - Mock de token storage functions (setToken, getToken, clearToken, etc.)
- * - Mock de window.location
- * - localStorage mock
+ * The access token is never persisted (in-memory only) and the refresh token
+ * lives in an httpOnly cookie handled by the server. On protected routes the
+ * hook therefore:
+ * 1. Restores the session silently (calls /auth/refresh) when there is no
+ *    access token in memory (e.g. after a page reload).
+ * 2. Fetches the current user once an access token is available.
+ * 3. Ends up unauthenticated (no redirect) when the refresh fails.
  */
 
 import { renderHook, waitFor } from '@testing-library/react';
@@ -27,6 +23,7 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 const {
   mockGetCurrentUser,
   mockRefreshToken,
+  mockRefreshAccessToken,
   mockLogin,
   mockRegister,
   mockLogout,
@@ -39,6 +36,7 @@ const {
 } = vi.hoisted(() => ({
   mockGetCurrentUser: vi.fn(),
   mockRefreshToken: vi.fn(),
+  mockRefreshAccessToken: vi.fn(),
   mockLogin: vi.fn(),
   mockRegister: vi.fn(),
   mockLogout: vi.fn(),
@@ -51,41 +49,36 @@ const {
 }));
 
 // ============================================
-// localStorage STORE - Probe for controlling token state
+// Token STORE - Probe for controlling token state
 // ============================================
 
-const localStorageStore: Record<string, string> = {};
+const tokenStore: Record<string, string> = {};
 
-const localStorageMock = {
-  getItem: vi.fn((key: string) => localStorageStore[key] || null),
-  setItem: vi.fn((key: string, value: string) => {
-    localStorageStore[key] = value;
-  }),
-  removeItem: vi.fn((key: string) => {
-    delete localStorageStore[key];
-  }),
-  clear: vi.fn(() => {
-    Object.keys(localStorageStore).forEach((key) => delete localStorageStore[key]);
-  }),
-};
-
-// Token implementations with probe logic
+// Token implementations with probe logic (mimic the api-client module)
 mockSetToken.mockImplementation((token: string | null) => {
-  if (token) localStorageStore['token'] = token;
-  else delete localStorageStore['token'];
+  if (token) tokenStore['token'] = token;
+  else delete tokenStore['token'];
 });
-mockGetToken.mockImplementation(() => localStorageStore['token'] || null);
-mockClearToken.mockImplementation(() => delete localStorageStore['token']);
+mockGetToken.mockImplementation(() => tokenStore['token'] || null);
+mockClearToken.mockImplementation(() => delete tokenStore['token']);
 
 mockSetRefreshToken.mockImplementation((token: string | null) => {
-  if (token) localStorageStore['refreshToken'] = token;
-  else delete localStorageStore['refreshToken'];
+  if (token) tokenStore['refreshToken'] = token;
+  else delete tokenStore['refreshToken'];
 });
-mockGetRefreshToken.mockImplementation(() => localStorageStore['refreshToken'] || null);
-mockClearRefreshToken.mockImplementation(() => delete localStorageStore['refreshToken']);
+mockGetRefreshToken.mockImplementation(() => tokenStore['refreshToken'] || null);
+mockClearRefreshToken.mockImplementation(() => delete tokenStore['refreshToken']);
+
+// Mirror the real refreshAccessToken single-flight contract: delegate to the
+// refresh endpoint probe and store the access token.
+mockRefreshAccessToken.mockImplementation(async () => {
+  const { accessToken } = await mockRefreshToken();
+  mockSetToken(accessToken);
+  return accessToken;
+});
 
 // ============================================
-// MOCK @/services/api-client - Inject probes into API client
+// MOCK @/services/api-client
 // ============================================
 
 vi.mock('@/services/api-client', () => ({
@@ -98,6 +91,7 @@ vi.mock('@/services/api-client', () => ({
   setToken: mockSetToken,
   getToken: mockGetToken,
   clearToken: mockClearToken,
+  refreshAccessToken: mockRefreshAccessToken,
   setRefreshToken: mockSetRefreshToken,
   getRefreshToken: mockGetRefreshToken,
   clearRefreshToken: mockClearRefreshToken,
@@ -114,52 +108,15 @@ vi.mock('../../services/auth.api', () => ({
   },
 }));
 
-// Setup window.localStorage
-Object.defineProperty(window, 'localStorage', {
-  value: localStorageMock,
-  writable: true,
-});
-
-// Mock window.location - Probe for redirect verification
-let mockLocationHref = '';
-const locationAssignMock = vi.fn((url: string) => {
-  mockLocationHref = url;
-});
-
-beforeEach(() => {
-  // Reset all probe state
-  Object.keys(localStorageStore).forEach((key) => delete localStorageStore[key]);
-  vi.clearAllMocks();
-  mockLocationHref = '';
-  mockGetCurrentUser.mockReset();
-  mockRefreshToken.mockReset();
-  mockSetToken.mockClear();
-  mockClearToken.mockClear();
-  mockSetRefreshToken.mockClear();
-  mockClearRefreshToken.mockClear();
-});
-
-Object.defineProperty(window, 'location', {
-  value: {
-    get href() {
-      return mockLocationHref;
-    },
-    assign: locationAssignMock,
-  },
-  writable: true,
-});
-
 // ============================================
 // IMPORTS
 // ============================================
 
 import { useAuth } from '../useAuth';
 
-// ============================================
-// TEST SUITE
-// ============================================
+const mockUser = { id: '1', email: 'test@test.com', name: 'Test', role: 'STUDENT' as const };
 
-describe('Auth Integration Tests - Bug de Redirección a /login', () => {
+describe('Auth Integration Tests - Sesión híbrida (access en memoria + refresh cookie)', () => {
   let queryClient: QueryClient;
 
   beforeEach(() => {
@@ -168,135 +125,115 @@ describe('Auth Integration Tests - Bug de Redirección a /login', () => {
     });
     queryClient.clear();
     vi.clearAllMocks();
-    Object.keys(localStorageStore).forEach((key) => delete localStorageStore[key]);
+    Object.keys(tokenStore).forEach((key) => delete tokenStore[key]);
   });
 
-  // ============================================
-  // ESCENARIO 1: Access token expirado, refresh token válido
-  // COMPORTAMIENTO ESPERADO: No redirigir a /login, mantener isAuthenticated = true
-  // BUG ACTUAL: El interceptor de axios no se activa en tests, por lo que el refresh no ocurre
-  // ============================================
-  it('ESCENARIO 1: No debe redirigir a /login cuando el refresh token es válido', async () => {
-    // Setup: Token exists - simulating expired access token with valid refresh token
-    localStorageStore['token'] = 'expired.access.token';
-    localStorageStore['refreshToken'] = 'valid.refresh.token';
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
 
-    const mockUser = { id: '1', email: 'test@test.com', name: 'Test', role: 'student' };
-
-    // PROBE CONFIGURATION:
-    // - getCurrentUser fails with 401 on first call (expired token)
-    // - refreshToken succeeds (returns new tokens)
-    // - getCurrentUser succeeds on retry (with new token)
-    mockGetCurrentUser
-      .mockRejectedValueOnce({ response: { status: 401, data: { message: 'Token expired' } } })
-      .mockResolvedValueOnce({ user: mockUser });
-
-    mockRefreshToken.mockResolvedValueOnce({
-      accessToken: 'new.access.token',
-      refreshToken: 'new.refresh.token',
-    });
-
-    const wrapper = ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    );
+  it('ESCENARIO 1: Sin access token pero con refresh cookie válido → restaura sesión silenciosamente', async () => {
+    // No access token in memory (fresh page load). The refresh endpoint
+    // succeeds (server reads the httpOnly cookie) and returns a new token.
+    mockRefreshToken.mockResolvedValueOnce({ accessToken: 'new.access.token' });
+    mockGetCurrentUser.mockResolvedValueOnce({ user: mockUser });
 
     const { result } = renderHook(() => useAuth(), { wrapper });
 
-    // Wait for auth query to complete
-    await waitFor(() => result.current.isLoading === false, { timeout: 5000 });
-
-    // VERIFICATION (PROBE OUTPUT):
-    console.log('========== ESCENARIO 1 RESULTS ==========');
-    console.log('getCurrentUser called:', mockGetCurrentUser.mock.calls.length, 'times');
-    console.log('refreshToken called:', mockRefreshToken.mock.calls.length, 'times');
-    console.log('isAuthenticated:', result.current.isAuthenticated);
-    console.log('location.href:', mockLocationHref || '(no redirect)');
-    console.log('======================================');
-
-    // ASSERTIONS:
-    // getCurrentUser debe haber sido llamado
-    expect(mockGetCurrentUser.mock.calls.length).toBeGreaterThan(0);
-
-    // NOTE: En el entorno de test, el interceptor de axios no se activa automáticamente
-    // Por lo que el refreshToken no se llama en el contexto del test.
-    // El bug real o la solución solo puede verificarse en un test E2E real.
-
-    if (mockRefreshToken.mock.calls.length > 0) {
-      // Si el refresh funciona (bug arreglado o integración real)
-      expect(localStorageStore['token']).toBe('new.access.token');
-      expect(result.current.isAuthenticated).toBe(true);
-      expect(locationAssignMock).not.toHaveBeenCalled();
-    } else {
-      // Interceptor no funciona en test environment (esperado)
-      // El test pasa verificando el estado actual
-      expect(result.current.isAuthenticated).toBe(false);
-    }
-  });
-
-  // ============================================
-  // ESCENARIO 2: Refresh token inválido
-  // COMPORTAMIENTO ESPERADO: Borrar tokens y redirigir a /login
-  // ============================================
-  it('ESCENARIO 2: Debe redirigir a /login cuando el refresh token es inválido', async () => {
-    localStorageStore['token'] = 'expired.access.token';
-    localStorageStore['refreshToken'] = 'invalid.refresh.token';
-
-    // Probe: Both API calls fail
-    mockGetCurrentUser.mockRejectedValueOnce({
-      response: { status: 401, data: { message: 'Token expired' } },
+    let probe = 0;
+    await waitFor(
+      () => {
+        probe++;
+        console.log('[W]', probe, {
+          loading: result.current.isLoading,
+          auth: result.current.isAuthenticated,
+          userId: result.current.user?.id ?? null,
+          err: result.current.isError,
+        });
+        return result.current.isAuthenticated === true;
+      },
+      { timeout: 3000 },
+    );
+    console.log('[after]', {
+      auth: result.current.isAuthenticated,
+      userId: result.current.user?.id ?? null,
     });
 
+    expect(mockRefreshToken).toHaveBeenCalledTimes(1);
+    expect(mockRefreshToken).toHaveBeenCalledWith();
+    expect(mockGetCurrentUser).toHaveBeenCalledTimes(1);
+    expect(mockSetToken).toHaveBeenCalledWith('new.access.token');
+    expect(result.current.isAuthenticated).toBe(true);
+    expect(result.current.user?.email).toBe('test@test.com');
+  });
+
+  it('ESCENARIO 2: Sin sesión válida (refresh falla) → isAuthenticated false, no se pide el usuario', async () => {
     mockRefreshToken.mockRejectedValueOnce({
       response: { status: 401, data: { message: 'Invalid refresh token' } },
     });
 
-    const wrapper = ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    );
-
     const { result } = renderHook(() => useAuth(), { wrapper });
 
-    await waitFor(() => result.current.isLoading === false, { timeout: 5000 });
+    await waitFor(() => result.current.isAuthenticated === false && !result.current.isLoading, {
+      timeout: 5000,
+    });
 
-    console.log('========== ESCENARIO 2 RESULTS ==========');
-    console.log('refreshToken called:', mockRefreshToken.mock.calls.length > 0);
-    console.log('location.href:', mockLocationHref || '(no redirect)');
-    console.log('======================================');
-
-    if (mockRefreshToken.mock.calls.length === 0) {
-      // Interceptor not working in test - expected
-      expect(result.current.isAuthenticated).toBe(false);
-    } else {
-      expect(localStorageStore['token']).toBeUndefined();
-      expect(locationAssignMock).toHaveBeenCalledWith('/login');
-    }
+    expect(mockRefreshToken).toHaveBeenCalledTimes(1);
+    expect(mockGetCurrentUser).not.toHaveBeenCalled();
+    expect(result.current.isAuthenticated).toBe(false);
   });
 
-  // ============================================
-  // ESCENARIO 3: Sin access token
-  // COMPORTAMIENTO ESPERADO: No intentar obtener usuario, isAuthenticated = false
-  // ============================================
-  it('ESCENARIO 3: Debe mantener isAuthenticated en false cuando no hay access token', async () => {
-    delete localStorageStore['token'];
-    delete localStorageStore['refreshToken'];
-
-    const wrapper = ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    );
+  it('ESCENARIO 3: Access token válido en memoria → no llama a refresh', async () => {
+    tokenStore['token'] = 'valid.access.token';
+    mockGetCurrentUser.mockResolvedValueOnce({ user: mockUser });
 
     const { result } = renderHook(() => useAuth(), { wrapper });
 
-    // VERIFICATION:
-    // - getCurrentUser NO debe ser llamado (query disabled)
-    expect(mockGetCurrentUser).not.toHaveBeenCalled();
+    await waitFor(() => result.current.isAuthenticated === true, { timeout: 5000 });
 
-    // - isAuthenticated debe ser false
-    expect(result.current.isAuthenticated).toBe(false);
-    expect(result.current.isLoading).toBe(false);
+    expect(mockRefreshToken).not.toHaveBeenCalled();
+    expect(mockGetCurrentUser).toHaveBeenCalledTimes(1);
+    expect(result.current.isAuthenticated).toBe(true);
+  });
 
-    console.log('========== ESCENARIO 3 RESULTS ==========');
-    console.log('getCurrentUser called: false (correct - query disabled)');
-    console.log('isAuthenticated:', result.current.isAuthenticated);
-    console.log('======================================');
+  it('ESCENARIO 4: Login guarda solo el access token (el refresh va en cookie)', async () => {
+    mockLogin.mockResolvedValueOnce({
+      user: mockUser,
+      accessToken: 'login.access.token',
+    });
+    mockGetCurrentUser.mockResolvedValueOnce({ user: mockUser });
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    // Restore a session first so the hook is authenticated, then login as a
+    // different user to exercise onSuccess.
+    mockRefreshToken.mockResolvedValueOnce({ accessToken: 'restored.access.token' });
+    await waitFor(() => result.current.isAuthenticated === true, { timeout: 5000 });
+
+    await result.current.login({ identifier: 'test@test.com', password: 'secret123' });
+
+    expect(mockSetToken).toHaveBeenLastCalledWith('login.access.token');
+    // The refresh token must never be stored client-side.
+    expect(mockSetRefreshToken).not.toHaveBeenCalled();
+    expect(tokenStore['refreshToken']).toBeUndefined();
+    expect(result.current.isAuthenticated).toBe(true);
+  });
+
+  it('ESCENARIO 5: Logout no requiere datos del usuario (solo limpia la sesión local)', async () => {
+    tokenStore['token'] = 'valid.access.token';
+    mockGetCurrentUser.mockResolvedValueOnce({ user: mockUser });
+    mockLogout.mockResolvedValueOnce(undefined);
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    await waitFor(() => result.current.isAuthenticated === true, { timeout: 5000 });
+    expect(result.current.isAuthenticated).toBe(true);
+
+    await result.current.logout();
+
+    expect(mockLogout).toHaveBeenCalledTimes(1);
+    expect(mockLogout).toHaveBeenCalledWith();
+    expect(mockClearToken).toHaveBeenCalled();
+    expect(tokenStore['token']).toBeUndefined();
   });
 });

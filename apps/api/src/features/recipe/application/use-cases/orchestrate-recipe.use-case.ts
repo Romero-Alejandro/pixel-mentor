@@ -1,5 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { config } from '@/shared/config/index.js';
+import {
+  SessionNotActiveError,
+  RecipeHasNoStepsError,
+  AtomNotFoundError,
+} from '@/features/recipe/domain/errors/session.errors.js';
 
 // Helper to extract text from string | {text: string} object
 type TextOrTextObject = string | { text: string };
@@ -63,6 +68,8 @@ import {
 } from '@/features/recipe/domain/entities/recipe-config.entity.js';
 import { isTerminalStatus } from '@/features/session/domain/entities/session.entity.js';
 import { DEFAULT_COHORT as USER_DEFAULT_COHORT } from '@/features/auth/domain/entities/user.entity.js';
+import { evaluateMCQ } from '@/features/recipe/application/services/mcq-evaluation.service.js';
+import { detectNavigationInput } from '@/features/recipe/application/services/navigation.service.js';
 import type { LessonEvaluatorUseCase } from '@/features/evaluation/application/services/lesson.evaluator.js';
 import type {
   EvaluationRequest,
@@ -77,6 +84,59 @@ import type { KnowledgeChunk } from '@/features/knowledge/domain/entities/knowle
 import { getEventBus } from '@/shared/events/event-bus.port.js';
 import { GameDomainEvents } from '@/shared/events/game-events.port.js';
 import type { LessonCompletedPayload } from '@/shared/events/game-events.port.js';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LLM Timeout Configuration
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Maximum time (ms) to wait for a single LLM chunk before aborting */
+const LLM_CHUNK_TIMEOUT_MS = 30_000;
+/** Maximum total time (ms) for the entire LLM streaming call */
+const LLM_TOTAL_TIMEOUT_MS = 60_000;
+
+/**
+ * Wraps an async generator with per-chunk and total timeouts.
+ * If a single chunk doesn't arrive within LLM_CHUNK_TIMEOUT_MS, or the total
+ * stream exceeds LLM_TOTAL_TIMEOUT_MS, the generator is abandoned.
+ */
+export async function* withTimeout<T>(
+  source: AsyncGenerator<T>,
+  chunkTimeoutMs: number = LLM_CHUNK_TIMEOUT_MS,
+  totalTimeoutMs: number = LLM_TOTAL_TIMEOUT_MS,
+): AsyncGenerator<T> {
+  const deadline = Date.now() + totalTimeoutMs;
+  let done = false;
+  try {
+    while (!done) {
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) {
+        orchestrateLogger.warn('[withTimeout] LLM total timeout reached');
+        break;
+      }
+      const chunkTimeout = Math.min(chunkTimeoutMs, remaining);
+      const result = await Promise.race([
+        source.next(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('LLM chunk timeout')), chunkTimeout),
+        ),
+      ]);
+      if (result.done) {
+        done = true;
+      } else {
+        yield result.value;
+      }
+    }
+  } finally {
+    // Ensure the source generator is properly closed on timeout or error
+    if (!done) {
+      try {
+        await source.return(undefined as unknown as T);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tipos del script auto-contenido
@@ -353,7 +413,7 @@ export class OrchestrateRecipeUseCase {
         },
         activity: {
           instruction: questionText,
-          options: null, // Explicitamente null para preguntas (sin opciones)
+          options: undefined, // Explicitamente undefined para preguntas (sin opciones)
           feedback: {
             correct: fb.correct,
             incorrect: fb.incorrect,
@@ -945,7 +1005,7 @@ export class OrchestrateRecipeUseCase {
 
     if (isMockRecipe) {
       // Use the mock recipe stored in the global object (set via /mock/recipe endpoint)
-      const mockRecipes = globalThis.__mockRecipes || {};
+      const mockRecipes = (globalThis as any).__mockRecipes || {};
       recipe = mockRecipes[recipeId];
       orchestrateLogger.info(`[MOCK] Using mock recipe: ${recipeId}`);
       if (!recipe) {
@@ -963,7 +1023,7 @@ export class OrchestrateRecipeUseCase {
     const name = student?.name ?? 'estudiante';
 
     const steps = await this.recipeRepo.findStepsByRecipeId(recipeId);
-    if (!steps.length) throw new Error('Recipe has no steps');
+    if (!steps.length) throw new RecipeHasNoStepsError(recipeId);
 
     const existing = await this.sessionRepo.findByStudentAndRecipe(studentId, recipeId);
 
@@ -977,28 +1037,40 @@ export class OrchestrateRecipeUseCase {
 
     // Case 1: Active session exists (and not a fresh reset) → resume it
     if (existing && !isTerminalStatus(existing.status) && !isFreshReset) {
-      const idx = existing.stateCheckpoint.currentStepIndex ?? 0;
+      const rawIdx = existing.stateCheckpoint.currentStepIndex ?? 0;
+      // Clamp the resumed index: a checkpoint pointing past the last step
+      // (e.g. after recipe edits) must not crash static-content extraction.
+      const clampedIdx = Math.min(Math.max(rawIdx, 0), steps.length - 1);
       const needsToStart = existing.stateCheckpoint.currentState === 'AWAITING_START';
-      const resumeMsg = needsToStart
-        ? fillTemplate(this.config.greetings.intro, {
-            name,
-            tutor: this.config.tutorName,
-            title: recipe.title,
-          })
-        : `¡Bienvenido de vuelta, ${name}! Continuemos con ${recipe.title}.`;
+      // A session that never started resumes at step 0 with the intro greeting.
+      const resumeIdx = needsToStart ? 0 : clampedIdx;
+      const resumeStep = steps[resumeIdx];
+      // Voice text comes from the resumed step itself so the client can speak
+      // real content; fall back to a generic greeting only when the step
+      // carries no speakable text.
+      const resumeVoiceText = this.buildVoiceText(resumeStep);
+      const voiceText =
+        resumeVoiceText ||
+        (needsToStart
+          ? fillTemplate(this.config.greetings.intro, {
+              name,
+              tutor: this.config.tutorName,
+              title: recipe.title,
+            })
+          : `¡Bienvenido de vuelta, ${name}! Continuemos con ${recipe.title}.`);
 
-      const stepRequiresInput = this.requiresStudentInput(steps[idx]?.stepType);
+      const stepRequiresInput = this.requiresStudentInput(resumeStep?.stepType);
       return {
         sessionId: existing.id,
-        voiceText: resumeMsg,
+        voiceText,
         pedagogicalState: (needsToStart
           ? 'AWAITING_START'
           : existing.stateCheckpoint.currentState) as PedagogicalState,
-        staticContent: this.extractStaticContent(steps[0]), // Always include first step's content for AWAITING_START
+        staticContent: this.extractStaticContent(resumeStep),
         config: this.config as unknown as Record<string, unknown>,
         resumed: true,
         needsStart: needsToStart,
-        lessonProgress: { currentStep: idx, totalSteps: steps.length },
+        lessonProgress: { currentStep: resumeIdx, totalSteps: steps.length },
         contentSteps: this.buildContentSteps(steps),
         autoAdvance: needsToStart ? false : !stepRequiresInput, // Auto-advance if not needsStart and step doesn't require input
       };
@@ -1108,7 +1180,7 @@ export class OrchestrateRecipeUseCase {
       throw Object.assign(new Error('Forbidden'), { statusCode: 403 });
     // Allow both ACTIVE and IDLE status - IDLE sessions can still interact
     if (session.status !== 'ACTIVE' && session.status !== 'IDLE')
-      throw new Error(`Session not active: ${session.status}`);
+      throw new SessionNotActiveError(sessionId, session.status);
 
     // Check if this is a mock recipe ID (used in E2E tests)
     const isMockRecipe = session.recipeId.startsWith('test-recipe-');
@@ -1116,7 +1188,7 @@ export class OrchestrateRecipeUseCase {
 
     if (isMockRecipe) {
       // Use the mock recipe stored in the global object (set via /mock/recipe endpoint)
-      const mockRecipes = globalThis.__mockRecipes || {};
+      const mockRecipes = (globalThis as any).__mockRecipes || {};
       recipe = mockRecipes[session.recipeId];
       if (!recipe) throw new RecipeNotFoundError(session.recipeId);
     } else {
@@ -1129,7 +1201,7 @@ export class OrchestrateRecipeUseCase {
     const steps = isMockRecipe
       ? recipe.steps
       : await this.recipeRepo.findStepsByRecipeId(session.recipeId);
-    if (!steps.length) throw new Error('Recipe has no steps');
+    if (!steps.length) throw new RecipeHasNoStepsError(session.recipeId);
 
     const history = await this.interactionRepo.findBySessionOrdered(sessionId);
     const limited = this.contextWindowService.trimHistory(history);
@@ -1184,7 +1256,7 @@ export class OrchestrateRecipeUseCase {
     }
 
     const currentAtom = await this.atomRepo.findById(currentStep.atomId);
-    if (!currentAtom) throw new Error(`Atom ${currentStep.atomId} not found`);
+    if (!currentAtom) throw new AtomNotFoundError(currentStep.atomId, currentIdx);
 
     // ── AWAITING_START fast path ─────────────────────────────────────────
     if (currentState === 'AWAITING_START') {
@@ -1235,26 +1307,10 @@ export class OrchestrateRecipeUseCase {
     // ── Navigation Fast Path ─────────────────────────────────────────────
     // Skip LLM calls for simple navigation inputs like "continuar", "siguiente", etc.
     // These inputs should just advance to the next step using static content.
-    const navWords = [
-      '__auto__', // Auto-advance trigger from frontend
-      'continuar',
-      'siguiente',
-      'next',
-      'ok',
-      'dale',
-      'vamos',
-      'adelante',
-      'seguir',
-      'avanzar',
-      'proseguir',
-      'forward',
-    ];
-    const lowerInput = studentInput.toLowerCase().trim();
-    const isNavInput = navWords.some((w) => lowerInput === w || lowerInput.includes(w));
+    const { isNavigation } = detectNavigationInput(studentInput, currentState);
 
-    // Navigation fast path: only for states where advancing is the expected action
-    // Skip for ACTIVITY_WAIT (needs answer evaluation) and RESOLVING_DOUBT (needs doubt resolution)
-    if (isNavInput && !['ACTIVITY_WAIT', 'RESOLVING_DOUBT', 'CLARIFYING'].includes(currentState)) {
+    // Navigation fast path: detectNavigationInput already blocks ACTIVITY_WAIT, RESOLVING_DOUBT, CLARIFYING
+    if (isNavigation) {
       const navNextIdx = this.advanceStep(steps, currentIdx);
       if (navNextIdx === null) {
         // No more steps — complete the lesson
@@ -1283,7 +1339,7 @@ export class OrchestrateRecipeUseCase {
 
       // For question steps, transition to ACTIVITY_WAIT
       // Always respect stepType — the type guard is only for extracting data
-      if (nextStep?.stepType === 'question' || nextStep?.stepType === 'QUESTION') {
+      if (nextStep?.stepType === 'question') {
         const questionText = isQuestionScript(nextScript)
           ? extractText((nextScript as QuestionScript).question)
           : this.buildVoiceText(nextStep);
@@ -1543,23 +1599,13 @@ export class OrchestrateRecipeUseCase {
           };
         }
         const as = script as ActivityScript;
-        const norm = studentInput.trim().toLowerCase();
-        const correct = as.options?.find((o) => o.isCorrect);
-        const isCorrect = !!correct && norm === correct.text.trim().toLowerCase();
+        const mcqResult = evaluateMCQ(as, studentInput, {
+          stepIndex: currentIdx,
+          stateName: 'ACTIVITY_WAIT_interact',
+        });
+        const isCorrect = mcqResult.isCorrect;
 
-        orchestrateLogger.info(
-          {
-            studentInput,
-            norm,
-            correctOption: correct?.text,
-            correctTextNormalized: correct?.text.trim().toLowerCase(),
-            isCorrect,
-            options: as.options.map((o) => ({ text: o.text, isCorrect: o.isCorrect })),
-          },
-          '[ACTIVITY_WAIT] MCQ deterministic comparison - isCorrect: ' + isCorrect,
-        );
-
-        voiceText = isCorrect ? as.feedback.correct : as.feedback.incorrect;
+        voiceText = mcqResult.feedback;
         responseFeedback = voiceText;
         isCorrectValue = isCorrect;
 
@@ -1658,10 +1704,12 @@ export class OrchestrateRecipeUseCase {
             };
           }
           const as = script as ActivityScript;
-          const norm = studentInput.trim().toLowerCase();
-          const correct = as.options?.find((o) => o.isCorrect);
-          const isCorrect = !!correct && norm === correct.text.trim().toLowerCase();
-          voiceText = isCorrect ? as.feedback.correct : as.feedback.incorrect;
+          const mcqResult = evaluateMCQ(as, studentInput, {
+            stepIndex: currentIdx,
+            stateName: 'EVALUATION_interact',
+          });
+          const isCorrect = mcqResult.isCorrect;
+          voiceText = mcqResult.feedback;
           responseFeedback = voiceText;
           isCorrectValue = isCorrect;
           if (isCorrect) {
@@ -1822,7 +1870,9 @@ export class OrchestrateRecipeUseCase {
     if (!session) throw new SessionNotFoundError(sessionId);
     if (userId && session.studentId !== userId)
       throw Object.assign(new Error('Forbidden'), { statusCode: 403 });
-    if (session.status !== 'ACTIVE') throw new Error(`Session not active: ${session.status}`);
+    // Allow both ACTIVE and IDLE status - IDLE sessions can still interact
+    if (session.status !== 'ACTIVE' && session.status !== 'IDLE')
+      throw new SessionNotActiveError(sessionId, session.status);
 
     const recipe = await this.recipeRepo.findById(session.recipeId);
     if (!recipe) throw new RecipeNotFoundError(session.recipeId);
@@ -1837,7 +1887,7 @@ export class OrchestrateRecipeUseCase {
       },
       '[DEBUG] interactStream() - Steps loaded',
     );
-    if (!steps.length) throw new Error('Recipe has no steps');
+    if (!steps.length) throw new RecipeHasNoStepsError(session.recipeId);
 
     const history = await this.interactionRepo.findBySessionOrdered(sessionId);
     const limited = this.contextWindowService.trimHistory(history);
@@ -1894,7 +1944,7 @@ export class OrchestrateRecipeUseCase {
     }
 
     const currentAtom = await this.atomRepo.findById(currentStep.atomId);
-    if (!currentAtom) throw new Error(`Atom ${currentStep.atomId} not found`);
+    if (!currentAtom) throw new AtomNotFoundError(currentStep.atomId, currentIdx);
 
     // ── ACTIVITY_WAIT fast path (no streaming needed) ────────────────────────
     // Skip LLM calls and use deterministic MCQ evaluation for activity steps
@@ -1925,42 +1975,24 @@ export class OrchestrateRecipeUseCase {
             { stepIndex: currentIdx, stepType },
             '[interactStream] Script is null for activity/exam step',
           );
-          return {
-            voiceText: 'Error: Activity script not found. Please contact support.',
+          yield {
+            type: 'end' as const,
+            reason: 'completed' as const,
             pedagogicalState: 'ACTIVITY_WAIT' as PedagogicalState,
+            sessionCompleted: false,
             staticContent: this.extractStaticContent(currentStep),
             lessonProgress: { currentStep: currentIdx, totalSteps: steps.length },
+            autoAdvance: false,
           };
+          return;
         }
         // MCQ: deterministic comparison (NO LLM)
         const as = script as ActivityScript;
-        const norm = studentInput.trim().toLowerCase();
-
-        // Debug: log all options
-        orchestrateLogger.info(
-          {
-            allOptions: as.options?.map((o) => ({ text: o.text, isCorrect: o.isCorrect })),
-            studentInput,
-            norm,
-          },
-          '[interactStream] MCQ options before finding correct',
-        );
-
-        const correct = as.options?.find((o) => o.isCorrect);
-        const isCorrect = !!correct && norm === correct.text.trim().toLowerCase();
-
-        orchestrateLogger.info(
-          {
-            studentInput,
-            norm,
-            correctOption: correct?.text,
-            correctOptionNormalized: correct?.text.trim().toLowerCase(),
-            isCorrect,
-          },
-          '[interactStream] MCQ deterministic comparison result',
-        );
-
-        const feedback = isCorrect ? as.feedback.correct : as.feedback.incorrect;
+        const mcqResult = evaluateMCQ(as, studentInput, {
+          stepIndex: currentIdx,
+          stateName: 'ACTIVITY_WAIT_fast',
+        });
+        const { isCorrect, feedback } = mcqResult;
 
         await this.record(sessionId, history.length, studentInput, null, currentIdx);
         await this.record(sessionId, history.length + 1, feedback, 'answer', currentIdx);
@@ -2070,24 +2102,9 @@ export class OrchestrateRecipeUseCase {
 
     // ── Navigation Fast Path (streaming) ─────────────────────────────────
     // Skip LLM calls for simple navigation inputs. Use static content only.
-    const navWords = [
-      '__auto__', // Auto-advance trigger from frontend
-      'continuar',
-      'siguiente',
-      'next',
-      'ok',
-      'dale',
-      'vamos',
-      'adelante',
-      'seguir',
-      'avanzar',
-      'proseguir',
-      'forward',
-    ];
-    const lowerInput = studentInput.toLowerCase().trim();
-    const isNavInput = navWords.some((w) => lowerInput === w || lowerInput.includes(w));
+    const { isNavigation } = detectNavigationInput(studentInput, currentState);
 
-    if (isNavInput && !['ACTIVITY_WAIT', 'RESOLVING_DOUBT', 'CLARIFYING'].includes(currentState)) {
+    if (isNavigation) {
       const navNextIdx = this.advanceStep(steps, currentIdx);
       if (navNextIdx === null) {
         await this.sessionRepo.complete(sessionId);
@@ -2131,7 +2148,7 @@ export class OrchestrateRecipeUseCase {
 
       // For question steps, transition to ACTIVITY_WAIT
       // Always respect stepType — the type guard is only for extracting data
-      if (nextStep?.stepType === 'question' || nextStep?.stepType === 'QUESTION') {
+      if (nextStep?.stepType === 'question') {
         const questionText = isQuestionScript(nextScript)
           ? extractText((nextScript as QuestionScript).question)
           : this.buildVoiceText(nextStep);
@@ -2264,7 +2281,8 @@ export class OrchestrateRecipeUseCase {
     let fullResponse = '';
     try {
       let chunkCount = 0;
-      for await (const chunk of this.aiService.generateResponseStream(params)) {
+      const timedStream = withTimeout(this.aiService.generateResponseStream(params));
+      for await (const chunk of timedStream) {
         fullResponse += chunk;
         chunkCount++;
         if (config.NODE_ENV === 'development') {
@@ -2282,8 +2300,10 @@ export class OrchestrateRecipeUseCase {
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : String(e);
       orchestrateLogger.warn({ err: errorMessage }, '[Orchestrator] Stream fallback');
-      fullResponse = this.getFallbackResponse(currentState, currentAtom.title).explanation;
-      yield { type: 'chunk', text: fullResponse };
+      if (!fullResponse) {
+        fullResponse = this.getFallbackResponse(currentState, currentAtom.title).explanation;
+        yield { type: 'chunk', text: fullResponse };
+      }
     }
 
     // ── Compute state machine ────────────────────────────────────────────────
@@ -2361,31 +2381,25 @@ export class OrchestrateRecipeUseCase {
             { stepIndex: currentIdx, stepType },
             '[stream] Script is null for activity/exam step',
           );
-          return {
-            voiceText: 'Error: Activity script not found. Please contact support.',
+          yield {
+            type: 'end' as const,
+            reason: 'completed' as const,
             pedagogicalState: 'ACTIVITY_WAIT' as PedagogicalState,
+            sessionCompleted: false,
             staticContent: this.extractStaticContent(currentStep),
             lessonProgress: { currentStep: currentIdx, totalSteps: steps.length },
+            autoAdvance: false,
           };
+          return;
         }
         const as = script as ActivityScript;
-        const norm = studentInput.trim().toLowerCase();
-        const correct = as.options?.find((o) => o.isCorrect);
-        const isCorrect = !!correct && norm === correct.text.trim().toLowerCase();
+        const mcqResult = evaluateMCQ(as, studentInput, {
+          stepIndex: currentIdx,
+          stateName: 'ACTIVITY_WAIT',
+        });
+        const isCorrect = mcqResult.isCorrect;
 
-        orchestrateLogger.info(
-          {
-            stepIndex: currentIdx,
-            stepType,
-            studentInput,
-            norm,
-            correctOption: correct?.text,
-            isCorrect,
-          },
-          '[interactStream ACTIVITY_WAIT] MCQ deterministic comparison',
-        );
-
-        voiceText = isCorrect ? as.feedback.correct : as.feedback.incorrect;
+        voiceText = mcqResult.feedback;
 
         if (isCorrect) {
           nextState = 'EVALUATION';
@@ -2465,18 +2479,24 @@ export class OrchestrateRecipeUseCase {
               { stepIndex: currentIdx },
               '[stream] Script is null for activity/exam step',
             );
-            return {
-              voiceText: 'Error: Activity script not found. Please contact support.',
+            yield {
+              type: 'end' as const,
+              reason: 'completed' as const,
               pedagogicalState: 'EVALUATION' as PedagogicalState,
+              sessionCompleted: false,
               staticContent: this.extractStaticContent(currentStep),
               lessonProgress: { currentStep: currentIdx, totalSteps: steps.length },
+              autoAdvance: false,
             };
+            return;
           }
           const as = script as ActivityScript;
-          const norm = studentInput.trim().toLowerCase();
-          const correct = as.options?.find((o) => o.isCorrect);
-          const isCorrect = !!correct && norm === correct.text.trim().toLowerCase();
-          voiceText = isCorrect ? as.feedback.correct : as.feedback.incorrect;
+          const mcqResult = evaluateMCQ(as, studentInput, {
+            stepIndex: currentIdx,
+            stateName: 'EVALUATION',
+          });
+          const isCorrect = mcqResult.isCorrect;
+          voiceText = mcqResult.feedback;
 
           if (isCorrect) {
             nextState = 'EVALUATION';
@@ -2617,8 +2637,5 @@ export class OrchestrateRecipeUseCase {
       xpEarned,
       accuracy: accuracyData,
     };
-  }
-  catch(_error: unknown) {
-    // Silently swallow errors — caller handles them
   }
 }

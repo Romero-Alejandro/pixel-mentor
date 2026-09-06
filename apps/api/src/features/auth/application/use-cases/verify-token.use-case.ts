@@ -19,6 +19,10 @@ export interface VerifyTokenResult {
     id: string;
     email: string;
     role: UserRole;
+    username?: string;
+    name: string;
+    age?: number;
+    quota: number;
   };
 }
 
@@ -29,26 +33,34 @@ export class VerifyTokenUseCase {
   ) {}
 
   async execute(token: string): Promise<VerifyTokenResult> {
+    let payload: AuthTokenPayload;
     try {
-      const payload = this.tokenService.verifyToken(token) as AuthTokenPayload;
-      const user = await this.userRepo.findById(payload.userId);
-      if (!user) {
-        throw new UserNotFoundError(payload.userId);
-      }
-      return { payload, user };
+      // The token service throws typed errors (TokenInvalidError / TokenExpiredError)
+      // so no message-based classification is needed here.
+      payload = this.tokenService.verifyToken(token) as AuthTokenPayload;
     } catch (error) {
-      if (error instanceof UserNotFoundError) {
-        throw error;
-      }
       if (error instanceof TokenInvalidError || error instanceof TokenExpiredError) {
         throw error;
       }
-      // Check if it's a generic error from token verification
-      const errorMessage = error instanceof Error ? error.message : '';
-      if (errorMessage.includes('expired')) {
-        throw new TokenExpiredError();
-      }
       throw new TokenInvalidError();
     }
+
+    const user = await this.userRepo.findById(payload.userId);
+    if (!user) {
+      throw new UserNotFoundError(payload.userId);
+    }
+
+    return {
+      payload,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        username: user.username,
+        name: user.name,
+        age: user.age,
+        quota: user.quota,
+      },
+    };
   }
 }

@@ -19,7 +19,6 @@ import { UpdateStepUseCase } from '@/features/recipe/application/use-cases/updat
 import { DeleteStepUseCase } from '@/features/recipe/application/use-cases/delete-step.use-case.js';
 import { ReorderStepsUseCase } from '@/features/recipe/application/use-cases/reorder-steps.use-case.js';
 import type { AIService } from '@/features/recipe/domain/ports/ai-service.port.js';
-import type { IClassLessonRepository } from '@/features/class/domain/ports/class.repository.port.js';
 
 export interface RecipeContainer {
   recipeRepository: PrismaRecipeRepository;

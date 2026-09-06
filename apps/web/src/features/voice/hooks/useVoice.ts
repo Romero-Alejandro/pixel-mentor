@@ -43,8 +43,41 @@ export interface UseVoiceReturn {
   isSpeechSupported: boolean;
   isRecognitionSupported: boolean;
   getCurrentAudioElement: () => HTMLAudioElement | null;
+  /** Chunk-aware sync snapshot for karaoke hooks (null when not streaming). */
+  getAudioSyncInfo: () => AudioSyncInfo | null;
+  /** Which TTS engine is sounding, null when silent (Phase 0 observability). */
+  getActiveEngine: () => ActiveTTSEngine | null;
   /** Signals that the audio element is available for sync. */
   audioElementReady: boolean;
+}
+
+/** Which TTS engine is currently sounding (Phase 0 observability). */
+export type ActiveTTSEngine = 'stream' | 'http' | 'browser';
+
+// ---- Streaming karaoke sync contract ----
+
+/** Per-chunk metadata for karaoke word mapping (playback order). */
+export interface AudioSyncChunk {
+  /** MP3 payload size in bytes (proportional to spoken duration). */
+  bytes: number;
+  /** Measured element duration in seconds, null until loadedmetadata. */
+  duration: number | null;
+  /** Exact source text slice of this chunk (when the server annotates it). */
+  text?: string;
+  /** Zero-based sequence within the utterance (when annotated). */
+  sequence?: number;
+}
+
+/** Snapshot describing which streamed chunk is currently sounding. */
+export interface AudioSyncInfo {
+  /** Currently sounding chunk element. */
+  element: HTMLAudioElement;
+  /** Index of the current chunk in `chunks`. */
+  chunkIndex: number;
+  /** True when the stream ended AND this is the final chunk. */
+  isLastChunk: boolean;
+  /** Per-chunk metadata in playback order. */
+  chunks: AudioSyncChunk[];
 }
 
 // Debug logging
@@ -71,12 +104,27 @@ export function useVoice(): UseVoiceReturn {
   // Streaming TTS refs
   const eventSourceRef = useRef<EventSource | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const audioQueueRef = useRef<Array<{ element: HTMLAudioElement; url: string }>>([]);
-  const currentAudioRef = useRef<{ element: HTMLAudioElement; url: string } | null>(null);
+  const audioQueueRef = useRef<Array<{ element: HTMLAudioElement; url: string; index: number }>>(
+    [],
+  );
+  const currentAudioRef = useRef<{
+    element: HTMLAudioElement;
+    url: string;
+    index: number;
+  } | null>(null);
   const httpAudioRef = useRef<HTMLAudioElement | null>(null);
   const httpAudioUrlRef = useRef<string | null>(null);
   const streamEndedRef = useRef(false);
   const audioReadyFiredRef = useRef(false);
+  // Per-chunk karaoke metadata (playback order) + index of sounding chunk.
+  const chunkMetaRef = useRef<AudioSyncChunk[]>([]);
+  const chunkIndexRef = useRef(0);
+  // Which TTS engine is sounding (null when silent).
+  const activeEngineRef = useRef<ActiveTTSEngine | null>(null);
+  // Resolver for the in-flight speakHTTP promise (HTTP audio or browser-TTS
+  // fallback). stopSpeaking() settles it explicitly so callers never hang when
+  // pause()/cancel() suppress onended/onerror (the 30s interaction-lock trap).
+  const pendingSpeakResolveRef = useRef<((value: boolean) => void) | null>(null);
 
   // Check browser support
   const isSpeechSupported = typeof window !== 'undefined' && 'speechSynthesis' in window;
@@ -145,12 +193,19 @@ export function useVoice(): UseVoiceReturn {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      // Settle any in-flight speakHTTP promise so its awaiter never hangs.
+      if (pendingSpeakResolveRef.current) {
+        pendingSpeakResolveRef.current(false);
+        pendingSpeakResolveRef.current = null;
+      }
       // Cancel any ongoing TTS operations
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
+        eventSourceRef.current = null;
       }
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
+        abortControllerRef.current = null;
       }
       // Clear streaming audio
       for (const item of audioQueueRef.current) {
@@ -158,11 +213,13 @@ export function useVoice(): UseVoiceReturn {
           URL.revokeObjectURL(item.url);
         } catch (e) {}
       }
+      audioQueueRef.current = [];
       if (currentAudioRef.current) {
         try {
           currentAudioRef.current.element.pause();
           URL.revokeObjectURL(currentAudioRef.current.url);
         } catch (e) {}
+        currentAudioRef.current = null;
       }
       // Clear HTTP audio
       if (httpAudioRef.current) {
@@ -191,6 +248,14 @@ export function useVoice(): UseVoiceReturn {
   }, [isSpeechSupported]);
 
   const stopSpeaking = useCallback(() => {
+    // Settle the in-flight speakHTTP promise explicitly: pause()/cancel()
+    // below suppress onended/onerror, which would otherwise leave the speak()
+    // awaiter (and the interaction lock) hanging until the 30s timeout.
+    if (pendingSpeakResolveRef.current) {
+      pendingSpeakResolveRef.current(false);
+      pendingSpeakResolveRef.current = null;
+    }
+
     // Abort current operation if any
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -255,12 +320,17 @@ export function useVoice(): UseVoiceReturn {
     setAudioElementReady(false);
     // Reset the audio ready flag to allow re-firing on restart
     audioReadyFiredRef.current = false;
+    // Reset karaoke chunk tracking
+    chunkMetaRef.current = [];
+    chunkIndexRef.current = 0;
+    activeEngineRef.current = null;
   }, [isSpeechSupported, setIsSpeaking, setError]);
 
   const speakHTTP = useCallback(
     async (text: string, voiceSettings?: VoiceSettings): Promise<boolean> => {
       setError(null);
       setIsSpeaking(true);
+      activeEngineRef.current = 'http';
 
       // Validate input
       if (!text || typeof text !== 'string' || text.trim().length === 0) {
@@ -303,8 +373,15 @@ export function useVoice(): UseVoiceReturn {
         debugLog('HTTP TTS started successfully!');
         notifyAudioReady();
 
-        // Wait for audio to actually finish playing
+        // Wait for audio to actually finish playing.
+        // The resolver is registered so stopSpeaking()/unmount can settle it
+        // explicitly when pause() suppresses onended/onerror.
         return new Promise<boolean>((resolve) => {
+          pendingSpeakResolveRef.current = resolve;
+          const settle = (value: boolean): void => {
+            pendingSpeakResolveRef.current = null;
+            resolve(value);
+          };
           audio.onended = () => {
             debugLog('HTTP TTS ended');
             setIsSpeaking(false);
@@ -313,7 +390,7 @@ export function useVoice(): UseVoiceReturn {
               URL.revokeObjectURL(httpAudioUrlRef.current);
               httpAudioUrlRef.current = null;
             }
-            resolve(true);
+            settle(true);
           };
           audio.onerror = () => {
             debugError('Audio playback error');
@@ -326,7 +403,7 @@ export function useVoice(): UseVoiceReturn {
               URL.revokeObjectURL(httpAudioUrlRef.current);
               httpAudioUrlRef.current = null;
             }
-            resolve(false);
+            settle(false);
           };
         });
       } catch (backendErr) {
@@ -337,6 +414,7 @@ export function useVoice(): UseVoiceReturn {
 
         try {
           const utterance = new SpeechSynthesisUtterance(text.trim());
+          activeEngineRef.current = 'browser';
 
           // Apply voice settings if possible
           utterance.rate = voiceSettings?.speakingRate ?? 1.0;
@@ -345,12 +423,20 @@ export function useVoice(): UseVoiceReturn {
             utterance.lang = voiceSettings.languageCode;
           }
 
-          // Wait for browser TTS to actually finish
+          // Wait for browser TTS to actually finish.
+          // Registered for explicit settlement (see HTTP path above):
+          // speechSynthesis.cancel() usually fires onerror, but not on every
+          // engine — the ref guarantees the awaiter never hangs.
           return new Promise<boolean>((resolve) => {
+            pendingSpeakResolveRef.current = resolve;
+            const settle = (value: boolean): void => {
+              pendingSpeakResolveRef.current = null;
+              resolve(value);
+            };
             utterance.onend = () => {
               debugLog('Browser TTS ended');
               setIsSpeaking(false);
-              resolve(true);
+              settle(true);
             };
             utterance.onerror = (event) => {
               debugError('Browser TTS error:', event.error);
@@ -358,7 +444,7 @@ export function useVoice(): UseVoiceReturn {
               if (event.error !== 'interrupted' && event.error !== 'canceled') {
                 setError(`Error de voz: ${event.error}`);
               }
-              resolve(false);
+              settle(false);
             };
             window.speechSynthesis.speak(utterance);
           });
@@ -379,6 +465,11 @@ export function useVoice(): UseVoiceReturn {
         debugLog('Empty text, skipping speakStream');
         return false;
       }
+
+      // Fresh karaoke chunk tracking for this utterance
+      chunkMetaRef.current = [];
+      chunkIndexRef.current = 0;
+      activeEngineRef.current = 'stream';
 
       const settings = {
         languageCode: voiceSettings?.languageCode || 'es-ES',
@@ -484,7 +575,22 @@ export function useVoice(): UseVoiceReturn {
               const audioBlob = base64ToBlob(data.audioBase64, 'audio/mpeg');
               const audioUrl = URL.createObjectURL(audioBlob);
               const audio = new Audio(audioUrl);
-              const queueItem = { element: audio, url: audioUrl };
+              // Track chunk metadata for karaoke sync (playback order)
+              const chunkIndex = chunkMetaRef.current.length;
+              chunkMetaRef.current.push({
+                bytes: data.audioBase64.length,
+                duration: null,
+                text: data.text,
+                sequence: data.sequence ?? chunkIndex,
+              });
+              audio.addEventListener('loadedmetadata', () => {
+                const d = audio.duration;
+                if (typeof d === 'number' && Number.isFinite(d) && d > 0) {
+                  const meta = chunkMetaRef.current[chunkIndex];
+                  if (meta) meta.duration = d;
+                }
+              });
+              const queueItem = { element: audio, url: audioUrl, index: chunkIndex };
 
               audio.onended = () => {
                 URL.revokeObjectURL(audioUrl);
@@ -492,6 +598,7 @@ export function useVoice(): UseVoiceReturn {
                 if (audioQueueRef.current.length > 0) {
                   const next = audioQueueRef.current.shift()!;
                   currentAudioRef.current = next;
+                  chunkIndexRef.current = next.index;
                   next.element.play().catch((e) => console.error('Play error', e));
                 } else if (streamEndedRef.current) {
                   // Final chunk finished - clear ref and resolve
@@ -512,6 +619,7 @@ export function useVoice(): UseVoiceReturn {
                 if (audioQueueRef.current.length > 0) {
                   const next = audioQueueRef.current.shift()!;
                   currentAudioRef.current = next;
+                  chunkIndexRef.current = next.index;
                   next.element.play().catch((e) => console.error('Play error', e));
                 } else if (streamEndedRef.current) {
                   cleanupStreamingResources();
@@ -521,6 +629,7 @@ export function useVoice(): UseVoiceReturn {
 
               if (!currentAudioRef.current) {
                 currentAudioRef.current = queueItem;
+                chunkIndexRef.current = queueItem.index;
                 audio.play().catch((e) => console.error('Failed to play chunk', e));
                 notifyAudioReady();
               } else {
@@ -614,7 +723,24 @@ export function useVoice(): UseVoiceReturn {
           debugLog(
             `Streaming connection failed, retrying in ${delay}ms (${retryCount}/${maxRetries})`,
           );
-          await new Promise((resolve) => setTimeout(resolve, delay));
+          // Abortable sleep: stopSpeaking()/unmount must not wait out the
+          // backoff, and no EventSource/Audio may be recreated afterwards.
+          await new Promise<void>((resolve, reject) => {
+            const timer = setTimeout(() => {
+              signal?.removeEventListener('abort', onAbort);
+              resolve();
+            }, delay);
+            const onAbort = (): void => {
+              clearTimeout(timer);
+              reject(new DOMException('Aborted', 'AbortError'));
+            };
+            if (signal?.aborted) {
+              clearTimeout(timer);
+              reject(new DOMException('Aborted', 'AbortError'));
+            } else {
+              signal?.addEventListener('abort', onAbort, { once: true });
+            }
+          });
         }
       }
       throw new Error('Max retries exceeded');
@@ -651,9 +777,15 @@ export function useVoice(): UseVoiceReturn {
         // Fallback to HTTP TTS
         return await speakHTTP(text, voiceSettings);
       } finally {
-        // Clear abort controller ref if it hasn't been cleared already
+        // Clear abort controller ref if it hasn't been cleared already.
+        // Only the owning run may lower the flag or clear the ref: a newer
+        // speak() replaces the ref first, so a stale finally must neither
+        // mute fresh speech nor resurrect a dead controller. This also drops
+        // isSpeaking back to false at natural stream end, so the next
+        // utterance produces a fresh false→true transition for sync hooks.
         if (abortControllerRef.current === abortController) {
           abortControllerRef.current = null;
+          setIsSpeaking(false);
         }
       }
     },
@@ -770,6 +902,25 @@ export function useVoice(): UseVoiceReturn {
     return element;
   }, []);
 
+  // Chunk-aware snapshot for karaoke sync hooks. Returns null when not
+  // playing streamed chunks (HTTP/browser TTS use the legacy single-element path).
+  const getAudioSyncInfo = useCallback((): AudioSyncInfo | null => {
+    const current = currentAudioRef.current;
+    if (!current || chunkMetaRef.current.length === 0) return null;
+    const chunks = chunkMetaRef.current.map((c) => ({ ...c }));
+    return {
+      element: current.element,
+      chunkIndex: chunkIndexRef.current,
+      isLastChunk: streamEndedRef.current && chunkIndexRef.current >= chunks.length - 1,
+      chunks,
+    };
+  }, []);
+
+  // Which TTS engine is sounding (null when silent/stopped).
+  const getActiveEngine = useCallback((): ActiveTTSEngine | null => {
+    return activeEngineRef.current;
+  }, []);
+
   // Notify consumers when the audio element becomes available
   const notifyAudioReady = useCallback(() => {
     if (!audioReadyFiredRef.current) {
@@ -794,6 +945,8 @@ export function useVoice(): UseVoiceReturn {
     isSpeechSupported,
     isRecognitionSupported,
     getCurrentAudioElement,
+    getAudioSyncInfo,
+    getActiveEngine,
     audioElementReady,
   };
 }

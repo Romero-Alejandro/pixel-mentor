@@ -19,17 +19,15 @@ import type {
   GamificationProfile,
 } from '../../domain/ports/gamification.ports';
 
-import { getEventBus } from '@/shared/events/event-bus.port';
-import { GameDomainEvents } from '@/shared/events/game-events.port';
-import type {
-  LessonCompletedPayload,
-  ActivityAttemptPayload,
-  DailyLoginPayload,
-} from '@/shared/events/game-events.port';
 import type { GetSessionUseCase } from '@/features/session/application/use-cases/get-session.use-case';
 import type { GetRecipeUseCase } from '@/features/recipe/application/use-cases/get-recipe.use-case';
 import type { PrismaClient } from '@/database/client.js';
 import { GetMissionReportParamsSchema } from '@/shared/dto/index';
+import { ClinicalCalculatorService } from '@/features/clinical/domain/services/clinical-calculator.service.js';
+import type {
+  Discrepancy,
+  PragmaticModuleData,
+} from '@/features/clinical/domain/entities/clinical-report.entity.js';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -39,21 +37,6 @@ export interface AuthenticatedRequest extends Request {
   };
   logger?: pino.Logger;
 }
-
-// Input Validation
-const ActivitySchema = z.object({
-  type: z.enum(['LESSON_COMPLETED', 'ACTIVITY_ATTEMPT', 'DAILY_LOGIN']),
-  payload: z
-    .object({
-      lessonId: z.string().optional(),
-      lessonTitle: z.string().optional(),
-      activityId: z.string().optional(),
-      correct: z.boolean().optional(),
-      attemptNumber: z.number().int().positive().optional(),
-      hintUsed: z.boolean().optional(),
-    })
-    .optional(),
-});
 
 // Mapper: Domain Profile → API Response
 interface GamificationProfileResponse {
@@ -118,6 +101,8 @@ interface MissionReport {
   levelUp: MissionReportLevelUp | null;
   streakDays: number;
   conceptsMastered: string[];
+  clinicalDiscrepancies: Discrepancy[];
+  pragmaticModule: PragmaticModuleData;
 }
 
 // Route Factory
@@ -143,88 +128,6 @@ export function createGamificationRouter(
         const shared = mapToProfileResponse(profile);
         res.json(shared);
       } catch (error) {
-        next(error);
-      }
-    },
-  );
-
-  // POST /api/gamification/xp/add
-  router.post(
-    '/xp/add',
-    async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
-      try {
-        const userId = req.user!.id;
-        const validated = ActivitySchema.parse(req.body);
-        const now = new Date();
-
-        let levelUpOccurred = false;
-        let earnedBadges: Array<{ code: string; name: string; icon: string }> = [];
-
-        // Call game engine directly to get results synchronously instead of fire-and-forget EventBus
-        switch (validated.type) {
-          case 'LESSON_COMPLETED': {
-            const payload: LessonCompletedPayload = {
-              userId,
-              lessonId: validated.payload?.lessonId ?? 'unknown',
-              lessonTitle: validated.payload?.lessonTitle ?? 'Lesson',
-              completedAt: now,
-            };
-            // Process lesson completion to get actual results
-            const result = await processLessonDirectly(userId, payload, gameEngine);
-            if (result) {
-              levelUpOccurred = result.leveledUp;
-              earnedBadges = result.badgesEarned;
-            }
-            break;
-          }
-          case 'ACTIVITY_ATTEMPT': {
-            const payload: ActivityAttemptPayload = {
-              userId,
-              activityId: validated.payload?.activityId ?? 'unknown',
-              correct: validated.payload?.correct ?? true,
-              attemptNumber: validated.payload?.attemptNumber ?? 1,
-              hintUsed: validated.payload?.hintUsed ?? false,
-              completedAt: now,
-            };
-            const result = await processActivityDirectly(userId, payload, gameEngine);
-            if (result) {
-              earnedBadges = result.badgesEarned;
-            }
-            break;
-          }
-          case 'DAILY_LOGIN': {
-            const payload: DailyLoginPayload = {
-              userId,
-              loginDate: now,
-            };
-            const result = await processDailyLoginDirectly(userId, payload, gameEngine);
-            if (result) {
-              levelUpOccurred = result.leveledUp;
-              earnedBadges = result.badgesEarned;
-            }
-            break;
-          }
-        }
-
-        // Get fresh profile after all operations complete
-        const profile = await gameEngine.getProfile(userId);
-        const shared = mapToProfileResponse(profile);
-
-        res.json({
-          success: true,
-          profile: shared,
-          levelUp: levelUpOccurred,
-          newBadges: earnedBadges.map((b) => ({
-            code: b.code,
-            name: b.name,
-            icon: b.icon,
-          })),
-        });
-      } catch (error) {
-        if (error instanceof z.ZodError) {
-          res.status(400).json({ error: 'Validation error', details: error.issues });
-          return;
-        }
         next(error);
       }
     },
@@ -427,6 +330,10 @@ export function createGamificationRouter(
           (c: { title: string }) => c.title,
         );
 
+        const clinicalCalculator = new ClinicalCalculatorService();
+        const clinicalReport = clinicalCalculator.calculate(session, recipe, userId);
+        // TODO: wire via buildClinicalContainer when global DI container is available
+
         const report: MissionReport = {
           xpEarned,
           totalXP: profile.currentXP,
@@ -437,6 +344,8 @@ export function createGamificationRouter(
           levelUp,
           streakDays: profile.streak,
           conceptsMastered,
+          clinicalDiscrepancies: [...clinicalReport.clinicalDiscrepancies] as Discrepancy[],
+          pragmaticModule: clinicalReport.pragmaticModule as PragmaticModuleData,
         };
 
         res.json(report);
@@ -449,110 +358,6 @@ export function createGamificationRouter(
       }
     },
   );
-
-  // Helper to process lesson directly and return results synchronously
-  async function processLessonDirectly(
-    userId: string,
-    payload: LessonCompletedPayload,
-    gameEngine: GameEngineCore,
-  ): Promise<{
-    leveledUp: boolean;
-    badgesEarned: Array<{ code: string; name: string; icon: string }>;
-  } | null> {
-    try {
-      const profile = await gameEngine.getProfile(userId);
-      if (!profile) return null;
-
-      const previousLevel = profile.level;
-
-      // Mark lesson as mastered
-      const eventBus = getEventBus();
-      await eventBus.emit(GameDomainEvents.LESSON_COMPLETED, payload);
-
-      // Small delay to let event process, then get fresh profile
-      await new Promise((resolve) => setTimeout(resolve, 50));
-
-      const newProfile = await gameEngine.getProfile(userId);
-      if (!newProfile) return null;
-
-      const newBadges = newProfile.badges.filter(
-        (b) => !profile.badges.some((pb) => pb.code === b.code),
-      );
-
-      return {
-        leveledUp: newProfile.level > previousLevel,
-        badgesEarned: newBadges.map((b) => ({ code: b.code, name: b.name, icon: b.icon })),
-      };
-    } catch {
-      return null;
-    }
-  }
-
-  // Helper to process activity directly
-  async function processActivityDirectly(
-    userId: string,
-    payload: ActivityAttemptPayload,
-    gameEngine: GameEngineCore,
-  ): Promise<{ badgesEarned: Array<{ code: string; name: string; icon: string }> } | null> {
-    try {
-      const profile = await gameEngine.getProfile(userId);
-      if (!profile) return null;
-
-      const eventBus = getEventBus();
-      await eventBus.emit(GameDomainEvents.ACTIVITY_ATTEMPT, payload);
-
-      await new Promise((resolve) => setTimeout(resolve, 50));
-
-      const newProfile = await gameEngine.getProfile(userId);
-      if (!newProfile) return null;
-
-      const newBadges = newProfile.badges.filter(
-        (b) => !profile.badges.some((pb) => pb.code === b.code),
-      );
-
-      return {
-        badgesEarned: newBadges.map((b) => ({ code: b.code, name: b.name, icon: b.icon })),
-      };
-    } catch {
-      return null;
-    }
-  }
-
-  // Helper to process daily login directly
-  async function processDailyLoginDirectly(
-    userId: string,
-    payload: DailyLoginPayload,
-    gameEngine: GameEngineCore,
-  ): Promise<{
-    leveledUp: boolean;
-    badgesEarned: Array<{ code: string; name: string; icon: string }>;
-  } | null> {
-    try {
-      const profile = await gameEngine.getProfile(userId);
-      if (!profile) return null;
-
-      const previousLevel = profile.level;
-
-      const eventBus = getEventBus();
-      await eventBus.emit(GameDomainEvents.DAILY_LOGIN, payload);
-
-      await new Promise((resolve) => setTimeout(resolve, 50));
-
-      const newProfile = await gameEngine.getProfile(userId);
-      if (!newProfile) return null;
-
-      const newBadges = newProfile.badges.filter(
-        (b) => !profile.badges.some((pb) => pb.code === b.code),
-      );
-
-      return {
-        leveledUp: newProfile.level > previousLevel,
-        badgesEarned: newBadges.map((b) => ({ code: b.code, name: b.name, icon: b.icon })),
-      };
-    } catch {
-      return null;
-    }
-  }
 
   return router;
 }

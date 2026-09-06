@@ -2,6 +2,11 @@ import type { IUserRepository } from '@/features/auth/domain/ports/user.reposito
 import type { IRefreshTokenRepository } from '@/features/auth/domain/ports/refresh-token.repository.port.js';
 import type { IHashingService } from '@/features/auth/domain/ports/hashing.service.port.js';
 import type { ITokenService } from '@/features/auth/domain/ports/token.service.port.js';
+import {
+  TokenInvalidError,
+  TokenExpiredError,
+  RefreshTokenRevokedError,
+} from '@/features/auth/domain/auth.errors.js';
 import { randomBytes } from 'node:crypto';
 
 export interface RefreshTokenInput {
@@ -23,56 +28,47 @@ export class RefreshTokenUseCase {
   ) {}
 
   async execute(input: RefreshTokenInput): Promise<RefreshTokenOutput> {
-    let payload;
+    let payload: { userId: string; jti: string };
     try {
       payload = this.refreshTokenService.verifyToken(input.refreshToken) as {
         userId: string;
         jti: string;
       };
     } catch (error) {
-      console.error('[RefreshToken] Error verifying token:', error);
-      throw error;
+      // The token service throws typed errors (TokenExpiredError / TokenInvalidError)
+      throw error instanceof TokenExpiredError || error instanceof TokenInvalidError
+        ? error
+        : new TokenInvalidError();
     }
 
     if (!payload.userId || !payload.jti) {
-      console.error('[RefreshToken] Invalid payload:', { payload });
-      throw new Error('Invalid refresh token payload');
+      throw new TokenInvalidError();
     }
 
     // Find the stored token by userId
     const storedToken = await this.refreshTokenRepo.findByUserId(payload.userId);
 
     if (!storedToken) {
-      console.error('[RefreshToken] Token not found in DB:', { userId: payload.userId });
       // If the token is not in the DB, it might be a replay attack
       // after the token was already used. Invalidate all tokens for the user.
       await this.refreshTokenRepo.deleteByUserId(payload.userId);
-      throw new Error('Invalid refresh token');
+      throw new TokenInvalidError();
     }
 
     // Verify the JTI against the stored hash using compare (not re-hashing)
     const isValidJti = await this.hashingService.compare(payload.jti, storedToken.tokenHash);
     if (!isValidJti) {
-      console.error('[RefreshToken] JTI mismatch', {
-        jti: payload.jti,
-        storedHash: storedToken.tokenHash,
-      });
       await this.refreshTokenRepo.deleteByUserId(payload.userId);
-      throw new Error('Invalid refresh token: JTI mismatch');
+      throw new TokenInvalidError();
     }
 
     if (storedToken.revoked) {
-      console.error('[RefreshToken] Token revoked:', { tokenId: storedToken.id });
-      throw new Error('Refresh token has been revoked');
+      throw new RefreshTokenRevokedError();
     }
 
     if (new Date() > storedToken.expiresAt) {
-      console.error('[RefreshToken] Token expired:', {
-        tokenId: storedToken.id,
-        expiresAt: storedToken.expiresAt,
-      });
       await this.refreshTokenRepo.delete(storedToken.id);
-      throw new Error('Refresh token has expired');
+      throw new TokenExpiredError();
     }
 
     // Revoke the used token
@@ -80,7 +76,9 @@ export class RefreshTokenUseCase {
 
     const user = await this.userRepository.findById(payload.userId);
     if (!user) {
-      throw new Error('User not found');
+      // Token belongs to a deleted user - treat as invalid and clear the session.
+      await this.refreshTokenRepo.deleteByUserId(payload.userId);
+      throw new TokenInvalidError();
     }
 
     // Issue new tokens

@@ -1,13 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { authApi, type User } from '../services/auth.api';
-import {
-  setToken,
-  getToken,
-  clearToken,
-  setRefreshToken,
-  getRefreshToken,
-  clearRefreshToken,
-} from '@/services/api-client';
+import { setToken, getToken, clearToken, refreshAccessToken } from '@/services/api-client';
 import { useAuthUIStore } from '../stores/auth.store';
 import { closeAudioContext } from '@/audio/micro/zzfx';
 
@@ -17,7 +10,6 @@ import { useState, useEffect } from 'react';
 interface AuthResponse {
   user: User;
   accessToken: string;
-  refreshToken: string;
 }
 
 interface UseAuthOptions {
@@ -36,29 +28,39 @@ export function useAuth(options: UseAuthOptions = {}) {
   // [EDD-TEMP] Log session recovery attempt
   if (import.meta.env.DEV) {
     const token = getToken();
-    const refreshToken = getRefreshToken();
     console.debug(`[EDD] [${new Date().toISOString()}] [useAuth]`, `Session recovery attempt`, {
       hasToken: !!token,
       tokenStartsWith: token ? token.substring(0, 10) : null,
-      hasRefreshToken: !!refreshToken,
       currentRoute: window.location.pathname,
     });
   }
 
-  // Only run the query on protected routes or when isProtected is true.
-  // On public routes (isProtected=false), the query is disabled so:
-  // - If token exists: isLoading=true (shows spinner) → user stays on public route
-  // - If no token: isLoading=false (renders page) → login/register works normally
-  const shouldFetch = isProtected && !!getToken();
+  // Only run the query on protected routes. On public routes (isProtected=false)
+  // the query is disabled so login/register work normally.
+  const shouldFetch = isProtected;
 
   const userQuery = useQuery({
     queryKey: ['user'],
     queryFn: async () => {
       // Mark hydration complete after first successful fetch
       setIsHydrated(true);
-      // The try/catch block was removed to allow the Axios interceptor to handle auth errors.
-      // Previously, catching the error and returning null caused a race condition where
-      // the app would redirect to /login before the token could be refreshed.
+
+      // Session restore: after a page reload there is no access token in memory
+      // (it is never persisted). If the httpOnly refresh cookie is still valid,
+      // exchange it silently for a fresh access token before fetching the user.
+      // Uses the shared single-flight so this never races 401-triggered
+      // refreshes from the interceptor into a double rotation (which the
+      // server treats as a replay attack and nukes the session).
+      if (!getToken()) {
+        try {
+          await refreshAccessToken();
+        } catch {
+          throw new Error('No active session');
+        }
+      }
+
+      // Errors bubble up so ProtectedRoute redirects to /login; the Axios
+      // interceptor handles access-token expiry transparently.
       const { user } = await authApi.getCurrentUser();
       return user;
     },
@@ -91,6 +93,27 @@ export function useAuth(options: UseAuthOptions = {}) {
     }
   }, [userQuery.isError, isHydrated]);
 
+  // Safety: if query is still pending after 8s, mark hydrated so redirect can happen
+  useEffect(() => {
+    if (isHydrated || !shouldFetch) return;
+    const timer = setTimeout(() => {
+      if (!isHydrated) {
+        logger.warn('[useAuth] Hydration safety timeout — forcing hydration after 8s');
+        setIsHydrated(true);
+      }
+    }, 8_000);
+    return () => clearTimeout(timer);
+  }, [isHydrated, shouldFetch]);
+
+  // Fix: when query is disabled (no token + protected route), hydration would never complete
+  // causing infinite "Verificando pase de explorador..." spinner. Mark hydrated immediately
+  // so ProtectedRoute can redirect to /login.
+  useEffect(() => {
+    if (!shouldFetch && !isHydrated) {
+      setIsHydrated(true);
+    }
+  }, [shouldFetch, isHydrated]);
+
   const loginMutation = useMutation({
     mutationFn: async (credentials: { identifier: string; password: string }) => {
       // [EDD-TEMP] Log login attempt
@@ -108,8 +131,8 @@ export function useAuth(options: UseAuthOptions = {}) {
           userRole: data.user.role,
         });
       }
+      // The refresh token is delivered by the server as an httpOnly cookie.
       setToken(data.accessToken);
-      setRefreshToken(data.refreshToken);
       queryClient.setQueryData(['user'], data.user);
     },
     onError: (error) => {
@@ -134,15 +157,14 @@ export function useAuth(options: UseAuthOptions = {}) {
       return result as AuthResponse;
     },
     onSuccess: (data) => {
+      // The refresh token is delivered by the server as an httpOnly cookie.
       setToken(data.accessToken);
-      setRefreshToken(data.refreshToken);
       queryClient.setQueryData(['user'], data.user);
     },
   });
 
   const cleanupUserState = () => {
     clearToken();
-    clearRefreshToken();
     queryClient.clear();
 
     useAuthUIStore.getState().closeModals();
@@ -163,25 +185,23 @@ export function useAuth(options: UseAuthOptions = {}) {
       if (import.meta.env.DEV) {
         console.debug(`[EDD] [${new Date().toISOString()}] [useAuth]`, `Logout mutation start`);
       }
-      const refreshToken = getRefreshToken();
-      const user = userQuery.data;
-      if (refreshToken && user) {
-        try {
-          await authApi.logout({ userId: user.id, refreshToken });
-          // [EDD-TEMP] Log logout API success
-          if (import.meta.env.DEV) {
-            console.debug(`[EDD] [${new Date().toISOString()}] [useAuth]`, `Logout API success`);
-          }
-        } catch (error) {
-          logger.error('Logout API call failed', error);
-          // [EDD-TEMP] Log logout API error (non-blocking)
-          if (import.meta.env.DEV) {
-            console.debug(
-              `[EDD] [${new Date().toISOString()}] [useAuth]`,
-              `Logout API error (non-blocking)`,
-              { error },
-            );
-          }
+      try {
+        // The server revokes the session identified by the httpOnly refresh
+        // cookie and clears it; no access token is required for this call.
+        await authApi.logout();
+        // [EDD-TEMP] Log logout API success
+        if (import.meta.env.DEV) {
+          console.debug(`[EDD] [${new Date().toISOString()}] [useAuth]`, `Logout API success`);
+        }
+      } catch (error) {
+        logger.error('Logout API call failed', error);
+        // [EDD-TEMP] Log logout API error (non-blocking)
+        if (import.meta.env.DEV) {
+          console.debug(
+            `[EDD] [${new Date().toISOString()}] [useAuth]`,
+            `Logout API error (non-blocking)`,
+            { error },
+          );
         }
       }
     },

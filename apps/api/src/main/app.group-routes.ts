@@ -18,14 +18,14 @@ export function getContentAccessService(): ContentAccessService {
 
 export function setupGroupRoutes(
   app: Express,
-  protectedMiddleware: (req , res: any, next: any) => void,
+  protectedMiddleware: (req: any, res: any, next: any) => void,
   requireRole: (...roles: string[]) => any,
 ): void {
   const groupRepo = new PrismaGroupRepository();
   const memberRepo = new PrismaGroupMemberRepository();
   const classRepo = new PrismaGroupClassRepository();
   const groupService = new GroupService(groupRepo, memberRepo, classRepo);
-  const contentAccessService = new ContentAccessService(memberRepo, classRepo);
+  const contentAccessService = new ContentAccessService();
   _contentAccessService = contentAccessService;
 
   const groupMiddleware = [protectedMiddleware, requireRole('TEACHER', 'ADMIN')] as const;

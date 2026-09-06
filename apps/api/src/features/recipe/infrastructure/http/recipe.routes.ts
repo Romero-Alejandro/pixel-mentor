@@ -2,14 +2,12 @@ import { Router, type Request, type Response, type NextFunction } from 'express'
 import { z } from 'zod';
 import type pino from 'pino';
 
+import { checkDedup, markActive, markCompleted, markFailed } from './interaction-dedup-cache';
+
 import { createLogger } from '@/shared/logger/logger.js';
 import { config } from '@/shared/config/index.js';
 import type { AuthRequest } from '@/features/auth/infrastructure/http/auth.middleware';
-import {
-  StartRecipeInputSchema,
-  InteractRecipeInputSchema,
-  QuestionAnswerInputSchema,
-} from '@/shared/dto';
+import { InteractRecipeInputSchema, QuestionAnswerInputSchema } from '@/shared/dto';
 // Re-export use cases from original location for backward compatibility
 import type { OrchestrateRecipeUseCase } from '@/features/recipe/application/use-cases/orchestrate-recipe.use-case';
 import type { QuestionAnsweringUseCase } from '@/features/recipe/application/use-cases/question-answering.use-case';
@@ -17,9 +15,30 @@ import {
   llmGovernanceMiddleware,
   recordLLMUsage,
 } from '@/shared/http/llm-governance.middleware.js';
+import {
+  SessionError,
+  getUserErrorMessage,
+  getErrorCode,
+} from '@/features/recipe/domain/errors/session.errors';
+
+// SSE heartbeat interval: 15 seconds (keeps connection alive through proxies)
+const SSE_HEARTBEAT_INTERVAL_MS = 15_000;
 
 // Create a local logger for route handlers
 const recipeRouterLogger = createLogger(undefined, { name: 'recipe-router', level: 'error' });
+
+/**
+ * Detects errors carrying statusCode 403 (e.g. cross-user session access
+ * rejected by the orchestration use cases).
+ */
+function isForbiddenError(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'statusCode' in error &&
+    (error as { statusCode?: unknown }).statusCode === 403
+  );
+}
 
 export interface AppRequest extends AuthRequest {
   logger?: pino.Logger;
@@ -29,7 +48,7 @@ export interface AppRequest extends AuthRequest {
 
 // In-memory mock storage for testing
 const mockRecipes: Record<string, any> = {};
-globalThis.__mockRecipes = mockRecipes;
+(globalThis as any).__mockRecipes = mockRecipes;
 
 export function createRecipeRouter(
   orchestrateUseCase: OrchestrateRecipeUseCase,
@@ -78,7 +97,11 @@ export function createRecipeRouter(
       }
 
       try {
-        const result = await orchestrateUseCase.interact(sessionId, studentInput);
+        const result = await orchestrateUseCase.interact(
+          sessionId,
+          studentInput,
+          appRequest.user?.id,
+        );
 
         // Record LLM usage for governance tracking
         recordLLMUsage(
@@ -90,6 +113,13 @@ export function createRecipeRouter(
 
         response.json(result);
       } catch (error) {
+        if (isForbiddenError(error)) {
+          response.status(403).json({
+            error: 'No tienes permisos para interactuar con esta sesión',
+            code: 'FORBIDDEN',
+          });
+          return;
+        }
         const errorMessage = error instanceof Error ? error.message : String(error);
         recipeRouterLogger.error({ err: errorMessage }, '[POST /interact] Error');
 
@@ -127,16 +157,86 @@ export function createRecipeRouter(
         return;
       }
 
+      // ── Deduplication check ──────────────────────────────────────────────
+      const interactionId =
+        typeof appRequest.body?.interactionId === 'string'
+          ? appRequest.body.interactionId
+          : undefined;
+
+      if (interactionId) {
+        const dedup = checkDedup(interactionId);
+
+        if (dedup.status === 'active') {
+          // Another request with same ID is already streaming
+          recipeRouterLogger.info(
+            { interactionId, sessionId, activeSince: dedup.activeSince },
+            '[POST /interact/stream] Duplicate active request, returning 409',
+          );
+          response.status(409).json({
+            error: 'Interaction already in progress',
+            interactionId,
+            retryAfter: 1,
+          });
+          return;
+        }
+
+        if (dedup.status === 'completed' && dedup.cachedResponse) {
+          // Return cached response as SSE events
+          recipeRouterLogger.info(
+            { interactionId, sessionId },
+            '[POST /interact/stream] Duplicate completed request, returning cached response',
+          );
+          response.setHeader('Content-Type', 'text/event-stream');
+          response.setHeader('Cache-Control', 'no-cache');
+          response.setHeader('Connection', 'keep-alive');
+          response.flushHeaders();
+          response.write(dedup.cachedResponse);
+          response.end();
+          return;
+        }
+      }
+
       response.setHeader('Content-Type', 'text/event-stream');
       response.setHeader('Cache-Control', 'no-cache');
       response.setHeader('Connection', 'keep-alive');
       response.flushHeaders();
 
+      // Start heartbeat to prevent proxy/load-balancer idle timeouts
+      const heartbeat = setInterval(() => {
+        if (!response.writableEnded) {
+          response.write(':heartbeat\n\n');
+        }
+      }, SSE_HEARTBEAT_INTERVAL_MS);
+
+      // Clear heartbeat if client disconnects before stream completes
+      response.on('close', () => {
+        clearInterval(heartbeat);
+      });
+
+      // Mark as active for deduplication
+      if (interactionId) markActive(interactionId);
+
       let errorSent = false;
       let fullResponse = '';
+      let sseChunks = ''; // Collect all SSE output for caching
+
+      const originalWrite = response.write.bind(response);
+      const capturingWrite: typeof response.write = (
+        chunk: string | Buffer,
+        ...args: unknown[]
+      ) => {
+        if (typeof chunk === 'string') sseChunks += chunk;
+        return originalWrite(chunk, ...(args as []));
+      };
+      // Monkey-patch write to capture SSE output for dedup cache
+      response.write = capturingWrite as typeof response.write;
 
       try {
-        const stream = orchestrateUseCase.interactStream(sessionId, studentInput);
+        const stream = orchestrateUseCase.interactStream(
+          sessionId,
+          studentInput,
+          appRequest.user?.id,
+        );
 
         for await (const chunk of stream) {
           if (chunk.type === 'chunk') {
@@ -162,26 +262,57 @@ export function createRecipeRouter(
 
             // Record LLM usage for streaming
             recordLLMUsage(appRequest, `stream:${sessionId}`, fullResponse, true);
+
+            // Cache completed response for dedup
+            if (interactionId) markCompleted(interactionId, sseChunks);
             break;
           }
         }
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        if (config.NODE_ENV === 'development') {
+        if (isForbiddenError(error)) {
+          if (!response.writableEnded) {
+            response.write(
+              `event: error\ndata: ${JSON.stringify({
+                message: 'No tienes permisos para interactuar con esta sesión',
+                code: 'FORBIDDEN',
+                statusCode: 403,
+              })}\n\n`,
+            );
+          }
+          if (interactionId) markFailed(interactionId);
+          return;
         }
+        const userMessage = getUserErrorMessage(error);
+        const errorCode = getErrorCode(error);
+        const statusCode = error instanceof SessionError ? error.statusCode : 500;
+        const metadata = error instanceof SessionError ? error.metadata : undefined;
+
+        recipeRouterLogger.error(
+          { err: error, errorCode, statusCode, sessionId, metadata },
+          '[POST /interact/stream] Error',
+        );
+
         if (!errorSent) {
-          const code = (error as { code?: string }).code ?? 'INTERNAL_ERROR';
           response.write(
-            `event: error\ndata: ${JSON.stringify({ message: errorMessage, code })}\n\n`,
+            `event: error\ndata: ${JSON.stringify({
+              message: userMessage,
+              code: errorCode,
+              statusCode,
+              ...(metadata ? { metadata } : {}),
+            })}\n\n`,
           );
           errorSent = true;
         }
 
         // Record failed LLM usage for streaming
-        recordLLMUsage(appRequest, `stream:${sessionId}`, fullResponse, false, errorMessage);
+        recordLLMUsage(appRequest, `stream:${sessionId}`, fullResponse, false, userMessage);
+
+        // Remove from dedup cache on failure
+        if (interactionId) markFailed(interactionId);
       } finally {
-        response.end();
-        if (config.NODE_ENV === 'development') {
+        clearInterval(heartbeat);
+        if (!response.writableEnded) {
+          response.end();
         }
       }
     },
@@ -203,6 +334,8 @@ export function createRecipeRouter(
         const result = await questionAnsweringUseCase.execute({
           recipeId: validated.recipeId,
           question: validated.question,
+          userId: appRequest.user?.id,
+          userRole: appRequest.user?.role,
         });
 
         // Record LLM usage
@@ -217,6 +350,13 @@ export function createRecipeRouter(
       } catch (error) {
         if (error instanceof z.ZodError) {
           response.status(400).json({ error: 'Validation error', details: error.issues });
+          return;
+        }
+        if (isForbiddenError(error)) {
+          response.status(403).json({
+            error: 'No tienes permisos para consultar esta receta',
+            code: 'FORBIDDEN',
+          });
           return;
         }
         next(error);

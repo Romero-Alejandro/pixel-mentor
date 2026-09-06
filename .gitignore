@@ -89,3 +89,5 @@ apps/api/src/infrastructure/adapters/database/generated/
 # OpenCode
 .opencode/
 skills-lock.json
+# Local Pi runtime state
+.atl/

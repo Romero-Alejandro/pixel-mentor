@@ -28,6 +28,7 @@ describe('authApi', () => {
         data: {
           user: { id: '1', email: 'test@test.com', name: 'Test', role: 'STUDENT', quota: 0 },
           accessToken: 'jwt-token-123',
+          refreshToken: 'refresh-token-123',
         },
       };
       (apiClient.post as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockResponse);
@@ -39,6 +40,7 @@ describe('authApi', () => {
         password: 'password123',
       });
       expect(result).toHaveProperty('accessToken', 'jwt-token-123');
+      expect(result).toHaveProperty('refreshToken', 'refresh-token-123');
       expect(result.user).toHaveProperty('email', 'test@test.com');
     });
 
@@ -58,6 +60,7 @@ describe('authApi', () => {
         data: {
           user: { id: '1', email: 'test@test.com', name: 'Test User', role: 'STUDENT', quota: 0 },
           accessToken: 'jwt-token-456',
+          refreshToken: 'refresh-token-456',
         },
       };
       (apiClient.post as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockResponse);
@@ -75,6 +78,7 @@ describe('authApi', () => {
         username: undefined,
       });
       expect(result).toHaveProperty('accessToken', 'jwt-token-456');
+      expect(result).toHaveProperty('refreshToken', 'refresh-token-456');
     });
   });
 

@@ -67,6 +67,7 @@ const createMockTemplateRepo = (): jest.Mocked<IClassTemplateRepository> => ({
 
 const createMockClassRepo = (): jest.Mocked<IClassRepository> => ({
   findById: jest.fn(),
+  findBySlug: jest.fn() as any,
   findByTutorId: jest.fn(),
   create: jest.fn(),
   update: jest.fn(),

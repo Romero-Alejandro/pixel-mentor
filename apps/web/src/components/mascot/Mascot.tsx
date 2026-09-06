@@ -12,8 +12,20 @@ import {
   IconSparkles,
 } from '@tabler/icons-react';
 
+import rivUrl from '@/assets/magic-cat.riv?url';
 import { useLessonStore } from '@/features/lesson/stores/lesson.store';
 import { cn } from '@/utils/cn';
+import { logger } from '@/utils/logger';
+
+// Single source of truth for the Rive scene: renaming these in the editor
+// without updating here breaks the mascot silently, hence the constants.
+const RIV_SRC = rivUrl;
+const STATE_MACHINE_NAME = 'BLACK CATW';
+const HOVER_INPUT_NAME = 'Hover';
+
+// Module-level layout: useRive must receive a stable reference instead of a
+// `new Layout` per render.
+const MASCOT_LAYOUT = new Layout({ fit: Fit.Contain, alignment: Alignment.Center });
 
 type AvatarState =
   | 'speaking'
@@ -77,6 +89,7 @@ export function Mascot({ className = '' }: MascotProps) {
 
   const isStart = currentState === 'AWAITING_START';
   const [isLoaded, setIsLoaded] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
   const avatarState = getAvatarState(isSpeaking, isListening, currentState);
@@ -84,14 +97,18 @@ export function Mascot({ className = '' }: MascotProps) {
   const StateIcon = theme.icon;
 
   const { rive, RiveComponent } = useRive({
-    src: '/assets/magic-cat.riv',
-    stateMachines: 'BLACK CATW',
+    src: RIV_SRC,
+    stateMachines: STATE_MACHINE_NAME,
     autoplay: true,
-    layout: new Layout({ fit: Fit.Contain, alignment: Alignment.Center }),
+    layout: MASCOT_LAYOUT,
     onLoad: () => setIsLoaded(true),
+    onLoadError: () => {
+      logger.error('[Mascot] Failed to load Rive scene');
+      setLoadFailed(true);
+    },
   });
 
-  const hoverInput = useStateMachineInput(rive, 'BLACK CATW', 'Hover');
+  const hoverInput = useStateMachineInput(rive, STATE_MACHINE_NAME, HOVER_INPUT_NAME);
 
   useEffect(() => {
     if (hoverInput) {
@@ -143,7 +160,7 @@ export function Mascot({ className = '' }: MascotProps) {
           isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8',
         )}
       >
-        <RiveComponent className="w-full h-full drop-shadow-2xl" />
+        {!loadFailed ? <RiveComponent className="w-full h-full drop-shadow-2xl" /> : null}
       </div>
 
       <div

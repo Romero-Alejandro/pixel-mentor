@@ -35,7 +35,10 @@ export const RegisterInputSchema = z.object({
 export const AuthResponseSchema = z.object({
   user: UserSchema,
   accessToken: z.string(),
-  refreshToken: z.string(),
+  // Optional: the refresh token is now delivered via an httpOnly cookie and is
+  // no longer part of the login/register response body. Kept optional for
+  // backwards compatibility with older servers/clients.
+  refreshToken: z.string().optional(),
 });
 
 // Error response schema

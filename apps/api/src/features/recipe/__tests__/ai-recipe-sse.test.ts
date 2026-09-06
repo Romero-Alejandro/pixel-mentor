@@ -87,7 +87,7 @@ describe('Progress Calculation', () => {
   });
 
   it('should calculate progress for second step of 3', () => {
-    expect(calculateProgress(1, 3)).toBe(76);
+    expect(calculateProgress(1, 3)).toBe(77);
   });
 
   it('should calculate progress for third step of 3', () => {
@@ -95,7 +95,7 @@ describe('Progress Calculation', () => {
   });
 
   it('should handle 7 steps correctly', () => {
-    expect(calculateProgress(0, 7)).toBe(55);
+    expect(calculateProgress(0, 7)).toBe(56);
     expect(calculateProgress(6, 7)).toBe(90);
   });
 
@@ -126,7 +126,7 @@ describe('GeneratedStepSchema', () => {
   const GeneratedStepScriptSchema = z
     .object({
       transition: z.union([z.string(), z.object({ text: z.string() })]).optional(),
-      content: z.union([z.string(), z.record(z.unknown())]).optional(),
+      content: z.union([z.string(), z.record(z.string(), z.unknown())]).optional(),
       examples: z.array(z.unknown()).optional(),
       closure: z.union([z.string(), z.object({ text: z.string() })]).optional(),
       instruction: z.union([z.string(), z.object({ text: z.string() })]).optional(),

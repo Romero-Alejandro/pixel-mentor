@@ -11,32 +11,17 @@
  */
 
 import request from 'supertest';
-import { z } from 'zod';
 
 import { createAuthRouter } from '@/features/auth/infrastructure/http/auth.routes.js';
 import type { ResolveUserByEmailUseCase } from '@/features/auth/application/use-cases/resolve-user-by-email.use-case.js';
-import type { IUserRepository } from '@/features/auth/domain/ports/user.repository.port.js';
-import type { User } from '@/features/auth/domain/entities/user.entity.js';
 
-const createMockUserRepository = (): jest.Mocked<IUserRepository> => ({
-  findByEmail: jest.fn(),
-  findById: jest.fn(),
-  findByEmailWithPassword: jest.fn(),
-  findByIdentifier: jest.fn(),
-  findByIdentifierWithPassword: jest.fn(),
-  create: jest.fn(),
-  updateRole: jest.fn(),
-  updateQuota: jest.fn(),
-  delete: jest.fn(),
-  findAll: jest.fn(),
-});
-
-const createMockResolveUserByEmailUseCase = (): jest.Mocked<ResolveUserByEmailUseCase> => ({
-  execute: jest.fn(),
-});
+const createMockResolveUserByEmailUseCase = (): jest.Mocked<ResolveUserByEmailUseCase> =>
+  ({
+    execute: jest.fn(),
+    userRepo: {} as any,
+  }) as any;
 
 const createApp = (
-  userRepo: jest.Mocked<IUserRepository>,
   resolveUseCase: jest.Mocked<ResolveUserByEmailUseCase>,
   user: { id: string; role: string } = { id: 'user-1', role: 'TEACHER' },
 ) => {
@@ -54,21 +39,8 @@ const createApp = (
   };
 
   const mockLogoutUseCase = { execute: jest.fn() };
-  const mockVerifyTokenUseCase = { execute: jest.fn() };
-
-  // Mock middleware that directly sets user (simulates successful auth)
-  const mockAuthMiddleware =
-    (user: { id: string; role: string } | null) => (_req: any, res: any, next: any) => {
-      if (!user) {
-        res.status(401).json({ error: 'No autenticado' });
-        return;
-      }
-      _req.user = user;
-      next();
-    };
 
   const router = createAuthRouter(
-    userRepo,
     mockRegisterUseCase as any,
     mockLoginUseCase as any,
     mockLogoutUseCase as any,
@@ -86,17 +58,15 @@ const createApp = (
 };
 
 describe('GET /api/auth/users/resolve', () => {
-  let mockUserRepo: jest.Mocked<IUserRepository>;
   let mockResolveUseCase: jest.Mocked<ResolveUserByEmailUseCase>;
 
   beforeEach(() => {
-    mockUserRepo = createMockUserRepository();
     mockResolveUseCase = createMockResolveUserByEmailUseCase();
   });
 
   describe('authentication', () => {
     it('should return 401 when no auth token provided', async () => {
-      const app = createApp(mockUserRepo, mockResolveUseCase, null as any);
+      const app = createApp(mockResolveUseCase, null as any);
 
       const response = await request(app).get('/api/auth/users/resolve?email=test@example.com');
 
@@ -104,7 +74,7 @@ describe('GET /api/auth/users/resolve', () => {
     });
 
     it('should return 401 when auth token is invalid', async () => {
-      const app = createApp(mockUserRepo, mockResolveUseCase, null as any);
+      const app = createApp(mockResolveUseCase, null as any);
 
       const response = await request(app)
         .get('/api/auth/users/resolve?email=test@example.com')
@@ -116,7 +86,7 @@ describe('GET /api/auth/users/resolve', () => {
 
   describe('authorization', () => {
     it('should return 403 when user is not a teacher', async () => {
-      const app = createApp(mockUserRepo, mockResolveUseCase, {
+      const app = createApp(mockResolveUseCase, {
         id: 'user-1',
         role: 'STUDENT',
       });
@@ -128,7 +98,7 @@ describe('GET /api/auth/users/resolve', () => {
     });
 
     it('should return 403 when user is an admin', async () => {
-      const app = createApp(mockUserRepo, mockResolveUseCase, {
+      const app = createApp(mockResolveUseCase, {
         id: 'user-1',
         role: 'ADMIN',
       });
@@ -141,7 +111,7 @@ describe('GET /api/auth/users/resolve', () => {
 
   describe('validation', () => {
     it('should return 400 when email query param is missing', async () => {
-      const app = createApp(mockUserRepo, mockResolveUseCase);
+      const app = createApp(mockResolveUseCase);
 
       const response = await request(app).get('/api/auth/users/resolve');
 
@@ -150,7 +120,7 @@ describe('GET /api/auth/users/resolve', () => {
     });
 
     it('should return 400 when email format is invalid', async () => {
-      const app = createApp(mockUserRepo, mockResolveUseCase);
+      const app = createApp(mockResolveUseCase);
 
       const response = await request(app).get('/api/auth/users/resolve?email=invalid');
 
@@ -167,7 +137,7 @@ describe('GET /api/auth/users/resolve', () => {
         name: 'Test User',
       });
 
-      const app = createApp(mockUserRepo, mockResolveUseCase);
+      const app = createApp(mockResolveUseCase);
 
       const response = await request(app).get('/api/auth/users/resolve?email=test@example.com');
 
@@ -185,7 +155,7 @@ describe('GET /api/auth/users/resolve', () => {
     it('should return 404 when user not found', async () => {
       mockResolveUseCase.execute.mockResolvedValue(null);
 
-      const app = createApp(mockUserRepo, mockResolveUseCase);
+      const app = createApp(mockResolveUseCase);
 
       const response = await request(app).get(
         '/api/auth/users/resolve?email=nonexistent@example.com',
@@ -202,7 +172,7 @@ describe('GET /api/auth/users/resolve', () => {
         name: 'Test User',
       });
 
-      const app = createApp(mockUserRepo, mockResolveUseCase);
+      const app = createApp(mockResolveUseCase);
 
       const response = await request(app).get(
         '/api/auth/users/resolve?email=TEST.USER@example.com',

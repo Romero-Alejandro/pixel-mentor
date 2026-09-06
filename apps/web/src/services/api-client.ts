@@ -1,27 +1,64 @@
-import axios, { type InternalAxiosRequestConfig, type AxiosError } from 'axios';
+import axios, { type InternalAxiosRequestConfig, type AxiosError, type AxiosResponse } from 'axios';
+
+// Imported here despite the circular dependency with auth.api (auth.api imports
+// apiClient): authApi is only referenced at runtime inside the interceptor
+// callbacks, so the cycle resolves safely.
 import { authApi } from '@/features/auth/services/auth.api';
 
 export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:3001',
   headers: { 'Content-Type': 'application/json' },
+  // Required so the httpOnly refresh cookie (scoped to /api/auth by the server)
+  // is sent on login/refresh/logout requests.
+  withCredentials: true,
 });
 
-// Request interceptor to add the auth token
+// ─────────────────────────────────────────────────────────────────────────────
+// Token storage
+//
+// The ACCESS token is kept in memory only — it is never persisted, so an XSS
+// can only steal a short-lived (15 min) token and there is nothing to recover
+// after the page closes. The REFRESH token lives in an httpOnly cookie set by
+// the server and is never exposed to JavaScript.
+// ─────────────────────────────────────────────────────────────────────────────
+
+let accessToken: string | null = null;
+// Kept only for backwards compatibility with callers of the old refresh-token
+// helpers; nothing in the app relies on it anymore.
+let legacyRefreshTokenValue: string | null = null;
+
+export const setToken = (token: string | null): void => {
+  accessToken = token;
+};
+
+export const getToken = (): string | null => {
+  return accessToken;
+};
+
+export const clearToken = (): void => {
+  accessToken = null;
+};
+
+/** @deprecated The refresh token now lives in an httpOnly cookie. */
+export const setRefreshToken = (token: string | null): void => {
+  legacyRefreshTokenValue = token;
+};
+
+/** @deprecated The refresh token now lives in an httpOnly cookie. */
+export const getRefreshToken = (): string | null => {
+  return legacyRefreshTokenValue;
+};
+
+/** @deprecated The refresh token now lives in an httpOnly cookie. */
+export const clearRefreshToken = (): void => {
+  legacyRefreshTokenValue = null;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Request interceptor: attach the in-memory access token
+// ─────────────────────────────────────────────────────────────────────────────
+
 apiClient.interceptors.request.use((config) => {
-  // [EDD-TEMP] Log request with auth context
-  if (import.meta.env.DEV) {
-    const token = getToken();
-    const refreshToken = getRefreshToken();
-    console.debug(
-      `[EDD] [${new Date().toISOString()}] [AxiosInterceptor]`,
-      `Request: ${config.method?.toUpperCase()} ${config.url}`,
-      {
-        hasToken: !!token,
-        hasRefreshToken: !!refreshToken,
-        currentRoute: window.location.pathname,
-      },
-    );
-  }
   const token = getToken();
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -29,205 +66,86 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-let isRefreshing = false;
-let failedQueue: ((token: string | null) => void)[] = [];
+// ─────────────────────────────────────────────────────────────────────────────
+// Response interceptor: transparent access-token refresh on 401
+// ─────────────────────────────────────────────────────────────────────────────
 
-const processQueue = (error: unknown, token: string | null = null) => {
-  for (const prom of failedQueue) {
-    if (error) {
-      prom(null);
-    } else {
-      prom(token);
-    }
+type RetryableConfig = InternalAxiosRequestConfig & { _retry?: boolean };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Shared refresh single-flight
+//
+// The refresh token ROTATES on the server: whoever uses it first invalidates
+// it for everyone else (reuse is treated as a replay attack and nukes the
+// whole session). On reload, the session-restore query AND any 401'd data
+// request can trigger a refresh concurrently, so ALL refresh callers MUST
+// share one in-flight promise instead of firing parallel rotations.
+// ─────────────────────────────────────────────────────────────────────────────
+
+let refreshPromise: Promise<string> | null = null;
+
+/**
+ * Exchange the httpOnly refresh cookie for a fresh access token.
+ * Concurrent callers share the same in-flight request; once settled, the
+ * next call starts a new rotation.
+ */
+export function refreshAccessToken(): Promise<string> {
+  if (!refreshPromise) {
+    refreshPromise = authApi
+      .refreshToken()
+      .then(({ accessToken: newAccessToken }) => {
+        setToken(newAccessToken);
+        apiClient.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
+        return newAccessToken;
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
   }
-  failedQueue = [];
-};
+  return refreshPromise;
+}
 
-// Response interceptor for handling 401 errors
+/** Requests that must never trigger an automatic refresh cycle. */
+function isAuthEndpoint(url: string | undefined): boolean {
+  return url === '/api/auth/login' || url === '/api/auth/register' || url === '/api/auth/refresh';
+}
+
+function handleRefreshFailure(): void {
+  clearToken();
+  // Only hard-redirect when we are not already on a public page, to avoid
+  // redirect loops (e.g. a failed login attempt).
+  if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+    window.location.href = '/login';
+  }
+}
+
 apiClient.interceptors.response.use(
-  (response) => {
-    // [EDD-TEMP] Log successful responses
-    if (import.meta.env.DEV) {
-      console.debug(`[EDD] [${new Date().toISOString()}] [AxiosInterceptor]`, `Response success`, {
-        status: response.status,
-        url: response.config?.url,
-      });
-    }
-    return response;
-  },
+  (response: AxiosResponse) => response,
   async (error: AxiosError<unknown, Record<string, unknown>>) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig | undefined;
+    const originalRequest = error.config as RetryableConfig | undefined;
 
-    // [EDD-TEMP] Log all response errors
-    if (import.meta.env.DEV) {
-      console.debug(`[EDD] [${new Date().toISOString()}] [AxiosInterceptor]`, `Response error`, {
-        status: error.response?.status,
-        url: originalRequest?.url,
-        isRefreshing,
-        currentRoute: window.location.pathname,
-      });
-    }
-
-    if (
-      error.response?.status === 401 &&
+    const isUnauthorized = error.response?.status === 401;
+    const shouldAttemptRefresh =
+      isUnauthorized &&
       originalRequest &&
-      !(originalRequest as { _retry?: boolean })._retry
-    ) {
-      // [EDD-TEMP] Log 401 detected
-      if (import.meta.env.DEV) {
-        console.debug(
-          `[EDD] [${new Date().toISOString()}] [AxiosInterceptor]`,
-          `401 detected, attempting token refresh`,
-          { url: originalRequest.url, isRefreshing },
-        );
-      }
+      !originalRequest._retry &&
+      !isAuthEndpoint(originalRequest.url);
 
-      if (isRefreshing) {
-        // [EDD-TEMP] Log queueing request while refreshing
-        if (import.meta.env.DEV) {
-          console.debug(
-            `[EDD] [${new Date().toISOString()}] [AxiosInterceptor]`,
-            `Queueing request while refreshing`,
-            { url: originalRequest.url },
-          );
-        }
-        return new Promise((resolve) => {
-          failedQueue.push((token: string | null) => {
-            if (token === null) {
-              resolve(Promise.reject(new Error('Refresh failed')));
-              return;
-            }
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-            resolve(apiClient(originalRequest as InternalAxiosRequestConfig));
-          });
-        });
-      }
-
-      (originalRequest as { _retry?: boolean })._retry = true;
-      isRefreshing = true;
-
-      const refreshToken = getRefreshToken();
-      // [EDD-TEMP] Log refresh token check
-      if (import.meta.env.DEV) {
-        console.debug(
-          `[EDD] [${new Date().toISOString()}] [AxiosInterceptor]`,
-          `Refresh token check`,
-          { hasRefreshToken: !!refreshToken },
-        );
-      }
-
-      if (!refreshToken) {
-        isRefreshing = false;
-        // [EDD-TEMP] Log no refresh token available
-        if (import.meta.env.DEV) {
-          console.debug(
-            `[EDD] [${new Date().toISOString()}] [AxiosInterceptor]`,
-            `No refresh token, rejecting request`,
-          );
-        }
-        return Promise.reject(error);
-      }
-
-      try {
-        // [EDD-TEMP] Log refresh attempt start
-        if (import.meta.env.DEV) {
-          console.debug(
-            `[EDD] [${new Date().toISOString()}] [AxiosInterceptor]`,
-            `Attempting token refresh...`,
-          );
-        }
-        const { accessToken, refreshToken: newRefreshToken } = await authApi.refreshToken({
-          refreshToken,
-        });
-        setToken(accessToken);
-        setRefreshToken(newRefreshToken);
-        apiClient.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-        processQueue(null, accessToken);
-
-        // [EDD-TEMP] Log refresh success
-        if (import.meta.env.DEV) {
-          console.debug(
-            `[EDD] [${new Date().toISOString()}] [AxiosInterceptor]`,
-            `Token refresh SUCCESS`,
-            { newTokenStartsWith: accessToken.substring(0, 10) },
-          );
-        }
-
-        return apiClient(originalRequest as InternalAxiosRequestConfig);
-      } catch (err) {
-        // [EDD-TEMP] Log refresh failure with stack trace
-        if (import.meta.env.DEV) {
-          console.debug(
-            `[EDD] [${new Date().toISOString()}] [AxiosInterceptor]`,
-            `Token refresh FAILED`,
-            { error: err, stack: new Error().stack },
-          );
-        }
-        clearToken();
-        clearRefreshToken();
-        processQueue(err, null);
-
-        // [EDD-TEMP] Log forced redirect to /login
-        // Skip redirect if the endpoint is /me to prevent infinite loops
-        const isMeEndpoint = originalRequest.url === '/me';
-        if (isMeEndpoint) {
-          if (import.meta.env.DEV) {
-            console.debug(
-              `[EDD] [${new Date().toISOString()}] [AxiosInterceptor]`,
-              `Skipping redirect for /me endpoint`,
-              { currentRoute: window.location.pathname },
-            );
-          }
-          return Promise.reject(err);
-        }
-
-        if (import.meta.env.DEV) {
-          console.debug(
-            `[EDD] [${new Date().toISOString()}] [AxiosInterceptor]`,
-            `REDIRECTING to /login`,
-            { currentRoute: window.location.pathname },
-          );
-        }
-        window.location.href = '/login';
-        return Promise.reject(err);
-      } finally {
-        isRefreshing = false;
-      }
+    if (!shouldAttemptRefresh) {
+      return Promise.reject(error);
     }
 
-    return Promise.reject(error);
+    originalRequest._retry = true;
+
+    try {
+      // Shared single-flight: concurrent 401s reuse the same rotation.
+      const newAccessToken = await refreshAccessToken();
+      originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+      return apiClient(originalRequest);
+    } catch (refreshError) {
+      clearToken();
+      handleRefreshFailure();
+      return Promise.reject(refreshError);
+    }
   },
 );
-
-export const setToken = (token: string | null): void => {
-  if (token) {
-    localStorage.setItem('token', token);
-  } else {
-    localStorage.removeItem('token');
-  }
-};
-
-export const getToken = (): string | null => {
-  return localStorage.getItem('token');
-};
-
-export const clearToken = (): void => {
-  localStorage.removeItem('token');
-};
-
-export const setRefreshToken = (token: string | null): void => {
-  if (token) {
-    localStorage.setItem('refreshToken', token);
-  } else {
-    localStorage.removeItem('refreshToken');
-  }
-};
-
-export const getRefreshToken = (): string | null => {
-  return localStorage.getItem('refreshToken');
-};
-
-export const clearRefreshToken = (): void => {
-  localStorage.removeItem('refreshToken');
-};

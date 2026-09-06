@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 
 import type { ITokenService } from '@/features/auth/domain/ports/token.service.port.js';
+import { TokenExpiredError, TokenInvalidError } from '@/features/auth/domain/auth.errors.js';
 import { config } from '@/shared/config/index.js';
 
 /**
@@ -15,15 +16,25 @@ export class JwtAccessTokenService implements ITokenService {
     } as jwt.SignOptions);
   }
 
-  verifyToken(token: string): { userId: string; jti: string } {
-    const decoded = jwt.verify(token, config.JWT_SECRET);
-    if (typeof decoded === 'string' || !decoded || !decoded.userId || !decoded.jti) {
-      if (config.NODE_ENV === 'development') {
-        console.debug('[TokenAdapter] Invalid payload:', decoded);
+  verifyToken(token: string): { userId: string; jti?: string } {
+    try {
+      const decoded = jwt.verify(token, config.JWT_SECRET);
+      if (typeof decoded === 'string' || !decoded || !decoded.userId) {
+        if (config.NODE_ENV === 'development') {
+          console.debug('[TokenAdapter] Invalid payload:', decoded);
+        }
+        throw new TokenInvalidError();
       }
-      throw new Error('Invalid token payload: missing required fields');
+      return decoded as { userId: string; jti?: string };
+    } catch (error) {
+      if (error instanceof TokenInvalidError) {
+        throw error;
+      }
+      if (error instanceof jwt.TokenExpiredError) {
+        throw new TokenExpiredError();
+      }
+      throw new TokenInvalidError();
     }
-    return decoded as { userId: string; jti: string };
   }
 }
 
@@ -47,13 +58,23 @@ export class JwtRefreshTokenService {
   }
 
   verifyToken(token: string): { userId: string; jti: string } {
-    const decoded = jwt.verify(token, this.secret);
-    if (typeof decoded === 'string' || !decoded || !decoded.userId || !decoded.jti) {
-      if (config.NODE_ENV === 'development') {
-        console.debug('[TokenAdapter] Invalid payload:', decoded);
+    try {
+      const decoded = jwt.verify(token, this.secret);
+      if (typeof decoded === 'string' || !decoded || !decoded.userId || !decoded.jti) {
+        if (config.NODE_ENV === 'development') {
+          console.debug('[TokenAdapter] Invalid payload:', decoded);
+        }
+        throw new TokenInvalidError();
       }
-      throw new Error('Invalid token payload: missing required fields');
+      return decoded as { userId: string; jti: string };
+    } catch (error) {
+      if (error instanceof TokenInvalidError) {
+        throw error;
+      }
+      if (error instanceof jwt.TokenExpiredError) {
+        throw new TokenExpiredError();
+      }
+      throw new TokenInvalidError();
     }
-    return decoded as { userId: string; jti: string };
   }
 }

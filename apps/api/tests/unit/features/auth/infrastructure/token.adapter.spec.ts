@@ -63,7 +63,12 @@ describe('JwtAccessTokenService', () => {
   describe('verifyToken', () => {
     it('should verify a valid token and return payload', () => {
       // Given
-      const payload = { userId: 'user-1', email: 'test@example.com', role: 'ADMIN' };
+      const payload = {
+        userId: 'user-1',
+        email: 'test@example.com',
+        role: 'ADMIN',
+        jti: 'token-id-1',
+      };
       const token = service.generateToken(payload);
 
       // When
@@ -75,6 +80,7 @@ describe('JwtAccessTokenService', () => {
           userId: 'user-1',
           email: 'test@example.com',
           role: 'ADMIN',
+          jti: 'token-id-1',
         }),
       );
     });
@@ -82,7 +88,7 @@ describe('JwtAccessTokenService', () => {
     it('should throw error for expired token', () => {
       // Given
       const expiredToken = jwt.sign(
-        { userId: 'user-1', exp: Math.floor(Date.now() / 1000) - 100 },
+        { userId: 'user-1', jti: 'some-id', exp: Math.floor(Date.now() / 1000) - 100 },
         TEST_JWT_SECRET,
       );
 
@@ -92,7 +98,7 @@ describe('JwtAccessTokenService', () => {
 
     it('should throw error for tampered token', () => {
       // Given
-      const validToken = service.generateToken({ userId: 'user-1' });
+      const validToken = service.generateToken({ userId: 'user-1', jti: 'some-id' });
       const tamperedToken = validToken.slice(0, -5) + 'XXXXX';
 
       // When / Then
@@ -102,7 +108,7 @@ describe('JwtAccessTokenService', () => {
     it('should throw error for token signed with different secret', () => {
       // Given
       const wrongSecretToken = jwt.sign(
-        { userId: 'user-1' },
+        { userId: 'user-1', jti: 'some-id' },
         'completely-different-secret-that-is-at-least-32-chars',
       );
 
@@ -115,15 +121,12 @@ describe('JwtAccessTokenService', () => {
       expect(() => service.verifyToken('not-a-jwt-token-at-all')).toThrow();
     });
 
-    it('should return empty object when decoded is a string', () => {
+    it('should throw when decoded is a string', () => {
       // Given — mock jwt.verify to simulate string return
       jest.spyOn(jwt, 'verify').mockReturnValue('some-string' as never);
 
-      // When
-      const result = service.verifyToken('any-token');
-
-      // Then
-      expect(result).toEqual({});
+      // When / Then
+      expect(() => service.verifyToken('any-token')).toThrow('Invalid token payload');
 
       // Restore
       (jwt.verify as jest.Mock).mockRestore();
@@ -174,7 +177,7 @@ describe('JwtRefreshTokenService', () => {
   describe('verifyToken', () => {
     it('should verify a valid token and return payload', () => {
       // Given
-      const payload = { userId: 'user-1' };
+      const payload = { userId: 'user-1', jti: 'refresh-token-id-1' };
       const token = service.generateToken(payload);
 
       // When
@@ -184,6 +187,7 @@ describe('JwtRefreshTokenService', () => {
       expect(result).toEqual(
         expect.objectContaining({
           userId: 'user-1',
+          jti: 'refresh-token-id-1',
         }),
       );
     });
@@ -191,7 +195,7 @@ describe('JwtRefreshTokenService', () => {
     it('should throw error for expired token', () => {
       // Given
       const expiredToken = jwt.sign(
-        { userId: 'user-1', exp: Math.floor(Date.now() / 1000) - 100 },
+        { userId: 'user-1', jti: 'some-id', exp: Math.floor(Date.now() / 1000) - 100 },
         TEST_JWT_REFRESH_SECRET,
       );
 
@@ -201,7 +205,7 @@ describe('JwtRefreshTokenService', () => {
 
     it('should throw error for tampered token', () => {
       // Given
-      const validToken = service.generateToken({ userId: 'user-1' });
+      const validToken = service.generateToken({ userId: 'user-1', jti: 'some-id' });
       const tamperedToken = validToken.slice(0, -5) + 'XXXXX';
 
       // When / Then
@@ -248,15 +252,12 @@ describe('JwtRefreshTokenService', () => {
       expect(decoded.userId).toBe('user-1');
     });
 
-    it('should return empty object when decoded is a string', () => {
+    it('should throw when decoded is a string', () => {
       // Given
       jest.spyOn(jwt, 'verify').mockReturnValue('some-string' as never);
 
-      // When
-      const result = service.verifyToken('any-token');
-
-      // Then
-      expect(result).toEqual({});
+      // When / Then
+      expect(() => service.verifyToken('any-token')).toThrow('Invalid token payload');
 
       // Restore
       (jwt.verify as jest.Mock).mockRestore();

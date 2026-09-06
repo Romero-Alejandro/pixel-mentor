@@ -153,7 +153,6 @@ export class PrismaUserRepository implements IUserRepository {
           cohort: true,
           createdAt: true,
           updatedAt: true,
-          slug: true,
         },
       });
       return mapToDomain(created);
@@ -184,7 +183,6 @@ export class PrismaUserRepository implements IUserRepository {
           cohort: true,
           createdAt: true,
           updatedAt: true,
-          slug: true,
         },
       });
       return mapToDomain(updated);
@@ -210,7 +208,6 @@ export class PrismaUserRepository implements IUserRepository {
           cohort: true,
           createdAt: true,
           updatedAt: true,
-          slug: true,
         },
       });
       return mapToDomain(updated);
@@ -259,7 +256,6 @@ export class PrismaUserRepository implements IUserRepository {
           cohort: true,
           createdAt: true,
           updatedAt: true,
-          slug: true,
         },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limit,

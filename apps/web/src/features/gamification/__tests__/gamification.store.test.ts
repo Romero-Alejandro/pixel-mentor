@@ -7,7 +7,6 @@ import { gamificationApi } from '../services/gamification.api';
 vi.mock('../services/gamification.api', () => ({
   gamificationApi: {
     getProfile: vi.fn(),
-    recordActivity: vi.fn(),
     getBadges: vi.fn(),
     getProgress: vi.fn(),
   },
@@ -38,7 +37,6 @@ const mockBadge: EarnedBadge = {
 describe('gamification store', () => {
   beforeEach(() => {
     mockedApi.getProfile.mockClear();
-    mockedApi.recordActivity.mockClear();
     mockedApi.getBadges.mockClear();
     useGamificationStore.setState({
       profile: null,
@@ -117,15 +115,13 @@ describe('gamification store', () => {
   });
 
   // ==================== recordActivity ====================
+  // XP is awarded server-side via domain events (no POST /xp/add endpoint).
+  // recordActivity only refreshes the profile; level-up/badge modals
+  // are driven by SSE handlers.
 
   describe('recordActivity', () => {
     it('should set isLoading to true during activity recording', async () => {
-      mockedApi.recordActivity.mockResolvedValue({
-        success: true,
-        profile: mockProfile,
-        levelUp: false,
-        newBadges: [],
-      });
+      mockedApi.getProfile.mockResolvedValue(mockProfile);
 
       const recordPromise = useGamificationStore.getState().recordActivity('LESSON_COMPLETED');
       expect(useGamificationStore.getState().isLoading).toBe(true);
@@ -134,64 +130,20 @@ describe('gamification store', () => {
       expect(useGamificationStore.getState().isLoading).toBe(false);
     });
 
-    it('should update profile on successful activity', async () => {
+    it('should refresh profile via getProfile', async () => {
       const updatedProfile = { ...mockProfile, totalXP: 200 };
-      mockedApi.recordActivity.mockResolvedValue({
-        success: true,
-        profile: updatedProfile,
-        levelUp: false,
-        newBadges: [],
-      });
+      mockedApi.getProfile.mockResolvedValue(updatedProfile);
 
       await useGamificationStore.getState().recordActivity('LESSON_COMPLETED');
 
+      expect(mockedApi.getProfile).toHaveBeenCalled();
       expect(useGamificationStore.getState().profile).toEqual(updatedProfile);
       expect(useGamificationStore.getState().showLevelUp).toBe(false);
       expect(useGamificationStore.getState().showBadgeEarned).toBe(false);
     });
 
-    it('should show level up modal when levelUp is true', async () => {
-      const leveledUpProfile = {
-        ...mockProfile,
-        currentLevel: 3,
-        levelTitle: 'Explorador',
-        totalXP: 500,
-      };
-      mockedApi.recordActivity.mockResolvedValue({
-        success: true,
-        profile: leveledUpProfile,
-        levelUp: true,
-        newBadges: [],
-      });
-
-      await useGamificationStore.getState().recordActivity('LESSON_COMPLETED');
-
-      expect(useGamificationStore.getState().showLevelUp).toBe(true);
-      expect(useGamificationStore.getState().levelUpData).toEqual({
-        userId: 'user-1',
-        newLevel: 3,
-        newLevelTitle: 'Explorador',
-        previousLevel: 2,
-        totalXP: 500,
-      });
-    });
-
-    it('should show badge earned modal when newBadges is non-empty', async () => {
-      mockedApi.recordActivity.mockResolvedValue({
-        success: true,
-        profile: mockProfile,
-        levelUp: false,
-        newBadges: [mockBadge],
-      });
-
-      await useGamificationStore.getState().recordActivity('ACTIVITY_ATTEMPT');
-
-      expect(useGamificationStore.getState().showBadgeEarned).toBe(true);
-      expect(useGamificationStore.getState().badgeData).toEqual(mockBadge);
-    });
-
     it('should set error on failed activity recording', async () => {
-      mockedApi.recordActivity.mockRejectedValue(new Error('Server error'));
+      mockedApi.getProfile.mockRejectedValue(new Error('Server error'));
 
       await expect(useGamificationStore.getState().recordActivity('DAILY_LOGIN')).rejects.toThrow(
         'Server error',

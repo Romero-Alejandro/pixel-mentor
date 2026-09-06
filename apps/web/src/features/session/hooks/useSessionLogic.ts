@@ -13,13 +13,18 @@ export interface Message {
 
 export interface MissionReport {
   xpEarned: number;
-  accuracy: number;
+  accuracy?: number;
   conceptsMastered: string[];
   currentLevel: number;
   levelTitle: string;
-  newBadges: Array<{ code: string; name: string; icon: string }>;
+  newBadges: Array<{ code: string; name: string; icon: string; xpReward?: number }>;
   totalXP: number;
-  currentStreak: number;
+  currentStreak?: number;
+  streakDays?: number;
+  xpToNextLevel?: number;
+  levelUp?: { from: number; to: number; title: string } | null;
+  clinicalDiscrepancies?: import('@/features/clinical/types/clinical.types').Discrepancy[];
+  pragmaticModule?: import('@/features/clinical/types/clinical.types').PragmaticModuleData;
 }
 
 export function useSessionLogic(sessionId: string | undefined, voiceSettings: VoiceSettings) {

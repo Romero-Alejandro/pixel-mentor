@@ -17,7 +17,7 @@ export const checkEnrollment = async (
   classId: string,
 ): Promise<boolean> => {
   const userId = req.user!.id;
-  const userRole = req.user?.role ?? 'STUDENT';
+  const userRole = (req.user?.role ?? 'STUDENT') as any;
 
   console.warn(
     `[DEPRECATION] checkEnrollment in class-middleware.ts is deprecated. Use ContentAccessService.canAccessClass instead.`,
@@ -42,11 +42,7 @@ export const checkOwnership = async (
 ): Promise<boolean> => {
   const userId = req.user!.id;
   const classEntity = await classService.getClass(classId);
-  if (
-    classEntity.tutorId !== userId &&
-    req.user?.role !== 'ADMIN' &&
-    req.user?.role !== 'TEACHER'
-  ) {
+  if (classEntity.tutorId !== userId && req.user?.role !== 'ADMIN') {
     throw new ClassOwnershipError(classId, userId);
   }
   return true;

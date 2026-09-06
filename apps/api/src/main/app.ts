@@ -27,7 +27,6 @@ import {
 } from '@/features/class/infrastructure/http/class-ai.routes.js';
 import { createClassTemplateRouter } from '@/features/class/infrastructure/http/class-templates.routes.js';
 import { createRecipeAIRouter } from '@/features/recipe/infrastructure/http/recipe-ai.routes.js';
-import { GroupService } from '@/features/group/application/services/group.service.js';
 import { setupGroupRoutes, getContentAccessService } from './app.group-routes.js';
 import { createAdminRouter } from '@/shared/http/admin.routes.js';
 import { createLLMGovernanceRouter } from '@/shared/http/llm-governance.routes.js';
@@ -123,8 +122,10 @@ export function createApp(deps: AppDependencies): Express {
   app.use(
     cors({
       origin: corsOrigins.length === 1 ? corsOrigins[0] : corsOrigins,
-      // credentials: false — JWT is sent via Authorization header, no cookies needed
-      // This prevents CSRF and credential leakage
+      // credentials: true — the refresh token travels in an httpOnly cookie
+      // scoped to /api/auth. Explicit origins are enforced above and SameSite=Lax
+      // mitigates CSRF on the auth endpoints.
+      credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
     }),
@@ -165,7 +166,6 @@ export function createApp(deps: AppDependencies): Express {
     '/api/auth',
     authLimiter,
     createAuthRouter(
-      auth.userRepository,
       auth.registerUseCase,
       auth.loginUseCase,
       auth.logoutUseCase,
@@ -232,6 +232,7 @@ export function createApp(deps: AppDependencies): Express {
       (globalThis as any).__startRecipeUseCase,
       getContentAccessService(),
       classContainer.classLessonRepository,
+      recipe.getRecipeUseCase,
     ),
   );
 

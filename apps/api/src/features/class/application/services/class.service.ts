@@ -18,6 +18,14 @@ import type {
   ClassLessonEntity,
 } from '@/features/class/domain/entities/class.entity';
 
+import {
+  ClassNotFoundError,
+  ClassOwnershipError,
+  ClassStateError,
+  ClassValidationError,
+  LessonNotFoundError,
+} from '@/shared/errors/domain-errors.js';
+
 // DTOs
 export interface CreateClassInput {
   title: string;
@@ -56,62 +64,6 @@ export interface ClassWithLessons extends Class {
   lessons: ClassLessonEntity[];
 }
 
-// Custom Errors
-export class ClassNotFoundError extends Error {
-  readonly code = 'CLASS_NOT_FOUND' as const;
-  readonly classId: string;
-
-  constructor(classId: string) {
-    super(`Class with ID ${classId} not found`);
-    this.name = 'ClassNotFoundError';
-    this.classId = classId;
-  }
-}
-
-export class ClassOwnershipError extends Error {
-  readonly code = 'CLASS_OWNERSHIP_ERROR' as const;
-  readonly classId: string;
-  readonly userId: string;
-
-  constructor(classId: string, userId: string) {
-    super(`Class ${classId} does not belong to user ${userId}`);
-    this.name = 'ClassOwnershipError';
-    this.classId = classId;
-    this.userId = userId;
-  }
-}
-
-export class ClassStateError extends Error {
-  readonly code = 'CLASS_STATE_ERROR' as const;
-  readonly classId: string;
-
-  constructor(classId: string, message: string) {
-    super(message);
-    this.name = 'ClassStateError';
-    this.classId = classId;
-  }
-}
-
-export class ClassValidationError extends Error {
-  readonly code = 'CLASS_VALIDATION_ERROR' as const;
-
-  constructor(message: string) {
-    super(message);
-    this.name = 'ClassValidationError';
-  }
-}
-
-export class LessonNotFoundError extends Error {
-  readonly code = 'LESSON_NOT_FOUND' as const;
-  readonly lessonId: string;
-
-  constructor(lessonId: string) {
-    super(`Lesson with ID ${lessonId} not found`);
-    this.name = 'LessonNotFoundError';
-    this.lessonId = lessonId;
-  }
-}
-
 export class ClassEnrollmentError extends Error {
   readonly code = 'CLASS_ENROLLMENT_ERROR' as const;
   readonly classId: string;
@@ -124,6 +76,15 @@ export class ClassEnrollmentError extends Error {
     this.userId = userId;
   }
 }
+
+// Re-export for backward compatibility
+export {
+  ClassNotFoundError,
+  ClassOwnershipError,
+  ClassStateError,
+  ClassValidationError,
+  LessonNotFoundError,
+};
 
 // Class Service
 export class ClassService {

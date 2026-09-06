@@ -21,13 +21,17 @@ export const authApi = {
     return { user: UserSchema.parse(data.user) };
   },
 
-  refreshToken: async (data: { refreshToken: string }) => {
-    const { data: res } = await apiClient.post('/api/auth/refresh', data);
-    // The refresh endpoint returns accessToken and refreshToken, but not the full AuthResponse
-    return res as { accessToken: string; refreshToken: string };
+  /**
+   * Exchange the httpOnly refresh cookie for a fresh access token.
+   * The server reads the refresh token from the cookie, so no body is sent.
+   */
+  refreshToken: async () => {
+    const { data: res } = await apiClient.post('/api/auth/refresh');
+    return res as { accessToken: string };
   },
 
-  logout: async (data: { userId: string; refreshToken: string }) => {
-    await apiClient.post('/api/auth/logout', data);
+  /** Revokes the server-side session (identified by the httpOnly refresh cookie). */
+  logout: async () => {
+    await apiClient.post('/api/auth/logout');
   },
 };

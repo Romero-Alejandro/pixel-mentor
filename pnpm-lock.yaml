@@ -222,9 +222,6 @@ importers:
       react-router-dom:
         specifier: 7.13.1
         version: 7.13.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      rive-react:
-        specifier: 4.24.0
-        version: 4.24.0(react@19.2.4)
       tailwind-merge:
         specifier: 3.5.0
         version: 3.5.0
@@ -1145,12 +1142,6 @@ packages:
   '@protobufjs/utf8@1.1.0':
     resolution: {integrity: sha512-Vvn3zZrhQZkkBE8LSuW3em98c0FwgO4nxzv6OdSxPKJIEKY2bGbHn+mhGIPerzI4twdxaP8/0+06HBpwf345Lw==}
 
-  '@rive-app/canvas-lite@2.32.0':
-    resolution: {integrity: sha512-F35bDRwmjpGNzprWyLt8zc9YducAMh6L3q06Dzqg34B0O6AVKymAb1knGsBIn0wBaG8ufNZZWHkrC2a0rv+zuA==}
-
-  '@rive-app/canvas@2.32.0':
-    resolution: {integrity: sha512-RZRZQRWItH7e0NVmHVhffkm02J/9CO/Qdq71Vu1TkExj312Oc22FpBVn8rBnyEeQak75bJy9m/ig84Crcr7qog==}
-
   '@rive-app/canvas@2.35.2':
     resolution: {integrity: sha512-RkVSoonCmaB0ciQR5H8RF9ofEpxEftby4mj31jGCJ45vGP55FSS3kVia5wDXBI7SMqwxG1ZuBsptQkmvC7xeDA==}
 
@@ -1158,12 +1149,6 @@ packages:
     resolution: {integrity: sha512-lvQSIOWBckqcqiVSKVA8ou0c7AcgklHUu21okwVq3MvRPB0n7J7yj1HTLFzXBjn5Bzny25rYjimZSViX9bCa7Q==}
     peerDependencies:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0
-
-  '@rive-app/webgl2@2.32.0':
-    resolution: {integrity: sha512-99Oquwnbl9HgZQhk70Dx9apQDyQPKTL1dyv5HUoWdVSJM71d3894XBbzw2W0o1pgYTDiS6iogaAs4dTw+OezJQ==}
-
-  '@rive-app/webgl@2.32.0':
-    resolution: {integrity: sha512-QfUyREAII5AV5zmM2jKu9qRR/vyix4JHXLW8xI/MHaMQP8M+PebBue8NdF6QQ3PC846LyhZo2Row9ozdTkqIGQ==}
 
   '@rolldown/pluginutils@1.0.0-rc.3':
     resolution: {integrity: sha512-eybk3TjzzzV97Dlj5c+XrBFW57eTNhzod66y9HrBlzJ6NsCrWCp/2kaPS3K9wJmurBC0Tdw4yPjXKZqlznim3Q==}
@@ -4432,11 +4417,6 @@ packages:
     engines: {node: 20 || >=22}
     hasBin: true
 
-  rive-react@4.24.0:
-    resolution: {integrity: sha512-7E2SirE6OdgoiOuHXs0aUZhuCbAI3gQpipnk2Tjo7v6dR20zhev2UPqE4nOTYP+5cTOhv0v224GrGQBaMDhxew==}
-    peerDependencies:
-      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0
-
   rollup@4.60.1:
     resolution: {integrity: sha512-VmtB2rFU/GroZ4oL8+ZqXgSA38O6GR8KSIvWmEFv63pQ0G6KaBH9s07PO8XTXP4vI+3UJUEypOfjkGfmSBBR0w==}
     engines: {node: '>=18.0.0', npm: '>=8.0.0'}
@@ -6197,20 +6177,12 @@ snapshots:
 
   '@protobufjs/utf8@1.1.0': {}
 
-  '@rive-app/canvas-lite@2.32.0': {}
-
-  '@rive-app/canvas@2.32.0': {}
-
   '@rive-app/canvas@2.35.2': {}
 
   '@rive-app/react-canvas@4.27.1(react@19.2.4)':
     dependencies:
       '@rive-app/canvas': 2.35.2
       react: 19.2.4
-
-  '@rive-app/webgl2@2.32.0': {}
-
-  '@rive-app/webgl@2.32.0': {}
 
   '@rolldown/pluginutils@1.0.0-rc.3': {}
 
@@ -9952,14 +9924,6 @@ snapshots:
     dependencies:
       glob: 13.0.6
       package-json-from-dist: 1.0.1
-
-  rive-react@4.24.0(react@19.2.4):
-    dependencies:
-      '@rive-app/canvas': 2.32.0
-      '@rive-app/canvas-lite': 2.32.0
-      '@rive-app/webgl': 2.32.0
-      '@rive-app/webgl2': 2.32.0
-      react: 19.2.4
 
   rollup@4.60.1:
     dependencies:

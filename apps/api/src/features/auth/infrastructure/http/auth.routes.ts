@@ -2,8 +2,8 @@ import { Router, type Request, type Response, type NextFunction } from 'express'
 import { z } from 'zod';
 
 import { requireRole } from './auth.middleware.js';
+import { clearRefreshTokenCookie, readRefreshToken, setRefreshTokenCookie } from './cookies.js';
 
-import type { IUserRepository } from '@/features/auth/domain/ports/user.repository.port.js';
 import {
   type RegisterUseCase,
   type LoginUseCase,
@@ -11,7 +11,11 @@ import {
   type RefreshTokenUseCase,
   type ResolveUserByEmailUseCase,
 } from '@/features/auth/application/use-cases/index.js';
-import type { AuthError } from '@/features/auth/domain/auth.errors.js';
+import {
+  AuthError,
+  TokenExpiredError,
+  RefreshTokenRevokedError,
+} from '@/features/auth/domain/auth.errors.js';
 
 const RegisterBodySchema = z.object({
   email: z.string().email(),
@@ -26,21 +30,12 @@ const LoginBodySchema = z.object({
   password: z.string().min(1),
 });
 
-const RefreshTokenBodySchema = z.object({
-  refreshToken: z.string().min(1, 'Refresh token is required'),
-});
-
-const LogoutBodySchema = z.object({
-  refreshToken: z.string().min(1, 'Refresh token is required'),
-});
-
 const ResolveUserQuerySchema = z.object({
   email: z.string().email('Email inválido'),
 });
 
 export class AuthController {
   constructor(
-    private userRepo: IUserRepository,
     private registerUseCase: RegisterUseCase,
     private loginUseCase: LoginUseCase,
     private logoutUseCase: LogoutUseCase,
@@ -60,10 +55,12 @@ export class AuthController {
         username: validated.username,
       });
 
+      // The refresh token is only delivered via httpOnly cookie.
+      setRefreshTokenCookie(res, result.refreshToken);
+
       res.status(201).json({
         user: result.user,
         accessToken: result.accessToken,
-        refreshToken: result.refreshToken,
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -85,10 +82,12 @@ export class AuthController {
         password: validated.password,
       });
 
+      // The refresh token is only delivered via httpOnly cookie.
+      setRefreshTokenCookie(res, result.refreshToken);
+
       res.status(200).json({
         user: result.user,
         accessToken: result.accessToken,
-        refreshToken: result.refreshToken,
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -111,50 +110,48 @@ export class AuthController {
 
   async logout(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const validated = LogoutBodySchema.parse(req.body);
-      await this.logoutUseCase.execute({ refreshToken: validated.refreshToken });
+      // Public endpoint: revokes the session identified by the refresh token
+      // (httpOnly cookie or, for backwards compatibility, the request body).
+      const refreshToken = readRefreshToken(req);
+      await this.logoutUseCase.execute({ refreshToken });
+      clearRefreshTokenCookie(res);
       res.status(204).send();
     } catch (error) {
       // Even if logout fails, we proceed. Client will clear tokens anyway.
-      if (error instanceof z.ZodError) {
-        res
-          .status(400)
-          .json({ error: 'Bad Request', code: 'VALIDATION_ERROR', details: error.issues });
-        return;
-      }
       next(error);
     }
   }
 
   async refresh(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const validated = RefreshTokenBodySchema.parse(req.body);
+      const refreshToken = readRefreshToken(req);
 
-      const result = await this.refreshTokenUseCase.execute({
-        refreshToken: validated.refreshToken,
-      });
+      if (!refreshToken) {
+        res.status(400).json({ error: 'Refresh token requerido', code: 'TOKEN_MISSING' });
+        return;
+      }
+
+      const result = await this.refreshTokenUseCase.execute({ refreshToken });
+
+      setRefreshTokenCookie(res, result.refreshToken);
 
       res.status(200).json({
         accessToken: result.accessToken,
-        refreshToken: result.refreshToken,
       });
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        res
-          .status(400)
-          .json({ error: 'Error de validación', code: 'VALIDATION_ERROR', details: error.issues });
+      if (error instanceof TokenExpiredError) {
+        clearRefreshTokenCookie(res);
+        res.status(401).json({ error: 'La sesión ha expirado', code: 'TOKEN_EXPIRED' });
         return;
       }
-      if (error instanceof Error) {
-        if (error.message.includes('revoked')) {
-          res.status(401).json({ error: 'Refresh token revoked', code: 'TOKEN_REVOKED' });
-        } else if (error.message.includes('expired')) {
-          res.status(401).json({ error: 'Refresh token expired', code: 'TOKEN_EXPIRED' });
-        } else if (error.message.includes('Invalid') || error.message.includes('payload')) {
-          res.status(401).json({ error: 'Invalid refresh token', code: 'TOKEN_INVALID' });
-        } else {
-          res.status(401).json({ error: 'Authentication failed', code: 'AUTH_FAILED' });
-        }
+      if (error instanceof RefreshTokenRevokedError) {
+        clearRefreshTokenCookie(res);
+        res.status(401).json({ error: 'La sesión ya fue cerrada', code: 'TOKEN_REVOKED' });
+        return;
+      }
+      if (error instanceof AuthError) {
+        clearRefreshTokenCookie(res);
+        res.status(401).json({ error: 'Sesión inválida', code: 'TOKEN_INVALID' });
         return;
       }
       next(error);
@@ -168,6 +165,10 @@ export class AuthController {
           id: string;
           email: string;
           role: string;
+          username?: string;
+          name?: string;
+          age?: number;
+          quota?: number;
         };
       };
 
@@ -176,12 +177,18 @@ export class AuthController {
         return;
       }
 
-      // User data already loaded by authMiddleware via VerifyTokenUseCase
+      // Must satisfy the shared UserSchema (name and quota are required).
+      // Missing fields would make the client's parse throw and look like a
+      // dead session on every page reload.
       res.json({
         user: {
           id: authReq.user.id,
           email: authReq.user.email,
           role: authReq.user.role,
+          ...(authReq.user.username !== undefined ? { username: authReq.user.username } : {}),
+          name: authReq.user.name ?? '',
+          ...(authReq.user.age !== undefined ? { age: authReq.user.age } : {}),
+          quota: authReq.user.quota ?? 0,
         },
       });
     } catch (error) {
@@ -216,7 +223,6 @@ export class AuthController {
 }
 
 export function createAuthRouter(
-  userRepo: IUserRepository,
   registerUseCase: RegisterUseCase,
   loginUseCase: LoginUseCase,
   logoutUseCase: LogoutUseCase,
@@ -225,7 +231,6 @@ export function createAuthRouter(
   protectedMiddleware: (req: Request, res: Response, next: NextFunction) => void,
 ) {
   const controller = new AuthController(
-    userRepo,
     registerUseCase,
     loginUseCase,
     logoutUseCase,

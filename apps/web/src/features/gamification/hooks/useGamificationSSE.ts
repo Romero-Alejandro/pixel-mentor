@@ -41,7 +41,14 @@ const INITIAL_RECONNECT_DELAY = 1000;
 
 export function useGamificationSSE(enabled = true) {
   const abortControllerRef = useRef<AbortController | null>(null);
-  const store = useGamificationStore();
+  // Select only stable action references — never the whole store.
+  // Subscribing to the whole store re-renders on ANY state change and,
+  // combined with the connect effect below, causes an infinite reconnect loop.
+  const fetchProfile = useGamificationStore((s) => s.fetchProfile);
+  const onXPEarned = useGamificationStore((s) => s.onXPEarned);
+  const onBadgeEarned = useGamificationStore((s) => s.onBadgeEarned);
+  const onLevelUp = useGamificationStore((s) => s.onLevelUp);
+  const onStreakUpdated = useGamificationStore((s) => s.onStreakUpdated);
   const [isConnected, setIsConnected] = useState(false);
   const reconnectAttemptRef = useRef(0);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -62,11 +69,11 @@ export function useGamificationSSE(enabled = true) {
   // Fetch fresh gamification state on reconnect
   const fetchFreshState = useCallback(async () => {
     try {
-      await store.fetchProfile();
+      await fetchProfile();
     } catch {
       // Silent fail - will retry on next reconnect
     }
-  }, [store]);
+  }, [fetchProfile]);
 
   useEffect(() => {
     if (!enabled) {
@@ -95,6 +102,7 @@ export function useGamificationSSE(enabled = true) {
         onopen: async () => {
           setIsConnected(true);
           reconnectAttemptRef.current = 0;
+          await fetchFreshState();
         },
         onmessage: (event: EventSourceMessage) => {
           try {
@@ -104,21 +112,17 @@ export function useGamificationSSE(enabled = true) {
             switch (eventType) {
               case 'xp_earned': {
                 const eventData = data as XPEarnedEvent;
-                store.onXPEarned(
-                  eventData.amount,
-                  eventData.reason,
-                  eventData.version ?? currentVersion,
-                );
+                onXPEarned(eventData.amount, eventData.reason, eventData.version ?? currentVersion);
                 break;
               }
               case 'badge_earned': {
                 const eventData = data as BadgeEarnedEvent;
-                store.onBadgeEarned(eventData.badge, eventData.version ?? currentVersion);
+                onBadgeEarned(eventData.badge, eventData.version ?? currentVersion);
                 break;
               }
               case 'level_up': {
                 const eventData = data as LevelUpEvent;
-                store.onLevelUp(
+                onLevelUp(
                   {
                     newLevel: eventData.newLevel,
                     newLevelTitle: eventData.newLevelTitle,
@@ -131,7 +135,7 @@ export function useGamificationSSE(enabled = true) {
               }
               case 'streak_updated': {
                 const eventData = data as StreakUpdatedEvent;
-                store.onStreakUpdated(
+                onStreakUpdated(
                   eventData.currentStreak,
                   eventData.longestStreak,
                   eventData.version ?? currentVersion,
@@ -185,7 +189,7 @@ export function useGamificationSSE(enabled = true) {
     return () => {
       cleanup();
     };
-  }, [enabled, cleanup, fetchFreshState]);
+  }, [enabled, cleanup, fetchFreshState, onXPEarned, onBadgeEarned, onLevelUp, onStreakUpdated]);
 
   return { isConnected };
 }

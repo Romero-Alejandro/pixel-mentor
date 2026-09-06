@@ -703,7 +703,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "/home/alejandro/dev/projects/active/pixel-mentor/apps/api/src/database/generated/client",
+      "value": "/home/alejandro/dev/me/projects/pixel-mentor/apps/api/src/database/generated/client",
       "fromEnvVar": null
     },
     "config": {
@@ -717,7 +717,7 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "/home/alejandro/dev/projects/active/pixel-mentor/apps/api/prisma/schema.prisma",
+    "sourceFilePath": "/home/alejandro/dev/me/projects/pixel-mentor/apps/api/prisma/schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
@@ -731,7 +731,6 @@ const config = {
     "db"
   ],
   "activeProvider": "postgresql",
-  "postinstall": false,
   "inlineDatasources": {
     "db": {
       "url": {

@@ -1,12 +1,18 @@
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo, lazy, Suspense } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { IconArrowLeft, IconAlertOctagon, IconSparkles } from '@tabler/icons-react';
+import {
+  IconArrowLeft,
+  IconAlertOctagon,
+  IconSparkles,
+  IconPlayerPlayFilled,
+  IconRepeat,
+} from '@tabler/icons-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { useGamificationStore } from '@/features/gamification/stores/gamification.store';
 import { useAudio } from '@/contexts/AudioContext';
+import { useToast } from '@/contexts/ToastContext';
 import { SpriteAudioEvent } from '@/audio/types/audio-events';
-import { Mascot } from '@/components/mascot/Mascot';
 import { Spinner, Button } from '@/components/ui';
 import { UI_STATES } from '@/features/lesson/constants/lesson.constants';
 import { LessonHeader } from '@/features/lesson/components/LessonHeader';
@@ -15,6 +21,7 @@ import { QuestionPanel } from '@/features/lesson/components/QuestionPanel';
 import { ActivityPanel } from '@/features/lesson/components/ActivityPanel';
 import { FeedbackPanel } from '@/features/lesson/components/FeedbackPanel';
 import { CompletedPanel } from '@/features/lesson/components/CompletedPanel';
+import { ResumeToast } from '@/features/lesson/components/ResumeToast';
 import {
   useClassOrchestrator,
   useVoiceSettingsSync,
@@ -30,6 +37,79 @@ const PANEL_TRANSITIONS = {
   exit: 'animate-out fade-out slide-out-to-top-2 duration-300',
 } as const;
 
+/** Persisted dictation-text preference. Default off: mascot + voice only. */
+const SHOW_TEXT_STORAGE_KEY = 'lesson-show-text';
+
+// Rive mascot rides in its own chunk (same one preloadMascot() warms in idle)
+// so the lesson page stays light until it actually renders the avatar.
+const Mascot = lazy(() =>
+  import('@/components/mascot/Mascot').then((m) => ({ default: m.Mascot })),
+);
+
+/** Same-size placeholder that holds layout while the mascot chunk loads. */
+function MascotFallback({ className = '' }: { className?: string }) {
+  return (
+    <div
+      className={cn('flex items-center justify-center', className)}
+      role="status"
+      aria-label="Cargando mascota"
+    >
+      <Spinner size="md" className="text-sky-500" />
+    </div>
+  );
+}
+
+function readShowTextPreference(): boolean {
+  try {
+    return window.localStorage.getItem(SHOW_TEXT_STORAGE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Audio-only dictation view (default): no text, no karaoke — just the
+ * listening status and repeat. Question/activity/feedback panels always
+ * show their text regardless of this preference.
+ */
+function DictationAudioOnly({
+  isSpeaking,
+  onRepeat,
+  onShowText,
+}: {
+  isSpeaking: boolean;
+  onRepeat: () => void;
+  onShowText: () => void;
+}) {
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-8 gap-6 w-full h-full min-h-0">
+      <div className="flex items-center gap-3 bg-sky-50 px-8 py-4 rounded-[1.5rem] border-4 border-sky-200 shadow-[0_6px_0_0_#bae6fd]">
+        <IconPlayerPlayFilled
+          className={cn('w-6 h-6 text-sky-500', isSpeaking && 'animate-pulse')}
+        />
+        <span className="text-sm font-black text-sky-700 uppercase tracking-widest">
+          {isSpeaking ? 'Escuchando' : 'Preparando audio'}
+        </span>
+      </div>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onRepeat}
+          className="flex items-center justify-center gap-2 px-6 py-3 bg-slate-50 text-slate-600 font-black rounded-[1.5rem] border-4 border-slate-200 shadow-[0_6px_0_0_#e2e8f0] hover:bg-sky-50 hover:text-sky-600 hover:border-sky-300 active:translate-y-1 active:shadow-none transition-all cursor-pointer outline-none focus-visible:ring-4 focus-visible:ring-sky-200"
+        >
+          <IconRepeat className="w-5 h-5" stroke={3} />
+          Repetir
+        </button>
+        <button
+          onClick={onShowText}
+          className="px-6 py-3 bg-white text-sky-700 font-black rounded-[1.5rem] border-4 border-sky-200 shadow-[0_6px_0_0_#bae6fd] hover:bg-sky-50 active:translate-y-1 active:shadow-none transition-all cursor-pointer outline-none focus-visible:ring-4 focus-visible:ring-sky-200"
+        >
+          Mostrar texto
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function LessonPage() {
   const { lessonId } = useParams<{ lessonId: string }>();
 
@@ -37,15 +117,20 @@ export function LessonPage() {
   const { particleTrigger } = useGamificationStore();
   const { playSprite } = useAudio();
 
-  const { isRepeat, xpEarned, accuracy, isSpeaking, isStreaming } = useLessonStore(
-    useShallow((state) => ({
-      isRepeat: state.isRepeat,
-      xpEarned: state.xpEarned,
-      accuracy: state.accuracy,
-      isSpeaking: state.isSpeaking,
-      isStreaming: state.isStreaming,
-    })),
-  );
+  const { error: toastError } = useToast();
+
+  const { isRepeat, xpEarned, accuracy, isSpeaking, isStreaming, wasResumed, setWasResumed } =
+    useLessonStore(
+      useShallow((state) => ({
+        isRepeat: state.isRepeat,
+        xpEarned: state.xpEarned,
+        accuracy: state.accuracy,
+        isSpeaking: state.isSpeaking,
+        isStreaming: state.isStreaming,
+        wasResumed: state.wasResumed,
+        setWasResumed: state.setWasResumed,
+      })),
+    );
 
   const prevParticleTrigger = useRef(particleTrigger);
 
@@ -62,12 +147,48 @@ export function LessonPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activityCorrect, setActivityCorrect] = useState<boolean | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  // Dictation text + karaoke visibility. Default off: mascot + voice only.
+  const [showText, setShowText] = useState<boolean>(readShowTextPreference);
+
+  const handleToggleText = () => {
+    setShowText((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem(SHOW_TEXT_STORAGE_KEY, next ? '1' : '0');
+      } catch {
+        // Storage unavailable — preference simply won't persist.
+      }
+      return next;
+    });
+  };
+
+  // Step-level resume: rehydrate the persisted sessionId into the
+  // orchestrator's in-memory refs on mount, before auto-start fires (this
+  // effect is registered first, so it runs first). The restore is
+  // idempotent compare-and-set, so the StrictMode remount in dev safely
+  // runs it twice without a double restore.
+  const restoreRef = useRef({ restore: orchestrator.restorePersistedSession });
+  restoreRef.current = { restore: orchestrator.restorePersistedSession };
+
+  useEffect((): void => {
+    void restoreRef.current.restore(lessonId ?? null);
+  }, [lessonId]);
 
   const { isInitializing, error, retryCount, retry, resetStarted } = useAutoStart(
     lessonId || null,
     orchestrator.startClass,
   );
   const { audioElementReady } = orchestrator;
+
+  // Surface in-lesson errors as toasts
+  const prevErrorRef = useRef<string | null>(null);
+  useEffect(() => {
+    const currentError = orchestrator.error;
+    if (currentError && currentError !== prevErrorRef.current) {
+      toastError(currentError, { duration: 8000 });
+    }
+    prevErrorRef.current = currentError;
+  }, [orchestrator.error, toastError]);
 
   const handleRestart = async () => {
     await orchestrator.reset(() => textSync.reset());
@@ -77,6 +198,7 @@ export function LessonPage() {
   const textSync = useTextSync({
     text: orchestrator.fullVoiceText,
     audioElementGetter: orchestrator.getCurrentAudioElement,
+    syncInfoGetter: orchestrator.getSyncInfo,
     isSpeaking: isSpeaking,
     audioElementReady,
   });
@@ -116,10 +238,27 @@ export function LessonPage() {
     }
   }, [orchestrator.feedbackData]);
 
+  // Unmount teardown always invokes the LATEST stopSpeaking/cancel via ref:
+  // an empty-deps effect would otherwise close over the first render's
+  // (stale) callbacks and silence a dead voice instance while the live one
+  // keeps playing after unmount.
+  const teardownRef = useRef({
+    stopSpeaking: orchestrator.stopSpeaking,
+    cancel: orchestrator.cancel,
+  });
+  teardownRef.current = {
+    stopSpeaking: orchestrator.stopSpeaking,
+    cancel: orchestrator.cancel,
+  };
+
   useEffect(() => {
     return () => {
-      orchestrator.stopSpeaking();
-      orchestrator.reset();
+      // Unmount-safe teardown only: silence audio and abort in-flight
+      // requests. Do NOT call reset() here — it nulls the shared session
+      // ref and wipes UI state asynchronously, which poisons the fresh
+      // start on StrictMode remounts ("Sesion no activa" + stuck idle UI).
+      teardownRef.current.stopSpeaking();
+      teardownRef.current.cancel();
     };
   }, []);
 
@@ -166,6 +305,15 @@ export function LessonPage() {
         );
 
       case UI_STATES.CONCENTRATION:
+        if (!showText) {
+          return (
+            <DictationAudioOnly
+              isSpeaking={isSpeaking}
+              onRepeat={handleRepeatContent}
+              onShowText={handleToggleText}
+            />
+          );
+        }
         return (
           <ConcentrationPanel
             words={textSync.words}
@@ -270,7 +418,9 @@ export function LessonPage() {
         />
 
         <div className="relative z-10 flex flex-col items-center text-center animate-fade-in">
-          <Mascot className="w-56 h-56 animate-float mb-8" />
+          <Suspense fallback={<MascotFallback className="w-56 h-56 mb-8" />}>
+            <Mascot className="w-56 h-56 animate-float mb-8" />
+          </Suspense>
 
           <div className="bg-white/90 backdrop-blur-sm border-4 border-sky-200 shadow-[0_8px_0_0_#bae6fd] px-8 py-5 rounded-[2rem] flex items-center gap-4">
             <Spinner size="md" className="text-sky-500" />
@@ -285,6 +435,7 @@ export function LessonPage() {
 
   return (
     <div className="min-h-screen bg-sky-50 font-sans text-slate-800 flex flex-col relative">
+      <ResumeToast isVisible={wasResumed} onDismiss={() => setWasResumed(false)} />
       <div className="absolute top-0 left-0 w-[40rem] h-[40rem] bg-sky-200 rounded-full blur-[100px] opacity-30 -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
       <div className="absolute bottom-0 right-0 w-[40rem] h-[40rem] bg-amber-200 rounded-full blur-[100px] opacity-20 translate-x-1/2 translate-y-1/2 pointer-events-none" />
 
@@ -297,6 +448,8 @@ export function LessonPage() {
         updateSettings={updateSettings}
         speakContent={orchestrator.speakContent}
         onReset={handleRestart}
+        showText={showText}
+        onToggleText={handleToggleText}
       />
 
       <main className="flex-1 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 flex flex-col min-h-0 relative z-10 transition-all duration-700 ease-in-out">
@@ -323,14 +476,27 @@ export function LessonPage() {
                   isSpeaking ? 'opacity-100 scale-110' : 'opacity-0 scale-100',
                 )}
               />
-              <Mascot
-                className={cn(
-                  'relative z-10 transition-all duration-500',
-                  isIdle
-                    ? 'w-72 h-72 sm:w-96 sm:h-96'
-                    : 'w-40 h-40 sm:w-56 sm:h-56 lg:w-72 lg:h-72',
-                )}
-              />
+              <Suspense
+                fallback={
+                  <MascotFallback
+                    className={cn(
+                      'relative z-10',
+                      isIdle
+                        ? 'w-72 h-72 sm:w-96 sm:h-96'
+                        : 'w-40 h-40 sm:w-56 sm:h-56 lg:w-72 lg:h-72',
+                    )}
+                  />
+                }
+              >
+                <Mascot
+                  className={cn(
+                    'relative z-10 transition-all duration-500',
+                    isIdle
+                      ? 'w-72 h-72 sm:w-96 sm:h-96'
+                      : 'w-40 h-40 sm:w-56 sm:h-56 lg:w-72 lg:h-72',
+                  )}
+                />
+              </Suspense>
             </div>
           </section>
 

@@ -17,7 +17,6 @@ import {
 import type { RecipeStep } from '@pixel-mentor/shared';
 
 import { useRecipeStore } from '@/features/recipe-management/stores/recipe.store';
-import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useAudio } from '@/contexts/AudioContext';
 import { useAlert, useConfirm } from '@/hooks/useConfirmationDialogs';
 import { Button, Card, Spinner, Input, Textarea, Badge } from '@/components/ui';
@@ -97,7 +96,6 @@ const transformAIScript = (stepType: string, script: any): Record<string, unknow
 
 const StepItem = memo(({ step, index, isLast, onMove, onEdit, onDelete }: any) => {
   const script = (step as any).script;
-  const stepType = step.stepType;
   const kind = script?.kind;
 
   const title =
@@ -377,7 +375,13 @@ export function RecipeEditorPage() {
           }}
           onEdit={(st: any) => setStepEditor({ isOpen: true, step: st })}
           onDelete={async (sid: string) => {
-            if (await confirm({ title: '¿Eliminar paso?', variant: 'danger' })) {
+            if (
+              await confirm({
+                title: '¿Eliminar paso?',
+                message: 'Esta acción no se puede deshacer.',
+                variant: 'danger',
+              })
+            ) {
               if (recipeId) {
                 await deleteStep(recipeId, sid);
                 await fetchRecipe(recipeId);
@@ -446,7 +450,7 @@ export function RecipeEditorPage() {
             ) : null}
             <Button
               onClick={() => handleSave(!form.published)}
-              variant={form.published ? 'warning' : 'success'}
+              variant={form.published ? 'danger' : 'success'}
             >
               {form.published ? 'Despublicar' : 'Publicar'}
             </Button>

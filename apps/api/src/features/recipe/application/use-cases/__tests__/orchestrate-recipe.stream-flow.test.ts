@@ -82,7 +82,7 @@ const mockFeatureFlagService = {
 };
 
 const mockActivityAttemptRepo = {
-  findByUserIdAndAtomId: jest.fn(),
+  findByUserIdAndAtomId: jest.fn().mockResolvedValue([]),
 };
 
 const mockContextWindowService = {
@@ -292,12 +292,12 @@ describe('OrchestrateRecipeUseCase - Streaming Flow Tests', () => {
     mockSessionRepo.findByStudentAndRecipe.mockResolvedValueOnce(null);
 
     // Expected staticContent step types per full step index (based on testRecipeSteps)
-    // intro -> 'intro', content -> 'content', question -> 'activity', activity -> 'activity', closure -> 'closure'
+    // intro -> 'intro', content -> 'content', question -> 'question', activity -> 'activity', closure -> 'closure'
     const expectedStepTypes = [
       'intro',
       'content',
       'content',
-      'activity',
+      'question',
       'content',
       'activity',
       'closure',

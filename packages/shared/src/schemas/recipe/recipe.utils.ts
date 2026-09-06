@@ -53,8 +53,9 @@ export const transformStepScript = (
 };
 
 export const getStepTitle = (step: RecipeStep): string => {
+  const script = step.script as Record<string, unknown> | undefined;
   const rawContent =
-    step.script?.content || step.activity?.instruction || step.question?.question || '';
+    script?.content || script?.instruction || script?.question || '';
 
   const text = extractText(rawContent);
   const finalTitle = text.trim() || `Paso ${step.order}`;
@@ -118,7 +119,7 @@ export function normalizeStepData(input: StepDataInput): StepDataInput {
       const questionText = extractText(script.question);
       const expectedAnswer = (script.expectedAnswer as string) || '';
       const feedback = (script.feedback as Record<string, string>) || {};
-      const hint = (script.hint as string) || '';
+      // hint is available if needed in the future
 
       return {
         ...rest,

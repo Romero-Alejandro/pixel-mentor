@@ -7,6 +7,7 @@ import type { ResetSessionUseCase } from '@/features/session/application/use-cas
 import type { CompleteSessionUseCase } from '@/features/session/application/use-cases/complete-session.use-case';
 import type { AppRequest } from '@/shared/types/express.d.js';
 import type { StartRecipeUseCase } from '@/features/recipe/application/use-cases/start-recipe.use-case';
+import type { GetRecipeUseCase } from '@/features/recipe/application/use-cases/get-recipe.use-case';
 import type { IClassLessonRepository } from '@/features/class/domain/ports/class.repository.port';
 import type { ContentAccessService } from '@/features/group/application/services/content-access.service';
 import {
@@ -21,6 +22,11 @@ import {
   CompleteSessionParamsSchema,
 } from '@/shared/dto/index';
 
+/** TEACHER/ADMIN may inspect other students' sessions (progress review). */
+function canAccessAnySession(role: string | undefined): boolean {
+  return role === 'TEACHER' || role === 'ADMIN';
+}
+
 export function createSessionsRouter(
   getSessionUseCase: GetSessionUseCase,
   listSessionsUseCase: ListSessionsUseCase,
@@ -29,6 +35,7 @@ export function createSessionsRouter(
   startRecipeUseCase: StartRecipeUseCase,
   contentAccessService: ContentAccessService,
   classLessonRepository: IClassLessonRepository,
+  getRecipeUseCase: GetRecipeUseCase,
 ): Router {
   const router = Router();
 
@@ -43,6 +50,17 @@ export function createSessionsRouter(
 
         if (!session) {
           response.status(404).json({ error: 'Session not found' });
+          return;
+        }
+
+        // Sessions belong to a single student. Only the owner (or TEACHER/ADMIN
+        // for progress review) may read them.
+        const authUser = (request as AppRequest).user;
+        if (session.studentId !== authUser?.id && !canAccessAnySession(authUser?.role)) {
+          response.status(403).json({
+            error: 'No tienes permisos para acceder a esta sesión',
+            code: 'FORBIDDEN',
+          });
           return;
         }
 
@@ -71,7 +89,18 @@ export function createSessionsRouter(
             : undefined;
 
         const query: { studentId?: string; activeOnly?: boolean } = {};
-        if (studentId) query.studentId = studentId;
+        if (studentId) {
+          // Students may only list their own sessions. TEACHER/ADMIN may list any.
+          const authUser = (request as AppRequest).user;
+          if (studentId !== authUser?.id && !canAccessAnySession(authUser?.role)) {
+            response.status(403).json({
+              error: 'No tienes permisos para listar estas sesiones',
+              code: 'FORBIDDEN',
+            });
+            return;
+          }
+          query.studentId = studentId;
+        }
 
         const rawActiveOnly = request.query.activeOnly as string | string[] | boolean | undefined;
         if (rawActiveOnly !== undefined) {
@@ -103,6 +132,22 @@ export function createSessionsRouter(
     async (request: Request, response: Response, next: NextFunction): Promise<void> => {
       try {
         const params = ReplaySessionParamsSchema.parse(request.params);
+        const authUser = (request as AppRequest).user;
+
+        const session = await getSessionUseCase.execute(params.id);
+        if (!session) {
+          response.status(404).json({ error: 'Session not found' });
+          return;
+        }
+        // Resetting progress is only allowed for the session owner (or ADMIN).
+        if (session.studentId !== authUser?.id && authUser?.role !== 'ADMIN') {
+          response.status(403).json({
+            error: 'No tienes permisos para reiniciar esta sesión',
+            code: 'FORBIDDEN',
+          });
+          return;
+        }
+
         const result = await resetSessionUseCase.execute(params.id);
         response.json(result);
       } catch (error) {
@@ -120,6 +165,22 @@ export function createSessionsRouter(
     async (request: Request, response: Response, next: NextFunction): Promise<void> => {
       try {
         const params = CompleteSessionParamsSchema.parse(request.params);
+        const authUser = (request as AppRequest).user;
+
+        const session = await getSessionUseCase.execute(params.id);
+        if (!session) {
+          response.status(404).json({ error: 'Session not found' });
+          return;
+        }
+        // Completing a session (and granting its XP) is only allowed for the owner.
+        if (session.studentId !== authUser?.id && authUser?.role !== 'ADMIN') {
+          response.status(403).json({
+            error: 'No tienes permisos para completar esta sesión',
+            code: 'FORBIDDEN',
+          });
+          return;
+        }
+
         const result = await completeSessionUseCase.execute(params.id);
         response.json(result);
       } catch (error) {
@@ -137,6 +198,7 @@ export function createSessionsRouter(
     async (request: Request, response: Response, next: NextFunction): Promise<void> => {
       const appRequest = request as AppRequest;
       const studentId = appRequest.user!.id;
+      const userRole = appRequest.user!.role;
 
       const StartRecipeSchema = z.object({
         recipeId: z.string().uuid(),
@@ -145,6 +207,18 @@ export function createSessionsRouter(
       try {
         const validated = StartRecipeSchema.parse(appRequest.body);
         const { recipeId } = validated;
+
+        // Only published recipes can be started by anyone; drafts are restricted
+        // to their author (teacher preview) and administrators.
+        const recipe = await getRecipeUseCase.execute(recipeId);
+        const isOwner = recipe.authorId === studentId;
+        if (!recipe.published && !isOwner && userRole !== 'ADMIN') {
+          response.status(403).json({
+            error: 'No tienes permisos para iniciar esta receta',
+            code: 'FORBIDDEN',
+          });
+          return;
+        }
 
         const { sessionId, resumed, classLessonId } = await startRecipeUseCase.execute(
           recipeId,

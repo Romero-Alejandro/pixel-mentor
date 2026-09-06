@@ -4,5 +4,6 @@ export * from './recipe/index.js';
 export * from './orchestration/index.js';
 export * from './evaluation/index.js';
 export * from './session/index.js';
+export * from './clinical/index.js';
 export * from './validation.schema.js';
 export * from './class.schema.js';

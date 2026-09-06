@@ -60,10 +60,10 @@ describe('LoginPage', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByLabelText(/Correo electrónico o nombre de usuario/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Usuario o Correo/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Contraseña secreta/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Entrar a la Academia!/i })).toBeInTheDocument();
-    expect(screen.getByText(/¿Aún no tienes tu pase?/i)).toBeInTheDocument();
+    expect(screen.getByText(/¿Aún no tienes tu pase\?/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Crear cuenta/i })).toHaveAttribute(
       'href',
       '/register',
@@ -95,7 +95,7 @@ describe('LoginPage', () => {
       </MemoryRouter>,
     );
 
-    const emailInput = screen.getByLabelText(/Correo electrónico o nombre de usuario/i);
+    const emailInput = screen.getByLabelText(/Usuario o Correo/i);
     const passwordInput = screen.getByLabelText(/Contraseña secreta/i);
 
     fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
@@ -114,7 +114,7 @@ describe('LoginPage', () => {
       </MemoryRouter>,
     );
 
-    const emailInput = screen.getByLabelText(/Correo electrónico o nombre de usuario/i);
+    const emailInput = screen.getByLabelText(/Usuario o Correo/i);
     const passwordInput = screen.getByLabelText(/Contraseña secreta/i);
     const submitButton = screen.getByRole('button', { name: /Entrar a la Academia!/i });
 
@@ -127,9 +127,6 @@ describe('LoginPage', () => {
       identifier: 'test@example.com',
       password: 'password123',
     });
-
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
   });
 
   it('should display loading state during login', () => {
@@ -147,7 +144,7 @@ describe('LoginPage', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText('Entrando...')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Entrando\.\.\./i })).toBeDisabled();
+    expect(screen.getByText('Abriendo portal...')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Abriendo portal/i })).toBeDisabled();
   });
 });

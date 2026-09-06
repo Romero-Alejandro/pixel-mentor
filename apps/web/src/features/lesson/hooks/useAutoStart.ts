@@ -14,6 +14,14 @@ export function useAutoStart(
 ) {
   const { maxRetries = 3, baseDelayMs = 1000, maxDelayMs = 5000, autoStart = true } = config;
 
+  // ── Stabilize onStartClass via ref ────────────────────────────────────────
+  // onStartClass changes every render because the orchestrator's startClass
+  // depends on interactions (new object each render). Without a ref, this
+  // causes startWithRetry to be recreated, which triggers the useEffect to
+  // re-run, which calls cleanup() → aborts the in-flight start request.
+  const onStartClassRef = useRef(onStartClass);
+  onStartClassRef.current = onStartClass;
+
   const [isStarting, setIsStarting] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -24,6 +32,11 @@ export function useAutoStart(
   const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMountedRef = useRef(true);
   const hasStartedRef = useRef(false);
+  // Generation counter: every startWithRetry that proceeds past the guard
+  // owns a run id. Stale continuations (aborted StrictMode first attempt,
+  // superseded manual retries, previous lessonId) must not touch flags
+  // or UI state once a newer run exists.
+  const runIdRef = useRef(0);
 
   const cleanup = useCallback(() => {
     if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
@@ -47,16 +60,20 @@ export function useAutoStart(
     }
 
     hasStartedRef.current = true;
+    runIdRef.current += 1;
+    const runId = runIdRef.current;
     setIsStarting(true);
     setError(null);
 
     const attempt = async (attemptNumber: number) => {
-      if (!isMountedRef.current || signal.aborted) return;
+      if (runId !== runIdRef.current || !isMountedRef.current || signal.aborted) return;
 
       try {
         setIsStarting(true);
-        const result = await onStartClass(lessonId);
+        // Use ref to always call the latest onStartClass
+        const result = await onStartClassRef.current(lessonId);
 
+        if (runId !== runIdRef.current) return;
         if (!result.ok) throw result.error || new Error('Falla en el inicio');
 
         if (isMountedRef.current) {
@@ -66,7 +83,16 @@ export function useAutoStart(
           setError(null);
         }
       } catch (err) {
-        if (!isMountedRef.current || signal.aborted) return;
+        // Stale run (a newer startWithRetry took over): never touch flags/state.
+        if (runId !== runIdRef.current) return;
+        if (signal.aborted || !isMountedRef.current) {
+          // The in-flight attempt was aborted by cleanup (React StrictMode
+          // remount in dev aborts the first attempt). The re-run effect
+          // restarts the lesson (see the lessonId effect below), so here
+          // we only release the flag and let the owning run drive UI state.
+          hasStartedRef.current = false;
+          return;
+        }
 
         const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
 
@@ -80,12 +106,13 @@ export function useAutoStart(
         } else {
           setError(`No se pudo conectar después de ${maxRetries} intentos.`);
           setIsStarting(false);
+          setIsInitializing(false);
         }
       }
     };
 
     attempt(0);
-  }, [lessonId, maxRetries, onStartClass, cleanup, baseDelayMs, maxDelayMs]);
+  }, [lessonId, maxRetries, cleanup, baseDelayMs, maxDelayMs]);
 
   const resetStarted = useCallback(() => {
     hasStartedRef.current = false;
@@ -101,6 +128,15 @@ export function useAutoStart(
     startWithRetry();
   }, [startWithRetry]);
 
+  // A new lessonId is a new startup: release the started flag so the
+  // effect below launches it. This also covers the React StrictMode remount
+  // in dev (its cleanup aborts the first attempt; without this reset the
+  // re-run effect would see hasStartedRef true and skip, hanging the UI on
+  // "Preparando la aventura..." forever). Runs before the starter effect.
+  useEffect(() => {
+    hasStartedRef.current = false;
+  }, [lessonId]);
+
   useEffect(() => {
     isMountedRef.current = true;
     if (autoStart && lessonId && !hasStartedRef.current) {
@@ -110,6 +146,8 @@ export function useAutoStart(
       isMountedRef.current = false;
       cleanup();
     };
+    // startWithRetry is stable now (deps no longer include onStartClass)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lessonId, autoStart, startWithRetry, cleanup]);
 
   return {

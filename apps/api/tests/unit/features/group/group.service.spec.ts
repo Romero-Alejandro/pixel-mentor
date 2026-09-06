@@ -3,7 +3,6 @@ import {
   GroupService,
   GroupNotFoundError,
   GroupOwnershipError,
-  StudentNotFoundError,
   ClassNotFoundError,
   GroupValidationError,
 } from '@/features/group/application/services/group.service.js';
@@ -149,6 +148,7 @@ describe('GroupService', () => {
         {
           id: 'group-1',
           name: 'Group 1',
+          description: null,
           teacherId: 'teacher-1',
           createdAt: new Date(),
           updatedAt: new Date(),

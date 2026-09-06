@@ -260,7 +260,7 @@ export function useTTS(): UseTTSReturn {
         const audio = new Audio(audioUrl);
         httpAudioRef.current = audio;
 
-        audio.play().catch((e) => {
+        audio.play().catch(() => {
           audio.onerror?.(new Event('playback-failed'));
         });
         debugLog('HTTP TTS started successfully!');
@@ -457,7 +457,7 @@ export function useTTS(): UseTTSReturn {
                 if (audioQueueRef.current.length > 0) {
                   const next = audioQueueRef.current.shift()!;
                   currentAudioRef.current = next;
-                  next.element.play().catch((e) => {
+                  next.element.play().catch(() => {
                     next.element.onerror?.(new Event('playback-failed'));
                   });
                 } else if (streamEndedRef.current) {
@@ -488,7 +488,7 @@ export function useTTS(): UseTTSReturn {
 
               if (!currentAudioRef.current) {
                 currentAudioRef.current = queueItem;
-                audio.play().catch((e) => {
+                audio.play().catch(() => {
                   audio.onerror?.(new Event('playback-failed'));
                 });
               } else {

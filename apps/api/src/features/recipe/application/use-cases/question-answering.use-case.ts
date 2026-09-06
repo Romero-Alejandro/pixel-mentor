@@ -10,9 +10,21 @@ export class QuestionAnsweringUseCase {
     private ragService?: RAGService,
   ) {}
 
-  async execute(params: { recipeId: string; question: string }) {
+  async execute(params: {
+    recipeId: string;
+    question: string;
+    userId?: string;
+    userRole?: string;
+  }) {
     const recipe = await this.recipeRepo.findById(params.recipeId);
     if (!recipe) throw new RecipeNotFoundError(params.recipeId);
+
+    // Only published recipes are visible to everyone. Drafts are restricted
+    // to their author and administrators.
+    const isOwner = recipe.authorId === params.userId;
+    if (!recipe.published && !isOwner && params.userRole !== 'ADMIN') {
+      throw Object.assign(new Error('Recipe is not accessible'), { statusCode: 403 });
+    }
 
     let ragContext = '';
     if (this.ragService) {

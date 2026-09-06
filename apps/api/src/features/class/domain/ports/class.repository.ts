@@ -21,6 +21,11 @@ export interface IClassRepository {
   findById(id: string): Promise<ClassEntity | null>;
 
   /**
+   * Find a class by its slug (shortId)
+   */
+  findBySlug(slug: string): Promise<ClassEntity | null>;
+
+  /**
    * Find all classes for a specific tutor
    */
   findByTutorId(
@@ -59,6 +64,16 @@ export interface IClassLessonRepository {
    * Find all lessons for a specific class
    */
   findByClassId(classId: string): Promise<ClassLessonEntity[]>;
+
+  /**
+   * Find a lesson by its ID
+   */
+  findById(id: string): Promise<ClassLessonEntity | null>;
+
+  /**
+   * Find the class ID for a given lesson
+   */
+  findClassIdByLessonId(lessonId: string): Promise<string | null>;
 
   /**
    * Create a new lesson

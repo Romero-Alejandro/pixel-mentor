@@ -13,6 +13,10 @@ export interface AuthRequest extends Request {
     id: string;
     email: string;
     role: string;
+    username?: string;
+    name?: string;
+    age?: number;
+    quota?: number;
   };
 }
 
@@ -65,13 +69,14 @@ export function authMiddleware(verifyTokenUseCase: VerifyTokenUseCase) {
 
 // Role-based authorization middleware factory
 export function requireRole(...roles: string[]) {
-  return (req: AuthRequest, res: Response, next: NextFunction): void => {
-    if (!req.user) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const authReq = req as AuthRequest;
+    if (!authReq.user) {
       res.status(401).json({ error: 'No autenticado', code: 'NOT_AUTHENTICATED' });
       return;
     }
 
-    if (!roles.includes(req.user.role)) {
+    if (!roles.includes(authReq.user.role)) {
       res.status(403).json({
         error: 'No tienes permisos para realizar esta acción',
         code: 'FORBIDDEN',

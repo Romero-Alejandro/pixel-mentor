@@ -58,13 +58,13 @@ describe('RegisterPage', () => {
     );
 
     expect(screen.getByLabelText('Nombre completo')).toBeInTheDocument();
-    expect(screen.getByLabelText('Nombre de usuario (opcional)')).toBeInTheDocument();
+    expect(screen.getByLabelText('Tu apodo (Opcional)')).toBeInTheDocument();
     expect(screen.getByLabelText('Correo electrónico')).toBeInTheDocument();
-    expect(screen.getByLabelText('Contraseña')).toBeInTheDocument();
-    expect(screen.getByLabelText('Confirmar contraseña')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Crear Cuenta/i })).toBeInTheDocument();
-    expect(screen.getByText(/¿Ya tienes cuenta?/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Iniciar sesión/i })).toHaveAttribute('href', '/login');
+    expect(screen.getByLabelText('Contraseña secreta')).toBeInTheDocument();
+    expect(screen.getByLabelText('Confirma tu contraseña')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Crear Personaje!/i })).toBeInTheDocument();
+    expect(screen.getByText(/Únete a la academia mágica/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Volver/i })).toHaveAttribute('href', '/login');
   });
 
   it('should show error message when hook has error', () => {
@@ -94,9 +94,9 @@ describe('RegisterPage', () => {
 
     const nameInput = screen.getByLabelText('Nombre completo');
     const emailInput = screen.getByLabelText('Correo electrónico');
-    const passwordInput = screen.getByLabelText('Contraseña');
-    const confirmPasswordInput = screen.getByLabelText('Confirmar contraseña');
-    const submitButton = screen.getByRole('button', { name: /Crear Cuenta/i });
+    const passwordInput = screen.getByLabelText('Contraseña secreta');
+    const confirmPasswordInput = screen.getByLabelText('Confirma tu contraseña');
+    const submitButton = screen.getByRole('button', { name: /Crear Personaje!/i });
 
     fireEvent.change(nameInput, { target: { value: 'Test User' } });
     fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
@@ -104,7 +104,7 @@ describe('RegisterPage', () => {
     fireEvent.change(confirmPasswordInput, { target: { value: 'different' } });
     fireEvent.click(submitButton);
 
-    expect(screen.getByText('Las contraseñas no coinciden.')).toBeInTheDocument();
+    expect(screen.getByText(/Las contraseñas secretas no coinciden/i)).toBeInTheDocument();
     expect(mockRegister).not.toHaveBeenCalled();
   });
 
@@ -117,9 +117,9 @@ describe('RegisterPage', () => {
 
     const nameInput = screen.getByLabelText('Nombre completo');
     const emailInput = screen.getByLabelText('Correo electrónico');
-    const passwordInput = screen.getByLabelText('Contraseña');
-    const confirmPasswordInput = screen.getByLabelText('Confirmar contraseña');
-    const submitButton = screen.getByRole('button', { name: /Crear Cuenta/i });
+    const passwordInput = screen.getByLabelText('Contraseña secreta');
+    const confirmPasswordInput = screen.getByLabelText('Confirma tu contraseña');
+    const submitButton = screen.getByRole('button', { name: /Crear Personaje!/i });
 
     fireEvent.change(nameInput, { target: { value: 'Test User' } });
     fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
@@ -127,7 +127,9 @@ describe('RegisterPage', () => {
     fireEvent.change(confirmPasswordInput, { target: { value: '12345' } });
     fireEvent.click(submitButton);
 
-    expect(screen.getByText('La contraseña debe tener al menos 6 caracteres.')).toBeInTheDocument();
+    expect(
+      screen.getByText(/contraseña secreta debe tener al menos 6 caracteres/i),
+    ).toBeInTheDocument();
     expect(mockRegister).not.toHaveBeenCalled();
   });
 
@@ -142,9 +144,9 @@ describe('RegisterPage', () => {
 
     const nameInput = screen.getByLabelText('Nombre completo');
     const emailInput = screen.getByLabelText('Correo electrónico');
-    const passwordInput = screen.getByLabelText('Contraseña');
-    const confirmPasswordInput = screen.getByLabelText('Confirmar contraseña');
-    const submitButton = screen.getByRole('button', { name: /Crear Cuenta/i });
+    const passwordInput = screen.getByLabelText('Contraseña secreta');
+    const confirmPasswordInput = screen.getByLabelText('Confirma tu contraseña');
+    const submitButton = screen.getByRole('button', { name: /Crear Personaje!/i });
 
     fireEvent.change(nameInput, { target: { value: 'Test User' } });
     fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
@@ -157,7 +159,7 @@ describe('RegisterPage', () => {
       email: 'test@example.com',
       password: 'password123',
       name: 'Test User',
-      username: '', // username is empty string since field was filled with empty value
+      username: '',
     });
 
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -179,8 +181,8 @@ describe('RegisterPage', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText('Creando cuenta...')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Creando cuenta/i })).toBeDisabled();
+    expect(screen.getByText('Forjando pase...')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Forjando pase/i })).toBeDisabled();
   });
 
   it('should clear validation errors on new input after error', () => {
@@ -192,9 +194,9 @@ describe('RegisterPage', () => {
 
     const nameInput = screen.getByLabelText('Nombre completo');
     const emailInput = screen.getByLabelText('Correo electrónico');
-    const passwordInput = screen.getByLabelText('Contraseña');
-    const confirmPasswordInput = screen.getByLabelText('Confirmar contraseña');
-    const submitButton = screen.getByRole('button', { name: /Crear Cuenta/i });
+    const passwordInput = screen.getByLabelText('Contraseña secreta');
+    const confirmPasswordInput = screen.getByLabelText('Confirma tu contraseña');
+    const submitButton = screen.getByRole('button', { name: /Crear Personaje!/i });
 
     // First trigger validation error
     fireEvent.change(nameInput, { target: { value: 'Test' } });
@@ -203,7 +205,9 @@ describe('RegisterPage', () => {
     fireEvent.change(confirmPasswordInput, { target: { value: '123' } });
     fireEvent.click(submitButton);
 
-    expect(screen.getByText('La contraseña debe tener al menos 6 caracteres.')).toBeInTheDocument();
+    expect(
+      screen.getByText(/contraseña secreta debe tener al menos 6 caracteres/i),
+    ).toBeInTheDocument();
 
     // Fix the password and submit again
     fireEvent.change(passwordInput, { target: { value: 'password123' } });
@@ -211,7 +215,7 @@ describe('RegisterPage', () => {
     fireEvent.click(submitButton);
 
     expect(
-      screen.queryByText('La clave requiere un mínimo de 6 caracteres.'),
+      screen.queryByText(/contraseña secreta debe tener al menos 6 caracteres/i),
     ).not.toBeInTheDocument();
     expect(mockRegister).toHaveBeenCalled();
   });

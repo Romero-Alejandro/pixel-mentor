@@ -18,6 +18,7 @@ const createMockAIService = (): jest.Mocked<AIService> => ({
 
 const createMockClassRepo = (): jest.Mocked<IClassRepository> => ({
   findById: jest.fn(),
+  findBySlug: jest.fn() as any,
   findByTutorId: jest.fn(),
   create: jest.fn(),
   update: jest.fn(),
@@ -26,6 +27,8 @@ const createMockClassRepo = (): jest.Mocked<IClassRepository> => ({
 
 const createMockLessonRepo = (): jest.Mocked<IClassLessonRepository> => ({
   findByClassId: jest.fn(),
+  findById: jest.fn(),
+  findClassIdByLessonId: jest.fn(),
   create: jest.fn(),
   update: jest.fn(),
   delete: jest.fn(),
@@ -111,7 +114,7 @@ describe('ClassAIService', () => {
     aiService = createMockAIService();
     classRepo = createMockClassRepo();
     lessonRepo = createMockLessonRepo();
-    service = new ClassAIService(classRepo, lessonRepo, aiService);
+    service = new ClassAIService(classRepo, lessonRepo as any, aiService);
   });
 
   describe('generateClassDraft', () => {

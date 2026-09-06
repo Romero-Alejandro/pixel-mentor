@@ -57,6 +57,9 @@ interface LessonState {
   streamingChunks: string[];
   isStreaming: boolean;
   streamError: string | null;
+  // Last-known step progress (persisted for step-level resume)
+  currentStep: number;
+  totalSteps: number;
 
   // Actions
   setLessonId: (id: string | null) => void;
@@ -80,6 +83,8 @@ interface LessonState {
   setIsStreaming: (streaming: boolean) => void;
   setStreamError: (error: string | null) => void;
   clearStream: () => void;
+  setCurrentStep: (step: number) => void;
+  setTotalSteps: (total: number) => void;
   reset: () => void;
 }
 
@@ -103,11 +108,14 @@ const initialState = {
   streamingChunks: [],
   isStreaming: false,
   streamError: null,
+  // Step progress initial state
+  currentStep: 0,
+  totalSteps: 0,
 };
 
 export const useLessonStore = create<LessonState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       ...initialState,
       setLessonId: (id) => set({ lessonId: id }),
       setSessionId: (id) => set({ sessionId: id }),
@@ -130,6 +138,8 @@ export const useLessonStore = create<LessonState>()(
       setIsStreaming: (streaming) => set({ isStreaming: streaming }),
       setStreamError: (error) => set({ streamError: error }),
       clearStream: () => set({ streamingChunks: [], isStreaming: false, streamError: null }),
+      setCurrentStep: (step) => set({ currentStep: step }),
+      setTotalSteps: (total) => set({ totalSteps: total }),
       reset: () =>
         set((state) => {
           return {
@@ -140,7 +150,18 @@ export const useLessonStore = create<LessonState>()(
     }),
     {
       name: 'lesson-storage',
-      partialize: (state) => ({ config: state.config }),
+      // Persisted for step-level resume: a remount can recover which
+      // session/lesson/step was active. Resume restores the STEP, never an
+      // intra-chunk playback offset. totalSteps is persisted alongside
+      // currentStep so the header can render progress before the fresh
+      // start response arrives.
+      partialize: (state) => ({
+        config: state.config,
+        sessionId: state.sessionId,
+        lessonId: state.lessonId,
+        currentStep: state.currentStep,
+        totalSteps: state.totalSteps,
+      }),
     },
   ),
 );

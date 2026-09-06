@@ -42,6 +42,15 @@ const createMockTokenService = (): jest.Mocked<ITokenService> => ({
   verifyToken: jest.fn(),
 });
 
+const createMockRefreshTokenRepo = () => ({
+  create: jest.fn().mockResolvedValue({}),
+  findByTokenHash: jest.fn().mockResolvedValue(null),
+  findByUserId: jest.fn().mockResolvedValue(null),
+  revoke: jest.fn().mockResolvedValue({}),
+  delete: jest.fn().mockResolvedValue(undefined),
+  deleteByUserId: jest.fn().mockResolvedValue(undefined),
+});
+
 describe('LoginUseCase', () => {
   let userRepo: jest.Mocked<IUserRepository>;
   let hashingService: jest.Mocked<IHashingService>;
@@ -52,7 +61,13 @@ describe('LoginUseCase', () => {
     userRepo = createMockUserRepository();
     hashingService = createMockHashingService();
     tokenService = createMockTokenService();
-    useCase = new LoginUseCase(userRepo, hashingService, tokenService);
+    useCase = new LoginUseCase(
+      userRepo,
+      hashingService,
+      tokenService,
+      createMockRefreshTokenRepo() as any,
+      createMockTokenService(),
+    );
   });
 
   describe('execute', () => {
@@ -93,7 +108,8 @@ describe('LoginUseCase', () => {
           createdAt: expect.any(Date),
           updatedAt: expect.any(Date),
         },
-        token: 'mock-jwt-token',
+        accessToken: 'mock-jwt-token',
+        refreshToken: 'mock-jwt-token',
       });
       expect(result.user).not.toHaveProperty('passwordHash');
     });
@@ -186,7 +202,7 @@ describe('LoginUseCase', () => {
       });
 
       // Then
-      expect(result.token).toBe('mock-jwt-token');
+      expect(result.accessToken).toBe('mock-jwt-token');
     });
   });
 });

@@ -11,6 +11,8 @@ export const InteractRecipeInputSchema = z.object({
     .string()
     .regex(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/),
   studentInput: z.string().min(1).max(1000),
+  /** Unique interaction ID for request deduplication on retry */
+  interactionId: z.string().uuid().optional(),
 });
 
 export type InteractRecipeInput = z.infer<typeof InteractRecipeInputSchema>;

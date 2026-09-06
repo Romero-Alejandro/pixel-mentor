@@ -359,7 +359,7 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
       result = await orchestrator.interact(testSessionId, studentInput, studentId);
 
       expect(result.pedagogicalState).toBe('EXPLANATION'); // intro step
-      expect(result.staticContent.stepType).toBe(StepType.INTRO);
+      expect(result.staticContent.stepType).toBe('intro');
 
       // Advance through content steps with "continuar"
       for (let i = 1; i <= 2; i++) {
@@ -368,7 +368,7 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
         result = await orchestrator.interact(testSessionId, studentInput, studentId);
 
         expect(result.pedagogicalState).toBe('EXPLANATION');
-        expect(result.staticContent.stepType).toBe(StepType.CONTENT);
+        expect(result.staticContent.stepType).toBe('content');
         expect(result.staticContent.script.content).toContain(
           `This is the ${i === 1 ? 'first' : 'second'} content step.`,
         );
@@ -380,7 +380,7 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
       result = await orchestrator.interact(testSessionId, studentInput, studentId);
 
       expect(result.pedagogicalState).toBe('ACTIVITY_WAIT');
-      expect(result.staticContent.stepType).toBe(StepType.QUESTION); // Question stepType
+      expect(result.staticContent.stepType).toBe('question'); // Question stepType
       expect(result.staticContent.activity.instruction).toBe('What is the capital of France?');
 
       // Try incorrect answer for question - should stay in ACTIVITY_WAIT for retry
@@ -414,7 +414,7 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
       result = await orchestrator.interact(testSessionId, studentInput, studentId);
 
       expect(result.pedagogicalState).toBe('EXPLANATION');
-      expect(result.staticContent.stepType).toBe(StepType.CONTENT);
+      expect(result.staticContent.stepType).toBe('content');
       expect(result.staticContent.script.content).toContain(
         'This content comes after the question.',
       );
@@ -425,7 +425,7 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
       result = await orchestrator.interact(testSessionId, studentInput, studentId);
 
       expect(result.pedagogicalState).toBe('ACTIVITY_WAIT');
-      expect(result.staticContent.stepType).toBe(StepType.ACTIVITY);
+      expect(result.staticContent.stepType).toBe('activity');
       expect(result.staticContent.activity.instruction).toBe('Select the correct option.');
 
       // Try incorrect answer for activity - should stay in ACTIVITY_WAIT for retry
@@ -449,7 +449,7 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
       result = await orchestrator.interact(testSessionId, studentInput, studentId);
 
       expect(result.pedagogicalState).toBe('EXPLANATION'); // closure step
-      expect(result.staticContent.stepType).toBe(StepType.CLOSURE);
+      expect(result.staticContent.stepType).toBe('closure');
       expect(result.staticContent.script.content).toBe('Lesson completed!');
 
       // Complete the lesson
@@ -507,14 +507,14 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
       result = await orchestrator.interact(testSessionId, studentInput, studentId);
 
       expect(result.pedagogicalState).toBe('EXPLANATION');
-      expect(result.staticContent.stepType).toBe(StepType.INTRO);
+      expect(result.staticContent.stepType).toBe('intro');
 
       // Advance to the first content step
       studentInput = 'continuar';
       result = await orchestrator.interact(testSessionId, studentInput, studentId);
 
       expect(result.pedagogicalState).toBe('EXPLANATION');
-      expect(result.staticContent.stepType).toBe(StepType.CONTENT);
+      expect(result.staticContent.stepType).toBe('content');
 
       // Student asks a question during content step
       studentInput = 'What does this mean?';
@@ -554,7 +554,7 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
       result = await orchestrator.interact(testSessionId, studentInput, studentId);
 
       expect(result.pedagogicalState).toBe('EXPLANATION');
-      expect(result.staticContent.stepType).toBe(StepType.CONTENT);
+      expect(result.staticContent.stepType).toBe('content');
       expect(result.staticContent.script.content).toContain('This is the second content step.');
 
       // ... then complete the flow for this test
@@ -562,7 +562,7 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
       result = await orchestrator.interact(testSessionId, studentInput, studentId);
 
       expect(result.pedagogicalState).toBe('ACTIVITY_WAIT');
-      expect(result.staticContent.stepType).toBe(StepType.QUESTION); // Question stepType
+      expect(result.staticContent.stepType).toBe('question'); // Question stepType
 
       studentInput = 'Paris';
       mockComprehensionEvaluator.evaluate.mockResolvedValueOnce({
@@ -579,13 +579,13 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
       result = await orchestrator.interact(testSessionId, studentInput, studentId);
 
       expect(result.pedagogicalState).toBe('EXPLANATION');
-      expect(result.staticContent.stepType).toBe(StepType.CONTENT);
+      expect(result.staticContent.stepType).toBe('content');
 
       studentInput = 'continuar';
       result = await orchestrator.interact(testSessionId, studentInput, studentId);
 
       expect(result.pedagogicalState).toBe('ACTIVITY_WAIT');
-      expect(result.staticContent.stepType).toBe(StepType.ACTIVITY);
+      expect(result.staticContent.stepType).toBe('activity');
 
       studentInput = 'Option B';
       result = await orchestrator.interact(testSessionId, studentInput, studentId);
@@ -597,7 +597,7 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
       result = await orchestrator.interact(testSessionId, studentInput, studentId);
 
       expect(result.pedagogicalState).toBe('EXPLANATION');
-      expect(result.staticContent.stepType).toBe(StepType.CLOSURE);
+      expect(result.staticContent.stepType).toBe('closure');
 
       studentInput = 'continuar';
       result = await orchestrator.interact(testSessionId, studentInput, studentId);
@@ -882,12 +882,12 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
       const result = await orchestrator.start(recipeId, studentId);
 
       expect(result.resumed).toBe(true);
-      expect(result.voiceText).toContain(
-        '¡Bienvenido de vuelta, Test Student! Continuemos con Test Recipe.',
-      );
+      // Resume speaks the resumed step's own content (step-level resume),
+      // falling back to a greeting only when the step has no speakable text.
+      expect(result.voiceText).toContain('This is the first content step.');
       expect(result.pedagogicalState).toBe('EXPLANATION');
-      expect(result.staticContent.stepType).toBe(StepType.INTRO); // Current behavior: returns first step (bug, but existing)
-      expect(result.staticContent.script.content).toContain('Welcome');
+      expect(result.staticContent.stepType).toBe('content'); // Resumed step (idx 1), not steps[0]
+      expect(result.staticContent.script.content).toContain('This is the first content step.');
       expect(result.lessonProgress.currentStep).toBe(1);
     });
 
@@ -954,7 +954,7 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
       expect(result.isRepeat).toBe(true);
       expect(result.voiceText).toContain('Hello Test Student, welcome to Test Recipe!');
       expect(result.pedagogicalState).toBe('AWAITING_START');
-      expect(result.staticContent.stepType).toBe(StepType.INTRO);
+      expect(result.staticContent.stepType).toBe('intro');
       expect(result.lessonProgress.currentStep).toBe(0);
       expect(mockInteractionRepo.deleteBySession).toHaveBeenCalledWith(testSessionId);
       expect(mockSessionRepo.resetProgress).toHaveBeenCalledWith(testSessionId);
@@ -1043,7 +1043,7 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
       // The question step MUST be treated as ACTIVITY_WAIT, NOT as content
       // This is the critical assertion — before the fix, it would return EXPLANATION
       expect(interactResult.pedagogicalState).toBe('ACTIVITY_WAIT');
-      expect(interactResult.staticContent.stepType).toBe(StepType.QUESTION);
+      expect(interactResult.staticContent.stepType).toBe('question');
       expect(interactResult.staticContent.activity).toBeDefined();
     });
   });

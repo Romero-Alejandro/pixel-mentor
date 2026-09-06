@@ -15,7 +15,10 @@ export interface TTSMessage<T extends TTSEventType = TTSEventType, D = any> {
 
 export interface TTSAudioMessageData {
   audioBase64: string;
-  // Add other relevant metadata if needed, e.g., 'sequence', 'sampleRate', 'mimeType'
+  /** Zero-based sequence of this chunk within the utterance. */
+  sequence?: number;
+  /** Source text slice synthesized in this chunk (karaoke word mapping). */
+  text?: string;
 }
 
 export type TTSAudioMessage = TTSMessage<typeof TTS_EVENT_TYPES.AUDIO, TTSAudioMessageData>;

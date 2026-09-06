@@ -27,8 +27,15 @@ export function useDashboardData(user: User | null) {
   useEffect(() => {
     async function loadAdventureData() {
       try {
+        const isTeacher = user?.role === 'TEACHER' || user?.role === 'ADMIN';
         const [classesData, sessionsData, badges, userBadges, streakResponse] = await Promise.all([
-          api.listClasses('PUBLISHED'),
+          isTeacher
+            ? api.listClasses('PUBLISHED').catch((err) => {
+                // 403 for students or empty for new teachers is not a fatal dashboard error
+                if (err?.response?.status === 403) return { classes: [] } as never;
+                throw err;
+              })
+            : Promise.resolve({ classes: [] } as never),
           user ? api.listSessions(user.id, false) : Promise.resolve([]),
           gamificationApi.getBadges(),
           gamificationApi.getUserBadges(),

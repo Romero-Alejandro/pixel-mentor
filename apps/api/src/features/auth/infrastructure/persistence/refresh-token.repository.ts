@@ -1,7 +1,6 @@
 import { prisma } from '@/database/client.js';
 import type { RefreshToken } from '@/features/auth/domain/entities/refresh-token.entity';
 import type { IRefreshTokenRepository } from '@/features/auth/domain/ports/refresh-token.repository.port.js';
-import { handlePrismaError } from '@/database/error-handler.js';
 
 const mapToDomain = (entity: any): RefreshToken => {
   return {

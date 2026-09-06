@@ -42,6 +42,15 @@ const createMockTokenService = (): jest.Mocked<ITokenService> => ({
   verifyToken: jest.fn(),
 });
 
+const createMockRefreshTokenRepo = () => ({
+  create: jest.fn().mockResolvedValue({}),
+  findByTokenHash: jest.fn().mockResolvedValue(null),
+  findByUserId: jest.fn().mockResolvedValue(null),
+  revoke: jest.fn().mockResolvedValue({}),
+  delete: jest.fn().mockResolvedValue(undefined),
+  deleteByUserId: jest.fn().mockResolvedValue(undefined),
+});
+
 describe('RegisterUseCase', () => {
   let userRepo: jest.Mocked<IUserRepository>;
   let hashingService: jest.Mocked<IHashingService>;
@@ -52,7 +61,13 @@ describe('RegisterUseCase', () => {
     userRepo = createMockUserRepository();
     hashingService = createMockHashingService();
     tokenService = createMockTokenService();
-    useCase = new RegisterUseCase(userRepo, hashingService, tokenService);
+    useCase = new RegisterUseCase(
+      userRepo,
+      hashingService,
+      tokenService,
+      createMockRefreshTokenRepo() as any,
+      createMockTokenService(),
+    );
   });
 
   describe('execute', () => {
@@ -106,7 +121,8 @@ describe('RegisterUseCase', () => {
           name: validInput.name,
           role: 'STUDENT',
         }),
-        token: 'mock-jwt-token',
+        accessToken: 'mock-jwt-token',
+        refreshToken: 'mock-jwt-token',
       });
     });
 
@@ -170,7 +186,7 @@ describe('RegisterUseCase', () => {
       const result = await useCase.execute(validInput);
 
       // Then
-      expect(result.token).toBe('mock-jwt-token');
+      expect(result.accessToken).toBe('mock-jwt-token');
     });
 
     it('should set default role to STUDENT', async () => {

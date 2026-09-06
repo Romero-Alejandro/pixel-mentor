@@ -117,6 +117,8 @@ const createMockRecipeRepository = (): jest.Mocked<RecipeRepository> => {
     findByIdWithSteps: jest.fn(),
     findAll: jest.fn(),
     findPublished: jest.fn(),
+    findByUserId: jest.fn(),
+    findByUserIdAndPublished: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),

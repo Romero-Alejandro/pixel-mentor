@@ -121,7 +121,7 @@ function ConfirmDialog({
     variant === 'danger' ? 'danger' : variant === 'warning' ? 'secondary' : 'primary';
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm" closeOnBackdrop={false}>
+    <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
       <div className="flex flex-col items-center text-center">
         <div className={`mb-4 ${iconColor}`}>
           <Icon className="w-12 h-12" />
@@ -176,7 +176,7 @@ function AlertDialog({ isOpen, onClose, title, message, variant = 'error' }: Ale
   const iconColor = alertVariantIconColors[variant] ?? 'text-slate-500';
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm" closeOnBackdrop={false}>
+    <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
       <div className="flex flex-col items-center text-center">
         <div className={`mb-4 ${iconColor}`}>
           <Icon className="w-12 h-12" />
@@ -229,7 +229,7 @@ function PromptDialog({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm" closeOnBackdrop={false}>
+    <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
       <div className="flex flex-col">
         <p className="text-slate-600 font-medium mb-4">{message}</p>
         <Input

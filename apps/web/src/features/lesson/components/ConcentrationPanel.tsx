@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react';
 import { IconRepeat, IconPlayerPlayFilled, IconAlertTriangle } from '@tabler/icons-react';
 import { Spinner } from '@/components/ui';
 import { cn } from '@/utils/cn';
+import { isKaraokeDebugEnabled, type SyncPhase } from '@/features/lesson/hooks/useTextSync';
+import type { ActiveTTSEngine } from '@/features/voice/hooks/useVoice';
 
 interface ConcentrationPanelProps {
   words: string[];
@@ -10,6 +12,10 @@ interface ConcentrationPanelProps {
   isSpeaking: boolean;
   isAttemptingSync?: boolean;
   syncError?: boolean;
+  /** Phase-0 observability: sync lifecycle + engine, shown only with debug flag. */
+  syncPhase?: SyncPhase;
+  syncDetail?: string;
+  activeEngine?: ActiveTTSEngine | null;
   onRepeat: () => void;
 }
 
@@ -21,6 +27,9 @@ export function ConcentrationPanel({
   onRepeat,
   isAttemptingSync = false,
   syncError = false,
+  syncPhase,
+  syncDetail,
+  activeEngine,
 }: ConcentrationPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -33,9 +42,12 @@ export function ConcentrationPanel({
     });
   }, [isAttemptingSync, isSynced, words.length]);
 
-  // Show all text when not synced (sync failed or not attempted yet)
-  // Only use karaoke effect (incremental + highlight) when isSynced is true
-  const showAllContent = !isSynced;
+  // Never flash the full text while sync is still attaching: show a skeleton
+  // until words start flowing. Full text is only a fallback for sync errors
+  // (highlighting impossible) and for the completed state.
+  const isPendingSync = !isSynced && !syncError;
+  const showSkeleton = isPendingSync && words.length > 0;
+  const showAllContent = !isSynced && !isPendingSync;
   const visibleCount = showAllContent ? words.length : currentWordIndex;
   const activeIndex = currentWordIndex - 1;
 
@@ -58,9 +70,20 @@ export function ConcentrationPanel({
 
   const showSyncIndicator = !isSynced && visibleCount > 0;
   const showError = syncError && showSyncIndicator;
+  const showDebugBadge = isKaraokeDebugEnabled();
 
   return (
     <div className="flex-1 flex flex-col items-center p-6 sm:p-8 gap-6 w-full h-full min-h-0 animate-bounce-in">
+      {showDebugBadge ? (
+        <div
+          className="px-3 py-1 rounded-lg bg-slate-900 text-[11px] font-mono text-lime-300"
+          data-testid="karaoke-debug-badge"
+        >
+          karaoke phase={syncPhase ?? 'unknown'} detail={syncDetail ?? '—'} engine=
+          {activeEngine ?? 'none'} word={currentWordIndex}/{words.length} synced=
+          {String(isSynced)} attempting={String(isAttemptingSync)}
+        </div>
+      ) : null}
       {showSyncIndicator ? (
         <div
           className={cn(
@@ -93,21 +116,30 @@ export function ConcentrationPanel({
         ref={scrollRef}
         className="bg-white rounded-[2.5rem] border-4 border-sky-100 shadow-[0_8px_0_0_#e0f2fe] p-6 sm:p-10 w-full flex-1 min-h-0 max-h-[40vh] sm:max-h-[50vh] lg:max-h-[55vh] overflow-y-auto custom-scrollbar"
       >
-        <div className="text-2xl sm:text-3xl leading-relaxed tracking-tight font-bold">
-          {words.slice(0, visibleCount).map((word, idx) => (
-            <mark
-              key={`${word}-${idx}`}
-              data-word-index={idx}
-              className={cn(
-                'bg-transparent transition-colors duration-200',
-                idx === activeIndex &&
-                  'bg-amber-200 text-amber-900 rounded-xl px-2 py-0.5 shadow-sm',
-              )}
-            >
-              {word}{' '}
-            </mark>
-          ))}
-        </div>
+        {showSkeleton ? (
+          <div className="flex flex-col gap-4 py-2" role="status" aria-label="Preparando texto">
+            <div className="h-7 rounded-xl bg-sky-100 animate-pulse w-full" />
+            <div className="h-7 rounded-xl bg-sky-100 animate-pulse w-11/12" />
+            <div className="h-7 rounded-xl bg-sky-100 animate-pulse w-4/6" />
+            <span className="sr-only">Preparando texto…</span>
+          </div>
+        ) : (
+          <div className="text-2xl sm:text-3xl leading-relaxed tracking-tight font-bold">
+            {words.slice(0, visibleCount).map((word, idx) => (
+              <mark
+                key={`${word}-${idx}`}
+                data-word-index={idx}
+                className={cn(
+                  'bg-transparent transition-colors duration-200',
+                  idx === activeIndex &&
+                    'bg-amber-200 text-amber-900 rounded-xl px-2 py-0.5 shadow-sm',
+                )}
+              >
+                {word}{' '}
+              </mark>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="h-16 flex items-center justify-center shrink-0 w-full">

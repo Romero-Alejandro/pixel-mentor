@@ -32,7 +32,7 @@ export function StudentLearningView() {
   if (loading && accessibleContent.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <Spinner size="xl" className="text-sky-500" />
+        <Spinner size="lg" className="text-sky-500" />
         <p className="text-sky-700 font-black tracking-widest uppercase text-sm animate-pulse">
           Preparando tu aventura...
         </p>

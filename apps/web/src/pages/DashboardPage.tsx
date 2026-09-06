@@ -41,12 +41,11 @@ export function DashboardPage() {
 
   const { user, logout, isLoggingOut } = useAuth();
 
-  const { profile, fetchProfile, particleTrigger, recordActivity } = useGamificationStore(
+  const { profile, fetchProfile, particleTrigger } = useGamificationStore(
     useShallow((state) => ({
       profile: state.profile,
       fetchProfile: state.fetchProfile,
       particleTrigger: state.particleTrigger,
-      recordActivity: state.recordActivity,
     })),
   );
 
@@ -72,8 +71,7 @@ export function DashboardPage() {
 
   useEffect(() => {
     fetchProfile().catch(() => {});
-    recordActivity('DAILY_LOGIN').catch(() => {});
-  }, [fetchProfile, recordActivity]);
+  }, [fetchProfile]);
 
   function handleTabChange(tab: DashboardTab) {
     playClick();

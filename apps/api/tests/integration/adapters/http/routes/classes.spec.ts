@@ -16,6 +16,7 @@
 import request from 'supertest';
 
 import { createClassRouter } from '@/features/class/infrastructure/http/classes.routes.js';
+import { errorHandler } from '@/shared/http/error-handler.middleware.js';
 import type { ClassService } from '@/features/class/application/services/class.service.js';
 import {
   ClassNotFoundError,
@@ -77,7 +78,7 @@ const createMockClassService = (): jest.Mocked<ClassService> => {
 // Helper to create app with mocked auth
 const createApp = (
   classService: jest.Mocked<ClassService>,
-  user: { id: string; role: string } = { id: 'tutor-1', role: 'TEACHER' },
+  user: { id: string; role: string } | null = { id: 'tutor-1', role: 'TEACHER' },
 ) => {
   // Create router with only classService (demo endpoint requires additional deps but not tested here)
   const router = createClassRouter({ classService } as any);
@@ -91,11 +92,14 @@ const createApp = (
 
   // Mock auth middleware
   app.use((req: any, _res: any, next: any) => {
-    req.user = user;
+    if (user && user.id) {
+      req.user = user;
+    }
     next();
   });
 
   app.use('/api/classes', router);
+  app.use(errorHandler);
 
   return app;
 };
@@ -140,7 +144,7 @@ describe('Classes API Routes', () => {
 
     it('should return 401 when user not authenticated', async () => {
       // Given
-      const app = createApp(classService, { id: '', role: '' } as any);
+      const app = createApp(classService, null);
 
       // When
       const response = await request(app).post('/api/classes').send({ title: 'Test' });
@@ -364,7 +368,7 @@ describe('Classes API Routes', () => {
       const response = await request(app).post('/api/classes/class-1/publish');
 
       // Then
-      expect(response.status).toBe(422);
+      expect(response.status).toBe(400);
     });
   });
 

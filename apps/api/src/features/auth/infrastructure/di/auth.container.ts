@@ -58,7 +58,7 @@ export function buildAuthContainer(_logger: pino.Logger): AuthContainer {
       refreshTokenRepository,
       refreshTokenService,
     ),
-    logoutUseCase: new LogoutUseCase(refreshTokenRepository, hashingService),
+    logoutUseCase: new LogoutUseCase(refreshTokenRepository, refreshTokenService, hashingService),
     verifyTokenUseCase: new VerifyTokenUseCase(userRepository, accessTokenService),
     refreshTokenUseCase: new RefreshTokenUseCase(
       userRepository,

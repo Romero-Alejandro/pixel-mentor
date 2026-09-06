@@ -7,6 +7,7 @@
 import request from 'supertest';
 
 import { createClassRouter } from '@/features/class/infrastructure/http/classes.routes.js';
+import { errorHandler } from '@/shared/http/error-handler.middleware.js';
 import type { ClassService } from '@/features/class/application/services/class.service.js';
 import {
   ClassNotFoundError,
@@ -46,6 +47,7 @@ const createApp = (
     next();
   });
   app.use('/api/classes', router);
+  app.use(errorHandler);
   return app;
 };
 

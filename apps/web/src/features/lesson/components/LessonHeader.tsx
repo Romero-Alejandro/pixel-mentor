@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { IconArrowLeft, IconRefresh } from '@tabler/icons-react';
+import { IconArrowLeft, IconRefresh, IconEye, IconEyeOff } from '@tabler/icons-react';
 import { cn } from '@/utils/cn';
 import { UIState } from '../hooks/useLessonState';
 import { VoiceSettingsPanel } from '@/features/voice/components/VoiceSettingsPanel';
@@ -14,6 +14,9 @@ interface HeaderProps {
   updateSettings: (settings: Partial<VoiceSettings>) => void;
   speakContent: () => void;
   onReset?: () => void;
+  /** Dictation text visibility (default off: mascot + voice only). */
+  showText?: boolean;
+  onToggleText?: () => void;
 }
 
 const UI_LABELS: Record<UIState, string> = {
@@ -34,6 +37,8 @@ export function LessonHeader({
   updateSettings,
   speakContent,
   onReset,
+  showText = false,
+  onToggleText,
 }: HeaderProps) {
   return (
     <header className="top-0 z-30 h-20 w-full border-b-4 border-sky-100 bg-white/80 px-4 backdrop-blur-md">
@@ -91,6 +96,22 @@ export function LessonHeader({
         </div>
 
         <div className="flex flex-1 justify-end items-center gap-2">
+          {onToggleText ? (
+            <button
+              onClick={onToggleText}
+              className="group flex items-center gap-2 rounded-2xl px-4 py-2 border-4 border-transparent hover:border-sky-200 bg-transparent hover:bg-sky-50 text-slate-500 hover:text-sky-700 font-black transition-all cursor-pointer outline-none focus-visible:ring-4 focus-visible:ring-sky-200"
+              aria-label={showText ? 'Ocultar texto del dictado' : 'Mostrar texto del dictado'}
+              aria-pressed={showText}
+              title={showText ? 'Ocultar texto del dictado' : 'Mostrar texto del dictado'}
+            >
+              {showText ? (
+                <IconEye className="h-5 w-5" stroke={3} />
+              ) : (
+                <IconEyeOff className="h-5 w-5" stroke={3} />
+              )}
+              <span className="hidden sm:inline tracking-wider uppercase text-xs">Texto</span>
+            </button>
+          ) : null}
           {onReset && !isStart ? (
             <button
               onClick={onReset}

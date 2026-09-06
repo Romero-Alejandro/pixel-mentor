@@ -100,10 +100,7 @@ export function LongTextTestPage() {
 
       <div className="bg-white rounded-3xl border border-sky-100 shadow-md p-6 max-h-[70vh] overflow-y-auto">
         <ConcentrationPanel
-          fullVoiceText={LONG_TEXT}
-          transitionText=""
-          contentText={LONG_TEXT}
-          closureText=""
+          words={LONG_TEXT.split(/\s+/)}
           currentWordIndex={0}
           isSynced={true}
           isSpeaking={isSpeaking}

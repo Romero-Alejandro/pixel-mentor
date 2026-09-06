@@ -71,7 +71,7 @@ export function authMiddleware(
       }
 
       const payload = await verifyTokenUseCase.execute(token);
-      const user = await userRepository.findById(payload.userId);
+      const user = await userRepository.findById(payload.user.id);
 
       if (!user) {
         res.status(404).json({ error: 'User not found' });

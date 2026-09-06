@@ -3,6 +3,8 @@ import { useEffect } from 'react';
 
 import { useAuth } from './features/auth/hooks/useAuth';
 import { useAuthRedirect } from './features/auth/stores/auth.store';
+import { getToken } from '@/services/api-client';
+import { preloadMascot } from '@/components/mascot/mascot-preload';
 import { useGamificationSSE } from './features/gamification/hooks/useGamificationSSE';
 import { ErrorBoundary, Spinner } from './components/ui';
 import { LoginPage } from './pages/LoginPage';
@@ -35,6 +37,19 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     }
   }, [isHydrated, isLoading, isAuthenticated, location.pathname, saveRedirectPath]);
 
+  // Safety: if not authenticated after hydration + loading complete, force redirect
+  // This catches cases where the interceptor's redirect doesn't fire
+  useEffect(() => {
+    if (isHydrated && !isLoading && !isAuthenticated) {
+      const timer = setTimeout(() => {
+        window.location.href = '/login';
+      }, 2_000);
+      return () => clearTimeout(timer);
+    }
+    // When user IS authenticated, any pending timer is cleaned up by the
+    // return () => clearTimeout(timer) above — no extra cleanup needed.
+  }, [isHydrated, isLoading, isAuthenticated]);
+
   // Show minimal placeholder while waiting for hydration
   // This prevents showing the spinner during the brief moment before Zustand/React Query settles
   if (!isHydrated) {
@@ -60,8 +75,20 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // Not authenticated — let the interceptor handle redirect to /login
+  // Do NOT use <Navigate> here because it causes a client-side navigation
+  // that races with the interceptor's hard redirect, leaving the user stuck
+  // on a spinner. The interceptor's window.location.href = '/login' is the
+  // authoritative redirect path.
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#f0f9ff]">
+        <div className="text-center">
+          <Spinner size="lg" className="text-sky-500" />
+          <p className="mt-4 text-sky-800 font-bold">Redirigiendo al inicio de sesion...</p>
+        </div>
+      </div>
+    );
   }
 
   return <>{children}</>;
@@ -145,16 +172,35 @@ export default function App() {
   const { isAuthenticated } = useAuth();
   useGamificationSSE(isAuthenticated);
 
+  // Warm the lesson mascot (Rive chunk + scene bytes) while idle so the
+  // first LessonPage mount is instant. Best effort, never on any hot path.
+  useEffect(() => {
+    let cancelled = false;
+    const run = () => {
+      if (!cancelled) preloadMascot();
+    };
+    if (typeof window.requestIdleCallback === 'function') {
+      const id = window.requestIdleCallback(run);
+      return () => {
+        cancelled = true;
+        window.cancelIdleCallback?.(id);
+      };
+    }
+    const timer = window.setTimeout(run, 1500);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, []);
+
   // [EDD-TEMP] Register page unload/refresh telemetry
   if (import.meta.env.DEV) {
     const handleBeforeUnload = (_event: BeforeUnloadEvent) => {
-      const token = localStorage.getItem('token');
-      const refreshToken = localStorage.getItem('refreshToken');
+      const token = getToken();
 
       console.debug(`[EDD] [${new Date().toISOString()}] [App]`, `PAGE UNLOAD/REFRESH`, {
         isAuthenticated,
         hasToken: !!token,
-        hasRefreshToken: !!refreshToken,
         tokenStartsWith: token ? token.substring(0, 10) : null,
         currentRoute: window.location.pathname,
       });

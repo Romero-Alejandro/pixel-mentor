@@ -17,6 +17,7 @@ import {
   type Recipe,
   type RecipeStep,
   type Session,
+  type SessionStatus,
   type PedagogicalState,
   type Class,
   type ClassCreate,
@@ -29,8 +30,22 @@ import {
   type ClassLesson,
 } from '@pixel-mentor/shared';
 
+import { z } from 'zod';
+import {
+  DiscrepancySchema,
+  PragmaticModuleSchema,
+  type Discrepancy as SharedDiscrepancy,
+  type PragmaticModuleData as SharedPragmaticModuleData,
+} from '@pixel-mentor/shared/schemas/clinical';
+
 import { apiClient, getToken } from './api-client';
 import { isValidUUID } from '@/utils/uuid';
+import {
+  SSE_RETRY_DEFAULTS,
+  calculateBackoffDelay,
+  classifySSEError,
+  type SSERetryConfig,
+} from './sse-retry';
 
 import { logger } from '@/utils/logger';
 
@@ -40,6 +55,7 @@ export {
   type Recipe,
   type RecipeStep,
   type Session,
+  type SessionStatus,
   type PedagogicalState,
   type Class,
   type ClassCreate,
@@ -61,13 +77,27 @@ export { setToken, clearToken } from './api-client';
 export interface StreamInteractHandlers {
   onMessage: (event: EventSourceMessage) => void;
   onError: (error: Error) => void;
-  onClose: () => void;
+  /**
+   * Called when the SSE connection closes.
+   * @param reason - Why the connection closed:
+   *   - 'completed': Normal close after end event
+   *   - 'error': Close due to error after max retries
+   *   - 'aborted': Client-side abort
+   *   - 'unknown': Close without clear reason
+   */
+  onClose: (reason?: 'completed' | 'error' | 'aborted' | 'unknown') => void;
+}
+
+export interface StreamInteractRetryConfig extends Partial<SSERetryConfig> {
+  /** Called on each retry attempt with status info */
+  onRetry?: (attempt: number, maxRetries: number, delayMs: number) => void;
 }
 
 export const streamInteractWithRecipe = (
   sessionId: string,
   studentInput: string,
   handlers: StreamInteractHandlers,
+  retryConfig?: StreamInteractRetryConfig,
 ): AbortController => {
   if (import.meta.env.VITE_ENABLE_STREAMING !== 'true') {
     throw new Error('Streaming disabled');
@@ -82,28 +112,90 @@ export const streamInteractWithRecipe = (
     studentInput: studentInput.slice(0, 50),
   });
 
+  const config: SSERetryConfig = {
+    ...SSE_RETRY_DEFAULTS,
+    ...retryConfig,
+  };
+
   const controller = new AbortController();
+  let retryCount = 0;
+  let endReceived = false;
+  let totalRetries = 0;
 
-  fetchEventSource('/api/recipe/interact/stream', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ sessionId, studentInput }),
-    signal: controller.signal,
-    onmessage: handlers.onMessage,
-    onerror: (error) => {
-      handlers.onError(error);
-      throw error;
-    },
-    onclose: handlers.onClose,
-  }).catch((err) => {
-    if (err.name !== 'AbortError') {
-      handlers.onError(err);
-    }
-  });
+  // Generate a unique interaction ID for deduplication across retries
+  const interactionId = crypto.randomUUID();
 
+  const connect = (): void => {
+    fetchEventSource('/api/recipe/interact/stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ sessionId, studentInput, interactionId }),
+      signal: controller.signal,
+      onmessage: (event) => {
+        if (event.event === 'end') endReceived = true;
+        handlers.onMessage(event);
+      },
+      onerror: (error) => {
+        // If aborted or end event was already received, don't retry
+        if (controller.signal.aborted || endReceived) return;
+
+        // Classify the error
+        const classification = classifySSEError(error);
+
+        if (!classification.retryable) {
+          logger.error(`[API] SSE non-retryable error (${classification.type}):`, error);
+          handlers.onError(error instanceof Error ? error : new Error(String(error)));
+          return;
+        }
+
+        if (retryCount < config.maxRetries) {
+          retryCount++;
+          totalRetries++;
+          const delay = calculateBackoffDelay(retryCount - 1, config);
+
+          logger.warn(
+            `[API] SSE ${classification.type} error, retry ${retryCount}/${config.maxRetries} in ${delay}ms`,
+            error,
+          );
+
+          // Notify UI about retry
+          retryConfig?.onRetry?.(retryCount, config.maxRetries, delay);
+
+          // Return without throwing — fetch-event-source will retry after this delay
+          return;
+        }
+
+        // Max retries exceeded — report error and stop
+        logger.error(
+          `[API] SSE max retries (${config.maxRetries}) exceeded after ${totalRetries} total retries`,
+          error,
+        );
+        handlers.onError(error instanceof Error ? error : new Error(String(error)));
+      },
+      onclose: () => {
+        const prevRetryCount = retryCount;
+        retryCount = 0; // Reset for next connection attempt
+        if (controller.signal.aborted) {
+          handlers.onClose('aborted');
+        } else if (endReceived) {
+          handlers.onClose('completed');
+        } else if (prevRetryCount >= config.maxRetries) {
+          handlers.onClose('error');
+        } else {
+          handlers.onClose('unknown');
+        }
+      },
+    }).catch((err) => {
+      if (err.name !== 'AbortError') {
+        handlers.onError(err);
+      }
+    });
+  };
+
+  connect();
   logger.log('[API] fetchEventSource started for streaming');
 
   return controller;
@@ -134,6 +226,9 @@ export const api = {
       voiceText: data.voiceText,
       meta: data.meta,
       isRepeat: data.isRepeat,
+      resumed: data.resumed,
+      needsStart: data.needsStart,
+      staticContent: data.staticContent,
       lessonProgress: data.lessonProgress,
       contentSteps: data.contentSteps,
       recipeId: data.recipeId,
@@ -166,15 +261,52 @@ export const api = {
   },
   getMissionReport: async (sessionId: string) => {
     const { data } = await apiClient.get(`/api/gamification/mission-report/${sessionId}`);
-    return data as {
+    const MissionReportResponseSchema = z.object({
+      xpEarned: z.number(),
+      totalXP: z.number(),
+      currentLevel: z.number(),
+      levelTitle: z.string(),
+      xpToNextLevel: z.number().optional(),
+      newBadges: z.array(
+        z.object({
+          code: z.string(),
+          name: z.string(),
+          icon: z.string(),
+          xpReward: z.number().optional(),
+        }),
+      ),
+      levelUp: z
+        .object({ from: z.number(), to: z.number(), title: z.string() })
+        .nullable()
+        .optional(),
+      streakDays: z.number().optional(),
+      currentStreak: z.number().optional(),
+      accuracy: z.number().optional(),
+      conceptsMastered: z.array(z.string()),
+      clinicalDiscrepancies: z.array(DiscrepancySchema).optional().default([]),
+      pragmaticModule: PragmaticModuleSchema.optional(),
+    });
+    const parsed = MissionReportResponseSchema.parse(data);
+    const normalized = {
+      ...parsed,
+      accuracy: parsed.accuracy ?? 100,
+      currentStreak: parsed.currentStreak ?? parsed.streakDays ?? 0,
+      streakDays: parsed.streakDays ?? parsed.currentStreak ?? 0,
+    };
+    return normalized as {
       xpEarned: number;
-      accuracy: number;
-      conceptsMastered: string[];
+      totalXP: number;
       currentLevel: number;
       levelTitle: string;
-      newBadges: Array<{ code: string; name: string; icon: string }>;
-      totalXP: number;
-      currentStreak: number;
+      xpToNextLevel?: number;
+      newBadges: Array<{ code: string; name: string; icon: string; xpReward?: number }>;
+      levelUp?: { from: number; to: number; title: string } | null;
+      streakDays?: number;
+      currentStreak?: number;
+      accuracy: number;
+      conceptsMastered: string[];
+      clinicalDiscrepancies: SharedDiscrepancy[];
+      pragmaticModule?: SharedPragmaticModuleData;
     };
   },
   // ==================== Classes ====================
@@ -359,10 +491,11 @@ export const api = {
     try {
       const { data } = await apiClient.post(`/api/recipes/${recipeId}/steps`, step);
       return data as RecipeStep;
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { status?: number; data?: unknown } };
       console.error('[API addStep] Error response:', {
-        status: err.response?.status,
-        data: err.response?.data,
+        status: axiosErr.response?.status,
+        data: axiosErr.response?.data,
       });
       throw err;
     }

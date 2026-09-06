@@ -30,6 +30,7 @@ const INITIAL_STATE = {
   feedbackData: null as FeedbackData | null,
   isProcessing: false,
   questionResults: [] as QuestionResult[],
+  error: null as string | null,
 };
 
 export function useLessonState() {
@@ -77,6 +78,7 @@ export function useLessonState() {
     (val: boolean) => updateState({ isProcessing: val }),
     [updateState],
   );
+  const setError = useCallback((val: string | null) => updateState({ error: val }), [updateState]);
 
   return {
     ...state,
@@ -89,6 +91,7 @@ export function useLessonState() {
     setOptions,
     setFeedbackData,
     setIsProcessing,
+    setError,
     addQuestionResult,
     resetState,
   };

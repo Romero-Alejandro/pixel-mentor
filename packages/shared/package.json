@@ -31,6 +31,7 @@
     "./schemas/evaluation/question": "./src/schemas/evaluation/question.schema.ts",
     "./schemas/session": "./src/schemas/session/index.ts",
     "./schemas/session/session": "./src/schemas/session/session.schema.ts",
+    "./schemas/clinical": "./src/schemas/clinical/index.ts",
     "./schemas/validation": "./src/schemas/validation.schema.ts"
   },
   "scripts": {

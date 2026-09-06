@@ -67,6 +67,13 @@ export class TokenInvalidError extends AuthError {
   }
 }
 
+export class RefreshTokenRevokedError extends AuthError {
+  constructor() {
+    super('Refresh token has been revoked', 'TOKEN_REVOKED');
+    this.name = 'RefreshTokenRevokedError';
+  }
+}
+
 export class ValidationError extends AuthError {
   readonly details?: unknown;
 
