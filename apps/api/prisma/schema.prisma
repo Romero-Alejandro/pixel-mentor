@@ -765,6 +765,10 @@ model Class {
   status  ClassStatus @default(DRAFT)
   version Int         @default(0)
 
+  // Target audience (children)
+  targetAgeMin Int? @db.SmallInt
+  targetAgeMax Int? @db.SmallInt
+
   // Lessons in the current draft
   lessons ClassLesson[]
 
@@ -773,6 +777,7 @@ model Class {
 
   @@index([tutorId])
   @@index([status])
+  @@index([status, tutorId])
   @@map("classes")
 }
 
@@ -811,6 +816,10 @@ model ClassVersion {
   description String?
   slug        String      @db.VarChar(255)
   status      ClassStatus @default(PUBLISHED)
+
+  // Target audience snapshot
+  targetAgeMin Int? @db.SmallInt
+  targetAgeMax Int? @db.SmallInt
 
   // Lessons snapshot for this version
   lessons ClassVersionLesson[]
