@@ -66,6 +66,8 @@ export const ClassSchema = z.object({
   currentVersionId: z.string().nullable().optional(),
   status: ClassStatusSchema,
   version: z.number(),
+  targetAgeMin: z.number().nullable().optional(),
+  targetAgeMax: z.number().nullable().optional(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
   lessons: z.array(ClassLessonSchema).optional(),
@@ -76,6 +78,8 @@ export const ClassSchema = z.object({
 export const ClassCreateSchema = z.object({
   title: z.string().min(1).max(255),
   description: z.string().optional(),
+  targetAgeMin: z.number().int().min(3).max(18).optional(),
+  targetAgeMax: z.number().int().min(3).max(18).optional(),
   classTemplateId: z.string().optional(),
   lessons: z.array(ClassLessonCreateSchema).optional(),
 });
@@ -83,6 +87,8 @@ export const ClassCreateSchema = z.object({
 export const ClassUpdateSchema = z.object({
   title: z.string().min(1).max(255).optional(),
   description: z.string().optional(),
+  targetAgeMin: z.number().int().min(3).max(18).nullable().optional(),
+  targetAgeMax: z.number().int().min(3).max(18).nullable().optional(),
   classTemplateId: z.string().optional(),
   status: ClassStatusSchema.optional(),
   lessons: z.array(ClassLessonCreateSchema).optional(),
@@ -201,6 +207,9 @@ export const GenerateClassDraftOutputSchema = z.object({
     errors: z.array(z.string()),
     warnings: z.array(z.string()),
   }),
+  // Echoed back so the client can create the class with the requested audience
+  targetAgeMin: z.number().optional(),
+  targetAgeMax: z.number().optional(),
 });
 
 export type GenerateClassDraftInput = z.infer<typeof GenerateClassDraftInputSchema>;

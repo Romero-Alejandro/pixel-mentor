@@ -3,7 +3,7 @@ import {
   isMCQStepType,
   isQuestionStepType,
   type ActivityScript,
-} from '../mcq-evaluation.service';
+} from '@/features/recipe/application/services/mcq-evaluation.service.js';
 
 // Mock logger
 jest.mock('@/shared/logger/logger.js', () => ({

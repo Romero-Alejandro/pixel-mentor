@@ -11,6 +11,8 @@ import { buildClassContainer } from '@/features/class/infrastructure/di/class.co
 import { buildEvaluationContainer } from '@/features/evaluation/infrastructure/di/evaluation.container.js';
 import { buildTTSContainer } from '@/features/tts/infrastructure/di/tts.container.js';
 import { buildPromptContainer } from '@/features/prompt/infrastructure/di/prompt.container.js';
+import { buildClinicalContainer } from '@/features/clinical/infrastructure/di/clinical.container.js';
+import { buildGroupContainer } from '@/features/group/infrastructure/di/group.container.js';
 
 import type { Config } from '@/shared/config/index.js';
 import type { AIService } from '@/features/recipe/domain/ports/ai-service.port.js';
@@ -41,6 +43,12 @@ export function buildContainer(config: Config, logger: pino.Logger, aiModel: AIS
   const evaluation = buildEvaluationContainer(aiModel);
   const tts = buildTTSContainer(config, logger);
   const prompt = buildPromptContainer(logger);
+  const clinical = buildClinicalContainer(
+    logger,
+    session.getSessionUseCase,
+    recipe.getRecipeUseCase,
+  );
+  const group = buildGroupContainer();
 
   // Return composed container with all feature containers
   return {
@@ -55,6 +63,8 @@ export function buildContainer(config: Config, logger: pino.Logger, aiModel: AIS
     evaluation,
     tts,
     prompt,
+    clinical,
+    group,
   };
 }
 
@@ -70,3 +80,5 @@ export type { ClassContainer } from '@/features/class/infrastructure/di/class.co
 export type { EvaluationContainer } from '@/features/evaluation/infrastructure/di/evaluation.container.js';
 export type { TTSContainer } from '@/features/tts/infrastructure/di/tts.container.js';
 export type { PromptContainer } from '@/features/prompt/infrastructure/di/prompt.container.js';
+export type { ClinicalContainer } from '@/features/clinical/infrastructure/di/clinical.container.js';
+export type { GroupContainer } from '@/features/group/infrastructure/di/group.container.js';

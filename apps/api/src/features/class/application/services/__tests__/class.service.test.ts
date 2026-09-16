@@ -64,6 +64,7 @@ const createMockClassRepo = (): jest.Mocked<IClassRepository> => ({
   findBySlug: jest.fn() as any,
   findByTutorId: jest.fn(),
   create: jest.fn(),
+  createWithLessons: jest.fn(),
   update: jest.fn(),
   delete: jest.fn(),
 });
@@ -84,19 +85,23 @@ const createMockVersionRepo = (): jest.Mocked<IClassVersionRepository> => ({
   findBySlug: jest.fn(),
   create: jest.fn(),
   publish: jest.fn(),
+  createPublishedVersion: jest.fn(),
+  unpublishByClassId: jest.fn(),
 });
 
 describe('ClassService', () => {
   let classRepo: jest.Mocked<IClassRepository>;
   let lessonRepo: jest.Mocked<IClassLessonRepository>;
   let versionRepo: jest.Mocked<IClassVersionRepository>;
+  let recipeRef: { findById: jest.Mock };
   let service: ClassService;
 
   beforeEach(() => {
     classRepo = createMockClassRepo();
     lessonRepo = createMockLessonRepo();
     versionRepo = createMockVersionRepo();
-    service = new ClassService(classRepo, lessonRepo as any, versionRepo);
+    recipeRef = { findById: jest.fn().mockResolvedValue({ id: 'recipe-x' }) };
+    service = new ClassService(classRepo, lessonRepo as any, versionRepo, recipeRef as any);
   });
 
   describe('createClass', () => {
@@ -138,16 +143,45 @@ describe('ClassService', () => {
       };
 
       const createdClass = createMockClassEntity({ id: 'class-1' });
-      classRepo.create.mockResolvedValue(createdClass);
+      classRepo.createWithLessons.mockResolvedValue(createdClass);
       classRepo.findById.mockResolvedValue(createdClass);
-      lessonRepo.create.mockResolvedValue(createMockLessonEntity());
       lessonRepo.findByClassId.mockResolvedValue([]);
 
       // When
       await service.createClass('tutor-1', input);
 
       // Then
-      expect(lessonRepo.create).toHaveBeenCalledTimes(2);
+      expect(classRepo.createWithLessons).toHaveBeenCalledTimes(1);
+      expect(classRepo.createWithLessons).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'New Class', tutorId: 'tutor-1', status: 'DRAFT' }),
+        [
+          { recipeId: 'recipe-1', order: 0 },
+          { recipeId: 'recipe-2', order: 1 },
+        ],
+      );
+      expect(lessonRepo.create).not.toHaveBeenCalled();
+    });
+
+    it('should persist target age range when provided', async () => {
+      // Given
+      const input: CreateClassInput = {
+        title: 'Kids Class',
+        targetAgeMin: 6,
+        targetAgeMax: 8,
+      };
+
+      const createdClass = createMockClassEntity({ id: 'class-1' });
+      classRepo.create.mockResolvedValue(createdClass);
+      classRepo.findById.mockResolvedValue(createdClass);
+      lessonRepo.findByClassId.mockResolvedValue([]);
+
+      // When
+      await service.createClass('tutor-1', input);
+
+      // Then
+      expect(classRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ targetAgeMin: 6, targetAgeMax: 8 }),
+      );
     });
   });
 
@@ -292,8 +326,17 @@ describe('ClassService', () => {
       const result = await service.publishClass(classId, 'tutor-1');
 
       // Then
-      expect(classRepo.update).toHaveBeenCalledTimes(2); // DRAFT->UNDER_REVIEW->PUBLISHED
-      expect(versionRepo.create).toHaveBeenCalled();
+      expect(versionRepo.createPublishedVersion).toHaveBeenCalledTimes(1);
+      expect(versionRepo.createPublishedVersion).toHaveBeenCalledWith(
+        expect.objectContaining({
+          classId,
+          version: '1.0.0',
+          slug: expect.any(String),
+          lessons: expect.arrayContaining([
+            expect.objectContaining({ recipeId: 'recipe-1', order: 0 }),
+          ]),
+        }),
+      );
       expect(result.status).toBe('PUBLISHED');
       expect(result.version).toBe(1);
     });
@@ -470,10 +513,8 @@ describe('ClassService', () => {
 
       classRepo.findById.mockResolvedValue(mockClass);
       lessonRepo.findByClassId.mockResolvedValue(mockLessons);
-      // Mock recipe validation
-      jest
-        .spyOn(require('@/database/client').prisma.recipe, 'findUnique')
-        .mockResolvedValue({ id: 'recipe-123' } as any);
+      // Mock recipe validation (injected port)
+      (recipeRef.findById as jest.Mock).mockResolvedValue({ id: 'recipe-123' });
       lessonRepo.update.mockResolvedValue({
         ...mockLesson,
         recipeId: 'recipe-123',
@@ -510,10 +551,8 @@ describe('ClassService', () => {
 
       classRepo.findById.mockResolvedValue(mockClass);
       lessonRepo.findByClassId.mockResolvedValue(mockLessons);
-      // Mock recipe validation
-      jest
-        .spyOn(require('@/database/client').prisma.recipe, 'findUnique')
-        .mockResolvedValue({ id: 'recipe-new' } as any);
+      // Mock recipe validation (injected port)
+      (recipeRef.findById as jest.Mock).mockResolvedValue({ id: 'recipe-new' });
       lessonRepo.update.mockResolvedValue({
         ...mockLesson,
         recipeId: 'recipe-new',

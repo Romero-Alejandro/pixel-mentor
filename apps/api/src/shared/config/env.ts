@@ -20,10 +20,7 @@ export const envSchema = z
     DEFAULT_MODEL_GROQ: z.string().default('llama-3.3-70b-versatile'),
     TTS_PROVIDER: z.enum(['google-free', 'mock']).default('google-free'),
     JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
-    JWT_REFRESH_SECRET: z
-      .string()
-      .min(32, 'JWT_REFRESH_SECRET must be at least 32 characters')
-      .optional(),
+    JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET must be at least 32 characters'),
     JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
     JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
     CORS_ORIGIN: z.string().min(1),
@@ -32,6 +29,12 @@ export const envSchema = z
     RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
     RATE_LIMIT_MAX_INTERACT: z.coerce.number().int().positive().default(5),
     REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
+    // Reverse-proxy trust expression (e.g. '1', 'loopback', '10.0.0.0/8').
+    // Required when deployed behind a TLS-terminating proxy so req.ip and the
+    // rate limiters key on the real client address instead of the proxy IP.
+    // Leave unset when the API is exposed directly (trusting X-Forwarded-For
+    // without a proxy lets clients spoof their IP).
+    TRUST_PROXY: z.string().min(1).optional(),
     ENABLE_STREAMING: z.coerce.boolean().default(false),
     USE_NEW_EVALUATOR_ENGINE: z.coerce.boolean().default(false),
 
@@ -45,6 +48,13 @@ export const envSchema = z
     // OpenRouter metadata
     OPENROUTER_APP_URL: z.string().url().default('http://localhost:3001'),
     OPENROUTER_APP_NAME: z.string().default('Pixel Mentor'),
+
+    // E2E mode: disables auth on TTS routes for automated browser testing.
+    // Strict coercion: z.coerce.boolean() would treat the string 'false' as true.
+    E2E_MODE: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((v) => v === 'true'),
   })
   .refine(
     (data) => {
@@ -57,7 +67,12 @@ export const envSchema = z
       message: 'API key is required for the selected LLM_PROVIDER',
       path: ['LLM_PROVIDER'],
     },
-  );
+  )
+  .refine((data) => !(data.NODE_ENV === 'production' && data.E2E_MODE === true), {
+    message:
+      'E2E_MODE=true is not allowed when NODE_ENV=production: it disables authentication on the TTS routes',
+    path: ['E2E_MODE'],
+  });
 
 export type Config = z.infer<typeof envSchema>;
 

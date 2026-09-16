@@ -1,9 +1,12 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import { z } from 'zod';
 
-import { requireRole } from './auth.middleware.js';
-import { clearRefreshTokenCookie, readRefreshToken, setRefreshTokenCookie } from './cookies.js';
-
+import { requireRole } from '@/features/auth/infrastructure/http/auth.middleware.js';
+import {
+  clearRefreshTokenCookie,
+  readRefreshToken,
+  setRefreshTokenCookie,
+} from '@/features/auth/infrastructure/http/cookies.js';
 import {
   type RegisterUseCase,
   type LoginUseCase,

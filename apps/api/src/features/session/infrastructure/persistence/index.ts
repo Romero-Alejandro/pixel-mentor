@@ -1,5 +1,5 @@
 // Persistence barrel
-export * from './postgres-advisory-lock.js';
-export * from './prisma-event-log.repository.js';
-export * from './prisma-interaction.repository.js';
-export * from './prisma-session.repository.js';
+export * from '@/features/session/infrastructure/persistence/postgres-advisory-lock.js';
+export * from '@/features/session/infrastructure/persistence/prisma-event-log.repository.js';
+export * from '@/features/session/infrastructure/persistence/prisma-interaction.repository.js';
+export * from '@/features/session/infrastructure/persistence/prisma-session.repository.js';

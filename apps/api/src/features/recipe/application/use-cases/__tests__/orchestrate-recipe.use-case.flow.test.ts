@@ -1,8 +1,23 @@
-import { OrchestrateRecipeUseCase } from '../orchestrate-recipe.use-case';
+import { OrchestrateRecipeUseCase } from '@/features/recipe/application/use-cases/orchestrate-recipe.use-case.js';
 import { randomUUID } from 'node:crypto';
-import type { PedagogicalState } from '@/features/evaluation/domain/entities/pedagogical-state-machine';
-import type { Session } from '@/features/session/domain/entities/session.entity'; // Corrected import for Session type
+import type { Session } from '@/features/session/domain/entities/session.entity';
 import { StepType } from '@/database/generated/client/index.js';
+
+/** Mutable Session test double (repo mocks mutate checkpoints/status in these tests). */
+type SessionDouble = { -readonly [K in keyof Session]: Session[K] };
+
+function makeSessionDouble(
+  overrides: Partial<Session> &
+    Pick<Session, 'id' | 'studentId' | 'recipeId' | 'status' | 'stateCheckpoint'>,
+): SessionDouble {
+  return {
+    startedAt: new Date('2023-01-01T10:00:00.000Z'),
+    lastActivityAt: new Date('2023-01-01T10:00:00.000Z'),
+    completedAt: null,
+    escalatedAt: null,
+    ...overrides,
+  };
+}
 
 // Mocks for dependencies
 const mockSessionRepo = {
@@ -70,6 +85,7 @@ const mockFeatureFlagService = {
 
 const mockActivityAttemptRepo = {
   findByUserIdAndAtomId: jest.fn(),
+  findByUserIdAndAtomIds: jest.fn(),
 };
 
 // Mock the logger to prevent console output during tests
@@ -276,6 +292,7 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
       improvementSuggestion: null,
     });
     mockActivityAttemptRepo.findByUserIdAndAtomId.mockResolvedValue([]);
+    mockActivityAttemptRepo.findByUserIdAndAtomIds.mockResolvedValue([]);
 
     // Mock RAG service to return empty chunks by default
     mockRagService.retrieveChunks.mockResolvedValue({ chunks: [] });
@@ -303,7 +320,7 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
       // Mock randomUUID to return testSessionId for session ID generation
       jest.spyOn(require('node:crypto'), 'randomUUID').mockReturnValue(testSessionId);
 
-      const sessionState: Session = {
+      const sessionState = makeSessionDouble({
         id: testSessionId,
         studentId: studentId,
         recipeId: recipeId,
@@ -317,7 +334,7 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
           failedAttempts: 0,
           totalWrongAnswers: 0,
         },
-      };
+      });
 
       // Mock sessionRepo.findById to return the current sessionState for this test
       mockSessionRepo.findById.mockImplementation((id: string) => {
@@ -339,7 +356,10 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
       mockSessionRepo.complete.mockImplementation((id: string) => {
         if (id === testSessionId) {
           sessionState.status = 'COMPLETED';
-          sessionState.stateCheckpoint.currentState = 'COMPLETED';
+          sessionState.stateCheckpoint = {
+            ...sessionState.stateCheckpoint,
+            currentState: 'COMPLETED',
+          };
         }
         return Promise.resolve(undefined);
       });
@@ -469,7 +489,7 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
       const testSessionId = randomUUID();
 
       // --- Session State Management for this test ---
-      const sessionState: Session = {
+      const sessionState = makeSessionDouble({
         id: testSessionId,
         studentId: studentId,
         recipeId: recipeId,
@@ -483,7 +503,7 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
           failedAttempts: 0,
           totalWrongAnswers: 0,
         },
-      };
+      });
 
       mockSessionRepo.findById.mockImplementation((id: string) => {
         if (id === testSessionId) {
@@ -612,7 +632,7 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
       const testSessionId = randomUUID();
 
       // --- Session State Management for this test ---
-      let sessionState: Session = {
+      let sessionState = makeSessionDouble({
         id: testSessionId,
         studentId: studentId,
         recipeId: recipeId,
@@ -626,7 +646,7 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
           failedAttempts: 0,
           totalWrongAnswers: 0,
         },
-      };
+      });
 
       mockSessionRepo.findById.mockImplementation((id: string) => {
         if (id === testSessionId) {
@@ -742,7 +762,7 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
       const testSessionId = randomUUID();
 
       // --- Session State Management for this test ---
-      let sessionState: Session = {
+      let sessionState = makeSessionDouble({
         id: testSessionId,
         studentId: studentId,
         recipeId: recipeId,
@@ -756,7 +776,7 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
           failedAttempts: 0,
           totalWrongAnswers: 0,
         },
-      };
+      });
 
       mockSessionRepo.findById.mockImplementation((id: string) => {
         if (id === testSessionId) {
@@ -774,7 +794,10 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
       mockSessionRepo.complete.mockImplementation((id: string) => {
         if (id === testSessionId) {
           sessionState.status = 'COMPLETED';
-          sessionState.stateCheckpoint.currentState = 'COMPLETED';
+          sessionState.stateCheckpoint = {
+            ...sessionState.stateCheckpoint,
+            currentState: 'COMPLETED',
+          };
         }
         return Promise.resolve(undefined);
       });
@@ -853,7 +876,7 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
 
     it('should correctly resume an existing active session', async () => {
       const testSessionId = randomUUID();
-      const existingSession: Session = {
+      const existingSession = makeSessionDouble({
         id: testSessionId,
         studentId: studentId,
         recipeId: recipeId,
@@ -869,7 +892,7 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
           savedStepIndex: undefined,
           doubtContext: undefined,
         },
-      };
+      });
       mockSessionRepo.findByStudentAndRecipe.mockResolvedValueOnce(existingSession);
       // Ensure findById also returns the existing session when requested by orchestrator.start
       mockSessionRepo.findById.mockImplementation((id: string) => {
@@ -886,14 +909,14 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
       // falling back to a greeting only when the step has no speakable text.
       expect(result.voiceText).toContain('This is the first content step.');
       expect(result.pedagogicalState).toBe('EXPLANATION');
-      expect(result.staticContent.stepType).toBe('content'); // Resumed step (idx 1), not steps[0]
-      expect(result.staticContent.script.content).toContain('This is the first content step.');
+      expect(result.staticContent?.stepType).toBe('content'); // Resumed step (idx 1), not steps[0]
+      expect(result.staticContent?.script?.content).toContain('This is the first content step.');
       expect(result.lessonProgress.currentStep).toBe(1);
     });
 
     it('should correctly reset and reuse a completed session', async () => {
       const testSessionId = randomUUID();
-      let completedSessionState: Session = {
+      let completedSessionState = makeSessionDouble({
         id: testSessionId,
         studentId: studentId,
         recipeId: recipeId,
@@ -909,7 +932,7 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
           savedStepIndex: undefined,
           doubtContext: undefined,
         },
-      };
+      });
       // Mock findByStudentAndRecipe to return the completed session
       mockSessionRepo.findByStudentAndRecipe.mockResolvedValueOnce(completedSessionState);
       // Ensure findById returns the completed session when requested, or the reset state later
@@ -954,7 +977,7 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
       expect(result.isRepeat).toBe(true);
       expect(result.voiceText).toContain('Hello Test Student, welcome to Test Recipe!');
       expect(result.pedagogicalState).toBe('AWAITING_START');
-      expect(result.staticContent.stepType).toBe('intro');
+      expect(result.staticContent?.stepType).toBe('intro');
       expect(result.lessonProgress.currentStep).toBe(0);
       expect(mockInteractionRepo.deleteBySession).toHaveBeenCalledWith(testSessionId);
       expect(mockSessionRepo.resetProgress).toHaveBeenCalledWith(testSessionId);
@@ -999,7 +1022,7 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
       ];
       mockRecipeRepo.findStepsByRecipeId.mockResolvedValue(nonStandardSteps);
 
-      const sessionState: Session = {
+      const sessionState = makeSessionDouble({
         id: testSessionId,
         studentId,
         recipeId,
@@ -1013,7 +1036,7 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
           failedAttempts: 0,
           totalWrongAnswers: 0,
         },
-      };
+      });
       mockSessionRepo.findById.mockImplementation((id: string) => {
         if (id === testSessionId) return Promise.resolve(sessionState);
         return Promise.resolve(null);
@@ -1043,8 +1066,8 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
       // The question step MUST be treated as ACTIVITY_WAIT, NOT as content
       // This is the critical assertion — before the fix, it would return EXPLANATION
       expect(interactResult.pedagogicalState).toBe('ACTIVITY_WAIT');
-      expect(interactResult.staticContent.stepType).toBe('question');
-      expect(interactResult.staticContent.activity).toBeDefined();
+      expect(interactResult.staticContent?.stepType).toBe('question');
+      expect(interactResult.staticContent?.activity).toBeDefined();
     });
   });
 });

@@ -1,2 +1,2 @@
 // Use cases barrel
-export * from './track-progress.use-case.js';
+export * from '@/features/progress/application/use-cases/track-progress.use-case.js';

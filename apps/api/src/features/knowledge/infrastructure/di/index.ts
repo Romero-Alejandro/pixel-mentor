@@ -1,2 +1,2 @@
 // DI barrel
-export * from './knowledge.container.js';
+export * from '@/features/knowledge/infrastructure/di/knowledge.container.js';

@@ -1,4 +1,4 @@
 // Domain entities barrel
-export * from './activity-attempt.entity.js';
-export * from './activity.entity.js';
-export * from './question-classification.entity.js';
+export * from '@/features/activity/domain/entities/activity-attempt.entity.js';
+export * from '@/features/activity/domain/entities/activity.entity.js';
+export * from '@/features/activity/domain/entities/question-classification.entity.js';

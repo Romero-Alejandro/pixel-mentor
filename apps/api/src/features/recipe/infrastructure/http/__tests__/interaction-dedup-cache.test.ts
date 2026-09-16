@@ -22,7 +22,7 @@ import {
   markFailed,
   getDedupStats,
   clearDedupCache,
-} from '../interaction-dedup-cache';
+} from '@/features/recipe/infrastructure/http/interaction-dedup-cache.js';
 
 describe('Interaction Dedup Cache', () => {
   beforeEach(() => {

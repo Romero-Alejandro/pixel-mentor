@@ -1,8 +1,8 @@
-import type { RecipeRepository } from '../../domain/ports/recipe.repository.port';
+import type { RecipeRepository } from '@/features/recipe/domain/ports/recipe.repository.port.js';
 import {
   RecipeNotFoundError,
   RecipeInactiveError,
-} from '../../domain/ports/recipe.repository.port';
+} from '@/features/recipe/domain/ports/recipe.repository.port.js';
 
 export class GetRecipeUseCase {
   constructor(private recipeRepo: RecipeRepository) {}

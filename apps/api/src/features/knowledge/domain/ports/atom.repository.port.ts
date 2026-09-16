@@ -1,5 +1,5 @@
-import type { Atom, AtomOption } from '../entities/atom.entity.js';
-import type { AtomCompetency } from '../entities/atom-competency.entity.js';
+import type { Atom, AtomOption } from '@/features/knowledge/domain/entities/atom.entity.js';
+import type { AtomCompetency } from '@/features/knowledge/domain/entities/atom-competency.entity.js';
 
 export interface AtomRepository {
   findById(id: string): Promise<Atom | null>;

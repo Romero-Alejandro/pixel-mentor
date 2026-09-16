@@ -1,2 +1,2 @@
 // Domain ports barrel
-export * from './gamification.ports.js';
+export * from '@/features/gamification/domain/ports/gamification.ports.js';

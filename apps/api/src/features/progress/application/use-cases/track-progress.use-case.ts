@@ -1,7 +1,10 @@
 import { randomUUID } from 'node:crypto';
 
-import type { ProgressRepository } from '../../domain/ports/progress.repository.port.js';
-import type { UserProgress, ProgressStatus } from '../../domain/entities/user-progress.entity.js';
+import type { ProgressRepository } from '@/features/progress/domain/ports/progress.repository.port.js';
+import type {
+  UserProgress,
+  ProgressStatus,
+} from '@/features/progress/domain/entities/user-progress.entity.js';
 
 export class TrackProgressUseCase {
   constructor(private progressRepo: ProgressRepository) {}

@@ -1,2 +1,2 @@
 // DI barrel
-export * from './progress.container.js';
+export * from '@/features/progress/infrastructure/di/progress.container.js';

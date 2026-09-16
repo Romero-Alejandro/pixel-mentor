@@ -1,4 +1,4 @@
-import type { Level } from '../entities/level.entity';
+import type { Level } from '@/features/class/domain/entities/level.entity.js';
 
 export interface LevelRepository {
   findById(id: string): Promise<Level | null>;

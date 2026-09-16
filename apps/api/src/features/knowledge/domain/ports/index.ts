@@ -1,4 +1,4 @@
 // Domain ports barrel
-export * from './atom.repository.port.js';
-export * from './concept.repository.port.js';
-export * from './knowledge-chunk.repository.port.js';
+export * from '@/features/knowledge/domain/ports/atom.repository.port.js';
+export * from '@/features/knowledge/domain/ports/concept.repository.port.js';
+export * from '@/features/knowledge/domain/ports/knowledge-chunk.repository.port.js';

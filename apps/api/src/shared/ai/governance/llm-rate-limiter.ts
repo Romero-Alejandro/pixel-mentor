@@ -1,4 +1,4 @@
-import type { RateLimitCheck } from './governance.types.js';
+import type { RateLimitCheck } from '@/shared/ai/governance/governance.types.js';
 
 /**
  * In-memory rate limiter for LLM requests per user.

@@ -54,6 +54,8 @@ export interface ClassEntity {
   readonly currentVersionId?: string;
   readonly status: ClassStatus;
   readonly version: number;
+  readonly targetAgeMin?: number;
+  readonly targetAgeMax?: number;
   readonly slug?: string;
   readonly createdAt: Date;
   readonly updatedAt: Date;
@@ -72,6 +74,8 @@ export interface ClassVersionEntity {
   readonly description?: string;
   readonly slug: string;
   readonly status: ClassStatus;
+  readonly targetAgeMin?: number;
+  readonly targetAgeMax?: number;
   readonly lessons?: readonly ClassVersionLessonEntity[];
   readonly createdAt: Date;
 }
@@ -85,6 +89,8 @@ export function createClassEntity(parameters: {
   classTemplateId?: string;
   status?: ClassStatus;
   version?: number;
+  targetAgeMin?: number;
+  targetAgeMax?: number;
   lessons?: readonly ClassLessonEntity[];
 }): ClassEntity {
   return Object.freeze({
@@ -95,6 +101,8 @@ export function createClassEntity(parameters: {
     classTemplateId: parameters.classTemplateId,
     status: parameters.status ?? 'DRAFT',
     version: parameters.version ?? 0,
+    targetAgeMin: parameters.targetAgeMin,
+    targetAgeMax: parameters.targetAgeMax,
     createdAt: new Date(),
     updatedAt: new Date(),
     lessons: parameters.lessons ?? [],
@@ -126,6 +134,8 @@ export function createClassVersionEntity(parameters: {
   slug: string;
   status?: ClassStatus;
   isPublished?: boolean;
+  targetAgeMin?: number;
+  targetAgeMax?: number;
   lessons?: readonly ClassVersionLessonEntity[];
 }): ClassVersionEntity {
   return Object.freeze({
@@ -138,6 +148,8 @@ export function createClassVersionEntity(parameters: {
     status: parameters.status ?? 'PUBLISHED',
     isPublished: parameters.isPublished ?? false,
     publishedAt: parameters.isPublished ? new Date() : undefined,
+    targetAgeMin: parameters.targetAgeMin,
+    targetAgeMax: parameters.targetAgeMax,
     lessons: parameters.lessons ?? [],
     createdAt: new Date(),
   });

@@ -1,2 +1,2 @@
 // Services barrel
-export * from './lesson.evaluator.js';
+export * from '@/features/evaluation/application/services/lesson.evaluator.js';

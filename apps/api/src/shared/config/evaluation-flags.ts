@@ -18,7 +18,7 @@
 
 import { createLogger } from '@/shared/logger/logger.js';
 import { readFileSync, existsSync } from 'node:fs';
-import { config } from './env.js';
+import { config } from '@/shared/config/env.js';
 import { resolve } from 'node:path';
 
 import { z } from 'zod';

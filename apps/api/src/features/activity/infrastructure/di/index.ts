@@ -1,2 +1,2 @@
 // DI barrel
-export * from './activity.container.js';
+export * from '@/features/activity/infrastructure/di/activity.container.js';

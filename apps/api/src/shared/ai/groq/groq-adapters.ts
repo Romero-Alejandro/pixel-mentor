@@ -1,10 +1,14 @@
 import type pino from 'pino';
 
 import OpenAI from 'openai';
-import { OpenAIBaseClientAdapter } from '../open-ai-base-adapter';
-import { AIResponseSchema, ClassificationSchema, ComprehensionSchema } from '../schemas';
-import { BaseRAGAdapter } from '../base-rag-adapter';
-import { BaseGenerativeAdapter } from '../base-llm-adapter';
+import { OpenAIBaseClientAdapter } from '@/shared/ai/open-ai-base-adapter.js';
+import {
+  AIResponseSchema,
+  ClassificationSchema,
+  ComprehensionSchema,
+} from '@/shared/ai/schemas.js';
+import { BaseRAGAdapter } from '@/shared/ai/base-rag-adapter.js';
+import { BaseGenerativeAdapter } from '@/shared/ai/base-llm-adapter.js';
 
 import type { AIService, AIResponse } from '@/features/recipe/domain/ports/ai-service.port.js';
 import type {
@@ -75,8 +79,11 @@ export class GroqAdapter extends BaseGenerativeAdapter implements AIService {
   }): Promise<{ result: 'correct' | 'partial' | 'incorrect'; confidence: number; hint?: string }> {
     return { result: 'incorrect', confidence: 0 };
   }
-  async generateAnswer(_params: any) {
-    return { answer: 'Respuesta' };
+  async generateAnswer(_params: any): Promise<{ answer: string }> {
+    // Stub: real Groq answer generation goes through generateResponse above.
+    // Throwing (instead of returning a fake answer) so callers fail loudly
+    // rather than silently showing placeholder content to students.
+    throw new Error('GroqAdapter.generateAnswer is not implemented');
   }
 }
 

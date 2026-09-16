@@ -1,8 +1,18 @@
-import { prisma } from '@/database/client.js';
+import { prisma, Prisma } from '@/database/client.js';
 import type { RefreshToken } from '@/features/auth/domain/entities/refresh-token.entity';
 import type { IRefreshTokenRepository } from '@/features/auth/domain/ports/refresh-token.repository.port.js';
 
-const mapToDomain = (entity: any): RefreshToken => {
+interface RefreshTokenRow {
+  id: string;
+  userId: string;
+  tokenHash: string;
+  expiresAt: Date;
+  revoked: boolean;
+  revokedAt: Date | null;
+  createdAt: Date;
+}
+
+const mapToDomain = (entity: RefreshTokenRow): RefreshToken => {
   return {
     id: entity.id,
     userId: entity.userId,
@@ -31,18 +41,16 @@ export class PrismaRefreshTokenRepository implements IRefreshTokenRepository {
   }
 
   async findByTokenHash(tokenHash: string): Promise<RefreshToken | null> {
-    const token = await prisma.refreshToken.findUnique({
-      where: { tokenHash },
-    });
-    return token ? mapToDomain(token) : null;
+    const found = await prisma.refreshToken.findUnique({ where: { tokenHash } });
+    return found ? mapToDomain(found) : null;
   }
 
   async findByUserId(userId: string): Promise<RefreshToken | null> {
-    const token = await prisma.refreshToken.findFirst({
-      where: { userId, revoked: false },
+    const found = await prisma.refreshToken.findFirst({
+      where: { userId },
       orderBy: { createdAt: 'desc' },
     });
-    return token ? mapToDomain(token) : null;
+    return found ? mapToDomain(found) : null;
   }
 
   async revoke(tokenId: string): Promise<RefreshToken> {
@@ -56,15 +64,10 @@ export class PrismaRefreshTokenRepository implements IRefreshTokenRepository {
   async delete(tokenId: string): Promise<void> {
     try {
       await prisma.refreshToken.delete({ where: { id: tokenId } });
-    } catch (error) {
-      // handlePrismaError doesn't exist yet, but let's assume it would be a generic helper
-      // For now, we can ignore not-found errors on delete.
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'code' in error &&
-        (error as any).code === 'P2025'
-      ) {
+    } catch (error: unknown) {
+      // Deleting an already-removed token is idempotent: P2025 (record not
+      // found) is swallowed, any other failure surfaces.
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
         return;
       }
       throw error;
@@ -72,8 +75,6 @@ export class PrismaRefreshTokenRepository implements IRefreshTokenRepository {
   }
 
   async deleteByUserId(userId: string): Promise<void> {
-    await prisma.refreshToken.deleteMany({
-      where: { userId },
-    });
+    await prisma.refreshToken.deleteMany({ where: { userId } });
   }
 }

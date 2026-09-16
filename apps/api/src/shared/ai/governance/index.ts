@@ -1,15 +1,15 @@
 // LLM Governance - Centralized cost protection and security
-export { LLMGovernanceEngine } from './llm-governance-engine.js';
-export { QuotaService } from './quota-service.js';
-export { LLMRateLimiter } from './llm-rate-limiter.js';
-export { PromptValidator } from './prompt-validator.js';
-export { BudgetGuard } from './budget-guard.js';
+export { LLMGovernanceEngine } from '@/shared/ai/governance/llm-governance-engine.js';
+export { QuotaService } from '@/shared/ai/governance/quota-service.js';
+export { LLMRateLimiter } from '@/shared/ai/governance/llm-rate-limiter.js';
+export { PromptValidator } from '@/shared/ai/governance/prompt-validator.js';
+export { BudgetGuard } from '@/shared/ai/governance/budget-guard.js';
 export {
   estimateTokens,
   estimateTokenUsage,
   estimateCost,
   estimateCostFromText,
-} from './token-tracker.js';
+} from '@/shared/ai/governance/token-tracker.js';
 
 export type {
   TokenUsage,
@@ -22,6 +22,6 @@ export type {
   PromptValidationResult,
   ProviderPricing,
   GovernanceConfig,
-} from './governance.types.js';
+} from '@/shared/ai/governance/governance.types.js';
 
-export { DEFAULT_GOVERNANCE_CONFIG } from './governance.types.js';
+export { DEFAULT_GOVERNANCE_CONFIG } from '@/shared/ai/governance/governance.types.js';

@@ -1,2 +1,2 @@
 // DTOs barrel
-export * from './evaluation.schemas.js';
+export * from '@/features/evaluation/application/dtos/evaluation.schemas.js';

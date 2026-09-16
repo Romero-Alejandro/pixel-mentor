@@ -1,4 +1,4 @@
-import type { Activity } from '../entities/activity.entity.js';
+import type { Activity } from '@/features/activity/domain/entities/activity.entity.js';
 
 export interface ActivityRepository {
   findById(id: string): Promise<Activity | null>;

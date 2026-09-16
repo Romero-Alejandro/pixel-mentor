@@ -5,6 +5,9 @@ export {
   getCircuitBreaker,
   resetAllCircuitBreakers,
   getAllCircuitBreakerMetrics,
-} from './circuit-breaker.js';
+} from '@/shared/resilience/circuit-breaker.js';
 
-export type { CircuitBreakerOptions, CircuitBreakerMetrics } from './circuit-breaker.js';
+export type {
+  CircuitBreakerOptions,
+  CircuitBreakerMetrics,
+} from '@/shared/resilience/circuit-breaker.js';

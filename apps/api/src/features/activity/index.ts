@@ -1,5 +1,5 @@
 // Activity Feature - Main exports
-export * from './domain/entities/index.js';
-export * from './domain/ports/index.js';
-export * from './application/use-cases/index.js';
-export * from './infrastructure/persistence/index.js';
+export * from '@/features/activity/domain/entities/index.js';
+export * from '@/features/activity/domain/ports/index.js';
+export * from '@/features/activity/application/use-cases/index.js';
+export * from '@/features/activity/infrastructure/persistence/index.js';

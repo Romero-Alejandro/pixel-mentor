@@ -1,12 +1,12 @@
 // Session feature exports
 // Domain
-export * from './domain/entities/index.js';
-export * from './domain/ports/index.js';
+export * from '@/features/session/domain/entities/index.js';
+export * from '@/features/session/domain/ports/index.js';
 
 // Application
-export * from './application/use-cases/index.js';
-export * from './application/services/index.js';
+export * from '@/features/session/application/use-cases/index.js';
+export * from '@/features/session/application/services/index.js';
 
 // Infrastructure
-export * from './infrastructure/persistence/index.js';
-export * from './infrastructure/http/index.js';
+export * from '@/features/session/infrastructure/persistence/index.js';
+export * from '@/features/session/infrastructure/http/index.js';

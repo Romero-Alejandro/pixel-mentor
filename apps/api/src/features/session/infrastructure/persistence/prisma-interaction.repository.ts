@@ -1,22 +1,27 @@
 import { prisma } from '@/database/client';
+import { toPrismaJsonOrUndefined } from '@/shared/utils/prisma-json';
 import type { Interaction } from '@/features/session/domain/entities/interaction.entity';
 import type { AIResponse } from '@/features/recipe/domain/ports/ai-service.port';
 import type { InteractionRepository } from '@/features/session/domain/ports/interaction.repository.port';
 
+/** Row shape returned by the generated Interaction delegate. */
+type InteractionRow =
+  ReturnType<typeof prisma.interaction.findUniqueOrThrow> extends Promise<infer R> ? R : never;
+
 export class PrismaInteractionRepository implements InteractionRepository {
-  private mapToDomain(prismaEntity: Record<string, unknown>): Interaction {
+  private mapToDomain(prismaEntity: InteractionRow): Interaction {
     return {
-      id: prismaEntity.id as string,
-      sessionId: prismaEntity.sessionId as string,
-      turnNumber: prismaEntity.turnNumber as number,
-      transcript: prismaEntity.transcript as string,
-      aiResponse: prismaEntity.aiResponse,
-      comprehensionConfirmed: prismaEntity.comprehensionConfirmed as boolean,
-      questionAsked: prismaEntity.questionAsked as boolean,
-      pausedForQuestion: prismaEntity.pausedForQuestion as boolean,
-      flaggedForReview: prismaEntity.flaggedForReview as boolean,
-      createdAt: prismaEntity.createdAt as Date,
-      updatedAt: prismaEntity.updatedAt as Date,
+      id: prismaEntity.id,
+      sessionId: prismaEntity.sessionId,
+      turnNumber: prismaEntity.turnNumber,
+      transcript: prismaEntity.transcript,
+      aiResponse: prismaEntity.aiResponse ?? undefined,
+      comprehensionConfirmed: prismaEntity.comprehensionConfirmed,
+      questionAsked: prismaEntity.questionAsked,
+      pausedForQuestion: prismaEntity.pausedForQuestion,
+      flaggedForReview: prismaEntity.flaggedForReview,
+      createdAt: prismaEntity.createdAt,
+      updatedAt: prismaEntity.updatedAt,
     };
   }
 
@@ -52,14 +57,14 @@ export class PrismaInteractionRepository implements InteractionRepository {
       },
       update: {
         transcript: interaction.transcript,
-        aiResponse: interaction.aiResponse as never,
+        aiResponse: toPrismaJsonOrUndefined(interaction.aiResponse, 'interaction.aiResponse'),
         pausedForQuestion: interaction.pausedForQuestion,
       },
       create: {
         sessionId: interaction.sessionId,
         turnNumber: interaction.turnNumber,
         transcript: interaction.transcript,
-        aiResponse: interaction.aiResponse as never,
+        aiResponse: toPrismaJsonOrUndefined(interaction.aiResponse, 'interaction.aiResponse'),
         comprehensionConfirmed: false,
         questionAsked: false,
         pausedForQuestion: interaction.pausedForQuestion ?? false,
@@ -72,7 +77,7 @@ export class PrismaInteractionRepository implements InteractionRepository {
   async addAIResponse(interactionId: string, aiResponse: AIResponse): Promise<Interaction> {
     const updated = await prisma.interaction.update({
       where: { id: interactionId },
-      data: { aiResponse: aiResponse as never },
+      data: { aiResponse: toPrismaJsonOrUndefined(aiResponse, 'aiResponse.aiResponse') },
     });
     return this.mapToDomain(updated);
   }

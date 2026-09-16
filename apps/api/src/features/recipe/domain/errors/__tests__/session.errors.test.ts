@@ -17,7 +17,7 @@ import {
   getUserErrorMessage,
   getErrorCode,
   SESSION_ERROR_CODES,
-} from '../session.errors';
+} from '@/features/recipe/domain/errors/session.errors.js';
 
 describe('Session Errors', () => {
   describe('SessionError (base)', () => {
@@ -204,7 +204,7 @@ describe('Session Errors', () => {
 
     it('should return connection message for network errors', () => {
       const error = new Error('Network error');
-      expect(getUserErrorMessage(error)).toBe('Ocurrio un error inesperado. Intenta de nuevo.');
+      expect(getUserErrorMessage(error)).toBe('Error de conexion. Verifica tu internet.');
     });
 
     it('should handle non-Error values', () => {

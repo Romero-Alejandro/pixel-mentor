@@ -25,10 +25,10 @@ export {
   validateOrThrow,
   assertDefined,
   assertValidUUID,
-} from './entity-validators.js';
+} from '@/shared/validators/entity-validators.js';
 
 export type {
   ValidatedSessionStatus,
   ValidatedSessionCheckpoint,
   ValidatedClassStatus,
-} from './entity-validators.js';
+} from '@/shared/validators/entity-validators.js';

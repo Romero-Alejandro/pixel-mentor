@@ -1,8 +1,8 @@
 // Class Feature - Main export
 
 // Domain
-export * from './domain/entities';
-export * from './domain/ports';
+export * from '@/features/class/domain/entities/index.js';
+export * from '@/features/class/domain/ports/index.js';
 
 // Application Services
-export * from './application/services';
+export * from '@/features/class/application/services/index.js';

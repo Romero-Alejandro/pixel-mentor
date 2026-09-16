@@ -1,2 +1,2 @@
 // DI barrel
-export * from './class.container.js';
+export * from '@/features/class/infrastructure/di/class.container.js';

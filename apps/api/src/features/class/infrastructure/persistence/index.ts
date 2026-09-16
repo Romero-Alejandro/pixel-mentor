@@ -1,5 +1,5 @@
 // Persistence barrel
-export * from './prisma-class-lesson.repository.js';
-export * from './prisma-class.repository.js';
-export * from './prisma-class-template.repository.js';
-export * from './prisma-class-version.repository.js';
+export * from '@/features/class/infrastructure/persistence/prisma-class-lesson.repository.js';
+export * from '@/features/class/infrastructure/persistence/prisma-class.repository.js';
+export * from '@/features/class/infrastructure/persistence/prisma-class-template.repository.js';
+export * from '@/features/class/infrastructure/persistence/prisma-class-version.repository.js';

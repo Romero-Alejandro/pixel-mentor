@@ -1,9 +1,12 @@
-import type { RecipeRepository } from '../../domain/ports/recipe.repository.port.js';
+import type { RecipeRepository } from '@/features/recipe/domain/ports/recipe.repository.port.js';
 import type { AtomRepository } from '@/features/knowledge/domain/ports/atom.repository.port.js';
 import { RecipeNotFoundError, RecipeOwnershipError } from '@/shared/errors/domain-errors.js';
-import type { RecipeStep, StepType } from '../../domain/entities/recipe.entity.js';
-import { CanonicalId } from '../../domain/valueObjects/canonical-id.vo.js';
+import type { RecipeStep, StepType } from '@/features/recipe/domain/entities/recipe.entity.js';
+import { CanonicalId } from '@/features/recipe/domain/value-objects/canonical-id.vo.js';
 import { AtomType } from '@/features/knowledge/domain/entities/atom.entity.js';
+import { moduleLogger } from '@/shared/logger/logger.js';
+
+const logger = moduleLogger('recipe:add-step');
 
 export interface AddStepInput {
   atomId?: string;
@@ -25,9 +28,8 @@ export class AddStepUseCase {
   ) {}
 
   async execute(recipeId: string, stepData: AddStepInput, userId: string): Promise<RecipeStep> {
-    console.log('[AddStepUseCase] Step 1: Starting execute for recipe:', recipeId);
+    logger.debug({ recipeId, userId }, 'AddStep starting');
     const recipe = await this.recipeRepository.findById(recipeId);
-    console.log('[AddStepUseCase] Step 2: Recipe found:', recipe ? 'yes' : 'no');
     if (!recipe) {
       throw new RecipeNotFoundError(recipeId);
     }
@@ -36,29 +38,16 @@ export class AddStepUseCase {
       throw new RecipeOwnershipError(recipeId, userId);
     }
 
-    console.log('[AddStepUseCase] Step 3: Checking existing steps');
     const existingSteps = await this.recipeRepository.findStepsByRecipeId(recipeId);
     const maxOrder = existingSteps.length > 0 ? Math.max(...existingSteps.map((s) => s.order)) : -1;
-    console.log('[AddStepUseCase] Step 4: maxOrder:', maxOrder);
 
-    console.log(
-      '[AddStepUseCase] Step 5: Creating atom for stepType:',
-      stepData.stepType || 'content',
-    );
     const atomId = await this.ensureAtomForStep(
       stepData.stepType || 'content',
       stepData.script,
       stepData.activity,
       stepData.question,
     );
-    console.log('[AddStepUseCase] Step 6: Atom created with id:', atomId);
 
-    console.log(
-      '[AddStepUseCase] Step 7: Creating step with atomId:',
-      atomId,
-      'order:',
-      stepData.order ?? maxOrder + 1,
-    );
     const step = await this.recipeRepository.createStep({
       id: crypto.randomUUID(),
       recipeId,
@@ -73,7 +62,7 @@ export class AddStepUseCase {
       question: stepData.question,
       stepType: stepData.stepType || 'content',
     });
-    console.log('[AddStepUseCase] Step 8: Step created successfully:', step.id);
+    logger.debug({ stepId: step.id, recipeId }, 'Step created');
 
     return step;
   }
@@ -155,7 +144,7 @@ export class AddStepUseCase {
 
       return newAtom.id;
     } catch (err) {
-      console.error('[AddStepUseCase] Error creating atom:', err);
+      logger.error({ err }, 'Atom creation failed');
       throw err;
     }
   }

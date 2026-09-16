@@ -51,6 +51,25 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
+/**
+ * ⚠️ PLACEHOLDER / SIMULACIÓN — NO constituye una evaluación clínica real.
+ *
+ * Los 7 puntajes de escala (ILR, ILE, ICL, IEL, IMT, IVP, ICV) no miden
+ * desempeño del estudiante: se derivan de un hash determinista de
+ * (sessionId, userId) pasado por un RNG (mulberry32), con un ajuste cosmético
+ * de -2 por intento fallido y recortes a rangos fijos. Las discrepancias y el
+ * módulo pragmático aplican umbrales reales (valores críticos .05/.15) sobre
+ * esos números fabricados — la significancia estadística es rigurosa, los
+ * datos de entrada no.
+ *
+ * Contrato: todo consumidor DEBE exponer `clinicalReportSimulated: true` en
+ * el payload (ver MissionReport en gamification.routes.ts) y la UI debe
+ * mostrar el aviso de simulación (MissionReportPage).
+ *
+ * Reemplazo real (pendiente de decisión de producto): derivar cada escala de
+ * activity_attempts / event_logs (accuracy por tipo de atom, intentos, uso de
+ * pistas, tiempos) con validación clínica de las fórmulas.
+ */
 export class ClinicalCalculatorService {
   calculate(session: Session, _recipe: Recipe, userId: string): ClinicalReport {
     const failedAttempts = session.failedAttempts ?? session.stateCheckpoint.failedAttempts ?? 0;
@@ -69,7 +88,7 @@ export class ClinicalCalculatorService {
       const adjusted = base - failedAttempts * 2;
       const clamped = clamp(Math.round(adjusted), 40, 85);
       const withRange = clamp(clamped, 45, 80);
-      const finalScore = (() => {
+      const finalScore = ((): number => {
         const altRand = mulberry32(labelHash + 7919)();
         const wideBase = 45 + altRand * 35 - failedAttempts * 2;
         const blended = Math.round((clamped + Math.round(wideBase)) / 2);

@@ -1,4 +1,3 @@
-import { cosineSimilarity } from '@/shared/utils/ai-utils.js';
 import type { RAGService } from '@/features/recipe/domain/ports/rag-service.port.js';
 import { RAG_CONFIG } from '@/features/recipe/domain/ports/rag-service.port.js';
 import type { KnowledgeChunk } from '@/features/knowledge/domain/entities/knowledge-chunk.entity.js';
@@ -22,24 +21,22 @@ export abstract class BaseRAGAdapter implements RAGService {
     const embedding = query.queryEmbedding ?? (await this.generateEmbedding(query.queryText ?? ''));
     const k = query.k ?? RAG_CONFIG.DEFAULT_K;
 
-    const rawChunks = await this.knowledgeChunkRepository.findRelevantChunks(
+    // Server-side vector search: ranking, similarity threshold and limit all
+    // happen in Postgres (pgvector `<=>`). This replaces the previous flow that
+    // re-scored every chunk in JS after the repository already did.
+    const retrieved = await this.knowledgeChunkRepository.searchRelevantChunks(
       query.atomId,
       embedding,
       k,
+      RAG_CONFIG.MIN_SIMILARITY_SCORE,
     );
 
-    const retrieved = rawChunks
-      .filter((item) => item.chunk.embedding)
-      .map((item) => ({
-        chunk: item.chunk,
-        similarityScore: cosineSimilarity(embedding, item.chunk.embedding!),
-        citations: [],
-      }))
-      .filter((item) => item.similarityScore >= RAG_CONFIG.MIN_SIMILARITY_SCORE)
-      .sort((a, b) => b.similarityScore - a.similarityScore);
-
     return {
-      chunks: retrieved,
+      chunks: retrieved.map((item) => ({
+        chunk: item.chunk,
+        similarityScore: item.similarityScore,
+        citations: [],
+      })),
       totalAvailable: retrieved.length,
       retrievalMethod: 'embedding',
     };

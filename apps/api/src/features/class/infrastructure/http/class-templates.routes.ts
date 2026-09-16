@@ -237,8 +237,8 @@ export function createClassTemplateRouter(deps: ClassTemplateRouterDependencies)
         };
       }
 
-      const result = await classTemplateService.createClassFromTemplate(id, tutorId, input);
-      res.status(201).json({ classId: result.classId, title: result.title });
+      const createdClass = await classTemplateService.createClassFromTemplate(id, tutorId, input);
+      res.status(201).json(createdClass);
     } catch (error) {
       if (error instanceof z.ZodError) {
         res.status(400).json({ error: 'Validation error', details: error.issues });

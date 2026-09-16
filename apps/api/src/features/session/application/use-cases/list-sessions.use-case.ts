@@ -1,4 +1,4 @@
-import type { SessionRepository } from '../../domain/ports/session.repository.port';
+import type { SessionRepository } from '@/features/session/domain/ports/session.repository.port.js';
 
 export class ListSessionsUseCase {
   constructor(private sessionRepo: SessionRepository) {}

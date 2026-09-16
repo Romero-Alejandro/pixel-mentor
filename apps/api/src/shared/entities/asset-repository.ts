@@ -1,4 +1,4 @@
-import type { Asset } from '../entities/asset';
+import type { Asset } from '@/shared/entities/asset.js';
 
 export interface AssetRepository {
   findById(id: string): Promise<Asset | null>;

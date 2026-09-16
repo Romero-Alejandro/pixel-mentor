@@ -68,7 +68,7 @@ describe('AI Recipe SSE Endpoint', () => {
 
 describe('Progress Calculation', () => {
   // Match the logic in recipe-ai.service.ts
-  const calculateProgress = (stepIndex, totalSteps) => {
+  const calculateProgress = (stepIndex: number, totalSteps: number) => {
     return 50 + Math.round(((stepIndex + 1) / totalSteps) * 40);
   };
 
@@ -268,7 +268,7 @@ describe('GeneratedStepSchema', () => {
 });
 
 describe('SSE Response Format', () => {
-  const formatSSEEvent = (event, data) => {
+  const formatSSEEvent = (event: string, data: unknown) => {
     return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
   };
 

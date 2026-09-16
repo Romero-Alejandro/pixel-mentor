@@ -1,8 +1,11 @@
-import type { BadgeProgress, BadgeRequirementType } from '../../domain/entities/badge.types';
+import type {
+  BadgeProgress,
+  BadgeRequirementType,
+} from '@/features/gamification/domain/entities/badge.types.js';
 import type {
   IBadgeRepository,
   IUserGamificationRepository,
-} from '../../domain/ports/gamification.ports';
+} from '@/features/gamification/domain/ports/gamification.ports.js';
 import type { ProgressRepository } from '@/features/progress/domain/ports/progress.repository.port';
 import type { ActivityAttemptRepository } from '@/features/activity/domain/ports/activity-attempt.repository.port';
 

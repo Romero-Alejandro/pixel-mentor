@@ -1,4 +1,4 @@
-import type { UserProgress } from '../entities/user-progress.entity.js';
+import type { UserProgress } from '@/features/progress/domain/entities/user-progress.entity.js';
 
 export interface ProgressRepository {
   findByUserId(userId: string): Promise<UserProgress[]>;

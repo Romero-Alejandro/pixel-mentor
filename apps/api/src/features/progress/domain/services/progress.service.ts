@@ -1,5 +1,5 @@
-import type { ProgressRepository } from '../ports/progress.repository.port.js';
-import type { UserProgress } from '../entities/user-progress.entity.js';
+import type { ProgressRepository } from '@/features/progress/domain/ports/progress.repository.port.js';
+import type { UserProgress } from '@/features/progress/domain/entities/user-progress.entity.js';
 
 export class ProgressService {
   constructor(private progressRepo: ProgressRepository) {}

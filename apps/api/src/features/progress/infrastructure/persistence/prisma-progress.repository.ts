@@ -1,7 +1,36 @@
-import type { UserProgress } from '../../domain/entities/user-progress.entity.js';
-import type { ProgressRepository } from '../../domain/ports/progress.repository.port.js';
-
+import type {
+  UserProgress,
+  ProgressStatus,
+} from '@/features/progress/domain/entities/user-progress.entity.js';
+import type { ProgressRepository } from '@/features/progress/domain/ports/progress.repository.port.js';
 import { prisma } from '@/database/client.js';
+
+/** Row shape returned by the generated UserProgress delegate. */
+type UserProgressRow =
+  ReturnType<typeof prisma.userProgress.findUniqueOrThrow> extends Promise<infer R> ? R : never;
+
+const PROGRESS_STATUSES: readonly ProgressStatus[] = [
+  'LOCKED',
+  'UNLOCKED',
+  'IN_PROGRESS',
+  'MASTERED',
+  'NEEDS_REMEDIATION',
+  'FAILED',
+];
+
+function isProgressStatus(value: string): value is ProgressStatus {
+  return (PROGRESS_STATUSES as readonly string[]).includes(value);
+}
+
+/**
+ * Converts an unknown status into a domain-valid one.
+ * The domain union and the Prisma enum share the same members, so valid
+ * values map 1:1; unknown values throw instead of silently persisting.
+ */
+function assertProgressStatus(value: string): ProgressStatus {
+  if (isProgressStatus(value)) return value;
+  throw new Error(`Unknown progress status: ${value}`);
+}
 
 export class PrismaProgressRepository implements ProgressRepository {
   async findByUserId(userId: string): Promise<UserProgress[]> {
@@ -104,7 +133,7 @@ export class PrismaProgressRepository implements ProgressRepository {
 
   async countByUserIdAndStatus(userId: string, statuses: string[]): Promise<number> {
     return prisma.userProgress.count({
-      where: { userId, status: { in: statuses as any } },
+      where: { userId, status: { in: statuses.map(assertProgressStatus) } },
     });
   }
 
@@ -135,11 +164,12 @@ export class PrismaProgressRepository implements ProgressRepository {
       where: { userId, recipeId },
     });
 
+    const validatedStatus = assertProgressStatus(status);
     if (existing) {
       if (existing.status !== status) {
         const raw = await prisma.userProgress.update({
           where: { id: existing.id },
-          data: { status: status as any, attempts: { increment: 1 }, lastAttemptAt: new Date() },
+          data: { status: validatedStatus, attempts: { increment: 1 }, lastAttemptAt: new Date() },
         });
         return this.mapProgress(raw);
       }
@@ -147,21 +177,21 @@ export class PrismaProgressRepository implements ProgressRepository {
     }
 
     const raw = await prisma.userProgress.create({
-      data: { userId, recipeId, status: status as any, attempts: 1, lastAttemptAt: new Date() },
+      data: { userId, recipeId, status: validatedStatus, attempts: 1, lastAttemptAt: new Date() },
     });
     return this.mapProgress(raw);
   }
 
-  private mapProgress(raw: any): UserProgress {
+  private mapProgress(raw: UserProgressRow): UserProgress {
     return {
       id: raw.id,
       userId: raw.userId,
-      recipeId: raw.recipeId,
-      atomId: raw.atomId,
-      status: raw.status,
-      score: raw.score,
+      recipeId: raw.recipeId ?? undefined,
+      atomId: raw.atomId ?? undefined,
+      status: assertProgressStatus(raw.status),
+      score: raw.score ?? undefined,
       attempts: raw.attempts,
-      lastAttemptAt: raw.lastAttemptAt,
+      lastAttemptAt: raw.lastAttemptAt ?? undefined,
       updatedAt: raw.updatedAt,
     };
   }

@@ -1,3 +1,3 @@
 // Persistence barrel
-export * from './prisma-activity-attempt.repository.js';
-export * from './prisma-activity.repository.js';
+export * from '@/features/activity/infrastructure/persistence/prisma-activity-attempt.repository.js';
+export * from '@/features/activity/infrastructure/persistence/prisma-activity.repository.js';

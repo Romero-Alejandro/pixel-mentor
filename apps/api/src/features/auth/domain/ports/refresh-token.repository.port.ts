@@ -1,4 +1,4 @@
-import type { RefreshToken } from '../entities/refresh-token.entity';
+import type { RefreshToken } from '@/features/auth/domain/entities/refresh-token.entity.js';
 
 export interface IRefreshTokenRepository {
   create(token: { userId: string; tokenHash: string; expiresAt: Date }): Promise<RefreshToken>;

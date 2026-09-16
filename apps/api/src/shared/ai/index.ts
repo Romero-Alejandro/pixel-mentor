@@ -6,14 +6,14 @@ export {
   resetAIServices,
   type IAIServiceProvider,
   type ProviderHealthStatus,
-} from './ai-service.provider.js';
+} from '@/shared/ai/ai-service.provider.js';
 
 // AI Adapter Factory - For creating provider-specific adapters
 export {
   AIAdapterFactory,
   type AIAdapterFactoryOptions,
   type AIAdapterInstances,
-} from './ai-adapter-factory.js';
+} from '@/shared/ai/ai-adapter-factory.js';
 
 // Client interface and error types
 export {
@@ -21,10 +21,10 @@ export {
   type LLMErrorCode,
   type LLMExecutionOptions,
   type ILLMClient,
-} from './client.interface.js';
+} from '@/shared/ai/client.interface.js';
 
 // Base adapters
-export { BaseLLMAdapter, BaseGenerativeAdapter } from './base-llm-adapter.js';
+export { BaseLLMAdapter, BaseGenerativeAdapter } from '@/shared/ai/base-llm-adapter.js';
 
 // Resilient adapters
 export {
@@ -32,7 +32,7 @@ export {
   ResilientClassifierAdapter,
   ResilientEvaluatorAdapter,
   ResilientRAGAdapter,
-} from './resilient-ai-adapter.js';
+} from '@/shared/ai/resilient-ai-adapter.js';
 
 // Schemas
-export * from './schemas.js';
+export * from '@/shared/ai/schemas.js';

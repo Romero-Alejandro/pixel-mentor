@@ -17,7 +17,7 @@ const router = Router();
  * GET /health - Full health check
  * Returns detailed status of all dependencies
  */
-router.get('/', async (_req: any, res: Response): Promise<void> => {
+router.get('/', async (_req: unknown, res: Response): Promise<void> => {
   const healthCheck = getHealthCheckService();
   const result = await healthCheck.check();
 
@@ -35,7 +35,7 @@ router.get('/', async (_req: any, res: Response): Promise<void> => {
  * Always returns 200 if the process is running
  * Used by orchestrators (K8s, ECS) to know if container should be restarted
  */
-router.get('/live', (_req: any, res: Response): void => {
+router.get('/live', (_req: unknown, res: Response): void => {
   res.status(200).json({ status: 'alive', timestamp: new Date().toISOString() });
 });
 
@@ -44,7 +44,7 @@ router.get('/live', (_req: any, res: Response): void => {
  * Returns 200 only if critical dependencies (database) are healthy
  * Used by load balancers to know if container should receive traffic
  */
-router.get('/ready', async (_req: any, res: Response): Promise<void> => {
+router.get('/ready', async (_req: unknown, res: Response): Promise<void> => {
   const healthCheck = getHealthCheckService();
   const result = await healthCheck.check();
 

@@ -1,17 +1,20 @@
 // Recipe feature exports
 // Domain
-export * from './domain/entities/index.js';
+export * from '@/features/recipe/domain/entities/index.js';
 // Only export unique items from ports to avoid duplicates
-export type { RecipeRepository, RecipeStepWithContent } from './domain/ports/index.js';
+export type {
+  RecipeRepository,
+  RecipeStepWithContent,
+} from '@/features/recipe/domain/ports/index.js';
 export {
   RecipeNotFoundError,
   RecipeInactiveError,
   getRecipeOrError,
-} from './domain/ports/index.js';
+} from '@/features/recipe/domain/ports/index.js';
 // Application
-export * from './application/use-cases/index.js';
-export * from './application/services/index.js';
+export * from '@/features/recipe/application/use-cases/index.js';
+export * from '@/features/recipe/application/services/index.js';
 
 // Infrastructure
-export * from './infrastructure/persistence/index.js';
-export * from './infrastructure/http/index.js';
+export * from '@/features/recipe/infrastructure/persistence/index.js';
+export * from '@/features/recipe/infrastructure/http/index.js';

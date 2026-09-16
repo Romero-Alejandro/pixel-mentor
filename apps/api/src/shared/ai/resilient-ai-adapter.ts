@@ -1,6 +1,6 @@
 import { createLogger } from '@/shared/logger/index.js';
 import { config } from '@/shared/config/index.js';
-import type { GenerateResponseParams } from './base-llm-adapter.js';
+import type { GenerateResponseParams } from '@/shared/ai/base-llm-adapter.js';
 
 import type { AIService, AIResponse } from '@/features/recipe/domain/ports/ai-service.port.js';
 import type {

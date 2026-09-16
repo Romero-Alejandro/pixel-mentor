@@ -1,10 +1,14 @@
-import type { RecipeRepository } from '../../domain/ports/recipe.repository.port.js';
+import type { RecipeRepository } from '@/features/recipe/domain/ports/recipe.repository.port.js';
 import type { AtomRepository } from '@/features/knowledge/domain/ports/atom.repository.port.js';
 import { RecipeValidationError } from '@/shared/errors/domain-errors.js';
-import { CanonicalId } from '../../domain/valueObjects/canonical-id.vo.js';
-import { SemanticVersion } from '../../domain/valueObjects/semantic-version.vo.js';
-import { ExpectedDuration } from '../../domain/valueObjects/expected-duration.vo.js';
-import type { Recipe, RecipeStep, StepType } from '../../domain/entities/recipe.entity.js';
+import { CanonicalId } from '@/features/recipe/domain/value-objects/canonical-id.vo.js';
+import { SemanticVersion } from '@/features/recipe/domain/value-objects/semantic-version.vo.js';
+import { ExpectedDuration } from '@/features/recipe/domain/value-objects/expected-duration.vo.js';
+import type {
+  Recipe,
+  RecipeStep,
+  StepType,
+} from '@/features/recipe/domain/entities/recipe.entity.js';
 import { AtomType } from '@/features/knowledge/domain/entities/atom.entity.js';
 
 export interface CreateRecipeInput {

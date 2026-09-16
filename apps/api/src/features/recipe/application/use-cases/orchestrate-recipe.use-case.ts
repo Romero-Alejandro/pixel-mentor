@@ -1,21 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { config } from '@/shared/config/index.js';
+import { isMockRecipeId, getMockRecipe } from '@/shared/testing/mock-recipe.store.js';
 import {
   SessionNotActiveError,
   RecipeHasNoStepsError,
   AtomNotFoundError,
 } from '@/features/recipe/domain/errors/session.errors.js';
-
-// Helper to extract text from string | {text: string} object
-type TextOrTextObject = string | { text: string };
-function extractText(val: TextOrTextObject | undefined | null): string {
-  if (!val) return '';
-  if (typeof val === 'string') return val;
-  if (typeof val === 'object' && 'text' in val && typeof val.text === 'string') {
-    return val.text;
-  }
-  return '';
-}
 
 import { createLogger } from '@/shared/logger/logger.js';
 
@@ -39,14 +29,6 @@ import type {
   ComprehensionEvaluation,
 } from '@/features/recipe/domain/ports/question-classifier.port.js';
 import type { RAGService } from '@/features/recipe/domain/ports/rag-service.port.js';
-// Metrics imports
-import {
-  EvaluationMetricsCollector,
-  EvaluationTimer,
-  type EngineType,
-  type EvaluationOutcome,
-  type EvaluationErrorType,
-} from '@/shared/monitoring/eval-metrics.js';
 import type { AdvisoryLockManager } from '@/features/session/domain/ports/advisory-lock.port.js';
 import { createSessionLockId } from '@/features/session/domain/ports/advisory-lock.port.js';
 import {
@@ -67,148 +49,38 @@ import {
   type RecipeConfig,
 } from '@/features/recipe/domain/entities/recipe-config.entity.js';
 import { isTerminalStatus } from '@/features/session/domain/entities/session.entity.js';
-import { DEFAULT_COHORT as USER_DEFAULT_COHORT } from '@/features/auth/domain/entities/user.entity.js';
 import { evaluateMCQ } from '@/features/recipe/application/services/mcq-evaluation.service.js';
 import { detectNavigationInput } from '@/features/recipe/application/services/navigation.service.js';
 import type { LessonEvaluatorUseCase } from '@/features/evaluation/application/services/lesson.evaluator.js';
-import type {
-  EvaluationRequest,
-  EvaluationResult,
-  EvaluationOutcome as PedagogicalOutcome,
-} from '@/features/evaluation/domain/entities/evaluation-types.js';
 import type { FeatureFlagService } from '@/shared/config/evaluation-flags.js';
 import type { RecipeStep } from '@/features/recipe/domain/entities/recipe.entity.js';
-import type { KnowledgeChunk } from '@/features/knowledge/domain/entities/knowledge-chunk.entity.js';
 
-// Gamification imports
-import { getEventBus } from '@/shared/events/event-bus.port.js';
-import { GameDomainEvents } from '@/shared/events/game-events.port.js';
-import type { LessonCompletedPayload } from '@/shared/events/game-events.port.js';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// LLM Timeout Configuration
-// ─────────────────────────────────────────────────────────────────────────────
-
-/** Maximum time (ms) to wait for a single LLM chunk before aborting */
-const LLM_CHUNK_TIMEOUT_MS = 30_000;
-/** Maximum total time (ms) for the entire LLM streaming call */
-const LLM_TOTAL_TIMEOUT_MS = 60_000;
-
-/**
- * Wraps an async generator with per-chunk and total timeouts.
- * If a single chunk doesn't arrive within LLM_CHUNK_TIMEOUT_MS, or the total
- * stream exceeds LLM_TOTAL_TIMEOUT_MS, the generator is abandoned.
- */
-export async function* withTimeout<T>(
-  source: AsyncGenerator<T>,
-  chunkTimeoutMs: number = LLM_CHUNK_TIMEOUT_MS,
-  totalTimeoutMs: number = LLM_TOTAL_TIMEOUT_MS,
-): AsyncGenerator<T> {
-  const deadline = Date.now() + totalTimeoutMs;
-  let done = false;
-  try {
-    while (!done) {
-      const remaining = deadline - Date.now();
-      if (remaining <= 0) {
-        orchestrateLogger.warn('[withTimeout] LLM total timeout reached');
-        break;
-      }
-      const chunkTimeout = Math.min(chunkTimeoutMs, remaining);
-      const result = await Promise.race([
-        source.next(),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('LLM chunk timeout')), chunkTimeout),
-        ),
-      ]);
-      if (result.done) {
-        done = true;
-      } else {
-        yield result.value;
-      }
-    }
-  } finally {
-    // Ensure the source generator is properly closed on timeout or error
-    if (!done) {
-      try {
-        await source.return(undefined as unknown as T);
-      } catch {
-        /* ignore */
-      }
-    }
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Tipos del script auto-contenido
-// ─────────────────────────────────────────────────────────────────────────────
-
-// Type for RAG service returned chunks with similarity scores
-type RAGChunk = {
-  chunk: KnowledgeChunk;
-  similarityScore: number;
-  citations?: unknown[];
-};
-
-// Tipos del script auto-contenido
-// ─────────────────────────────────────────────────────────────────────────────
-
-interface ContentScript {
-  transition?: string;
-  content?: string;
-  examples?: string[];
-  closure?: string;
-}
-
-interface QuestionScript extends ContentScript {
-  question: string; // Texto de la pregunta de comprensión
-  expectedAnswer: string; // Respuesta esperada (para el evaluador LLM)
-  hint?: string;
-  feedback: { correct: string; incorrect: string };
-}
-
-interface ActivityOption {
-  text: string;
-  isCorrect: boolean;
-}
-
-interface ActivityScript extends ContentScript {
-  instruction: string; // Enunciado del MCQ
-  options: ActivityOption[];
-  feedback: { correct: string; incorrect: string };
-}
-
-function isQuestionScript(s: unknown): s is QuestionScript {
-  const q = (s as QuestionScript)?.question;
-  const opts = (s as ActivityScript)?.options;
-  const inst = (s as ActivityScript)?.instruction;
-
-  // If it has options, it's a multiple choice activity - use deterministic comparison
-  if (Array.isArray(opts) && opts.length > 0) {
-    return false;
-  }
-
-  // If it has instruction but no question, it's an activity without options
-  if (inst && !q) {
-    return false;
-  }
-
-  // Accept both string and {text: string} object
-  return typeof q === 'string' || (typeof q === 'object' && q !== null && 'text' in q);
-}
-
-function isActivityScript(s: unknown): s is ActivityScript {
-  const opts = (s as ActivityScript)?.options;
-  const inst = (s as ActivityScript)?.instruction;
-  // Check if it has options OR has instruction (string or object)
-  const hasInstruction =
-    typeof inst === 'string' || (typeof inst === 'object' && inst !== null && 'text' in inst);
-  return (Array.isArray(opts) && opts.length > 0) || hasInstruction;
-}
+// Phase 4 split: extracted collaborators (see same folder services/)
+import {
+  type RAGChunk,
+  extractText,
+  isQuestionScript,
+  isActivityScript,
+  readScriptOptions,
+  requiresStudentInput,
+  buildContentSteps,
+  findPreviousContentStep,
+  extractStaticContent as mapStaticContent,
+  buildVoiceText as mapVoiceText,
+  type QuestionScript,
+  type ActivityScript,
+} from '@/features/recipe/application/services/step-script.mapper.js';
+import { withTimeout } from '@/features/recipe/application/services/llm-stream-timeout.js';
+import { AnswerEvaluationService } from '@/features/recipe/application/services/answer-evaluation.service.js';
+import { LessonCompletionService } from '@/features/recipe/application/services/lesson-completion.service.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 
 export class OrchestrateRecipeUseCase {
   private config: RecipeConfig = DEFAULT_CONFIG;
+
+  private readonly answerEvaluation: AnswerEvaluationService;
+  private readonly lessonCompletion: LessonCompletionService;
 
   constructor(
     private sessionRepo: SessionRepository,
@@ -221,296 +93,35 @@ export class OrchestrateRecipeUseCase {
     private aiService: AIService,
     private questionClassifier: QuestionClassifier,
     private ragService: RAGService,
-    private comprehensionEvaluator: ComprehensionEvaluator,
-    private lessonEvaluator: LessonEvaluatorUseCase,
+    comprehensionEvaluator: ComprehensionEvaluator,
+    lessonEvaluator: LessonEvaluatorUseCase,
     private advisoryLockManager?: AdvisoryLockManager,
     private contextWindowService: ContextWindowService = new ContextWindowService(),
-    private featureFlagService?: FeatureFlagService,
-    private activityAttemptRepo?: ActivityAttemptRepository,
+    featureFlagService?: FeatureFlagService,
+    activityAttemptRepo?: ActivityAttemptRepository,
   ) {
     // Mantenidos para compatibilidad futura
     void this.conceptRepo;
     void this.activityRepo;
-  }
 
-  /**
-   * Calculate accuracy for a completed lesson.
-   * Uses LAST attempt to determine if the student eventually mastered the material.
-   * Also tracks if all answers were correct on first attempt for bonus XP.
-   */
-  private async calculateAccuracy(
-    userId: string,
-    steps: Array<{ atomId: string; stepType?: string | null }>,
-    skippedAtomIds: string[],
-  ): Promise<{
-    correctFirstAttempts: number;
-    correctLastAttempts: number;
-    totalActivities: number;
-    skippedActivities: number;
-    accuracyPercent: number;
-    allCorrectOnFirstAttempt: boolean;
-    tier: 'perfect' | 'high' | 'medium' | 'low';
-  }> {
-    const activitySteps = steps.filter(
-      (s) => s.stepType === 'activity' || s.stepType === 'question',
+    // Phase 4 split: collaborators extracted into dedicated services
+    this.answerEvaluation = new AnswerEvaluationService(
+      userRepo,
+      comprehensionEvaluator,
+      lessonEvaluator,
+      featureFlagService,
     );
-    const totalActivities = activitySteps.length;
-
-    let correctFirstAttempts = 0;
-    let correctLastAttempts = 0;
-    let allCorrectOnFirstAttempt = true;
-
-    if (totalActivities > 0 && this.activityAttemptRepo) {
-      for (const step of activitySteps) {
-        if (skippedAtomIds.includes(step.atomId)) continue;
-
-        const attempts = await this.activityAttemptRepo.findByUserIdAndAtomId(userId, step.atomId);
-
-        // Sort by attemptNo to get first and last
-        const sortedAttempts = attempts.sort((a, b) => a.attemptNo - b.attemptNo);
-        const firstAttempt = sortedAttempts[0];
-        const lastAttempt = sortedAttempts[sortedAttempts.length - 1];
-
-        // Check first attempt (for bonus calculation)
-        if (firstAttempt?.correct) {
-          correctFirstAttempts++;
-        } else {
-          allCorrectOnFirstAttempt = false;
-        }
-
-        // Check last attempt (for accuracy calculation - mastery)
-        if (lastAttempt?.correct) {
-          correctLastAttempts++;
-        }
-      }
-    }
-
-    const skippedActivities = skippedAtomIds.length;
-    const attemptedActivities = totalActivities - skippedActivities;
-
-    // Accuracy is based on LAST attempt (mastery)
-    const accuracyPercent =
-      attemptedActivities > 0 ? Math.round((correctLastAttempts / attemptedActivities) * 100) : 100;
-
-    // Determine tier based on last attempt accuracy
-    let tier: 'perfect' | 'high' | 'medium' | 'low';
-    if (accuracyPercent >= 100) tier = 'perfect';
-    else if (accuracyPercent >= 80) tier = 'high';
-    else if (accuracyPercent >= 50) tier = 'medium';
-    else tier = 'low';
-
-    return {
-      correctFirstAttempts,
-      correctLastAttempts,
-      totalActivities,
-      skippedActivities,
-      accuracyPercent,
-      allCorrectOnFirstAttempt,
-      tier,
-    };
-  }
-
-  /**
-   * Emit LESSON_COMPLETED event to trigger gamification processing (XP, badges, streaks).
-   * Calculates accuracy from ActivityAttempt records and includes it in the payload.
-   * Wrapped in try/catch so gamification failures never break session completion.
-   */
-  private async emitLessonCompleted(
-    userId: string,
-    lessonId: string,
-    lessonTitle: string,
-    steps: Array<{ atomId: string; stepType?: string | null }>,
-    skippedAtomIds: string[],
-  ): Promise<void> {
-    try {
-      const eventBus = getEventBus();
-
-      // Calculate accuracy
-      const accuracyData = await this.calculateAccuracy(userId, steps, skippedAtomIds);
-
-      const payload: LessonCompletedPayload = {
-        userId,
-        lessonId,
-        lessonTitle,
-        completedAt: new Date(),
-        accuracy: accuracyData,
-      };
-      await eventBus.emit(GameDomainEvents.LESSON_COMPLETED, payload);
-    } catch {
-      // Don't fail session completion if gamification fails
-    }
-  }
-
-  // ─── extractStaticContent ────────────────────────────────────────────────
-  /**
-   * Lee TODO el contenido del paso desde step.script (JSON auto-contenido).
-   *
-   * CORRECCIÓN CLAVE respecto a la versión anterior:
-   *   - La versión anterior leía `step.activityId` → siempre undefined porque
-   *     el campo no existe en el schema de Prisma.
-   *   - Ahora leemos directamente de `step.script.options` / `step.script.question`,
-   *     que están embebidos en el JSON del paso. Sin dependencias de FKs externas.
-   */
+    this.lessonCompletion = new LessonCompletionService(activityAttemptRepo);
+  } // ─── Content mapping (delegated to step-script.mapper) ───────────────────
   private extractStaticContent(step: {
     stepType?: string | null;
     script?: unknown;
   }): StaticContent | undefined {
-    const { stepType, script } = step;
-    if (!stepType) return undefined;
-
-    // Even if script is null/undefined, return a basic staticContent with stepType
-    if (!script) {
-      return {
-        stepType: 'content' as const,
-        script: {
-          transition: '',
-          content: '',
-          examples: [],
-          closure: '',
-        },
-      };
-    }
-
-    // Handle both lowercase strings and uppercase Prisma enum values for backward compatibility
-    const isContent = stepType === 'content' || stepType === 'CONTENT';
-    const isIntro = stepType === 'intro' || stepType === 'INTRO';
-    const isClosure = stepType === 'closure' || stepType === 'CLOSURE';
-    const isQuestion = stepType === 'question' || stepType === 'QUESTION';
-
-    // ── Contenido / intro / closure ──────────────────────────────────────
-    if (isContent || isIntro || isClosure) {
-      const s = script as ContentScript;
-      return {
-        stepType: isContent ? 'content' : isIntro ? 'intro' : 'closure',
-        script: {
-          transition: s.transition ?? '',
-          content: s.content ?? '',
-          examples: s.examples ?? [],
-          closure: s.closure ?? '',
-        },
-      };
-    }
-
-    // ── Pregunta de comprensión (respuesta libre) ─────────────────────────
-    // Always respect stepType — type guard is only for extracting data
-    if (isQuestion) {
-      const questionText = isQuestionScript(script)
-        ? extractText((script as QuestionScript).question)
-        : '';
-      const fb = isQuestionScript(script)
-        ? (script as QuestionScript).feedback
-        : { correct: '', incorrect: '' };
-      const hint = isQuestionScript(script) ? (script as QuestionScript).hint : undefined;
-      return {
-        stepType: 'question', // Preserve original type for frontend routing
-        script: {
-          transition: extractText(
-            isQuestionScript(script) ? (script as QuestionScript).transition : '',
-          ),
-          content: questionText,
-          examples: [],
-          closure: '',
-        },
-        activity: {
-          instruction: questionText,
-          options: undefined, // Explicitamente undefined para preguntas (sin opciones)
-          feedback: {
-            correct: fb.correct,
-            incorrect: fb.incorrect,
-            partial: hint,
-          },
-        },
-      };
-    }
-
-    // ── Actividad / examen (opción múltiple) ──────────────────────────────
-    // Always respect stepType — type guard is only for extracting data
-    if (
-      stepType === 'activity' ||
-      stepType === 'exam' ||
-      stepType === 'ACTIVITY' ||
-      stepType === 'EXAM'
-    ) {
-      const instructionText = isActivityScript(script)
-        ? extractText((script as ActivityScript).instruction)
-        : '';
-      const safeOptions =
-        isActivityScript(script) && Array.isArray((script as ActivityScript).options)
-          ? (script as ActivityScript).options.map((o) => ({
-              text: o.text,
-              isCorrect: o.isCorrect,
-            }))
-          : [];
-      const fb = isActivityScript(script)
-        ? (script as ActivityScript).feedback
-        : { correct: '', incorrect: '' };
-      return {
-        stepType: 'activity',
-        script: {
-          transition: extractText(
-            isActivityScript(script) ? (script as ActivityScript).transition : '',
-          ),
-          content: instructionText,
-          examples: [],
-          closure: extractText(isActivityScript(script) ? (script as ActivityScript).closure : ''),
-        },
-        activity: {
-          instruction: instructionText,
-          options: safeOptions,
-          feedback: {
-            correct: fb.correct ?? '',
-            incorrect: fb.incorrect ?? '',
-          },
-        },
-      };
-    }
-
-    // Fallback
-    const s = script as ContentScript;
-    return {
-      stepType: 'content',
-      script: {
-        transition: s.transition ?? '',
-        content: s.content ?? '',
-        examples: s.examples ?? [],
-        closure: s.closure ?? '',
-      },
-    };
+    return mapStaticContent(step);
   }
 
-  // ─── buildVoiceText ──────────────────────────────────────────────────────
   private buildVoiceText(step: { stepType?: string | null; script?: unknown }): string {
-    const { stepType, script } = step;
-    if (!script) return '';
-
-    // Helper to extract text from either string or { text } object
-    const txt = (val: unknown): string => {
-      if (typeof val === 'string') return val;
-      if (
-        val &&
-        typeof val === 'object' &&
-        'text' in val &&
-        typeof (val as { text: unknown }).text === 'string'
-      ) {
-        return (val as { text: string }).text;
-      }
-      return '';
-    };
-
-    if (stepType === 'question' && isQuestionScript(script)) {
-      return [txt(script.transition), txt(script.question)].filter(Boolean).join(' ');
-    }
-    if (
-      (stepType === 'activity' ||
-        stepType === 'exam' ||
-        stepType === 'ACTIVITY' ||
-        stepType === 'EXAM') &&
-      isActivityScript(script)
-    ) {
-      return [txt(script.transition), txt(script.instruction)].filter(Boolean).join(' ');
-    }
-    const s = script as ContentScript;
-    return [txt(s.transition), txt(s.content), txt(s.closure)].filter(Boolean).join(' ');
+    return mapVoiceText(step);
   }
 
   // ─── Helpers de clasificación de paso ───────────────────────────────────
@@ -571,11 +182,7 @@ export class OrchestrateRecipeUseCase {
   }
 
   private requiresStudentInput(stepType?: string | null): boolean {
-    // Accept both string literals and Prisma enum values for backward compatibility
-    const isActivity = stepType === 'activity' || stepType === 'ACTIVITY';
-    const isQuestion = stepType === 'question' || stepType === 'QUESTION';
-    const isExam = stepType === 'exam' || stepType === 'EXAM';
-    return isActivity || isQuestion || isExam;
+    return requiresStudentInput(stepType);
   }
 
   private stateForStep(step: { stepType?: string | null }): PedagogicalState {
@@ -596,32 +203,11 @@ export class OrchestrateRecipeUseCase {
     stepType: 'content' | 'intro' | 'closure';
     staticContent: StaticContent;
   }> {
-    const result: Array<{
-      stepIndex: number;
-      stepType: 'content' | 'intro' | 'closure';
-      staticContent: StaticContent;
-    }> = [];
-    for (let idx = 0; idx < steps.length; idx++) {
-      const step = steps[idx];
-      if (!this.requiresStudentInput(step.stepType)) {
-        const sc = this.extractStaticContent(step);
-        if (sc) {
-          result.push({
-            stepIndex: idx,
-            stepType: (step.stepType ?? 'content') as 'content' | 'intro' | 'closure',
-            staticContent: sc,
-          });
-        }
-      }
-    }
-    return result;
+    return buildContentSteps(steps);
   }
 
   private findPreviousContentStep(steps: readonly RecipeStep[], from: number): number | null {
-    for (let i = from - 1; i >= 0; i--) {
-      if (!this.requiresStudentInput(steps[i].stepType)) return i;
-    }
-    return null;
+    return findPreviousContentStep(steps, from);
   }
 
   /**
@@ -661,182 +247,7 @@ export class OrchestrateRecipeUseCase {
     });
   }
 
-  // ─── evaluateWithLessonEngine ───────────────────────────────────────────
-  /**
-   * Evaluates a student's answer using the new LessonEvaluatorUseCase engine.
-   *
-   * Maps the existing script data to the new EvaluationRequest DTO:
-   * - TeacherConfig: centralTruth from expectedAnswer, empty keywords (future extraction possible)
-   * - LessonContext: built from recipe metadata
-   * - EvaluationRequest: studentAnswer = studentInput
-   */
-  private async evaluateWithLessonEngine(params: {
-    script: QuestionScript;
-    studentInput: string;
-    attemptNumber: number;
-    recipeTitle: string;
-    stepIndex: number;
-  }): Promise<ComprehensionEvaluation> {
-    // attemptNumber reserved for future use (adaptive hints based on attempts)
-    void params.attemptNumber;
-    const { script, studentInput, recipeTitle } = params;
-
-    // Build TeacherConfig from script
-    const teacherConfig = {
-      centralTruth: script.expectedAnswer ?? '',
-      requiredKeywords: [] as string[], // Could extract from expectedAnswer in future
-      maxScore: 10,
-    };
-
-    // Build LessonContext from recipe metadata
-    // Note: For more accurate context, we could extract subject/gradeLevel from recipe.meta
-    const lessonContext = {
-      subject: 'Educación General', // Could be extracted from recipe metadata
-      gradeLevel: 'Nivel General', // Could be extracted from recipe metadata
-      topic: recipeTitle,
-    };
-
-    // Build EvaluationRequest
-    const request: EvaluationRequest = {
-      studentAnswer: studentInput,
-      questionText: script.question,
-      teacherConfig,
-      lessonContext,
-    };
-
-    // DEBUG: Log the evaluation request
-    orchestrateLogger.debug(
-      {
-        studentAnswer: studentInput,
-        questionText: script.question,
-        expectedAnswer: script.expectedAnswer,
-      },
-      '[DEBUG] evaluateWithLessonEngine - calling LLM',
-    );
-
-    try {
-      const result: EvaluationResult = await this.lessonEvaluator.evaluate(request);
-
-      // DEBUG: Log the LLM result
-      orchestrateLogger.debug(
-        {
-          outcome: result.outcome,
-          score: result.score,
-          feedback: result.feedback,
-          confidence: result.confidence,
-        },
-        '[DEBUG] evaluateWithLessonEngine - LLM result',
-      );
-
-      // Map 6-category EvaluationOutcome to 3-category ComprehensionEvaluation
-      // This mapping ensures backward compatibility with the frontend
-      const pedagogicalOutcome = result.outcome as PedagogicalOutcome;
-      const mappedResult = this.mapPedagogicalOutcomeToComprehension(pedagogicalOutcome);
-
-      // Map confidence (normalize if needed)
-      const mappedConfidence = this.normalizePedagogicalConfidence(
-        result.confidence,
-        pedagogicalOutcome,
-      );
-
-      return {
-        result: mappedResult,
-        confidence: mappedConfidence,
-        hint: result.improvementSuggestion,
-        shouldEscalate: this.shouldEscalateBasedOnPedagogicalOutcome(pedagogicalOutcome),
-      };
-    } catch (error) {
-      // Graceful fallback to incorrect on error
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      orchestrateLogger.error({ err: errorMessage }, '[OrchestrateRecipe] LessonEvaluator error');
-      return {
-        result: 'incorrect',
-        confidence: 0,
-        hint: script.hint,
-        shouldEscalate: false,
-      };
-    }
-  }
-
-  /**
-   * Maps the 6-category pedagogical outcome to the 3-category legacy outcome.
-   * This ensures backward compatibility with the frontend while using the new evaluator.
-   */
-  private mapPedagogicalOutcomeToComprehension(
-    outcome: PedagogicalOutcome,
-  ): 'correct' | 'partial' | 'incorrect' {
-    switch (outcome) {
-      case 'conceptually_correct':
-      case 'intuitive_correct':
-        return 'correct';
-      case 'partially_correct':
-      case 'relevant_but_incomplete':
-        return 'partial';
-      case 'conceptual_error':
-      case 'no_response':
-        return 'incorrect';
-      default:
-        // Fallback for any unknown outcome
-        return 'incorrect';
-    }
-  }
-
-  /**
-   * Normalizes confidence based on the pedagogical evaluation outcome.
-   * Higher confidence for correct answers, lower for partial.
-   */
-  private normalizePedagogicalConfidence(confidence: number, outcome: PedagogicalOutcome): number {
-    // Ensure confidence is between 0 and 1
-    const normalized = Math.max(0, Math.min(1, confidence));
-
-    // Boost confidence for conceptually correct answers
-    if (outcome === 'conceptually_correct' && normalized < 0.8) {
-      return 0.9;
-    }
-
-    // Keep higher confidence for intuitive correct (shows understanding)
-    if (outcome === 'intuitive_correct' && normalized < 0.7) {
-      return 0.8;
-    }
-
-    return normalized;
-  }
-
-  /**
-   * Determines if the evaluation should escalate based on the pedagogical outcome.
-   * Used to trigger additional help for struggling students.
-   */
-  private shouldEscalateBasedOnPedagogicalOutcome(outcome: PedagogicalOutcome): boolean {
-    // Escalate on conceptual errors or no response to provide extra support
-    return outcome === 'conceptual_error' || outcome === 'no_response';
-  }
-
-  // ─── evaluateWithLegacyEngine ───────────────────────────────────────────
-  /**
-   * Evaluates using the legacy ComprehensionEvaluator adapter.
-   * Maintains backward compatibility with existing implementations.
-   */
-  private async evaluateWithLegacyEngine(params: {
-    script: QuestionScript;
-    studentInput: string;
-    attemptNumber: number;
-  }): Promise<ComprehensionEvaluation> {
-    const { script, studentInput, attemptNumber } = params;
-
-    return this.comprehensionEvaluator.evaluate({
-      microQuestion: script.question,
-      expectedAnswer: script.expectedAnswer ?? '',
-      studentAnswer: studentInput,
-      attemptNumber,
-    });
-  }
-
-  // ─── evaluateAnswer ─────────────────────────────────────────────────────
-  /**
-   * Unified evaluation method that routes to the appropriate engine based on cohort feature flag.
-   * Determines the student's cohort and uses FeatureFlagService to decide which evaluator to use.
-   * Integrates with metrics collection for observability.
-   */
+  // ─── Answer evaluation (delegated to AnswerEvaluationService) ────────────
   private async evaluateAnswer(params: {
     script: QuestionScript;
     studentInput: string;
@@ -845,153 +256,7 @@ export class OrchestrateRecipeUseCase {
     stepIndex: number;
     studentId?: string;
   }): Promise<ComprehensionEvaluation> {
-    // Fetch student cohort for feature flag evaluation
-    const cohort = await this.getStudentCohort(params.studentId);
-    const useNewEngine = this.shouldUseNewEngine(cohort);
-    const engineType: EngineType = useNewEngine ? 'new' : 'old';
-
-    // Create metrics collector for this evaluation
-    const metrics = new EvaluationMetricsCollector();
-    const timer = new EvaluationTimer();
-    const completeTracking = metrics.startEvaluation(engineType, cohort);
-
-    // Log which engine is being used for observability
-    orchestrateLogger.info(
-      `[EVAL ENGINE: ${engineType}] cohort=${cohort} requestId=${metrics.getRequestId()}`,
-    );
-
-    try {
-      let result: ComprehensionEvaluation;
-
-      if (useNewEngine) {
-        result = await this.evaluateWithLessonEngine(params);
-      } else {
-        result = await this.evaluateWithLegacyEngine(params);
-      }
-
-      // Record completion metrics
-      const latencyMs = timer.getElapsed();
-      const outcome = result.result as EvaluationOutcome;
-      metrics.recordCompletion(engineType, outcome, latencyMs, cohort);
-
-      orchestrateLogger.info(
-        `[EVAL COMPLETE] engine=${engineType} outcome=${outcome} latency=${latencyMs}ms cohort=${cohort} requestId=${metrics.getRequestId()}`,
-      );
-
-      // Call the tracking completion function
-      completeTracking(outcome);
-
-      return result;
-    } catch (error) {
-      // Record error metrics
-      const latencyMs = timer.getElapsed();
-      const errorType = this.categorizeError(error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      metrics.recordError(errorType, errorMessage);
-
-      orchestrateLogger.error(
-        {
-          err: error,
-          engine: engineType,
-          errorType,
-          latencyMs,
-          cohort,
-          requestId: metrics.getRequestId(),
-        },
-        `[EVAL ERROR] engine=${engineType} error=${errorType} latency=${latencyMs}ms cohort=${cohort} requestId=${metrics.getRequestId()}`,
-      );
-
-      // Call the tracking completion function with error
-      completeTracking(undefined, errorType, errorMessage);
-
-      // Return graceful fallback
-      return {
-        result: 'incorrect',
-        confidence: 0,
-        hint: params.script.hint,
-        shouldEscalate: false,
-      };
-    }
-  }
-
-  /**
-   * Categorize an error into a specific error type for metrics
-   */
-  private categorizeError(error: unknown): EvaluationErrorType {
-    if (error instanceof Error) {
-      const message = error.message.toLowerCase();
-
-      if (message.includes('timeout')) {
-        return 'timeout_error';
-      }
-      if (
-        message.includes('network') ||
-        message.includes('fetch') ||
-        message.includes('connection')
-      ) {
-        return 'network_error';
-      }
-      if (
-        message.includes('validation') ||
-        message.includes('schema') ||
-        message.includes('parse')
-      ) {
-        return 'validation_error';
-      }
-      if (
-        message.includes('llm') ||
-        message.includes('openai') ||
-        message.includes('gemini') ||
-        message.includes('anthropic')
-      ) {
-        return 'llm_error';
-      }
-    }
-    return 'unknown_error';
-  }
-
-  /**
-   * Retrieves the student's cohort from their user profile.
-   * Defaults to 'default' cohort if student not found or cohort not set.
-   */
-  private async getStudentCohort(studentId?: string): Promise<string> {
-    if (!studentId) {
-      return USER_DEFAULT_COHORT;
-    }
-
-    try {
-      const student = await this.userRepo.findById(studentId);
-      return student?.cohort ?? USER_DEFAULT_COHORT;
-    } catch {
-      orchestrateLogger.warn(
-        { studentId },
-        '[OrchestrateRecipe] Failed to fetch student cohort, using default',
-      );
-      return USER_DEFAULT_COHORT;
-    }
-  }
-
-  /**
-   * Determines if the new evaluation engine should be used based on cohort configuration.
-   * Returns false (legacy engine) if FeatureFlagService is not available (backward compatibility).
-   */
-  private shouldUseNewEngine(cohort: string): boolean {
-    if (!this.featureFlagService) {
-      // FeatureFlagService not available - default to legacy engine for backward compatibility
-      return false;
-    }
-
-    try {
-      return this.featureFlagService.shouldUseNewEngine(cohort);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      orchestrateLogger.error(
-        { err: errorMessage, cohort },
-        `[OrchestrateRecipe] FeatureFlagService error for cohort ${cohort}`,
-      );
-      // Default to legacy engine on error to maintain backward compatibility
-      return false;
-    }
+    return this.answerEvaluation.evaluateAnswer(params);
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -1000,13 +265,12 @@ export class OrchestrateRecipeUseCase {
 
   async start(recipeId: string, studentId: string) {
     // Check if this is a mock recipe ID (used in E2E tests)
-    const isMockRecipe = recipeId.startsWith('test-recipe-');
+    const isMockRecipe = isMockRecipeId(recipeId);
     let recipe;
 
     if (isMockRecipe) {
-      // Use the mock recipe stored in the global object (set via /mock/recipe endpoint)
-      const mockRecipes = (globalThis as any).__mockRecipes || {};
-      recipe = mockRecipes[recipeId];
+      // Use the mock recipe stored in the in-memory store (set via /mock/recipe endpoint)
+      recipe = getMockRecipe(recipeId);
       orchestrateLogger.info(`[MOCK] Using mock recipe: ${recipeId}`);
       if (!recipe) {
         orchestrateLogger.error(`[MOCK] Mock recipe not found: ${recipeId}`);
@@ -1183,13 +447,12 @@ export class OrchestrateRecipeUseCase {
       throw new SessionNotActiveError(sessionId, session.status);
 
     // Check if this is a mock recipe ID (used in E2E tests)
-    const isMockRecipe = session.recipeId.startsWith('test-recipe-');
+    const isMockRecipe = isMockRecipeId(session.recipeId);
     let recipe;
 
     if (isMockRecipe) {
-      // Use the mock recipe stored in the global object (set via /mock/recipe endpoint)
-      const mockRecipes = (globalThis as any).__mockRecipes || {};
-      recipe = mockRecipes[session.recipeId];
+      // Use the mock recipe stored in the in-memory store (set via /mock/recipe endpoint)
+      recipe = getMockRecipe(session.recipeId);
       if (!recipe) throw new RecipeNotFoundError(session.recipeId);
     } else {
       // Normal flow: fetch from repository
@@ -1237,7 +500,7 @@ export class OrchestrateRecipeUseCase {
     const currentStep = steps[currentIdx];
     if (!currentStep) {
       await this.sessionRepo.complete(sessionId);
-      await this.emitLessonCompleted(
+      await this.lessonCompletion.emitLessonCompleted(
         session.studentId,
         session.recipeId,
         recipe.title,
@@ -1315,7 +578,7 @@ export class OrchestrateRecipeUseCase {
       if (navNextIdx === null) {
         // No more steps — complete the lesson
         await this.sessionRepo.complete(sessionId);
-        await this.emitLessonCompleted(
+        await this.lessonCompletion.emitLessonCompleted(
           session.studentId,
           session.recipeId,
           recipe.title,
@@ -1517,8 +780,7 @@ export class OrchestrateRecipeUseCase {
         }
       }
     } else if (currentState === 'ACTIVITY_WAIT') {
-      const script = currentStep.script as any;
-      // Use string type assertion to avoid strict type issues
+      const script: unknown = currentStep.script;
       const stepType = currentStep.stepType as string;
 
       orchestrateLogger.info(
@@ -1526,8 +788,8 @@ export class OrchestrateRecipeUseCase {
           stepIndex: currentIdx,
           stepType,
           studentInput,
-          scriptHasOptions: !!(script as any)?.options,
-          scriptOptionsLength: (script as any)?.options?.length,
+          scriptHasOptions: readScriptOptions(script).length > 0,
+          scriptOptionsLength: readScriptOptions(script).length,
         },
         '[ACTIVITY_WAIT] Processing student input',
       );
@@ -1795,7 +1057,7 @@ export class OrchestrateRecipeUseCase {
         // Save checkpoint (including failedAttempts) BEFORE marking as completed
         await this.sessionRepo.updateCheckpoint(sessionId, newCp);
         await this.sessionRepo.complete(sessionId);
-        await this.emitLessonCompleted(
+        await this.lessonCompletion.emitLessonCompleted(
           session.studentId,
           session.recipeId,
           recipe.title,
@@ -1835,7 +1097,11 @@ export class OrchestrateRecipeUseCase {
     let xpEarned: number | undefined;
     let accuracyData: InteractRecipeOutput['accuracy'] = undefined;
     if (willComplete && session.studentId) {
-      const accuracy = await this.calculateAccuracy(session.studentId, steps, skippedActivities);
+      const accuracy = await this.lessonCompletion.calculateAccuracy(
+        session.studentId,
+        steps,
+        skippedActivities,
+      );
       const { calculateXPFromAccuracy } =
         await import('@/features/gamification/application/strategies/xp-reward.strategy.js');
       xpEarned = calculateXPFromAccuracy(accuracy.accuracyPercent);
@@ -1926,7 +1192,7 @@ export class OrchestrateRecipeUseCase {
     const currentStep = steps[currentIdx];
     if (!currentStep) {
       await this.sessionRepo.complete(sessionId);
-      await this.emitLessonCompleted(
+      await this.lessonCompletion.emitLessonCompleted(
         session.studentId,
         session.recipeId,
         recipe.title,
@@ -1949,7 +1215,7 @@ export class OrchestrateRecipeUseCase {
     // ── ACTIVITY_WAIT fast path (no streaming needed) ────────────────────────
     // Skip LLM calls and use deterministic MCQ evaluation for activity steps
     if (currentState === 'ACTIVITY_WAIT') {
-      const script = currentStep.script as any;
+      const script: unknown = currentStep.script;
       const stepType = currentStep.stepType as string;
 
       orchestrateLogger.info(
@@ -1957,9 +1223,9 @@ export class OrchestrateRecipeUseCase {
           stepIndex: currentIdx,
           stepType,
           studentInput,
-          scriptKeys: script ? Object.keys(script) : [],
-          hasOptions: Array.isArray(script?.options) && script.options.length > 0,
-          options: script?.options,
+          scriptKeys: script !== null && typeof script === 'object' ? Object.keys(script) : [],
+          hasOptions: readScriptOptions(script).length > 0,
+          options: readScriptOptions(script),
         },
         '[interactStream] ACTIVITY_WAIT - processing answer',
       );
@@ -2108,7 +1374,7 @@ export class OrchestrateRecipeUseCase {
       const navNextIdx = this.advanceStep(steps, currentIdx);
       if (navNextIdx === null) {
         await this.sessionRepo.complete(sessionId);
-        await this.emitLessonCompleted(
+        await this.lessonCompletion.emitLessonCompleted(
           session.studentId,
           session.recipeId,
           recipe.title,
@@ -2119,7 +1385,7 @@ export class OrchestrateRecipeUseCase {
         let xpEarned: number | undefined;
         let accuracyData: InteractRecipeOutput['accuracy'] = undefined;
         if (session.studentId) {
-          const accuracy = await this.calculateAccuracy(
+          const accuracy = await this.lessonCompletion.calculateAccuracy(
             session.studentId,
             steps,
             skippedActivities,
@@ -2362,7 +1628,7 @@ export class OrchestrateRecipeUseCase {
         }
       }
     } else if (currentState === 'ACTIVITY_WAIT') {
-      const script = currentStep.script as any;
+      const script: unknown = currentStep.script;
       const stepType = currentStep.stepType as string;
 
       // QUESTION: free response - response already generated above, just advance
@@ -2582,7 +1848,7 @@ export class OrchestrateRecipeUseCase {
         // Save checkpoint (including failedAttempts) BEFORE marking as completed
         await this.sessionRepo.updateCheckpoint(sessionId, newCp);
         await this.sessionRepo.complete(sessionId);
-        await this.emitLessonCompleted(
+        await this.lessonCompletion.emitLessonCompleted(
           session.studentId,
           session.recipeId,
           recipe.title,
@@ -2608,7 +1874,11 @@ export class OrchestrateRecipeUseCase {
     let xpEarned: number | undefined;
     let accuracyData: InteractRecipeOutput['accuracy'] = undefined;
     if (willComplete && session.studentId) {
-      const accuracy = await this.calculateAccuracy(session.studentId, steps, skippedActivities);
+      const accuracy = await this.lessonCompletion.calculateAccuracy(
+        session.studentId,
+        steps,
+        skippedActivities,
+      );
       const { calculateXPFromAccuracy } =
         await import('@/features/gamification/application/strategies/xp-reward.strategy.js');
       xpEarned = calculateXPFromAccuracy(accuracy.accuracyPercent);

@@ -5,9 +5,9 @@ import type {
   BadgeDefinition,
   BadgeProgress,
   UserBadgeStats,
-} from '../../domain/entities/badge.types';
-import { parseBadgeRules } from './badge-progress.service.js';
-import type { BadgeProgressCalculator } from './badge-progress.service.js';
+} from '@/features/gamification/domain/entities/badge.types.js';
+import { parseBadgeRules } from '@/features/gamification/application/services/badge-progress.service.js';
+import type { BadgeProgressCalculator } from '@/features/gamification/application/services/badge-progress.service.js';
 
 import { getEventBus, type EventBus } from '@/shared/events/event-bus.port.js';
 import type { BadgeEarnedPayload, XPChangedPayload } from '@/shared/events/game-events.port.js';
@@ -15,7 +15,7 @@ import { GameEngineEvents } from '@/shared/events/game-events.port.js';
 import type {
   IBadgeRepository,
   IUserGamificationRepository,
-} from '../../domain/ports/gamification.ports';
+} from '@/features/gamification/domain/ports/gamification.ports.js';
 import type { ProgressRepository } from '@/features/progress/domain/ports/progress.repository.port';
 import type { ActivityAttemptRepository } from '@/features/activity/domain/ports/activity-attempt.repository.port';
 

@@ -34,7 +34,7 @@ jest.mock('@/shared/config/index.js', () => ({
 }));
 
 jest.mock('@/shared/http/llm-governance.middleware.js', () => ({
-  llmGovernanceMiddleware: () => (req: Request, _res: Response, next: NextFunction) => next(),
+  llmGovernanceMiddleware: () => (_req: Request, _res: Response, next: NextFunction) => next(),
   recordLLMUsage: jest.fn(),
 }));
 

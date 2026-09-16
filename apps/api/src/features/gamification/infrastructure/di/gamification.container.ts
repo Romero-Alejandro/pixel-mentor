@@ -1,27 +1,27 @@
 import type pino from 'pino';
 
-import { PrismaUserGamificationRepository } from '../persistence/prisma-user-gamification.repository.js';
-import { PrismaBadgeRepository } from '../persistence/prisma-badge.repository.js';
-import { PrismaLevelConfigRepository } from '../persistence/prisma-level-config.repository.js';
-import { PrismaDailyActivityRepository } from '../persistence/prisma-daily-activity.repository.js';
-import { PrismaAuditRepository } from '../persistence/prisma-audit.repository.js';
-import { LevelService } from '../../application/services/level.service.js';
-import { StreakService } from '../../application/services/streak.service.js';
-import { BadgeProgressCalculator } from '../../application/services/badge-progress.service.js';
-import { BadgeEngine } from '../../application/services/badge-engine.service.js';
-import { StrategyRegistry } from '../../application/strategies/strategy-registry.js';
-import { GameEngineCore } from '../../application/services/game-engine-core.service.js';
+import { PrismaUserGamificationRepository } from '@/features/gamification/infrastructure/persistence/prisma-user-gamification.repository.js';
+import { PrismaBadgeRepository } from '@/features/gamification/infrastructure/persistence/prisma-badge.repository.js';
+import { PrismaLevelConfigRepository } from '@/features/gamification/infrastructure/persistence/prisma-level-config.repository.js';
+import { PrismaDailyActivityRepository } from '@/features/gamification/infrastructure/persistence/prisma-daily-activity.repository.js';
+import { PrismaAuditRepository } from '@/features/gamification/infrastructure/persistence/prisma-audit.repository.js';
+import { LevelService } from '@/features/gamification/application/services/level.service.js';
+import { StreakService } from '@/features/gamification/application/services/streak.service.js';
+import { BadgeProgressCalculator } from '@/features/gamification/application/services/badge-progress.service.js';
+import { BadgeEngine } from '@/features/gamification/application/services/badge-engine.service.js';
+import { StrategyRegistry } from '@/features/gamification/application/strategies/strategy-registry.js';
+import { GameEngineCore } from '@/features/gamification/application/services/game-engine-core.service.js';
 import {
   LessonCompletionStrategy,
   FirstLessonBadgeStrategy,
   StreakMilestone7Strategy,
   StreakMilestone30Strategy,
   StreakBonusStrategy,
-} from '../../application/strategies/index.js';
-
+} from '@/features/gamification/application/strategies/index.js';
 import type { ProgressRepository } from '@/features/progress/domain/ports/progress.repository.port';
 import type { ActivityAttemptRepository } from '@/features/activity/domain/ports/activity-attempt.repository.port';
 import { prisma } from '@/database/client.js';
+import { PrismaGamificationTransactionService } from '@/features/gamification/infrastructure/persistence/prisma-gamification-transaction.service.js';
 
 export interface GamificationContainer {
   userGamificationRepository: PrismaUserGamificationRepository;
@@ -81,6 +81,7 @@ export function buildGamificationContainer(
     strategyRegistry,
     streakService,
     progressRepo,
+    new PrismaGamificationTransactionService(),
     undefined,
     logger,
     auditRepository,

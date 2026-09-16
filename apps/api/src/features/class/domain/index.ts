@@ -1,2 +1,2 @@
-export * from './entities/index.js';
-export * from './ports/index.js';
+export * from '@/features/class/domain/entities/index.js';
+export * from '@/features/class/domain/ports/index.js';

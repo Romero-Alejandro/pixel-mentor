@@ -1,2 +1,2 @@
 // Services barrel
-export * from './admin-user.service.js';
+export * from '@/features/auth/application/services/admin-user.service.js';

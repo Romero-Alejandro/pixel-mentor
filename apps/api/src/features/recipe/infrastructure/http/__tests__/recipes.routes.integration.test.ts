@@ -13,9 +13,9 @@ import {
   StepNotFoundError,
 } from '@/shared/errors/domain-errors.js';
 import type { Recipe, RecipeStep } from '@/features/recipe/domain/entities/recipe.entity.js';
-import { CanonicalId } from '@/features/recipe/domain/valueObjects/canonical-id.vo.js';
-import { SemanticVersion } from '@/features/recipe/domain/valueObjects/semantic-version.vo.js';
-import { ExpectedDuration } from '@/features/recipe/domain/valueObjects/expected-duration.vo.js';
+import { CanonicalId } from '@/features/recipe/domain/value-objects/canonical-id.vo.js';
+import { SemanticVersion } from '@/features/recipe/domain/value-objects/semantic-version.vo.js';
+import { ExpectedDuration } from '@/features/recipe/domain/value-objects/expected-duration.vo.js';
 
 // Valid UUIDs for tests
 const RECIPE_ID = '123e4567-e89b-12d3-a456-426614174000';

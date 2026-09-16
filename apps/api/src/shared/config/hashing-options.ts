@@ -28,6 +28,8 @@ export const DEFAULT_HASH_OPTIONS = HASHING_OPTIONS;
 
 /**
  * Verify options - used when verifying existing hashes
- * Must include the type to match how hashes were created
+ * Argon2.verify reads algorithm parameters from the hash string itself,
+ * so an empty options object is correct here ("as const" keeps it a
+ * narrow object type instead of `any`).
  */
-export const VERIFY_HASH_OPTIONS = {} as any;
+export const VERIFY_HASH_OPTIONS = {} as const;

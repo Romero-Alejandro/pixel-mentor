@@ -11,6 +11,7 @@
 import type { AIService } from '@/features/recipe/domain/ports/ai-service.port.js';
 import type { ILLMClient, LLMExecutionOptions } from '@/shared/ai/client.interface.js';
 import { LLMError } from '@/shared/ai/client.interface.js';
+import { createRecipe } from '@/features/recipe/domain/entities/recipe.entity.js';
 
 /**
  * Adapter that wraps an AIService to implement ILLMClient.
@@ -58,27 +59,21 @@ export class LLMClientAdapter implements ILLMClient {
   }
 
   private async executeWithTimeout(prompt: string, timeoutMs: number): Promise<string> {
-    // Build a minimal recipe context for evaluation
-    const mockRecipe = {
+    // Build a minimal recipe context for evaluation through the domain factory,
+    // so the object is a real Recipe (value objects included) instead of an
+    // untyped mock smuggled in with `as any`.
+    const evaluationRecipe = createRecipe({
       id: 'eval',
+      canonicalId: 'eval',
       title: 'Lesson Evaluation',
       description: 'Context for answer evaluation',
-      canonicalId: 'eval',
-      version: '1.0',
       published: true,
-      steps: [] as any[],
-      concepts: [] as any[],
-      tags: [] as any[],
-      progressEntries: [] as any[],
-      attachments: [] as any[],
-      sessions: [] as any[],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+      authorId: 'system',
+    });
 
     return Promise.race([
       this.aiService.generateResponse({
-        recipe: mockRecipe as any,
+        recipe: evaluationRecipe,
         currentState: 'EXPLANATION',
         conversationHistory: [],
         ragContext: undefined,

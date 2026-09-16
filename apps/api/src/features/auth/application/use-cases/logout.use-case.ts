@@ -1,5 +1,8 @@
 import type { IRefreshTokenRepository } from '@/features/auth/domain/ports/refresh-token.repository.port.js';
 import type { IHashingService } from '@/features/auth/domain/ports/hashing.service.port.js';
+import { moduleLogger } from '@/shared/logger/logger.js';
+
+const logger = moduleLogger('auth:logout');
 
 export interface LogoutInput {
   refreshToken?: string;
@@ -47,7 +50,7 @@ export class LogoutUseCase {
     } catch (error) {
       // Best-effort: logout must never fail the request (the client clears its
       // session locally regardless). Also avoid leaking token validity.
-      console.error('Error during logout', error);
+      logger.warn({ err: error }, 'Best-effort logout failed to revoke tokens');
     }
   }
 }

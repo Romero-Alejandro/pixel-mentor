@@ -1,5 +1,4 @@
-import type { IDailyActivityRepository } from '../../domain/ports/daily-activity.repository.port';
-
+import type { IDailyActivityRepository } from '@/features/gamification/domain/ports/daily-activity.repository.port.js';
 import { prisma } from '@/database/client.js';
 
 export class PrismaDailyActivityRepository implements IDailyActivityRepository {

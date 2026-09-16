@@ -1,2 +1,2 @@
 // DI barrel
-export * from './recipe.container.js';
+export * from '@/features/recipe/infrastructure/di/recipe.container.js';

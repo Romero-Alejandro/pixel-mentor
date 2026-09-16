@@ -1,2 +1,2 @@
 // DI barrel
-export * from './auth.container.js';
+export * from '@/features/auth/infrastructure/di/auth.container.js';

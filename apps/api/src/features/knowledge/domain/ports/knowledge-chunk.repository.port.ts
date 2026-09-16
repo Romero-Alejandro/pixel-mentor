@@ -1,4 +1,4 @@
-import type { KnowledgeChunk } from '../entities/knowledge-chunk.entity.js';
+import type { KnowledgeChunk } from '@/features/knowledge/domain/entities/knowledge-chunk.entity.js';
 
 export interface KnowledgeChunkRepository {
   findByAtomId(atomId: string): Promise<KnowledgeChunk[]>;
@@ -11,6 +11,20 @@ export interface KnowledgeChunkRepository {
     atomId: string,
     queryEmbedding: number[],
     limit: number,
+  ): Promise<{ chunk: KnowledgeChunk; similarityScore: number }[]>;
+  /**
+   * Server-side vector similarity search (pgvector cosine distance).
+   *
+   * Only chunks whose embedding dimension matches `queryEmbedding` are
+   * considered (providers use mixed dimensions: 768 / 1536). Results are
+   * ranked by descending similarity and capped at `limit` inside Postgres.
+   * When `minSimilarityScore` is provided, chunks below it are excluded.
+   */
+  searchRelevantChunks(
+    atomId: string,
+    queryEmbedding: number[],
+    limit: number,
+    minSimilarityScore?: number,
   ): Promise<{ chunk: KnowledgeChunk; similarityScore: number }[]>;
 }
 

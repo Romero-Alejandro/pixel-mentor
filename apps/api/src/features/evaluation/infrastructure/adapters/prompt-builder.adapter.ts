@@ -8,8 +8,8 @@
 import type {
   IPromptBuilderPort,
   EvaluationPromptValues,
-} from '../../domain/ports/prompt-builder.port';
-import { getEvaluationPromptRepository } from '../prompts/evaluation-prompt-repository';
+} from '@/features/evaluation/domain/ports/prompt-builder.port.js';
+import { getEvaluationPromptRepository } from '@/features/evaluation/infrastructure/prompts/evaluation-prompt-repository.js';
 import type { PromptValues } from '@/features/prompt/domain/ports/safe-prompt-builder.interface';
 
 /**

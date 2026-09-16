@@ -1,4 +1,4 @@
-import type { Tag } from '../entities/tag.entity.js';
+import type { Tag } from '@/features/recipe/domain/entities/tag.entity.js';
 
 export interface TagRepository {
   findById(id: string): Promise<Tag | null>;

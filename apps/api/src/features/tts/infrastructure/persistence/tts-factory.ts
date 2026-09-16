@@ -3,9 +3,8 @@ import { Readable } from 'node:stream';
 import * as googleTTS from '@sefinek/google-tts-api';
 import type pino from 'pino';
 
-import { GoogleFreeTTSAdapter } from './google-free.adapter';
-import { MockTTSAdapter } from './mock-tts-adapter';
-
+import { GoogleFreeTTSAdapter } from '@/features/tts/infrastructure/persistence/google-free.adapter.js';
+import { MockTTSAdapter } from '@/features/tts/infrastructure/persistence/mock-tts-adapter.js';
 import {
   isValidTTSHost,
   validateTTSOptions,

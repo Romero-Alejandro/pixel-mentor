@@ -1,3 +1,3 @@
 // Domain ports barrel
-export * from './safe-prompt-builder.interface.js';
-export * from './template-preprocessor.interface.js';
+export * from '@/features/prompt/domain/ports/safe-prompt-builder.interface.js';
+export * from '@/features/prompt/domain/ports/template-preprocessor.interface.js';

@@ -1,4 +1,4 @@
-import type { Concept } from '../entities/concept.entity.js';
+import type { Concept } from '@/features/knowledge/domain/entities/concept.entity.js';
 
 export interface ConceptRepository {
   findById(id: string): Promise<Concept | null>;

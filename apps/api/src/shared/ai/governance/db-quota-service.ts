@@ -1,4 +1,4 @@
-import type { QuotaCheck } from './governance.types.js';
+import type { QuotaCheck } from '@/shared/ai/governance/governance.types.js';
 import type { IUserRepository } from '@/features/auth/domain/ports/user.repository.port.js';
 import { createLogger } from '@/shared/logger/index.js';
 

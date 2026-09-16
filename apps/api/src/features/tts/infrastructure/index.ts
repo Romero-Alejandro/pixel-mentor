@@ -1,4 +1,4 @@
 // Infrastructure barrel
-export * from './persistence/index.js';
-export * from './http/index.js';
-export * from './di/index.js';
+export * from '@/features/tts/infrastructure/persistence/index.js';
+export * from '@/features/tts/infrastructure/http/index.js';
+export * from '@/features/tts/infrastructure/di/index.js';

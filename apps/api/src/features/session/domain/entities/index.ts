@@ -1,4 +1,4 @@
 // Domain entities barrel
-export * from './event-log.entity.js';
-export * from './interaction.entity.js';
-export * from './session.entity.js';
+export * from '@/features/session/domain/entities/event-log.entity.js';
+export * from '@/features/session/domain/entities/interaction.entity.js';
+export * from '@/features/session/domain/entities/session.entity.js';

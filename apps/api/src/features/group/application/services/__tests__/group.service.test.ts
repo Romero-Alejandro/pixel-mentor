@@ -1,4 +1,3 @@
-import { prisma } from '@/database/client.js';
 import {
   GroupService,
   GroupNotFoundError,
@@ -11,13 +10,10 @@ import type {
   IGroupMemberRepository,
   IGroupClassRepository,
 } from '@/features/group/domain/ports/group.repository.port.js';
-
-jest.mock('@/database/client.js', () => ({
-  prisma: {
-    user: { findMany: jest.fn() },
-    class: { findUnique: jest.fn() },
-  },
-}));
+import type {
+  IStudentLookupPort,
+  IClassReferencePort,
+} from '@/features/group/domain/ports/student-lookup.port.js';
 
 const createMockGroupRepository = (): jest.Mocked<IGroupRepository> => ({
   create: jest.fn(),
@@ -54,6 +50,8 @@ describe('GroupService', () => {
   let groupRepo: jest.Mocked<IGroupRepository>;
   let memberRepo: jest.Mocked<IGroupMemberRepository>;
   let classRepo: jest.Mocked<IGroupClassRepository>;
+  let studentLookup: jest.Mocked<IStudentLookupPort>;
+  let classReference: jest.Mocked<IClassReferencePort>;
   let service: GroupService;
 
   beforeEach(() => {
@@ -61,7 +59,13 @@ describe('GroupService', () => {
     groupRepo = createMockGroupRepository();
     memberRepo = createMockMemberRepository();
     classRepo = createMockClassRepository();
-    service = new GroupService(groupRepo, memberRepo, classRepo);
+    studentLookup = {
+      findExistingStudentIds: jest.fn().mockResolvedValue([]),
+    };
+    classReference = {
+      findOwnerById: jest.fn().mockResolvedValue(null),
+    };
+    service = new GroupService(groupRepo, memberRepo, classRepo, studentLookup, classReference);
   });
 
   describe('createGroup', () => {
@@ -259,9 +263,9 @@ describe('GroupService', () => {
       };
       groupRepo.findById.mockResolvedValue(mockGroup);
       memberRepo.findByGroupId.mockResolvedValue([]);
-      (prisma.user.findMany as jest.Mock).mockResolvedValue([
-        { id: 'student-1' },
-        { id: 'student-2' },
+      (studentLookup.findExistingStudentIds as jest.Mock).mockResolvedValue([
+        'student-1',
+        'student-2',
       ]);
       memberRepo.createMany.mockResolvedValue([
         {
@@ -358,10 +362,7 @@ describe('GroupService', () => {
         updatedAt: new Date(),
       };
       groupRepo.findById.mockResolvedValue(mockGroup);
-      (prisma.class.findUnique as jest.Mock).mockResolvedValue({
-        id: 'class-1',
-        tutorId: 'teacher-1',
-      });
+      (classReference.findOwnerById as jest.Mock).mockResolvedValue({ tutorId: 'teacher-1' });
       classRepo.findByGroupIdAndClassId.mockResolvedValue(null);
       classRepo.findByGroupId.mockResolvedValue([]);
       classRepo.create.mockResolvedValue({
@@ -386,7 +387,7 @@ describe('GroupService', () => {
         updatedAt: new Date(),
       };
       groupRepo.findById.mockResolvedValue(mockGroup);
-      (prisma.class.findUnique as jest.Mock).mockResolvedValue(null);
+      (classReference.findOwnerById as jest.Mock).mockResolvedValue(null);
 
       await expect(
         service.assignClass('group-1', 'teacher-1', { classId: 'class-1' }),
@@ -403,10 +404,7 @@ describe('GroupService', () => {
         updatedAt: new Date(),
       };
       groupRepo.findById.mockResolvedValue(mockGroup);
-      (prisma.class.findUnique as jest.Mock).mockResolvedValue({
-        id: 'class-1',
-        tutorId: 'teacher-1',
-      });
+      (classReference.findOwnerById as jest.Mock).mockResolvedValue({ tutorId: 'teacher-1' });
       classRepo.findByGroupIdAndClassId.mockResolvedValue({ id: 'gc-1', order: 0 });
 
       await expect(

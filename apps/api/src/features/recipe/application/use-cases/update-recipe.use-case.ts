@@ -1,12 +1,18 @@
-import type { RecipeRepository } from '../../domain/ports/recipe.repository.port.js';
+import type {
+  RecipeRepository,
+  RecipeUpdateInput,
+} from '@/features/recipe/domain/ports/recipe.repository.port.js';
 import {
   RecipeNotFoundError,
   RecipeOwnershipError,
   RecipeValidationError,
 } from '@/shared/errors/domain-errors.js';
-import { CanonicalId } from '../../domain/valueObjects/canonical-id.vo.js';
-import { ExpectedDuration } from '../../domain/valueObjects/expected-duration.vo.js';
-import type { Recipe } from '../../domain/entities/recipe.entity.js';
+import { CanonicalId } from '@/features/recipe/domain/value-objects/canonical-id.vo.js';
+import { ExpectedDuration } from '@/features/recipe/domain/value-objects/expected-duration.vo.js';
+import type { Recipe } from '@/features/recipe/domain/entities/recipe.entity.js';
+import { moduleLogger } from '@/shared/logger/logger.js';
+
+const logger = moduleLogger('recipe:update');
 
 export interface UpdateRecipeInput {
   title?: string;
@@ -20,7 +26,7 @@ export class UpdateRecipeUseCase {
   constructor(private recipeRepository: RecipeRepository) {}
 
   async execute(id: string, data: UpdateRecipeInput, userId: string): Promise<Recipe> {
-    console.log('[UpdateRecipeUseCase] execute called with:', { id, data, userId });
+    logger.debug({ recipeId: id, userId }, 'UpdateRecipe starting');
     const recipe = await this.recipeRepository.findById(id);
     if (!recipe) {
       throw new RecipeNotFoundError(id);
@@ -32,7 +38,7 @@ export class UpdateRecipeUseCase {
 
     const newVersion = recipe.version.incrementPatch().toString();
 
-    const updateData: Record<string, unknown> = {
+    const updateData: RecipeUpdateInput = {
       version: newVersion,
     };
 
@@ -63,7 +69,7 @@ export class UpdateRecipeUseCase {
       updateData.published = data.published;
     }
 
-    await this.recipeRepository.update(id, updateData as any);
+    await this.recipeRepository.update(id, updateData);
 
     return this.recipeRepository.findByIdWithSteps(id) as Promise<Recipe>;
   }

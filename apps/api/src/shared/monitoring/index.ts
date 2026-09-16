@@ -26,9 +26,9 @@ export {
   createEvaluationLog,
   logEvaluationEvent,
   getMetricsSummary,
-} from './eval-metrics';
+} from '@/shared/monitoring/eval-metrics.js';
 
-export { createMetricsRouter, type MetricsDependencies } from './routes/eval-metrics.route';
+export { createMetricsRouter } from '@/shared/monitoring/routes/eval-metrics.route.js';
 
 export {
   // Staging validation
@@ -39,4 +39,4 @@ export {
   getEvaluationHealthCheck,
   type DependencyValidationResult,
   type EvaluationHealthCheck,
-} from './staging-validation';
+} from '@/shared/monitoring/staging-validation.js';

@@ -1,4 +1,4 @@
-import { ResolveUserByEmailUseCase } from '../resolve-user-by-email.use-case';
+import { ResolveUserByEmailUseCase } from '@/features/auth/application/use-cases/resolve-user-by-email.use-case.js';
 import type { IUserRepository } from '@/features/auth/domain/ports/user.repository.port.js';
 import type { User } from '@/features/auth/domain/entities/user.entity.js';
 

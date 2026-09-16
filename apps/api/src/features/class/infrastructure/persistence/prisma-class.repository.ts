@@ -2,9 +2,8 @@
  * Prisma-based Class Repository.
  */
 
-import type { IClassRepository } from '../../domain/ports/class.repository.port';
-import type { ClassEntity, ClassStatus } from '../../domain/entities/class.entity';
-
+import type { IClassRepository } from '@/features/class/domain/ports/class.repository.port.js';
+import type { ClassEntity, ClassStatus } from '@/features/class/domain/entities/class.entity.js';
 import { prisma } from '@/database/client.js';
 
 const isValidUUID = (uuid: string): boolean => {
@@ -22,6 +21,8 @@ function mapPrismaToClassEntity(prismaClass: {
   currentVersionId: string | null;
   status: ClassStatus;
   version: number;
+  targetAgeMin: number | null;
+  targetAgeMax: number | null;
   createdAt: Date;
   updatedAt: Date;
   lessons?: Array<{
@@ -48,6 +49,8 @@ function mapPrismaToClassEntity(prismaClass: {
     currentVersionId: prismaClass.currentVersionId ?? undefined,
     status: prismaClass.status,
     version: prismaClass.version,
+    targetAgeMin: prismaClass.targetAgeMin ?? undefined,
+    targetAgeMax: prismaClass.targetAgeMax ?? undefined,
     createdAt: prismaClass.createdAt,
     updatedAt: prismaClass.updatedAt,
     lessons: prismaClass.lessons?.map((lesson) => ({
@@ -157,6 +160,35 @@ export class PrismaClassRepository implements IClassRepository {
     return mapPrismaToClassEntity(created);
   }
 
+  async createWithLessons(
+    classData: Omit<ClassEntity, 'id' | 'createdAt' | 'updatedAt'>,
+    lessons: readonly { recipeId: string; order: number }[],
+  ): Promise<ClassEntity> {
+    const created = await prisma.class.create({
+      data: {
+        title: classData.title,
+        description: classData.description,
+        tutorId: classData.tutorId,
+        classTemplateId: classData.classTemplateId,
+        currentVersionId: classData.currentVersionId,
+        status: classData.status,
+        version: classData.version,
+        shortId: classData.shortId,
+        targetAgeMin: classData.targetAgeMin,
+        targetAgeMax: classData.targetAgeMax,
+        lessons: {
+          create: lessons.map((lesson) => ({
+            recipeId: lesson.recipeId,
+            order: lesson.order,
+          })),
+        },
+      },
+      include: { lessons: { orderBy: { order: 'asc' } } },
+    });
+
+    return mapPrismaToClassEntity(created);
+  }
+
   async update(
     id: string,
     classData: Partial<Omit<ClassEntity, 'id' | 'createdAt' | 'updatedAt'>>,
@@ -172,6 +204,8 @@ export class PrismaClassRepository implements IClassRepository {
     if (classData.status !== undefined) updateData.status = classData.status;
     if (classData.version !== undefined) updateData.version = classData.version;
     if (classData.shortId !== undefined) updateData.shortId = classData.shortId;
+    if (classData.targetAgeMin !== undefined) updateData.targetAgeMin = classData.targetAgeMin;
+    if (classData.targetAgeMax !== undefined) updateData.targetAgeMax = classData.targetAgeMax;
 
     const updated = await prisma.class.update({
       where: { id },

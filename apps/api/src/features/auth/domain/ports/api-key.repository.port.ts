@@ -1,4 +1,4 @@
-import type { ApiKey } from '../entities/api-key.entity.js';
+import type { ApiKey } from '@/features/auth/domain/entities/api-key.entity.js';
 
 export interface IApiKeyRepository {
   findById(id: string): Promise<ApiKey | null>;

@@ -1,4 +1,4 @@
-import type { Module } from '../entities/module.entity';
+import type { Module } from '@/features/class/domain/entities/module.entity.js';
 
 export interface ModuleRepository {
   findById(id: string): Promise<Module | null>;

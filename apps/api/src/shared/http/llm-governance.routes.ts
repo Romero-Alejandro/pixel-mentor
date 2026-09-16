@@ -37,7 +37,7 @@ export function createLLMGovernanceRouter(): Router {
       return;
     }
 
-    const limit = parseInt(String((_req as any).query.limit ?? '50'), 10);
+    const limit = parseInt(String(_req.query.limit ?? '50'), 10);
     const logs = getAIServices().governance.getUsageLogs(limit);
 
     res.json({ logs, count: logs.length });
@@ -51,7 +51,7 @@ export function createLLMGovernanceRouter(): Router {
     }
 
     const userId = Array.isArray(_req.params.userId) ? _req.params.userId[0] : _req.params.userId;
-    const { quota } = (_req as any).body as { quota?: number };
+    const { quota } = _req.body as { quota?: number };
 
     if (quota === undefined || quota < 0) {
       res.status(400).json({ error: 'Invalid quota value' });

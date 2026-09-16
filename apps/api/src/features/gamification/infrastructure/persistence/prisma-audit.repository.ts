@@ -6,9 +6,13 @@
 import type {
   IGamificationAuditRepository,
   GamificationAuditLogEntry,
-} from '../../domain/ports/gamification.ports';
-
+} from '@/features/gamification/domain/ports/gamification.ports.js';
 import { type PrismaClient } from '@/database/client.js';
+import { toPrismaJson } from '@/shared/utils/prisma-json.js';
+
+function isJsonObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 export class PrismaAuditRepository implements IGamificationAuditRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -18,7 +22,7 @@ export class PrismaAuditRepository implements IGamificationAuditRepository {
       data: {
         userId: entry.userId,
         eventType: entry.eventType,
-        details: entry.details as never,
+        details: toPrismaJson(entry.details, 'audit.details'),
         xpAwarded: entry.xpAwarded,
         badgesAwarded: entry.badgesAwarded ? JSON.stringify(entry.badgesAwarded) : undefined,
         succeeded: entry.succeeded,
@@ -39,7 +43,7 @@ export class PrismaAuditRepository implements IGamificationAuditRepository {
       id: log.id,
       userId: log.userId,
       eventType: log.eventType,
-      details: log.details as Record<string, unknown> | undefined,
+      details: isJsonObject(log.details) ? log.details : undefined,
       xpAwarded: log.xpAwarded,
       badgesAwarded:
         typeof log.badgesAwarded === 'string'
@@ -65,7 +69,7 @@ export class PrismaAuditRepository implements IGamificationAuditRepository {
       id: log.id,
       userId: log.userId,
       eventType: log.eventType,
-      details: log.details as Record<string, unknown> | undefined,
+      details: isJsonObject(log.details) ? log.details : undefined,
       xpAwarded: log.xpAwarded,
       badgesAwarded:
         typeof log.badgesAwarded === 'string'

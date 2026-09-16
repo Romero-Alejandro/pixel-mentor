@@ -1,7 +1,7 @@
 // Evaluation Feature - Public API
-export * from './domain/entities/index.js';
+export * from '@/features/evaluation/domain/entities/index.js';
 export {
   LessonEvaluatorUseCase,
   createLessonEvaluator,
-} from './application/services/lesson.evaluator.js';
-export * from './application/dtos/index.js';
+} from '@/features/evaluation/application/services/lesson.evaluator.js';
+export * from '@/features/evaluation/application/dtos/index.js';

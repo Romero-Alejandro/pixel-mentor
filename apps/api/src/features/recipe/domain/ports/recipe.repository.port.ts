@@ -1,5 +1,4 @@
-import type { Recipe, RecipeStep } from '../entities/recipe.entity';
-
+import type { Recipe, RecipeStep } from '@/features/recipe/domain/entities/recipe.entity.js';
 import type { Concept } from '@/features/knowledge/domain/entities/concept.entity';
 import type { Activity } from '@/features/activity/domain/entities/activity.entity';
 
@@ -34,6 +33,23 @@ export interface RecipeUpdateInput {
   moduleId?: string;
 }
 
+/**
+ * Partial update payload for a recipe step.
+ *
+ * Unlike `Partial<RecipeStep>`, the JSON columns distinguish "absent" (keep
+ * current value) from `null` (clear the column) — mirroring Prisma's own
+ * update semantics — so callers can unset step content explicitly.
+ */
+export type RecipeStepUpdateInput = {
+  -readonly [K in keyof Omit<RecipeStep, 'activityData' | 'question'>]?: Omit<
+    RecipeStep,
+    'activityData' | 'question'
+  >[K];
+} & {
+  activityData?: Record<string, unknown> | null;
+  question?: Record<string, unknown> | null;
+};
+
 export interface RecipeRepository {
   findById(id: string): Promise<Recipe | null>;
   findByIdWithSteps(id: string): Promise<Recipe | null>;
@@ -47,9 +63,21 @@ export interface RecipeRepository {
   findStepsByRecipeId(recipeId: string): Promise<RecipeStep[]>;
   findStepsWithContent(recipeId: string): Promise<RecipeStepWithContent[]>;
   createStep(step: Omit<RecipeStep, 'createdAt'>): Promise<RecipeStep>;
-  updateStep(stepId: string, step: Partial<RecipeStep>): Promise<RecipeStep>;
+  updateStep(stepId: string, step: RecipeStepUpdateInput): Promise<RecipeStep>;
   deleteStep(stepId: string): Promise<void>;
   findStepById(stepId: string): Promise<RecipeStep | null>;
+  /**
+   * Atomically persists the desired step order for a recipe.
+   *
+   * `stepIds` lists the steps that take the leading positions, in the given
+   * order (0-based); unlisted steps follow in their previous relative order.
+   * The whole operation (membership validation + constraint-safe two-phase
+   * swap under @@unique([recipeId, order])) runs in a single transaction:
+   * it either fully applies or leaves the previous order untouched.
+   *
+   * @throws StepNotFoundError if a listed step does not belong to the recipe.
+   */
+  reorderSteps(recipeId: string, stepIds: string[]): Promise<void>;
 }
 
 export class RecipeNotFoundError extends Error {

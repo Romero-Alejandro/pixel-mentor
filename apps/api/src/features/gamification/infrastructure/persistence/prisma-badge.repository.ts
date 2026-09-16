@@ -1,6 +1,8 @@
-import type { IBadgeRepository, BadgeDefinition } from '../../domain/ports/gamification.ports';
-import type { BadgeRequirement } from '../../domain/entities/badge.types';
-
+import type {
+  IBadgeRepository,
+  BadgeDefinition,
+} from '@/features/gamification/domain/ports/gamification.ports.js';
+import type { BadgeRequirement } from '@/features/gamification/domain/entities/badge.types.js';
 import { prisma } from '@/database/client.js';
 
 function parseRules(raw: unknown): BadgeRequirement {

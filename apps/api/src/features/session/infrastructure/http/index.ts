@@ -1,2 +1,2 @@
 // HTTP barrel
-export * from './session.routes.js';
+export * from '@/features/session/infrastructure/http/session.routes.js';

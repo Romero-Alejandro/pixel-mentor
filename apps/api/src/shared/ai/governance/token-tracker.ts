@@ -1,4 +1,8 @@
-import type { TokenUsage, CostEstimate, ProviderPricing } from './governance.types.js';
+import type {
+  TokenUsage,
+  CostEstimate,
+  ProviderPricing,
+} from '@/shared/ai/governance/governance.types.js';
 
 // ==================== Token Estimation ====================
 

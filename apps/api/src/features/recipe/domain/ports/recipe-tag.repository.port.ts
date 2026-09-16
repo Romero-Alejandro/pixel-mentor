@@ -1,4 +1,4 @@
-import type { RecipeTag } from '../entities/recipe-tag.entity.js';
+import type { RecipeTag } from '@/features/recipe/domain/entities/recipe-tag.entity.js';
 
 export interface RecipeTagRepository {
   findByRecipeId(recipeId: string): Promise<RecipeTag[]>;

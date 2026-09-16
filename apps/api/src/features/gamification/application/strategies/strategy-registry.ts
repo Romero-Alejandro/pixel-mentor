@@ -4,8 +4,11 @@
 
 import { createLogger } from '@/shared/logger/logger.js';
 
-import type { IRewardStrategy } from './reward-strategy.interface';
-import type { RewardContext, Reward } from './reward.types';
+import type { IRewardStrategy } from '@/features/gamification/application/strategies/reward-strategy.interface.js';
+import type {
+  RewardContext,
+  Reward,
+} from '@/features/gamification/application/strategies/reward.types.js';
 
 /**
  * Result of executing strategies for a context.

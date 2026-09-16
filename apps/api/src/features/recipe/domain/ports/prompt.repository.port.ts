@@ -1,5 +1,4 @@
-import type { Recipe } from '../entities/recipe.entity.js';
-
+import type { Recipe } from '@/features/recipe/domain/entities/recipe.entity.js';
 import type { PedagogicalState } from '@/features/evaluation/domain/entities/pedagogical-state-machine.js';
 
 export interface PromptParams {

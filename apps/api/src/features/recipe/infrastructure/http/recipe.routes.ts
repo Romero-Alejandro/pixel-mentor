@@ -2,8 +2,17 @@ import { Router, type Request, type Response, type NextFunction } from 'express'
 import { z } from 'zod';
 import type pino from 'pino';
 
-import { checkDedup, markActive, markCompleted, markFailed } from './interaction-dedup-cache';
-
+import {
+  checkDedup,
+  markActive,
+  markCompleted,
+  markFailed,
+} from '@/features/recipe/infrastructure/http/interaction-dedup-cache.js';
+import {
+  isMockRecipeId,
+  putMockRecipe,
+  MOCK_RECIPE_ID_PREFIX,
+} from '@/shared/testing/mock-recipe.store.js';
 import { createLogger } from '@/shared/logger/logger.js';
 import { config } from '@/shared/config/index.js';
 import type { AuthRequest } from '@/features/auth/infrastructure/http/auth.middleware';
@@ -46,10 +55,6 @@ export interface AppRequest extends AuthRequest {
   startTime?: number;
 }
 
-// In-memory mock storage for testing
-const mockRecipes: Record<string, any> = {};
-(globalThis as any).__mockRecipes = mockRecipes;
-
 export function createRecipeRouter(
   orchestrateUseCase: OrchestrateRecipeUseCase,
   questionAnsweringUseCase?: QuestionAnsweringUseCase,
@@ -62,12 +67,19 @@ export function createRecipeRouter(
       recipeRouterLogger.info('[MOCK] Received request to save mock recipe');
       const recipe = request.body;
       recipeRouterLogger.info('[MOCK] Recipe data: %o', recipe);
-      if (!recipe || !recipe.id) {
+      if (
+        !recipe ||
+        typeof recipe.id !== 'string' ||
+        recipe.id.length === 0 ||
+        !isMockRecipeId(recipe.id)
+      ) {
         recipeRouterLogger.error('[MOCK] Invalid recipe data or missing ID');
-        response.status(400).json({ error: 'Invalid recipe data or missing ID' });
+        response
+          .status(400)
+          .json({ error: `Invalid recipe data: id must start with '${MOCK_RECIPE_ID_PREFIX}'` });
         return;
       }
-      mockRecipes[recipe.id] = recipe;
+      putMockRecipe(recipe);
       recipeRouterLogger.info(`[MOCK] Recipe saved successfully: ${recipe.id}`);
       response
         .status(201)

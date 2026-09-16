@@ -3,6 +3,8 @@ import { PrismaClassRepository } from '@/features/class/infrastructure/persisten
 import { PrismaClassLessonRepository } from '@/features/class/infrastructure/persistence/prisma-class-lesson.repository.js';
 import { PrismaClassVersionRepository } from '@/features/class/infrastructure/persistence/prisma-class-version.repository.js';
 import { PrismaClassTemplateRepository } from '@/features/class/infrastructure/persistence/prisma-class-template.repository.js';
+import { PrismaRecipeReferenceAdapter } from '@/features/class/infrastructure/persistence/prisma-recipe-reference.adapter.js';
+import { PrismaGroupClassAccessAdapter } from '@/features/class/infrastructure/persistence/prisma-group-class-access.adapter.js';
 import { ClassService } from '@/features/class/application/services/class.service.js';
 import { ClassAIService } from '@/features/class/application/services/class-ai.service.js';
 import { ClassTemplateService } from '@/features/class/application/services/class-template.service.js';
@@ -27,6 +29,8 @@ export function buildClassContainer(aiModel: AIService): ClassContainer {
     classRepository,
     classLessonRepository,
     classVersionRepository,
+    new PrismaRecipeReferenceAdapter(),
+    new PrismaGroupClassAccessAdapter(),
   );
 
   const classAIService = new ClassAIService(classRepository, classLessonRepository, aiModel);

@@ -2,18 +2,17 @@ import type { Server } from 'node:http';
 
 import { createLogger } from '@/shared/logger/logger.js';
 
-import { buildContainer } from './main/container.js';
-import { createApp } from './main/app.js';
+import { buildContainer } from '@/main/container.js';
+import { createApp } from '@/main/app.js';
 
 import { config, getFeatureFlagService } from '@/shared/config';
 import { prisma } from '@/database/client.js';
 import { runStagingValidation } from '@/shared/monitoring/staging-validation.js';
 import { initializeAIServices } from '@/shared/ai/ai-service.provider.js';
 
-// Import the orchestrate use case and others that are still in the old location
-// These will be migrated in future phases
+// Cross-feature use cases assembled at the composition root
 import { OrchestrateRecipeUseCase } from '@/features/recipe/application/use-cases/orchestrate-recipe.use-case.js';
-import { StartRecipeUseCase } from '@/features/recipe/application/use-cases/start-recipe.use-case.js';
+import { LessonCompletionService } from '@/features/recipe/application/services/lesson-completion.service.js';
 
 const logger = createLogger(config);
 
@@ -44,7 +43,7 @@ function setupGracefulShutdown(server: Server, shutdownSignal: string): void {
         isClosed = true;
         process.exit(0);
       })
-      .catch((disconnectError: any) => {
+      .catch((disconnectError: unknown) => {
         logger.error(disconnectError, 'Error disconnecting database');
         process.exit(1);
       });
@@ -84,9 +83,10 @@ async function bootstrap(): Promise<void> {
   const featureFlagService = getFeatureFlagService();
   runStagingValidation(featureFlagService);
 
-  // Create orchestrate use case with dependencies from various containers
-  // This is needed because OrchestrateRecipeUseCase has complex dependencies
-  // that span multiple features
+  // Assemble the cross-feature orchestrate use case. It spans several
+  // bounded contexts (session, recipe, knowledge, activity, auth,
+  // evaluation), so it lives at the composition root instead of any
+  // single feature container.
   const orchestrateUseCase = new OrchestrateRecipeUseCase(
     container.session.sessionRepository,
     container.session.interactionRepository,
@@ -106,21 +106,17 @@ async function bootstrap(): Promise<void> {
     container.activity.activityAttemptRepository,
   );
 
-  // Create start recipe use case (requires classLessonRepository to find linked ClassLesson for recipe)
-  const startRecipeUseCase = new StartRecipeUseCase(
-    container.recipe.recipeRepository,
-    container.session.sessionRepository,
-    container.class.classLessonRepository,
+  // The recipe container already exposes a StartRecipeUseCase built from the
+  // same repositories — reuse it instead of constructing a duplicate.
+  const startRecipeUseCase = container.recipe.startRecipeUseCase;
+
+  // Mission-report real-accuracy recomputation — shares the completion flow's
+  // ActivityAttemptRepository so both paths read the same attempt data.
+  const lessonCompletionService = new LessonCompletionService(
+    container.activity.activityAttemptRepository,
   );
 
-  // Expose these globally for the app to use (temporary solution)
-  // Using 'any' type to bypass TypeScript issues with duplicate class declarations
-  (globalThis as any).__orchestrateUseCase = orchestrateUseCase;
-  (globalThis as any).__startRecipeUseCase = startRecipeUseCase;
-
-  // Add group routes after app creation (content control feature)
-
-  // Create and configure Express app
+  // Create and configure Express app — all dependencies flow through DI
   const app = createApp({
     config,
     logger,
@@ -130,6 +126,11 @@ async function bootstrap(): Promise<void> {
     gamification: container.gamification,
     class: container.class,
     tts: container.tts,
+    group: container.group,
+    clinical: container.clinical,
+    orchestrateUseCase,
+    startRecipeUseCase,
+    lessonCompletionService,
   });
 
   // Express app.listen() returns http.Server in Express 5

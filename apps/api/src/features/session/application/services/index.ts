@@ -1,2 +1,2 @@
 // Services barrel
-export * from './event.service.js';
+export * from '@/features/session/application/services/event.service.js';

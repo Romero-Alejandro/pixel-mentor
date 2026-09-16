@@ -1,2 +1,2 @@
 // DI barrel
-export * from './session.container.js';
+export * from '@/features/session/infrastructure/di/session.container.js';

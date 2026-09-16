@@ -1,4 +1,4 @@
-import { buildAuthContainer } from '../infrastructure/di/auth.container';
+import { buildAuthContainer } from '@/features/auth/infrastructure/di/auth.container.js';
 import { prisma } from '@/database/client';
 import { createLogger } from '@/shared/logger';
 
@@ -8,7 +8,7 @@ import { createLogger } from '@/shared/logger';
 // Skip if no DATABASE_URL or if explicitly skipping integration tests
 describe.skip('Auth Flow - Integration Test', () => {
   let container: ReturnType<typeof buildAuthContainer>;
-  const logger = createLogger({ level: 'silent' });
+  const logger = createLogger(undefined, { level: 'fatal' });
   const testUser = {
     email: `test-${Date.now()}@example.com`,
     password: 'password123',
@@ -123,9 +123,9 @@ describe.skip('Auth Flow - Integration Test', () => {
   });
 
   test('5. should logout and invalidate the refresh token', async () => {
-    const { loginUseCase, logoutUseCase } = container;
+    const { loginUseCase } = container;
 
-    const loginOutput = await loginUseCase.execute({
+    await loginUseCase.execute({
       identifier: testUser.email,
       password: testUser.password,
     });

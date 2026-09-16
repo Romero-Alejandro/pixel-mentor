@@ -1,6 +1,5 @@
-import type { Competency } from '../../domain/entities/competency.entity.js';
-import type { CompetencyRepository } from '../../domain/ports/competency.repository.port.js';
-
+import type { Competency } from '@/features/progress/domain/entities/competency.entity.js';
+import type { CompetencyRepository } from '@/features/progress/domain/ports/competency.repository.port.js';
 import { prisma } from '@/database/client.js';
 
 export class PrismaCompetencyRepository implements CompetencyRepository {

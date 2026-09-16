@@ -1,15 +1,17 @@
-import { prisma } from '@/database/client.js';
-
 import type {
   GroupEntity,
   GroupMemberEntity,
   GroupClassEntity,
-} from '../../domain/entities/group.entity.js';
+} from '@/features/group/domain/entities/group.entity.js';
 import type {
   IGroupRepository,
   IGroupMemberRepository,
   IGroupClassRepository,
-} from '../../domain/ports/group.repository.port.js';
+} from '@/features/group/domain/ports/group.repository.port.js';
+import type {
+  IStudentLookupPort,
+  IClassReferencePort,
+} from '@/features/group/domain/ports/student-lookup.port.js';
 import type { UserRole } from '@/features/auth/domain/entities/user.entity.js';
 
 export interface CreateGroupInput {
@@ -95,6 +97,8 @@ export class GroupService {
     private groupRepo: IGroupRepository,
     private memberRepo: IGroupMemberRepository,
     private classRepo: IGroupClassRepository,
+    private readonly studentLookup: IStudentLookupPort,
+    private readonly classReference: IClassReferencePort,
   ) {}
 
   async createGroup(teacherId: string, data: CreateGroupInput): Promise<GroupEntity> {
@@ -171,15 +175,8 @@ export class GroupService {
       throw new GroupValidationError('At least one student ID is required');
     }
 
-    const students = await prisma.user.findMany({
-      where: {
-        id: { in: data.studentIds },
-        role: 'STUDENT',
-      },
-      select: { id: true },
-    });
-
-    const foundIds = new Set(students.map((s) => s.id));
+    const foundStudentIds = await this.studentLookup.findExistingStudentIds(data.studentIds);
+    const foundIds = new Set(foundStudentIds);
     const notFound = data.studentIds.filter((id) => !foundIds.has(id));
     if (notFound.length > 0) {
       throw new StudentNotFoundError(notFound[0]);
@@ -258,10 +255,7 @@ export class GroupService {
       throw new GroupOwnershipError(groupId, teacherId);
     }
 
-    const classEntity = await prisma.class.findUnique({
-      where: { id: data.classId },
-      select: { id: true, tutorId: true },
-    });
+    const classEntity = await this.classReference.findOwnerById(data.classId);
 
     if (!classEntity) {
       throw new ClassNotFoundError(data.classId);
@@ -364,9 +358,17 @@ export class GroupServiceDeps {
     readonly groupRepo: IGroupRepository,
     readonly memberRepo: IGroupMemberRepository,
     readonly classRepo: IGroupClassRepository,
+    readonly studentLookup: IStudentLookupPort,
+    readonly classReference: IClassReferencePort,
   ) {}
 
   createService(): GroupService {
-    return new GroupService(this.groupRepo, this.memberRepo, this.classRepo);
+    return new GroupService(
+      this.groupRepo,
+      this.memberRepo,
+      this.classRepo,
+      this.studentLookup,
+      this.classReference,
+    );
   }
 }

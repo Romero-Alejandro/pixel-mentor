@@ -16,7 +16,6 @@ import {
   RecipeNotFoundError,
   RecipeHasNoStepsError,
   LLMTimeoutError,
-  StreamingDisabledError,
   InvalidInputError,
 } from '@/features/recipe/domain/errors/session.errors';
 
@@ -39,7 +38,7 @@ jest.mock('@/shared/config/index.js', () => ({
 }));
 
 jest.mock('@/shared/http/llm-governance.middleware.js', () => ({
-  llmGovernanceMiddleware: () => (req: Request, _res: Response, next: NextFunction) => next(),
+  llmGovernanceMiddleware: () => (_req: Request, _res: Response, next: NextFunction) => next(),
   recordLLMUsage: jest.fn(),
 }));
 
@@ -53,6 +52,11 @@ interface InteractionChunk {
   sessionCompleted?: boolean;
   staticContent?: { stepType?: string; script?: unknown; activity?: unknown };
   lessonProgress?: { currentStep: number; totalSteps: number };
+  feedback?: string;
+  isCorrect?: boolean;
+  autoAdvance?: boolean;
+  xpEarned?: number;
+  accuracy?: unknown;
 }
 
 // ---- SSE Response Parser ----

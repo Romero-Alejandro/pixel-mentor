@@ -1,6 +1,5 @@
-import type { KnowledgeChunk } from './knowledge-chunk.entity.js';
-import type { AtomCompetency } from './atom-competency.entity.js';
-
+import type { KnowledgeChunk } from '@/features/knowledge/domain/entities/knowledge-chunk.entity.js';
+import type { AtomCompetency } from '@/features/knowledge/domain/entities/atom-competency.entity.js';
 import type { AssetAttachment } from '@/shared/entities/asset-attachment.js';
 
 export enum AtomType {

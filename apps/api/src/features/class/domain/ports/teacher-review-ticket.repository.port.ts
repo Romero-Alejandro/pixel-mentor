@@ -1,4 +1,7 @@
-import type { TeacherReviewTicket, TicketStatus } from '../entities/teacher-review-ticket.entity';
+import type {
+  TeacherReviewTicket,
+  TicketStatus,
+} from '@/features/class/domain/entities/teacher-review-ticket.entity.js';
 
 export interface TeacherReviewTicketRepository {
   findById(id: string): Promise<TeacherReviewTicket | null>;

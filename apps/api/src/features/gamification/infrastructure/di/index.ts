@@ -1,2 +1,2 @@
 // DI barrel
-export * from './gamification.container.js';
+export * from '@/features/gamification/infrastructure/di/gamification.container.js';

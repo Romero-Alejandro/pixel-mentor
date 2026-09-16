@@ -18,9 +18,9 @@ import {
   isTransitionAllowed,
   getAllowedTransitions,
   getNextState,
-} from '../features/evaluation/domain/entities/pedagogical-state-machine.js';
-import { type RecipeConfig } from '../features/recipe/domain/entities/recipe-config.entity.js';
-import { createLogger } from '../shared/logger/logger.js';
+} from '@/features/evaluation/domain/entities/pedagogical-state-machine.js';
+import { type RecipeConfig } from '@/features/recipe/domain/entities/recipe-config.entity.js';
+import { createLogger } from '@/shared/logger/logger.js';
 
 const logger = createLogger(undefined, { name: 'pedagogical-state-service' });
 

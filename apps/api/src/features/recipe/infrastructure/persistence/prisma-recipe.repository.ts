@@ -1,4 +1,5 @@
 import { prisma } from '@/database/client';
+import { toPrismaJsonOrUndefined } from '@/shared/utils/prisma-json.js';
 import { StepType as PrismaStepType } from '@/database/generated/client/index.js';
 import type { Recipe, RecipeStep } from '@/features/recipe/domain/entities/recipe.entity';
 import type {
@@ -6,12 +7,14 @@ import type {
   RecipeStepWithContent,
   RecipeCreateInput,
   RecipeUpdateInput,
+  RecipeStepUpdateInput,
 } from '@/features/recipe/domain/ports/recipe.repository.port';
 import type { Concept } from '@/features/knowledge/domain/entities/concept.entity';
 import type { Activity } from '@/features/activity/domain/entities/activity.entity';
-import { CanonicalId } from '@/features/recipe/domain/valueObjects/canonical-id.vo.js';
-import { SemanticVersion } from '@/features/recipe/domain/valueObjects/semantic-version.vo.js';
-import { ExpectedDuration } from '@/features/recipe/domain/valueObjects/expected-duration.vo.js';
+import { CanonicalId } from '@/features/recipe/domain/value-objects/canonical-id.vo.js';
+import { SemanticVersion } from '@/features/recipe/domain/value-objects/semantic-version.vo.js';
+import { ExpectedDuration } from '@/features/recipe/domain/value-objects/expected-duration.vo.js';
+import { StepNotFoundError } from '@/shared/errors/domain-errors.js';
 
 export class PrismaRecipeRepository implements RecipeRepository {
   async findById(id: string): Promise<Recipe | null> {
@@ -139,40 +142,38 @@ export class PrismaRecipeRepository implements RecipeRepository {
   }
 
   async createStep(step: Omit<RecipeStep, 'createdAt'>): Promise<RecipeStep> {
-    console.log('[createStep] Input:', JSON.stringify(step, null, 2));
     const raw = await prisma.recipeStep.create({
       data: {
         recipeId: step.recipeId,
         atomId: step.atomId,
         order: step.order,
-        condition: step.condition as never,
+        condition: toPrismaJsonOrUndefined(step.condition, 'step.condition'),
         onCondition: step.onCondition,
         stepType: this.normalizeStepTypeForPrisma(step.stepType),
-        script: step.script as never,
-        activityData: (step as any).activityData as never,
-        question: (step as any).question as never,
+        script: toPrismaJsonOrUndefined(step.script, 'step.script'),
+        activityData: toPrismaJsonOrUndefined(step.activityData, 'step.activityData'),
+        question: toPrismaJsonOrUndefined(step.question, 'step.question'),
         conceptId: step.conceptId,
         activityId: step.activityId,
       },
     });
-    console.log('[createStep] Created:', JSON.stringify(raw, null, 2));
     return this.mapRecipeStep(raw);
   }
 
-  async updateStep(stepId: string, step: Partial<RecipeStep>): Promise<RecipeStep> {
+  async updateStep(stepId: string, step: RecipeStepUpdateInput): Promise<RecipeStep> {
     const raw = await prisma.recipeStep.update({
       where: { id: stepId },
       data: {
         atomId: step.atomId,
         order: step.order,
-        condition: step.condition as never,
+        condition: toPrismaJsonOrUndefined(step.condition, 'step.condition'),
         onCondition: step.onCondition,
-        script: step.script as never,
+        script: toPrismaJsonOrUndefined(step.script, 'step.script'),
         stepType: this.normalizeStepTypeForPrisma(step.stepType),
         conceptId: step.conceptId,
         activityId: step.activityId,
-        activityData: (step as any).activityData as never,
-        question: (step as any).question as never,
+        activityData: toPrismaJsonOrUndefined(step.activityData, 'step.activityData'),
+        question: toPrismaJsonOrUndefined(step.question, 'step.question'),
       },
     });
     return this.mapRecipeStep(raw);
@@ -186,6 +187,68 @@ export class PrismaRecipeRepository implements RecipeRepository {
     const raw = await prisma.recipeStep.findUnique({ where: { id: stepId } });
     if (!raw) return null;
     return this.mapRecipeStep(raw);
+  }
+
+  /**
+   * Single interactive transaction implementing a constraint-safe reorder:
+   * a two-phase order swap (current + TEMP_OFFSET → final) avoids the
+   * @@unique([recipeId, order]) conflicts while keeping the whole operation
+   * atomic — a failure rolls back completely instead of leaving half-shifted
+   * orders. Validating membership inside the tx makes the check-then-write
+   * race-free against concurrent step additions/removals for this recipe.
+   *
+   * `stepIds` anchors the leading positions (0-based); unlisted steps keep
+   * their previous relative order after them.
+   */
+  async reorderSteps(recipeId: string, stepIds: string[]): Promise<void> {
+    await prisma.$transaction(async (tx) => {
+      // 1. Read current orders inside the tx (also validates membership).
+      const orderedIds = [...new Set(stepIds)];
+      const steps = await tx.recipeStep.findMany({
+        where: { recipeId, id: { in: orderedIds } },
+        select: { id: true, order: true },
+      });
+      if (steps.length !== orderedIds.length) {
+        const foundIds = new Set(steps.map((s) => s.id));
+        const missing = orderedIds.find((id) => !foundIds.has(id));
+        throw new StepNotFoundError(missing ?? '<unknown>');
+      }
+
+      // 2. Pass 1 — lift listed steps above unlisted ones (offset swap).
+      //    Ordering the temp values by the desired index is what lets pass 2
+      //    skip conflict resolution for unlisted steps.
+      const UNLISTED_TEMP_OFFSET = 10000;
+      const listedMaxOrder = Math.max(...steps.map((s) => s.order), -1);
+      const tempBase = listedMaxOrder + 1 + UNLISTED_TEMP_OFFSET;
+      for (const [index, stepId] of orderedIds.entries()) {
+        await tx.recipeStep.update({
+          where: { id: stepId },
+          data: { order: tempBase + index },
+        });
+      }
+
+      // 3. Pass 2 — unlisted steps take their final 0..n orders (safe: listed
+      //    steps now sit above the final range, so @@unique never conflicts).
+      const unlisted = await tx.recipeStep.findMany({
+        where: { recipeId, id: { notIn: orderedIds } },
+        select: { id: true, order: true },
+        orderBy: { order: 'asc' },
+      });
+      let cursor = orderedIds.length;
+      for (const step of unlisted) {
+        await tx.recipeStep.update({
+          where: { id: step.id },
+          data: { order: cursor++ },
+        });
+      }
+
+      // 4. Pass 3 — listed steps drop into their final positions.
+      for (const [index, stepId] of orderedIds.entries())
+        await tx.recipeStep.update({
+          where: { id: stepId },
+          data: { order: index },
+        });
+    });
   }
 
   private mapRecipe(raw: Record<string, unknown>): Recipe {

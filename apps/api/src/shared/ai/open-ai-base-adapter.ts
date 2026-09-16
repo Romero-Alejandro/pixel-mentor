@@ -2,7 +2,7 @@ import OpenAI from 'openai';
 import type pino from 'pino';
 import type { z } from 'zod';
 
-import { BaseLLMAdapter } from './base-llm-adapter';
+import { BaseLLMAdapter } from '@/shared/ai/base-llm-adapter.js';
 
 export abstract class OpenAIBaseClientAdapter extends BaseLLMAdapter {
   protected readonly client: OpenAI;

@@ -135,6 +135,14 @@ export function createLogger(config?: Config, options: LoggerOptions = {}): Pino
   return pino(pinoOptions);
 }
 
+/**
+ * Create a pino logger for a specific module (routes, use cases, adapters).
+ * Replaces scattered console.* usage with structured, redacted logging.
+ */
+export function moduleLogger(name: string): PinoLogger {
+  return createLogger(undefined, { name: `pm:${name}` });
+}
+
 export function createChildLogger(
   parent: PinoLogger,
   bindings: Record<string, unknown>,

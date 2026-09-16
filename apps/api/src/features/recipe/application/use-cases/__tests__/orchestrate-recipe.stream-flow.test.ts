@@ -1,4 +1,4 @@
-import { OrchestrateRecipeUseCase } from '../orchestrate-recipe.use-case';
+import { OrchestrateRecipeUseCase } from '@/features/recipe/application/use-cases/orchestrate-recipe.use-case.js';
 import { randomUUID } from 'node:crypto';
 
 // Mock logger
@@ -83,6 +83,7 @@ const mockFeatureFlagService = {
 
 const mockActivityAttemptRepo = {
   findByUserIdAndAtomId: jest.fn().mockResolvedValue([]),
+  findByUserIdAndAtomIds: jest.fn().mockResolvedValue([]),
 };
 
 const mockContextWindowService = {
@@ -245,9 +246,7 @@ describe('OrchestrateRecipeUseCase - Streaming Flow Tests', () => {
     const testSessionId = randomUUID();
 
     // Spy on randomUUID to return the same testSessionId whenever called during session creation
-    const randomUUIDSpy = jest
-      .spyOn(require('node:crypto'), 'randomUUID')
-      .mockReturnValue(testSessionId);
+    jest.spyOn(require('node:crypto'), 'randomUUID').mockReturnValue(testSessionId);
 
     const sessionState: any = {
       id: testSessionId,

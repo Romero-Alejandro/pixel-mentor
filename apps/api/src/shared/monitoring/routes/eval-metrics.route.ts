@@ -15,8 +15,6 @@ import {
   resetMetricsStore,
   getMetricsSummary,
 } from '@/shared/monitoring/eval-metrics';
-import type { IUserRepository as UserRepository } from '@/features/auth/domain/ports/user.repository.port.js';
-import type { VerifyTokenUseCase } from '@/features/auth/application/use-cases/verify-token.use-case.js';
 
 /**
  * Request body schema for reset endpoint
@@ -25,15 +23,13 @@ const ResetMetricsSchema = z.object({
   confirm: z.literal(true),
 });
 
-export interface MetricsDependencies {
-  userRepository?: UserRepository;
-  verifyTokenUseCase?: VerifyTokenUseCase;
-}
-
 /**
- * Create the metrics router with optional authentication
+ * Create the metrics router.
+ *
+ * Authentication and authorization are NOT handled here: the router must be
+ * mounted behind `protectedMiddleware` + `requireRole('ADMIN')` (see app.ts).
  */
-export function createMetricsRouter(deps: MetricsDependencies = {}): Router {
+export function createMetricsRouter(): Router {
   const router = Router();
 
   /**
@@ -64,25 +60,11 @@ export function createMetricsRouter(deps: MetricsDependencies = {}): Router {
 
   /**
    * POST /metrics/evaluation/reset
-   * Reset all metrics. Requires authentication in production.
+   * Reset all metrics. Requires the surrounding middleware to have
+   * authenticated an ADMIN user.
    */
   router.post('/reset', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      // In production, verify admin authentication
-      // For now, we check if deps are provided
-      const authHeader = req.headers.authorization;
-
-      if (deps.verifyTokenUseCase && authHeader) {
-        try {
-          const token = authHeader.replace('Bearer ', '');
-          await deps.verifyTokenUseCase.execute(token);
-          // In a real app, verify admin role here
-        } catch {
-          res.status(401).json({ error: 'Unauthorized' });
-          return;
-        }
-      }
-
       // Validate request body
       const parseResult = ResetMetricsSchema.safeParse(req.body);
       if (!parseResult.success) {

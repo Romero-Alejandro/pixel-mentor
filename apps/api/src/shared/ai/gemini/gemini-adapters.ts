@@ -84,18 +84,13 @@ export class GeminiAIModelAdapter extends BaseGenerativeAdapter implements AISer
       prompt = `${params.context}\n\n${prompt}`;
     }
 
-    try {
-      const model = this.client.getGenerativeModel({ model: this.defaultModel });
-      const result = await model.generateContent(prompt);
-      const text = result.response?.text();
-      if (text && text.trim()) {
-        return { answer: text.trim() };
-      }
-      return { answer: 'No se pudo generar contenido.' };
-    } catch (error) {
-      this.logger?.error({ err: error }, '[Gemini] generateAnswer error');
-      return { answer: 'Error al generar contenido.' };
+    const model = this.client.getGenerativeModel({ model: this.defaultModel });
+    const result = await model.generateContent(prompt);
+    const text = result.response?.text();
+    if (!text || !text.trim()) {
+      throw new Error('Gemini generateAnswer returned an empty response');
     }
+    return { answer: text.trim() };
   }
 
   async *generateResponseStream(params: GenerateResponseParams): AsyncGenerator<string> {
@@ -148,7 +143,8 @@ abstract class BaseGeminiClassifierAdapter extends BaseLLMAdapter {
         if (
           error instanceof Error &&
           'status' in error &&
-          [429, 503, 500].includes((error as any).status)
+          typeof error.status === 'number' &&
+          [429, 503, 500].includes(error.status)
         )
           continue;
         throw error;

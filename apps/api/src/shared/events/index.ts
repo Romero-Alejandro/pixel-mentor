@@ -5,23 +5,23 @@
  * for decoupling gamification logic from domain logic.
  */
 
-export { InMemoryEventBus, getEventBus, resetEventBus } from './event-bus';
+export { InMemoryEventBus, getEventBus, resetEventBus } from '@/shared/events/event-bus.js';
 
-export type { EventBus, EventHandler } from './event-bus';
+export type { EventBus, EventHandler } from '@/shared/events/event-bus.js';
 
 export {
   InMemoryIdempotentEventBus,
   getIdempotentEventBus,
   resetIdempotentEventBus,
-} from './idempotent-event-bus';
+} from '@/shared/events/idempotent-event-bus.js';
 
 export type {
   IdempotentEventBus,
   IdempotentEventOptions,
   ProcessedEvent,
-} from './idempotent-event-bus';
+} from '@/shared/events/idempotent-event-bus.js';
 
-export { GameEvents, GameDomainEvents, GameEngineEvents } from './game-events';
+export { GameEvents, GameDomainEvents, GameEngineEvents } from '@/shared/events/game-events.js';
 
 export type {
   GameEvent,
@@ -34,4 +34,4 @@ export type {
   BadgeEarnedPayload,
   LevelUpPayload,
   StreakUpdatedPayload,
-} from './game-events';
+} from '@/shared/events/game-events.js';

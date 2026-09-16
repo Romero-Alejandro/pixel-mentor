@@ -1,14 +1,14 @@
 import { createLogger } from '@/shared/logger/logger.js';
 
-import type { StreakResult } from '../../domain/entities/streak.types';
-import type { IUserGamificationRepository } from '../../domain/ports/gamification.ports';
-import type { IDailyActivityRepository } from '../../domain/ports/daily-activity.repository.port';
+import type { StreakResult } from '@/features/gamification/domain/entities/streak.types.js';
+import type { IUserGamificationRepository } from '@/features/gamification/domain/ports/gamification.ports.js';
+import type { IDailyActivityRepository } from '@/features/gamification/domain/ports/daily-activity.repository.port.js';
 import {
   calculateStreakBonus,
   isSameDay,
   isStreakBroken,
   getStartOfDayUTC,
-} from './streak-calculator.service.js';
+} from '@/features/gamification/application/services/streak-calculator.service.js';
 
 export interface IClock {
   now(): Date;

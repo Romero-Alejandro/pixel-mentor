@@ -302,7 +302,7 @@ export function getUserErrorMessage(error: unknown): string {
     // Map common error patterns
     const msg = error.message.toLowerCase();
     if (msg.includes('network') || msg.includes('fetch')) {
-      ('Error de conexion. Verifica tu internet.');
+      return 'Error de conexion. Verifica tu internet.';
     }
     if (msg.includes('timeout')) {
       return 'La operacion tardo demasiado. Intenta de nuevo.';

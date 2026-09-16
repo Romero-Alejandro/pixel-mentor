@@ -43,8 +43,8 @@
 
 import type { ITemplatePreprocessor } from '@/features/prompt/domain/ports/template-preprocessor.interface';
 import type { ISafePromptBuilder } from '@/features/prompt/domain/ports/safe-prompt-builder.interface';
-import { TemplatePreprocessor } from './template-preprocessor.service';
-import { SafePromptBuilder } from './safe-prompt-builder.service';
+import { TemplatePreprocessor } from '@/features/prompt/application/services/template-preprocessor.service.js';
+import { SafePromptBuilder } from '@/features/prompt/application/services/safe-prompt-builder.service.js';
 
 /**
  * Sentinel placeholder used internally to preserve student answer placeholder

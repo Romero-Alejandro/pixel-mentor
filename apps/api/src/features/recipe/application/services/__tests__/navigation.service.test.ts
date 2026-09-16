@@ -2,7 +2,8 @@ import {
   detectNavigationInput,
   calculateNextStep,
   determineStepTransition,
-} from '../navigation.service';
+} from '@/features/recipe/application/services/navigation.service.js';
+import type { RecipeStep } from '@/features/recipe/domain/entities/recipe.entity.js';
 
 // Mock logger
 jest.mock('@/shared/logger/logger.js', () => ({
@@ -13,6 +14,15 @@ jest.mock('@/shared/logger/logger.js', () => ({
     error: jest.fn(),
   })),
 }));
+
+const makeStep = (
+  overrides: Partial<RecipeStep> & Pick<RecipeStep, 'atomId' | 'stepType' | 'order'>,
+): RecipeStep => ({
+  id: `step-${overrides.order ?? 0}`,
+  recipeId: 'recipe-1',
+  createdAt: new Date('2023-01-01T00:00:00.000Z'),
+  ...overrides,
+});
 
 describe('NavigationService', () => {
   describe('detectNavigationInput', () => {
@@ -98,11 +108,11 @@ describe('NavigationService', () => {
 
   describe('calculateNextStep', () => {
     const steps = [
-      { atomId: 'a1', stepType: 'intro', order: 0, script: {} },
-      { atomId: 'a2', stepType: 'content', order: 1, script: {} },
-      { atomId: 'a3', stepType: 'question', order: 2, script: {} },
-      { atomId: 'a4', stepType: 'activity', order: 3, script: {} },
-      { atomId: 'a5', stepType: 'closure', order: 4, script: {} },
+      makeStep({ atomId: 'a1', stepType: 'intro', order: 0, script: {} }),
+      makeStep({ atomId: 'a2', stepType: 'content', order: 1, script: {} }),
+      makeStep({ atomId: 'a3', stepType: 'question', order: 2, script: {} }),
+      makeStep({ atomId: 'a4', stepType: 'activity', order: 3, script: {} }),
+      makeStep({ atomId: 'a5', stepType: 'closure', order: 4, script: {} }),
     ];
 
     it('should return next step when not at end', () => {
@@ -120,7 +130,7 @@ describe('NavigationService', () => {
     });
 
     it('should handle single step array', () => {
-      const singleStep = [{ atomId: 'a1', stepType: 'content', order: 0, script: {} }];
+      const singleStep = [makeStep({ atomId: 'a1', stepType: 'content', order: 0, script: {} })];
       const result = calculateNextStep(singleStep, 0);
       expect(result.willComplete).toBe(true);
     });
@@ -128,80 +138,65 @@ describe('NavigationService', () => {
 
   describe('determineStepTransition', () => {
     it('should return ACTIVITY_WAIT for activity step', () => {
-      const result = determineStepTransition({
-        atomId: 'a1',
-        stepType: 'activity',
-        order: 0,
-        script: {},
-      });
+      const result = determineStepTransition(
+        makeStep({ atomId: 'a1', stepType: 'activity', order: 0, script: {} }),
+      );
       expect(result.targetState).toBe('ACTIVITY_WAIT');
       expect(result.requiresInput).toBe(true);
       expect(result.autoAdvance).toBe(false);
     });
 
     it('should return ACTIVITY_WAIT for exam step', () => {
-      const result = determineStepTransition({
-        atomId: 'a1',
-        stepType: 'exam',
-        order: 0,
-        script: {},
-      });
+      // 'exam' is handled defensively by the service even though it's not in the domain StepType union
+      const result = determineStepTransition(
+        makeStep({
+          atomId: 'a1',
+          stepType: 'exam' as RecipeStep['stepType'],
+          order: 0,
+          script: {},
+        }),
+      );
       expect(result.targetState).toBe('ACTIVITY_WAIT');
       expect(result.requiresInput).toBe(true);
     });
 
     it('should return ACTIVITY_WAIT for question step', () => {
-      const result = determineStepTransition({
-        atomId: 'a1',
-        stepType: 'question',
-        order: 0,
-        script: {},
-      });
+      const result = determineStepTransition(
+        makeStep({ atomId: 'a1', stepType: 'question', order: 0, script: {} }),
+      );
       expect(result.targetState).toBe('ACTIVITY_WAIT');
       expect(result.requiresInput).toBe(true);
     });
 
     it('should return EXPLANATION for content step', () => {
-      const result = determineStepTransition({
-        atomId: 'a1',
-        stepType: 'content',
-        order: 0,
-        script: {},
-      });
+      const result = determineStepTransition(
+        makeStep({ atomId: 'a1', stepType: 'content', order: 0, script: {} }),
+      );
       expect(result.targetState).toBe('EXPLANATION');
       expect(result.requiresInput).toBe(false);
       expect(result.autoAdvance).toBe(true);
     });
 
     it('should return EXPLANATION for intro step', () => {
-      const result = determineStepTransition({
-        atomId: 'a1',
-        stepType: 'intro',
-        order: 0,
-        script: {},
-      });
+      const result = determineStepTransition(
+        makeStep({ atomId: 'a1', stepType: 'intro', order: 0, script: {} }),
+      );
       expect(result.targetState).toBe('EXPLANATION');
       expect(result.requiresInput).toBe(false);
     });
 
     it('should return EXPLANATION for closure step', () => {
-      const result = determineStepTransition({
-        atomId: 'a1',
-        stepType: 'closure',
-        order: 0,
-        script: {},
-      });
+      const result = determineStepTransition(
+        makeStep({ atomId: 'a1', stepType: 'closure', order: 0, script: {} }),
+      );
       expect(result.targetState).toBe('EXPLANATION');
       expect(result.requiresInput).toBe(false);
     });
 
     it('should default to EXPLANATION for null stepType', () => {
-      const result = determineStepTransition({
-        atomId: 'a1',
-        stepType: null,
-        order: 0,
-        script: {},
-      });
+      const result = determineStepTransition(
+        makeStep({ atomId: 'a1', stepType: undefined, order: 0, script: {} }),
+      );
       expect(result.targetState).toBe('EXPLANATION');
       expect(result.requiresInput).toBe(false);
     });

@@ -6,24 +6,24 @@ import { Router, type Request, type Response, type NextFunction } from 'express'
 import { z } from 'zod';
 import type pino from 'pino';
 
-import type { GameEngineCore } from '../../application/services/game-engine-core.service';
-import type { LevelService } from '../../application/services/level.service';
-import type { BadgeEngine } from '../../application/services/badge-engine.service';
-import {
-  calculateXPFromAccuracy,
-  getPerformanceTier,
-} from '../../application/strategies/xp-reward.strategy';
+import type { GameEngineCore } from '@/features/gamification/application/services/game-engine-core.service.js';
+import type { LevelService } from '@/features/gamification/application/services/level.service.js';
+import type { BadgeEngine } from '@/features/gamification/application/services/badge-engine.service.js';
+import { calculateXPFromAccuracy } from '@/features/gamification/application/strategies/xp-reward.strategy.js';
 import type {
   IUserGamificationRepository,
   IBadgeRepository,
   GamificationProfile,
-} from '../../domain/ports/gamification.ports';
-
+} from '@/features/gamification/domain/ports/gamification.ports.js';
 import type { GetSessionUseCase } from '@/features/session/application/use-cases/get-session.use-case';
 import type { GetRecipeUseCase } from '@/features/recipe/application/use-cases/get-recipe.use-case';
+import type {
+  LessonCompletionService,
+  LessonAccuracy,
+} from '@/features/recipe/application/services/lesson-completion.service.js';
 import type { PrismaClient } from '@/database/client.js';
 import { GetMissionReportParamsSchema } from '@/shared/dto/index';
-import { ClinicalCalculatorService } from '@/features/clinical/domain/services/clinical-calculator.service.js';
+import type { ClinicalCalculatorService } from '@/features/clinical/domain/services/clinical-calculator.service.js';
 import type {
   Discrepancy,
   PragmaticModuleData,
@@ -100,7 +100,16 @@ interface MissionReport {
   newBadges: MissionReportBadge[];
   levelUp: MissionReportLevelUp | null;
   streakDays: number;
+  /** Real accuracy recomputed from ActivityAttempt records (last attempt per activity atom). */
+  accuracy: LessonAccuracy;
   conceptsMastered: string[];
+  /**
+   * Always `true` today: the clinical section comes from the placeholder
+   * simulation (ClinicalCalculatorService), not from real student data.
+   * Clients must render a disclosure notice; remove once a real calculation
+   * replaces the simulation.
+   */
+  clinicalReportSimulated: true;
   clinicalDiscrepancies: Discrepancy[];
   pragmaticModule: PragmaticModuleData;
 }
@@ -115,6 +124,8 @@ export function createGamificationRouter(
   getSessionUseCase: GetSessionUseCase,
   getRecipeUseCase: GetRecipeUseCase,
   prisma: PrismaClient,
+  clinicalCalculator: ClinicalCalculatorService,
+  lessonCompletion: LessonCompletionService,
 ): Router {
   const router = Router();
 
@@ -303,9 +314,26 @@ export function createGamificationRouter(
         const levelConfig = await levelService.getLevel(profile.level);
         const xpToNextLevel = await levelService.getXPForNextLevel(profile.level);
 
-        const accuracyPercent = 100;
-        const xpEarned = calculateXPFromAccuracy(accuracyPercent);
-        void getPerformanceTier(accuracyPercent);
+        const recipe = await getRecipeUseCase.execute(session.recipeId);
+
+        // Real accuracy: recompute from the student's ActivityAttempt records
+        // (same service the completion flow uses), so the report reflects
+        // actual retry behavior instead of an assumed 100%. Skipped activities
+        // come from the session checkpoint, mirroring the completion flow.
+        const skippedActivities =
+          (session.stateCheckpoint as { skippedActivities?: string[] } | undefined)
+            ?.skippedActivities ?? [];
+        const accuracy = await lessonCompletion.calculateAccuracy(
+          userId,
+          recipe.steps,
+          skippedActivities,
+        );
+        // Mirror the LessonCompletionStrategy payout so the displayed XP matches
+        // what the gamification engine awards for this lesson's accuracy.
+        const xpEarned = calculateXPFromAccuracy(
+          accuracy.accuracyPercent,
+          accuracy.allCorrectOnFirstAttempt,
+        );
 
         const newBadges = await prisma.userBadge.findMany({
           where: {
@@ -325,14 +353,11 @@ export function createGamificationRouter(
 
         const levelUp: MissionReportLevelUp | null = null;
 
-        const recipe = await getRecipeUseCase.execute(session.recipeId);
         const conceptsMastered: string[] = (recipe.concepts ?? []).map(
           (c: { title: string }) => c.title,
         );
 
-        const clinicalCalculator = new ClinicalCalculatorService();
         const clinicalReport = clinicalCalculator.calculate(session, recipe, userId);
-        // TODO: wire via buildClinicalContainer when global DI container is available
 
         const report: MissionReport = {
           xpEarned,
@@ -343,7 +368,11 @@ export function createGamificationRouter(
           newBadges: missionBadges,
           levelUp,
           streakDays: profile.streak,
+          accuracy,
           conceptsMastered,
+          // Placeholder simulation — never present these numbers as a real
+          // clinical evaluation. See ClinicalCalculatorService.
+          clinicalReportSimulated: true,
           clinicalDiscrepancies: [...clinicalReport.clinicalDiscrepancies] as Discrepancy[],
           pragmaticModule: clinicalReport.pragmaticModule as PragmaticModuleData,
         };

@@ -1,4 +1,4 @@
-import type { RecipeRepository } from '../../domain/ports/recipe.repository.port';
+import type { RecipeRepository } from '@/features/recipe/domain/ports/recipe.repository.port.js';
 
 export interface ListRecipesOptions {
   isMy?: boolean;

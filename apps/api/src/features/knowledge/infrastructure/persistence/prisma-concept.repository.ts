@@ -1,7 +1,14 @@
-import type { Concept } from '../../domain/entities/concept.entity.js';
-import type { ConceptRepository } from '../../domain/ports/concept.repository.port.js';
-
 import { prisma } from '@/database/client.js';
+import {
+  toPrismaJsonRequired,
+  toPrismaJsonRequiredOrUndefined,
+} from '@/shared/utils/prisma-json.js';
+import type { Concept } from '@/features/knowledge/domain/entities/concept.entity.js';
+import type { ConceptRepository } from '@/features/knowledge/domain/ports/concept.repository.port.js';
+
+/** Row shape returned by the generated Concept delegate. */
+type ConceptRow =
+  ReturnType<typeof prisma.concept.findUniqueOrThrow> extends Promise<infer R> ? R : never;
 
 export class PrismaConceptRepository implements ConceptRepository {
   async findById(id: string): Promise<Concept | null> {
@@ -29,29 +36,28 @@ export class PrismaConceptRepository implements ConceptRepository {
         recipeId: concept.recipeId,
         title: concept.title,
         order: concept.order,
-        introduction: concept.introduction as any,
-        explanation: concept.explanation as any,
-        examples: concept.examples as any,
-        keyPoints: concept.keyPoints as any,
-        closure: concept.closure as any,
+        introduction: toPrismaJsonRequired(concept.introduction, 'concept.introduction'),
+        explanation: toPrismaJsonRequired(concept.explanation, 'concept.explanation'),
+        examples: toPrismaJsonRequired(concept.examples ?? [], 'concept.examples'),
+        keyPoints: toPrismaJsonRequired(concept.keyPoints ?? [], 'concept.keyPoints'),
+        closure: toPrismaJsonRequired(concept.closure, 'concept.closure'),
       },
     });
     return this.mapConcept(raw);
   }
 
   async update(id: string, data: Partial<Concept>): Promise<Concept> {
-    const updateData: any = {};
-    if (data.title !== undefined) updateData.title = data.title;
-    if (data.order !== undefined) updateData.order = data.order;
-    if (data.introduction !== undefined) updateData.introduction = data.introduction as any;
-    if (data.explanation !== undefined) updateData.explanation = data.explanation as any;
-    if (data.examples !== undefined) updateData.examples = data.examples as any;
-    if (data.keyPoints !== undefined) updateData.keyPoints = data.keyPoints as any;
-    if (data.closure !== undefined) updateData.closure = data.closure as any;
-
     const raw = await prisma.concept.update({
       where: { id },
-      data: updateData,
+      data: {
+        ...(data.title !== undefined && { title: data.title }),
+        ...(data.order !== undefined && { order: data.order }),
+        introduction: toPrismaJsonRequiredOrUndefined(data.introduction, 'concept.introduction'),
+        explanation: toPrismaJsonRequiredOrUndefined(data.explanation, 'concept.explanation'),
+        examples: toPrismaJsonRequiredOrUndefined(data.examples, 'concept.examples'),
+        keyPoints: toPrismaJsonRequiredOrUndefined(data.keyPoints, 'concept.keyPoints'),
+        closure: toPrismaJsonRequiredOrUndefined(data.closure, 'concept.closure'),
+      },
     });
     return this.mapConcept(raw);
   }
@@ -60,17 +66,17 @@ export class PrismaConceptRepository implements ConceptRepository {
     await prisma.concept.delete({ where: { id } });
   }
 
-  private mapConcept(raw: any): Concept {
+  private mapConcept(raw: ConceptRow): Concept {
     return {
       id: raw.id,
       recipeId: raw.recipeId,
       title: raw.title,
       order: raw.order,
-      introduction: raw.introduction,
-      explanation: raw.explanation,
-      examples: raw.examples || [],
-      keyPoints: raw.keyPoints || [],
-      closure: raw.closure,
+      introduction: raw.introduction as unknown as Concept['introduction'],
+      explanation: raw.explanation as unknown as Concept['explanation'],
+      examples: (raw.examples as unknown as Concept['examples']) ?? [],
+      keyPoints: raw.keyPoints as Concept['keyPoints'],
+      closure: raw.closure as unknown as Concept['closure'],
       createdAt: raw.createdAt,
     };
   }

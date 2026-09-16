@@ -72,6 +72,12 @@ export const MissionReportSchema = z.object({
     .nullable(),
   streakDays: z.number().int().min(0),
   conceptsMastered: z.array(z.string()),
+  /**
+   * ⚠️ `true` while the clinical section is produced by the placeholder
+   * simulation (ClinicalCalculatorService). Must be absent/false once a real
+   * calculation is implemented — UIs use it to show a disclosure notice.
+   */
+  clinicalReportSimulated: z.boolean().optional(),
   clinicalDiscrepancies: z.array(DiscrepancySchema),
   pragmaticModule: PragmaticModuleSchema,
 });

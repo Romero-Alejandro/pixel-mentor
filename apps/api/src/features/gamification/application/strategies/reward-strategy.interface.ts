@@ -2,7 +2,10 @@
  * Reward Strategy Interface - Defines the contract for reward strategies.
  */
 
-import type { RewardContext, Reward } from './reward.types';
+import type {
+  RewardContext,
+  Reward,
+} from '@/features/gamification/application/strategies/reward.types.js';
 
 /**
  * Strategy interface for calculating and generating rewards.

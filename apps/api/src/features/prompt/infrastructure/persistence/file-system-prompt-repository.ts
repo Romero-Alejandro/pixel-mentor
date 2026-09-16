@@ -2,8 +2,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { createUnifiedPromptRenderer } from './unified-prompt-renderer.js';
-
+import { createUnifiedPromptRenderer } from '@/features/prompt/infrastructure/persistence/unified-prompt-renderer.js';
 import type {
   PromptRepository,
   PromptParams,

@@ -1,12 +1,12 @@
 import type pino from 'pino';
 
 import type { Config } from '@/shared/config/index.js';
-import { AIAdapterFactory, type AIAdapterFactoryOptions } from './ai-adapter-factory.js';
+import { AIAdapterFactory, type AIAdapterFactoryOptions } from '@/shared/ai/ai-adapter-factory.js';
 import {
   LLMGovernanceEngine,
   DEFAULT_GOVERNANCE_CONFIG,
   type GovernanceConfig,
-} from './governance/index.js';
+} from '@/shared/ai/governance/index.js';
 
 import type { AIService } from '@/features/recipe/domain/ports/ai-service.port.js';
 import type {

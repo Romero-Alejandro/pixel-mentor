@@ -17,13 +17,17 @@ import {
   recordLLMUsage,
 } from '@/shared/http/llm-governance.middleware.js';
 
-const GenerateClassDraftInputSchema = z.object({
-  topic: z.string().min(1).max(500),
-  targetAgeMin: z.number().min(3).max(18),
-  targetAgeMax: z.number().min(3).max(18),
-  objectives: z.array(z.string()).min(3).max(10),
-  duration: z.number().min(15).max(180).optional(),
-});
+const GenerateClassDraftInputSchema = z
+  .object({
+    topic: z.string().min(1).max(500),
+    targetAgeMin: z.number().int().min(3).max(18),
+    targetAgeMax: z.number().int().min(3).max(18),
+    objectives: z.array(z.string()).min(3).max(10),
+    duration: z.number().min(15).max(180).optional(),
+  })
+  .refine((data) => data.targetAgeMin <= data.targetAgeMax, {
+    message: 'targetAgeMin must be <= targetAgeMax',
+  });
 
 export interface ClassAIRouterDependencies {
   classAIService: ClassAIService;
@@ -48,6 +52,8 @@ export function createClassAIRouter(deps: ClassAIRouterDependencies): Router {
         learningObjectives: validatedData.objectives,
         targetAudience: undefined,
         duration: validatedData.duration,
+        targetAgeMin: validatedData.targetAgeMin,
+        targetAgeMax: validatedData.targetAgeMax,
       };
 
       const draft = await classAIService.generateClassDraft(input);

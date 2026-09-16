@@ -1,10 +1,5 @@
-import type { RecipeRepository } from '../../domain/ports/recipe.repository.port.js';
-import {
-  RecipeNotFoundError,
-  RecipeOwnershipError,
-  StepNotFoundError,
-} from '@/shared/errors/domain-errors.js';
-import type { RecipeStep } from '../../domain/entities/recipe.entity.js';
+import type { RecipeRepository } from '@/features/recipe/domain/ports/recipe.repository.port.js';
+import { RecipeNotFoundError, RecipeOwnershipError } from '@/shared/errors/domain-errors.js';
 
 export class ReorderStepsUseCase {
   constructor(private recipeRepository: RecipeRepository) {}
@@ -19,17 +14,8 @@ export class ReorderStepsUseCase {
       throw new RecipeOwnershipError(recipeId, userId);
     }
 
-    const steps = await this.recipeRepository.findStepsByRecipeId(recipeId);
-    const stepIdSet = new Set(steps.map((s) => s.id));
-
-    for (const id of stepIds) {
-      if (!stepIdSet.has(id)) {
-        throw new StepNotFoundError(id);
-      }
-    }
-
-    for (let i = 0; i < stepIds.length; i++) {
-      await this.recipeRepository.updateStep(stepIds[i], { order: i } as Partial<RecipeStep>);
-    }
+    // Membership validation + constraint-safe reorder run atomically in the
+    // repository — see PrismaRecipeRepository.reorderSteps.
+    await this.recipeRepository.reorderSteps(recipeId, stepIds);
   }
 }

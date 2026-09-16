@@ -19,7 +19,7 @@
  */
 
 import { createLogger } from '@/shared/logger/index.js';
-import { InMemoryEventBus, type EventBus } from './event-bus.js';
+import { InMemoryEventBus, type EventBus } from '@/shared/events/event-bus.js';
 
 export interface IdempotentEventOptions {
   /** Unique event ID for deduplication */

@@ -4,12 +4,11 @@
  * Implements IUserGamificationRepository using Prisma ORM.
  */
 
-import { LevelService } from '../../application/services/level.service';
+import { LevelService } from '@/features/gamification/application/services/level.service.js';
 import type {
   IUserGamificationRepository,
   GamificationProfile,
-} from '../../domain/ports/gamification.ports';
-
+} from '@/features/gamification/domain/ports/gamification.ports.js';
 import { prisma } from '@/database/client.js';
 
 export class PrismaUserGamificationRepository implements IUserGamificationRepository {

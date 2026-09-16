@@ -11,6 +11,22 @@ export interface AppRequest extends Request {
     email: string;
     role: string;
   };
+  /** LLM governance context attached by llmGovernanceMiddleware */
+  llmGovernance?: {
+    userId: string | null;
+    startTime: number;
+    provider: string;
+    postCallRecord: (
+      userId: string | null,
+      provider: string,
+      model: string,
+      path: string,
+      prompt: string,
+      response: string,
+      success: boolean,
+      error?: string,
+    ) => unknown;
+  };
 }
 
 export type AppRequestHandler = (

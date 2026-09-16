@@ -1,4 +1,4 @@
-import type { Module } from './module.entity';
+import type { Module } from '@/features/class/domain/entities/module.entity.js';
 
 export interface Level {
   readonly id: string;

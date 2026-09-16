@@ -2,9 +2,8 @@
  * Prisma-based ClassVersion Repository.
  */
 
-import type { IClassVersionRepository } from '../../domain/ports/class.repository.port';
-import type { ClassVersionEntity } from '../../domain/entities/class.entity';
-
+import type { IClassVersionRepository } from '@/features/class/domain/ports/class.repository.port.js';
+import type { ClassVersionEntity } from '@/features/class/domain/entities/class.entity.js';
 import { prisma, type Prisma } from '@/database/client.js';
 
 function toClassVersionEntity(prismaVersion: {
@@ -17,6 +16,8 @@ function toClassVersionEntity(prismaVersion: {
   description: string | null;
   slug: string;
   status: string;
+  targetAgeMin: number | null;
+  targetAgeMax: number | null;
   lessons?: Array<{
     id: string;
     classVersionId: string;
@@ -38,6 +39,8 @@ function toClassVersionEntity(prismaVersion: {
     description: prismaVersion.description ?? undefined,
     slug: prismaVersion.slug,
     status: prismaVersion.status as ClassVersionEntity['status'],
+    targetAgeMin: prismaVersion.targetAgeMin ?? undefined,
+    targetAgeMax: prismaVersion.targetAgeMax ?? undefined,
     lessons: prismaVersion.lessons?.map((l) => ({
       id: l.id,
       classVersionId: l.classVersionId,
@@ -76,6 +79,70 @@ export class PrismaClassVersionRepository implements IClassVersionRepository {
       include: { lessons: { include: { recipe: true } } },
     });
     if (!version) return null;
+    return toClassVersionEntity(version);
+  }
+
+  async unpublishByClassId(classId: string): Promise<void> {
+    await prisma.classVersion.updateMany({
+      where: { classId, isPublished: true },
+      data: { isPublished: false },
+    });
+  }
+
+  async createPublishedVersion(parameters: {
+    classId: string;
+    version: string;
+    title: string;
+    description?: string;
+    slug: string;
+    targetAgeMin?: number;
+    targetAgeMax?: number;
+    lessons: readonly {
+      recipeId: string;
+      order: number;
+      title: string;
+      duration?: number;
+      recipeSnapshot?: Record<string, unknown>;
+    }[];
+  }): Promise<ClassVersionEntity> {
+    const version = await prisma.$transaction(async (tx) => {
+      const created = await tx.classVersion.create({
+        data: {
+          classId: parameters.classId,
+          version: parameters.version,
+          publishedAt: new Date(),
+          isPublished: true,
+          title: parameters.title,
+          description: parameters.description,
+          slug: parameters.slug,
+          status: 'PUBLISHED',
+          targetAgeMin: parameters.targetAgeMin,
+          targetAgeMax: parameters.targetAgeMax,
+          lessons: {
+            create: parameters.lessons.map((lesson) => ({
+              recipeId: lesson.recipeId,
+              order: lesson.order,
+              title: lesson.title,
+              duration: lesson.duration,
+              recipeSnapshot: (lesson.recipeSnapshot as Prisma.InputJsonValue) ?? undefined,
+            })),
+          },
+        },
+        include: { lessons: true },
+      });
+
+      await tx.class.update({
+        where: { id: parameters.classId },
+        data: {
+          status: 'PUBLISHED',
+          version: Number(parameters.version.split('.')[0]),
+          currentVersionId: created.id,
+        },
+      });
+
+      return created;
+    });
+
     return toClassVersionEntity(version);
   }
 

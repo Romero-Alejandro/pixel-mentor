@@ -2,9 +2,8 @@
  * Prisma-based ClassTemplate Repository.
  */
 
-import type { IClassTemplateRepository } from '../../domain/ports/class.repository.port';
-import type { ClassTemplateEntity } from '../../domain/entities/class.entity';
-
+import type { IClassTemplateRepository } from '@/features/class/domain/ports/class.repository.port.js';
+import type { ClassTemplateEntity } from '@/features/class/domain/entities/class.entity.js';
 import { prisma } from '@/database/client.js';
 
 function mapPrismaToClassTemplateEntity(prismaTemplate: {

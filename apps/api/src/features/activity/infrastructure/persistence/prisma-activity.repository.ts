@@ -1,7 +1,52 @@
-import type { Activity } from '../../domain/entities/activity.entity.js';
-import type { ActivityRepository } from '../../domain/ports/activity.repository.port.js';
-
 import { prisma } from '@/database/client.js';
+import {
+  toPrismaJson,
+  toPrismaJsonRequired,
+  toPrismaJsonOrUndefined,
+} from '@/shared/utils/prisma-json.js';
+import type {
+  Activity,
+  ActivityFeedback,
+  ActivityOption,
+  ActivityType,
+} from '@/features/activity/domain/entities/activity.entity.js';
+import type { ActivityRepository } from '@/features/activity/domain/ports/activity.repository.port.js';
+
+/** Row shape returned by the generated Activity delegate. */
+type ActivityRow =
+  ReturnType<typeof prisma.activity.findUniqueOrThrow> extends Promise<infer R> ? R : never;
+
+const ACTIVITY_TYPES: readonly ActivityType[] = ['PRACTICE', 'QUIZ', 'GAME'];
+
+function isActivityType(value: string): value is ActivityType {
+  return (ACTIVITY_TYPES as readonly string[]).includes(value);
+}
+
+function isActivityOptionArray(value: unknown): value is ActivityOption[] {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (item) =>
+        typeof item === 'object' &&
+        item !== null &&
+        'text' in item &&
+        typeof item.text === 'string' &&
+        'isCorrect' in item &&
+        typeof item.isCorrect === 'boolean',
+    )
+  );
+}
+
+function isActivityFeedback(value: unknown): value is ActivityFeedback {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'correct' in value &&
+    typeof value.correct === 'string' &&
+    'incorrect' in value &&
+    typeof value.incorrect === 'string'
+  );
+}
 
 export class PrismaActivityRepository implements ActivityRepository {
   async findById(id: string): Promise<Activity | null> {
@@ -26,26 +71,27 @@ export class PrismaActivityRepository implements ActivityRepository {
         type: activity.type,
         order: activity.order,
         instruction: activity.instruction,
-        options: activity.options as any,
+        options: toPrismaJson(activity.options ?? null, 'activity.options'),
         correctAnswer: activity.correctAnswer,
-        feedback: activity.feedback as any,
+        feedback: toPrismaJsonRequired(activity.feedback, 'activity.feedback'),
       },
     });
     return this.mapActivity(raw);
   }
 
   async update(id: string, data: Partial<Activity>): Promise<Activity> {
-    const updateData: any = {};
-    if (data.type !== undefined) updateData.type = data.type;
-    if (data.order !== undefined) updateData.order = data.order;
-    if (data.instruction !== undefined) updateData.instruction = data.instruction;
-    if (data.options !== undefined) updateData.options = data.options as any;
-    if (data.correctAnswer !== undefined) updateData.correctAnswer = data.correctAnswer;
-    if (data.feedback !== undefined) updateData.feedback = data.feedback as any;
-
     const raw = await prisma.activity.update({
       where: { id },
-      data: updateData,
+      data: {
+        ...(data.type !== undefined && { type: data.type }),
+        ...(data.order !== undefined && { order: data.order }),
+        ...(data.instruction !== undefined && { instruction: data.instruction }),
+        options: toPrismaJsonOrUndefined(data.options ?? undefined, 'activity.options'),
+        ...(data.correctAnswer !== undefined && { correctAnswer: data.correctAnswer }),
+        ...(data.feedback !== undefined && {
+          feedback: toPrismaJsonRequired(data.feedback, 'activity.feedback'),
+        }),
+      },
     });
     return this.mapActivity(raw);
   }
@@ -54,16 +100,18 @@ export class PrismaActivityRepository implements ActivityRepository {
     await prisma.activity.delete({ where: { id } });
   }
 
-  private mapActivity(raw: any): Activity {
+  private mapActivity(raw: ActivityRow): Activity {
+    const type = isActivityType(raw.type) ? raw.type : (raw.type.toUpperCase() as ActivityType);
+
     return {
       id: raw.id,
       conceptId: raw.conceptId,
-      type: raw.type,
+      type,
       order: raw.order,
       instruction: raw.instruction,
-      options: raw.options,
+      options: raw.options !== null && isActivityOptionArray(raw.options) ? raw.options : null,
       correctAnswer: raw.correctAnswer,
-      feedback: raw.feedback,
+      feedback: isActivityFeedback(raw.feedback) ? raw.feedback : { correct: '', incorrect: '' },
       createdAt: raw.createdAt,
     };
   }

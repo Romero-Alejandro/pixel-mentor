@@ -1,5 +1,7 @@
 import jwt from 'jsonwebtoken';
 
+import { TokenInvalidError } from '@/features/auth/domain/auth.errors.js';
+
 // Mock config before importing token.adapter
 jest.mock('@/shared/config/index.js', () => ({
   config: {
@@ -17,6 +19,11 @@ const {
 
 const TEST_JWT_SECRET = 'test-jwt-secret-that-is-at-least-32-characters-long';
 const TEST_JWT_REFRESH_SECRET = 'test-refresh-secret-that-is-at-least-32-chars';
+
+// Prevent spy leakage between tests (e.g. mocked jwt.verify breaking later assertions)
+afterEach(() => {
+  jest.restoreAllMocks();
+});
 
 describe('JwtAccessTokenService', () => {
   let service: any;
@@ -125,11 +132,8 @@ describe('JwtAccessTokenService', () => {
       // Given — mock jwt.verify to simulate string return
       jest.spyOn(jwt, 'verify').mockReturnValue('some-string' as never);
 
-      // When / Then
-      expect(() => service.verifyToken('any-token')).toThrow('Invalid token payload');
-
-      // Restore
-      (jwt.verify as jest.Mock).mockRestore();
+      // When / Then — payload validation throws the typed invalid-token error
+      expect(() => service.verifyToken('any-token')).toThrow(TokenInvalidError);
     });
   });
 });
@@ -225,42 +229,26 @@ describe('JwtRefreshTokenService', () => {
       expect(decoded.userId).toBe('user-1');
     });
 
-    it('should fallback to JWT_SECRET when JWT_REFRESH_SECRET is not set', () => {
-      // Given — we need to re-mock config without JWT_REFRESH_SECRET
-      jest.resetModules();
+    it('should sign with the dedicated JWT_REFRESH_SECRET (never the access-token secret)', () => {
+      // Given
+      const token = service.generateToken({ userId: 'user-1' });
 
-      jest.mock('@/shared/config/index.js', () => ({
-        config: {
-          JWT_SECRET: TEST_JWT_SECRET,
-          JWT_REFRESH_SECRET: undefined,
-          JWT_ACCESS_EXPIRES_IN: '15m',
-          JWT_REFRESH_EXPIRES_IN: '7d',
-        },
-      }));
+      // Then — must NOT verify with the access-token secret…
+      expect(() => jwt.verify(token, TEST_JWT_SECRET)).toThrow();
 
-      const {
-        JwtRefreshTokenService: FallbackService,
-      } = require('@/features/auth/infrastructure/token.adapter.js');
-
-      const fallbackService = new FallbackService();
-
-      // When
-      const token = fallbackService.generateToken({ userId: 'user-1' });
-
-      // Then — should verify with JWT_SECRET
-      const decoded = jwt.verify(token, TEST_JWT_SECRET) as jwt.JwtPayload;
+      // …and must verify with the dedicated refresh secret
+      const decoded = jwt.verify(token, TEST_JWT_REFRESH_SECRET) as jwt.JwtPayload;
       expect(decoded.userId).toBe('user-1');
+      // Guard against config drift: the two secrets must differ
+      expect(TEST_JWT_REFRESH_SECRET).not.toBe(TEST_JWT_SECRET);
     });
 
     it('should throw when decoded is a string', () => {
       // Given
       jest.spyOn(jwt, 'verify').mockReturnValue('some-string' as never);
 
-      // When / Then
-      expect(() => service.verifyToken('any-token')).toThrow('Invalid token payload');
-
-      // Restore
-      (jwt.verify as jest.Mock).mockRestore();
+      // When / Then — payload validation throws the typed invalid-token error
+      expect(() => service.verifyToken('any-token')).toThrow(TokenInvalidError);
     });
   });
 });

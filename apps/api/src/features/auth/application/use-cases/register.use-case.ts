@@ -112,7 +112,7 @@ export class RegisterUseCase {
   }
 
   private sanitizeUser(user: User): Omit<User, 'passwordHash'> {
-    const { passwordHash, ...sanitized } = user;
+    const { passwordHash: _passwordHash, ...sanitized } = user;
     return sanitized;
   }
 }

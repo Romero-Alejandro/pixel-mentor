@@ -1,2 +1,2 @@
 // HTTP barrel
-export * from './recipe.routes.js';
+export * from '@/features/recipe/infrastructure/http/recipe.routes.js';

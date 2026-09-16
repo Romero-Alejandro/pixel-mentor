@@ -1,11 +1,8 @@
 import crypto from 'node:crypto';
 
 import type { Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
 import type pino from 'pino';
 
-import type { IUserRepository } from '@/features/auth/domain/ports/user.repository.port.js';
-import type { VerifyTokenUseCase } from '@/features/auth/application/use-cases/verify-token.use-case.js';
 import type { AppRequest } from '@/shared/types/express.d';
 
 export function requestIdMiddleware(req: AppRequest, res: Response, next: NextFunction): void {
@@ -47,54 +44,5 @@ export function timeoutMiddleware(timeoutMs: number) {
       }
     });
     next();
-  };
-}
-
-export function authMiddleware(
-  userRepository: IUserRepository,
-  verifyTokenUseCase: VerifyTokenUseCase,
-) {
-  return async (req: AppRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      let token: string | null = null;
-      const authHeader = req.headers.authorization;
-
-      if (authHeader?.startsWith('Bearer ')) {
-        token = authHeader.slice(7);
-      } else if (typeof req.query.token === 'string') {
-        token = req.query.token;
-      }
-
-      if (!token) {
-        res.status(401).json({ error: 'No token provided' });
-        return;
-      }
-
-      const payload = await verifyTokenUseCase.execute(token);
-      const user = await userRepository.findById(payload.user.id);
-
-      if (!user) {
-        res.status(404).json({ error: 'User not found' });
-        return;
-      }
-
-      req.user = {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-      };
-
-      next();
-    } catch (error: unknown) {
-      if (error instanceof jwt.JsonWebTokenError) {
-        res.status(401).json({ error: 'Invalid token' });
-        return;
-      }
-      if (error instanceof jwt.TokenExpiredError) {
-        res.status(401).json({ error: 'Token expired' });
-        return;
-      }
-      next(error);
-    }
   };
 }

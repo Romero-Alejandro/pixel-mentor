@@ -1,4 +1,4 @@
-import type { PromptValidationResult } from './governance.types.js';
+import type { PromptValidationResult } from '@/shared/ai/governance/governance.types.js';
 
 // ==================== Prompt Injection Patterns ====================
 

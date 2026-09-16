@@ -4,16 +4,16 @@
 
 import { createLogger } from '@/shared/logger/logger.js';
 
-import type { IRewardStrategy } from './reward-strategy.interface';
-import type { StrategyConfig } from './reward.types';
+import type { IRewardStrategy } from '@/features/gamification/application/strategies/reward-strategy.interface.js';
+import type { StrategyConfig } from '@/features/gamification/application/strategies/reward.types.js';
 
-import { LessonCompletionStrategy } from './xp-reward.strategy';
+import { LessonCompletionStrategy } from '@/features/gamification/application/strategies/xp-reward.strategy.js';
 import {
   FirstLessonBadgeStrategy,
   StreakMilestone7Strategy,
   StreakMilestone30Strategy,
-} from './badge-reward.strategy';
-import { StreakBonusStrategy } from './streak-bonus.strategy';
+} from '@/features/gamification/application/strategies/badge-reward.strategy.js';
+import { StreakBonusStrategy } from '@/features/gamification/application/strategies/streak-bonus.strategy.js';
 
 // Create a logger for strategy factory
 const strategyFactoryLogger = createLogger(undefined, { name: 'strategy-factory', level: 'warn' });

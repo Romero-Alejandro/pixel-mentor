@@ -1,4 +1,4 @@
-import type { AssetAttachment } from '../entities/asset-attachment';
+import type { AssetAttachment } from '@/shared/entities/asset-attachment.js';
 
 export interface AssetAttachmentRepository {
   findById(id: string): Promise<AssetAttachment | null>;

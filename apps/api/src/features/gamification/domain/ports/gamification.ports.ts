@@ -1,4 +1,4 @@
-import type { BadgeDefinition } from '../entities/badge.types.js';
+import type { BadgeDefinition } from '@/features/gamification/domain/entities/badge.types.js';
 
 export type { BadgeDefinition };
 

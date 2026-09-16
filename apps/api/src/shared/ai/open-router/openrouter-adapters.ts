@@ -98,18 +98,21 @@ export class OpenRouterAdapter extends BaseGenerativeAdapter implements AIServic
     return { result: 'incorrect', confidence: 0 };
   }
 
-  async generateAnswer(params: any): Promise<{ answer: string }> {
-    const prompt = `Contexto: ${params.context}\nPregunta: ${params.question}`;
-    try {
-      const result = await this.client.chat.completions.create({
-        model: this.defaultModel,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.3,
-      });
-      return { answer: result.choices[0]?.message?.content || 'Error' };
-    } catch {
-      return { answer: 'Error' };
+  async generateAnswer(params: {
+    context?: string;
+    question: string;
+  }): Promise<{ answer: string }> {
+    const prompt = `Contexto: ${params.context ?? ''}\nPregunta: ${params.question}`;
+    const result = await this.client.chat.completions.create({
+      model: this.defaultModel,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.3,
+    });
+    const answer = result.choices[0]?.message?.content;
+    if (!answer || !answer.trim()) {
+      throw new Error('OpenRouter generateAnswer returned an empty response');
     }
+    return { answer };
   }
 }
 

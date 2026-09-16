@@ -1,5 +1,6 @@
 import { PrismaRecipeRepository } from '@/features/recipe/infrastructure/persistence/prisma-recipe.repository.js';
-import { PrismaConceptRepository } from '@/features/recipe/infrastructure/persistence/prisma-concept.repository.js';
+// Concept persistence lives in the knowledge feature (single adapter, no duplicate)
+import { PrismaConceptRepository } from '@/features/knowledge/infrastructure/persistence/prisma-concept.repository.js';
 import { PrismaTagRepository } from '@/features/recipe/infrastructure/persistence/prisma-tag.repository.js';
 import { PrismaRecipeTagRepository } from '@/features/recipe/infrastructure/persistence/prisma-recipe-tag.repository.js';
 import { FileSystemPromptRepository } from '@/features/recipe/infrastructure/persistence/file-system-prompt.repository.js';
@@ -75,7 +76,9 @@ export function buildRecipeContainer(aiModel: AIService): RecipeContainer {
     questionAnsweringUseCase: new QuestionAnsweringUseCase(
       recipeRepository,
       aiModel,
-      atomRepository as any,
+      // No RAGService wired yet: the use case skips RAG context when it is
+      // omitted. Do NOT pass a non-RAG repository here (see audit finding:
+      // PrismaAtomRepository does not implement RAGService).
     ),
     createRecipeUseCase: new CreateRecipeUseCase(recipeRepository, atomRepository),
     updateRecipeUseCase: new UpdateRecipeUseCase(recipeRepository),

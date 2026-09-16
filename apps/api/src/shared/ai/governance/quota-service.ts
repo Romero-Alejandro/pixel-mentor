@@ -1,4 +1,4 @@
-import type { QuotaCheck } from './governance.types.js';
+import type { QuotaCheck } from '@/shared/ai/governance/governance.types.js';
 
 /**
  * Quota service that tracks and enforces per-user LLM usage limits.

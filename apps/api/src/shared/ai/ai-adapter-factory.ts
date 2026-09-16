@@ -5,25 +5,25 @@ import {
   GeminiClassifierAdapter,
   GeminiComprehensionEvaluatorAdapter,
   GeminiRAGServiceAdapter,
-} from './gemini/gemini-adapters';
+} from '@/shared/ai/gemini/gemini-adapters.js';
 import {
   OpenRouterAdapter,
   OpenRouterClassifierAdapter,
   OpenRouterComprehensionEvaluatorAdapter,
   OpenRouterRAGServiceAdapter,
-} from './open-router/openrouter-adapters';
+} from '@/shared/ai/open-router/openrouter-adapters.js';
 import {
   GroqAdapter,
   GroqClassifierAdapter,
   GroqComprehensionEvaluatorAdapter,
   GroqRAGServiceAdapter,
-} from './groq/groq-adapters';
+} from '@/shared/ai/groq/groq-adapters.js';
 import {
   ResilientAIAdapter,
   ResilientClassifierAdapter,
   ResilientEvaluatorAdapter,
   ResilientRAGAdapter,
-} from './resilient-ai-adapter';
+} from '@/shared/ai/resilient-ai-adapter.js';
 
 import type { AIService } from '@/features/recipe/domain/ports/ai-service.port.js';
 import type {

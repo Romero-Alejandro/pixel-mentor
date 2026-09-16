@@ -1,4 +1,4 @@
-import type { Interaction } from '../entities/interaction.entity.js';
+import type { Interaction } from '@/features/session/domain/entities/interaction.entity.js';
 
 export interface InteractionRepository {
   findById(id: string): Promise<Interaction | null>;

@@ -32,7 +32,7 @@ jest.mock('@/shared/config/index.js', () => ({
 }));
 
 jest.mock('@/shared/http/llm-governance.middleware.js', () => ({
-  llmGovernanceMiddleware: () => (req: Request, _res: Response, next: NextFunction) => next(),
+  llmGovernanceMiddleware: () => (_req: Request, _res: Response, next: NextFunction) => next(),
   recordLLMUsage: jest.fn(),
 }));
 
@@ -188,7 +188,7 @@ describe('SSE Heartbeat / Keepalive', () => {
         .post('/api/recipe/interact/stream')
         .send({ sessionId: SESSION_ID, studentInput: 'hi' });
 
-      const { events, comments } = parseSSEResponseWithComments(response.text);
+      const { events } = parseSSEResponseWithComments(response.text);
 
       // Fast stream may or may not have heartbeats depending on timing
       // But it should still work correctly
@@ -221,9 +221,6 @@ describe('SSE Heartbeat / Keepalive', () => {
 
   describe('Heartbeat cleanup', () => {
     it('should stop sending heartbeats after stream ends', async () => {
-      const writeCount = 0;
-      const writes: string[] = [];
-
       async function* trackedStream(): AsyncGenerator<InteractionChunk> {
         yield makeChunk('Content');
         yield makeEnd();
@@ -232,7 +229,7 @@ describe('SSE Heartbeat / Keepalive', () => {
       const app = express();
       app.use(express.json());
 
-      app.post('/api/recipe/interact/stream', async (req: Request, res: Response) => {
+      app.post('/api/recipe/interact/stream', async (_req: Request, res: Response) => {
         res.setHeader('Content-Type', 'text/event-stream');
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
@@ -270,7 +267,7 @@ describe('SSE Heartbeat / Keepalive', () => {
         .post('/api/recipe/interact/stream')
         .send({ sessionId: SESSION_ID, studentInput: 'hi' });
 
-      const { comments } = parseSSEResponseWithComments(response.text);
+      parseSSEResponseWithComments(response.text);
 
       // After stream ends, no more heartbeats should be sent
       // (We can't directly test this in a unit test, but we verify

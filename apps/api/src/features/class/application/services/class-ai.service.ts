@@ -19,6 +19,35 @@ export interface GenerateClassDraftInput {
   targetAudience?: string;
   duration?: number;
   numberOfLessons?: number;
+  /** Child age bounds (3–18). Drives lesson length and vocabulary guidance. */
+  targetAgeMin?: number;
+  targetAgeMax?: number;
+}
+
+/** Pedagogical guidance per age band, used to steer the AI prompt. */
+function ageBandGuidance(ageMin?: number, ageMax?: number): string {
+  const min = ageMin ?? 6;
+  const max = ageMax ?? min;
+  const avg = (min + max) / 2;
+
+  if (avg <= 7) {
+    return `
+Target audience: children aged ${min}-${max}.
+Pedagogical guidance: very short lessons (5-10 minutes each), simple everyday
+vocabulary, one concept per lesson, heavy use of play, stories and repetition,
+frequent encouragement, no reading-heavy steps.`;
+  }
+  if (avg <= 12) {
+    return `
+Target audience: children aged ${min}-${max}.
+Pedagogical guidance: short lessons (10-20 minutes each), concrete examples
+from daily life, gamified challenges, gradual difficulty within each lesson,
+positive reinforcement.`;
+  }
+  return `
+Target audience: teenagers aged ${min}-${max}.
+Pedagogical guidance: lessons up to 30 minutes, relatable real-world contexts,
+space for guided discovery and light autonomy.`;
 }
 
 export interface GeneratedLesson {
@@ -35,6 +64,9 @@ export interface GeneratedClassDraft {
   learningObjectives: string[];
   lessons: GeneratedLesson[];
   suggestedDuration: number;
+  /** Echoed from the input so the client can persist the audience with the class. */
+  targetAgeMin?: number;
+  targetAgeMax?: number;
   qualityValidation?: {
     passed: boolean;
     errors: string[];
@@ -145,20 +177,19 @@ export class ClassAIService {
 
   private buildClassGenerationPrompt(input: GenerateClassDraftInput): string {
     const objectives = input.learningObjectives?.join(', ') || 'Not specified';
-    const audience = input.targetAudience || 'General learners';
     const lessons = input.numberOfLessons || 3;
     const duration = input.duration || 60;
 
     return `Create a class structure for the topic: "${input.topic}"
 
 Learning objectives: ${objectives}
-Target audience: ${audience}
 Total duration: ${duration} minutes
 Number of lessons: ${lessons}
+${ageBandGuidance(input.targetAgeMin, input.targetAgeMax)}
 
 For each lesson, provide:
-- title
-- duration in minutes
+- title (short, concrete, child-friendly)
+- duration in minutes (respect the age guidance above)
 - 2-3 learning objectives
 - key topics to cover
 
@@ -174,6 +205,8 @@ Return the response as a structured JSON that can be parsed.`;
         learningObjectives: parsed.learningObjectives || input.learningObjectives || [],
         lessons: parsed.lessons || this.generateDefaultLessons(input),
         suggestedDuration: parsed.suggestedDuration || input.duration || 60,
+        targetAgeMin: input.targetAgeMin,
+        targetAgeMax: input.targetAgeMax,
         qualityValidation: parsed.qualityValidation || {
           passed: true,
           errors: [],
@@ -196,6 +229,8 @@ Return the response as a structured JSON that can be parsed.`;
       ],
       lessons: this.generateDefaultLessons(input),
       suggestedDuration: input.duration || 60,
+      targetAgeMin: input.targetAgeMin,
+      targetAgeMax: input.targetAgeMax,
       qualityValidation: {
         passed: true,
         errors: [],

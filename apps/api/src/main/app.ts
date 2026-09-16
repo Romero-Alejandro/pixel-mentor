@@ -15,6 +15,7 @@ import { createRecipeRouter } from '@/features/recipe/infrastructure/http/recipe
 import { createRecipesRouter } from '@/features/recipe/infrastructure/http/recipes.routes.js';
 import { createSessionsRouter } from '@/features/session/infrastructure/http/sessions.routes.js';
 import { createTTSRouter } from '@/features/tts/infrastructure/http/tts.routes.js';
+import type { LessonCompletionService } from '@/features/recipe/application/services/lesson-completion.service.js';
 import { createGamificationRouter } from '@/features/gamification/infrastructure/http/gamification.routes.js';
 import { createGamificationEventsRouter } from '@/features/gamification/infrastructure/http/gamification-events.routes.js';
 import {
@@ -27,7 +28,8 @@ import {
 } from '@/features/class/infrastructure/http/class-ai.routes.js';
 import { createClassTemplateRouter } from '@/features/class/infrastructure/http/class-templates.routes.js';
 import { createRecipeAIRouter } from '@/features/recipe/infrastructure/http/recipe-ai.routes.js';
-import { setupGroupRoutes, getContentAccessService } from './app.group-routes.js';
+import { createGroupRoutes } from '@/features/group/infrastructure/http/group.routes.js';
+import { createContentAccessRoutes } from '@/features/group/infrastructure/http/content-access.routes.js';
 import { createAdminRouter } from '@/shared/http/admin.routes.js';
 import { createLLMGovernanceRouter } from '@/shared/http/llm-governance.routes.js';
 
@@ -47,22 +49,66 @@ import { requestLoggerMiddleware } from '@/shared/http/index.js';
 import type { AppRequest } from '@/shared/types/express.d.js';
 import type { Config } from '@/shared/config/index.js';
 import type { AuthContainer } from '@/features/auth/infrastructure/di/auth.container.js';
+import type { RecipeContainer } from '@/features/recipe/infrastructure/di/recipe.container.js';
+import type { SessionContainer } from '@/features/session/infrastructure/di/session.container.js';
+import type { GamificationContainer } from '@/features/gamification/infrastructure/di/gamification.container.js';
+import type { ClassContainer } from '@/features/class/infrastructure/di/class.container.js';
+import type { TTSContainer } from '@/features/tts/infrastructure/di/tts.container.js';
+import type { GroupContainer } from '@/features/group/infrastructure/di/group.container.js';
+import type { ClinicalContainer } from '@/features/clinical/infrastructure/di/clinical.container.js';
+import type { OrchestrateRecipeUseCase } from '@/features/recipe/application/use-cases/orchestrate-recipe.use-case.js';
+import type { StartRecipeUseCase } from '@/features/recipe/application/use-cases/start-recipe.use-case.js';
+import { AppError, HttpError } from '@/shared/errors/index.js';
+import { moduleLogger } from '@/shared/logger/logger.js';
+
+// Fallback logger for requests that fail before requestLoggerMiddleware ran
+const httpLogger = moduleLogger('http');
 
 export interface AppDependencies {
   config: Config;
   logger: pino.Logger;
   auth: AuthContainer;
-  recipe: any; // Using 'any' to bypass type conflicts between feature and old use cases
-  session: any; // Using 'any' to bypass type conflicts between feature and old use cases
-  gamification: any; // Using 'any' to bypass type conflicts between feature and old services
-  class: any; // Using 'any' to bypass type conflicts between feature and old services
-  tts: any; // Using 'any' to bypass type conflicts
+  recipe: RecipeContainer;
+  session: SessionContainer;
+  gamification: GamificationContainer;
+  class: ClassContainer;
+  tts: TTSContainer;
+  group: GroupContainer;
+  clinical: ClinicalContainer;
+  /** Cross-feature orchestration use case, assembled at the composition root (index.ts). */
+  orchestrateUseCase: OrchestrateRecipeUseCase;
+  /** Recipe start use case shared by session and class routers. */
+  startRecipeUseCase: StartRecipeUseCase;
+  /** Real-accuracy recomputation for the mission report (composition root wiring). */
+  lessonCompletionService: LessonCompletionService;
 }
 
 export function createApp(deps: AppDependencies): Express {
-  const { config, logger, auth, recipe, session, gamification, class: classContainer, tts } = deps;
+  const {
+    config,
+    logger,
+    auth,
+    recipe,
+    session,
+    gamification,
+    class: classContainer,
+    tts,
+    group,
+    clinical,
+  } = deps;
 
   const app = express();
+
+  // Trust the reverse proxy (when deployed behind one) so req.ip and the rate
+  // limiters key on the real client address instead of the proxy IP. Without
+  // this, every client behind the proxy shares one rate-limit bucket and the
+  // auth limiter becomes a global lockout. Not set when exposed directly.
+  if (config.TRUST_PROXY !== undefined) {
+    app.set(
+      'trust proxy',
+      /^\d+$/.test(config.TRUST_PROXY) ? Number(config.TRUST_PROXY) : config.TRUST_PROXY,
+    );
+  }
 
   // Core middleware
   app.use(requestIdMiddleware);
@@ -196,9 +242,10 @@ export function createApp(deps: AppDependencies): Express {
   });
 
   // Protected routes (require auth)
-  // Get the global orchestrate use case that was set up in index.ts
-  const orchestrateUseCase = (globalThis as any).__orchestrateUseCase;
-  const questionAnsweringUseCase = (globalThis as any).__questionAnsweringUseCase;
+  // Use cases are injected via AppDependencies — no globalThis service locator.
+  const orchestrateUseCase = deps.orchestrateUseCase;
+  const startRecipeUseCase = deps.startRecipeUseCase;
+  const questionAnsweringUseCase = recipe.questionAnsweringUseCase;
 
   // Recipe routes
   app.use(
@@ -229,15 +276,15 @@ export function createApp(deps: AppDependencies): Express {
       session.listSessionsUseCase,
       session.resetSessionUseCase,
       session.completeSessionUseCase,
-      (globalThis as any).__startRecipeUseCase,
-      getContentAccessService(),
+      startRecipeUseCase,
+      group.contentAccessService,
       classContainer.classLessonRepository,
       recipe.getRecipeUseCase,
     ),
   );
 
   // TTS routes: in E2E mode, skip auth for easier testing
-  if (process.env.E2E_MODE === 'true') {
+  if (config.E2E_MODE === true) {
     app.use('/api/tts', ttsLimiter, createTTSRouter(tts.ttsService));
   } else {
     app.use('/api/tts', ttsLimiter, protectedMiddleware, createTTSRouter(tts.ttsService));
@@ -256,6 +303,10 @@ export function createApp(deps: AppDependencies): Express {
       session.getSessionUseCase,
       recipe.getRecipeUseCase,
       prisma,
+      clinical.clinicalCalculatorService,
+      // Real-accuracy recomputation for the mission report — reuses the same
+      // ActivityAttemptRepository the completion flow uses.
+      deps.lessonCompletionService,
     ),
   );
 
@@ -270,11 +321,14 @@ export function createApp(deps: AppDependencies): Express {
     createRecipeAIRouter({ recipeAIService: recipe.recipeAIService }),
   );
 
-  // Get recipe use cases from global (must be before routes that use them)
-  const startRecipeUseCase = (globalThis as any).__startRecipeUseCase;
-
   // Group routes (protected, requires TEACHER or ADMIN role) - MUST be before createClassLessonStudentRouter
-  setupGroupRoutes(app, protectedMiddleware, requireRole);
+  const groupMiddleware = [protectedMiddleware, requireRole('TEACHER', 'ADMIN')] as const;
+  app.use('/api/groups', ...groupMiddleware, createGroupRoutes(group.groupService));
+  app.use(
+    '/api/content/accessible',
+    protectedMiddleware,
+    createContentAccessRoutes(group.contentAccessService),
+  );
 
   // Student-facing class lesson routes (protected, requires auth only)
   app.use(
@@ -285,14 +339,13 @@ export function createApp(deps: AppDependencies): Express {
       classLessonRepository: classContainer.classLessonRepository,
       startRecipeUseCase,
       orchestrateUseCase,
-      contentAccessService: getContentAccessService(),
+      contentAccessService: group.contentAccessService,
     }),
   );
 
   // Class routes (protected, requires auth - route-level authorization in routes)
   // NOTE: Removed requireRole('TEACHER', 'ADMIN') to allow students to access via checkEnrollment
   const classMiddleware = [protectedMiddleware];
-  console.log('🔍 Debug classMiddleware:', classMiddleware);
 
   app.use(
     '/api/classes',
@@ -302,7 +355,7 @@ export function createApp(deps: AppDependencies): Express {
       classLessonRepository: classContainer.classLessonRepository,
       startRecipeUseCase,
       orchestrateUseCase,
-      contentAccessService: getContentAccessService(),
+      contentAccessService: group.contentAccessService,
     }),
   );
   app.use(
@@ -328,8 +381,9 @@ export function createApp(deps: AppDependencies): Express {
   // LLM Governance admin routes (protected, requires ADMIN role)
   app.use('/api/admin/llm-governance', Array.from(adminMiddleware), createLLMGovernanceRouter());
 
-  // Metrics endpoint for evaluation monitoring (public, no auth required)
-  app.use('/api/metrics/evaluation', createMetricsRouter());
+  // Metrics endpoint for evaluation monitoring (admin-only: exposes internal
+  // evaluation data, and the reset endpoint mutates shared state)
+  app.use('/api/metrics/evaluation', ...adminMiddleware, createMetricsRouter());
 
   // 404 handler
   // @ts-expect-error - Express 5 compatibility
@@ -337,32 +391,69 @@ export function createApp(deps: AppDependencies): Express {
     res.status(404).json({ error: 'Not found' });
   });
 
-  // Error handler
+  // Error handler — logs details internally with pino, never leaks internals to clients
   // @ts-expect-error - Express 5 compatibility
   app.use((err: unknown, req: AppRequest, res: Response, _next: NextFunction) => {
-    const requestLogger = req.logger ?? logger;
-    requestLogger.error({ url: req.url, method: req.method, err: String(err) });
+    const requestLogger = req.logger ?? httpLogger;
 
-    // Handle typed AuthError
-    if (err instanceof Error && 'httpStatus' in err && 'code' in err) {
-      const authErr = err as {
-        httpStatus: number;
-        code: string;
-        message: string;
-        details?: unknown;
-      };
-      res.status(authErr.httpStatus).json({
-        error: authErr.message,
-        code: authErr.code,
-        ...(authErr.details ? { details: authErr.details } : {}),
-      });
+    // Normalize legacy ad-hoc errors that carry httpStatus/statusCode but are
+    // not AppError instances (e.g. GovernanceError, SessionError)
+    let error: unknown = err;
+    if (!(error instanceof AppError) && typeof error === 'object' && error !== null) {
+      const candidate = error as { httpStatus?: unknown; statusCode?: unknown };
+      const status =
+        typeof candidate.httpStatus === 'number'
+          ? candidate.httpStatus
+          : typeof candidate.statusCode === 'number'
+            ? candidate.statusCode
+            : undefined;
+      if (status !== undefined) {
+        const raw = error as { code?: unknown; message?: unknown };
+        error = new HttpError(
+          status,
+          typeof raw.message === 'string' ? raw.message : 'Request rejected',
+          typeof raw.code === 'string' ? raw.code : `HTTP_${status}`,
+        );
+      }
+    }
+
+    if (res.headersSent) {
+      requestLogger.error({ err: error, requestId: req.requestId }, 'Error after headers sent');
+      res.destroy();
       return;
     }
 
-    const statusCode = err instanceof Error && 'statusCode' in err ? (err as any).statusCode : 500;
-    const message = err instanceof Error ? err.message : 'Error interno del servidor';
+    if (error instanceof AppError) {
+      if (error.httpStatus >= 500) {
+        requestLogger.error({ err: error, requestId: req.requestId }, 'Request failed');
+      } else {
+        requestLogger.warn(
+          { code: error.code, requestId: req.requestId },
+          `Request rejected: ${error.message}`,
+        );
+      }
+      const response: { error: string; code: string; details?: unknown } = {
+        error: error.message,
+        code: error.code,
+      };
+      if (error.details !== undefined) {
+        response.details = error.details;
+      }
+      res.status(error.httpStatus).json(response);
+      return;
+    }
 
-    res.status(statusCode).json({ error: message });
+    // Unknown/untyped errors: log everything internally, return a generic message
+    requestLogger.error(
+      {
+        err: error instanceof Error ? { message: error.message, stack: error.stack } : error,
+        url: req.url,
+        method: req.method,
+        requestId: req.requestId,
+      },
+      'Unhandled error',
+    );
+    res.status(500).json({ error: 'Internal server error', code: 'INTERNAL_ERROR' });
   });
 
   return app;

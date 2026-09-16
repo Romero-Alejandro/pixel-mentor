@@ -1,1 +1,1 @@
-export * from './group.entity.js';
+export * from '@/features/group/domain/entities/group.entity.js';

@@ -7,7 +7,7 @@
 
 import type { z } from 'zod';
 
-import type { ISchemaValidator } from '../../domain/ports/schema-validator.port';
+import type { ISchemaValidator } from '@/features/evaluation/domain/ports/schema-validator.port.js';
 import { SchemaValidator } from '@/features/prompt/infrastructure/persistence/schema-validator';
 
 /**

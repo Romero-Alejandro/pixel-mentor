@@ -1,4 +1,4 @@
-import type { User, UserRole } from '../entities/user.entity.js';
+import type { User, UserRole } from '@/features/auth/domain/entities/user.entity.js';
 
 export interface UserListOptions {
   role?: UserRole;

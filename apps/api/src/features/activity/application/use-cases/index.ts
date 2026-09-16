@@ -1,2 +1,2 @@
 // Use cases barrel
-export * from './attempt-activity.use-case.js';
+export * from '@/features/activity/application/use-cases/attempt-activity.use-case.js';

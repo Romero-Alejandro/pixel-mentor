@@ -1,4 +1,4 @@
 // Infrastructure barrel
-export * from './persistence/index.js';
-export * from './http/index.js';
-export * from './di/index.js';
+export * from '@/features/evaluation/infrastructure/persistence/index.js';
+export * from '@/features/evaluation/infrastructure/http/index.js';
+export * from '@/features/evaluation/infrastructure/di/index.js';

@@ -3,6 +3,9 @@ import jwt from 'jsonwebtoken';
 import type { ITokenService } from '@/features/auth/domain/ports/token.service.port.js';
 import { TokenExpiredError, TokenInvalidError } from '@/features/auth/domain/auth.errors.js';
 import { config } from '@/shared/config/index.js';
+import { moduleLogger } from '@/shared/logger/logger.js';
+
+const logger = moduleLogger('auth:token-adapter');
 
 /**
  * Short-lived access token service.
@@ -20,9 +23,7 @@ export class JwtAccessTokenService implements ITokenService {
     try {
       const decoded = jwt.verify(token, config.JWT_SECRET);
       if (typeof decoded === 'string' || !decoded || !decoded.userId) {
-        if (config.NODE_ENV === 'development') {
-          console.debug('[TokenAdapter] Invalid payload:', decoded);
-        }
+        logger.debug({ hasPayload: Boolean(decoded) }, 'Access token payload failed validation');
         throw new TokenInvalidError();
       }
       return decoded as { userId: string; jti?: string };
@@ -47,8 +48,9 @@ export class JwtRefreshTokenService {
   private readonly secret: string;
 
   constructor() {
-    // Use dedicated refresh secret if configured, fallback to JWT_SECRET
-    this.secret = config.JWT_REFRESH_SECRET ?? config.JWT_SECRET;
+    // Dedicated secret — required by the env schema so refresh tokens are
+    // never signed with the same key as short-lived access tokens.
+    this.secret = config.JWT_REFRESH_SECRET;
   }
 
   generateToken(payload: object): string {
@@ -61,9 +63,7 @@ export class JwtRefreshTokenService {
     try {
       const decoded = jwt.verify(token, this.secret);
       if (typeof decoded === 'string' || !decoded || !decoded.userId || !decoded.jti) {
-        if (config.NODE_ENV === 'development') {
-          console.debug('[TokenAdapter] Invalid payload:', decoded);
-        }
+        logger.debug({ hasPayload: Boolean(decoded) }, 'Refresh token payload failed validation');
         throw new TokenInvalidError();
       }
       return decoded as { userId: string; jti: string };

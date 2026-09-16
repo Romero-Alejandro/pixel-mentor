@@ -1,6 +1,7 @@
 import {
   RecipeService,
   RecipeNotFoundError,
+  RecipeOwnershipError,
   RecipeValidationError,
   StepNotFoundError,
 } from '@/features/recipe/application/services/recipe.service.js';
@@ -12,9 +13,9 @@ import type {
   StepScript,
 } from '@/features/recipe/domain/entities/recipe.entity.js';
 import type { CreateRecipeStepInput } from '@/features/recipe/application/services/recipe.service.js';
-import { CanonicalId } from '@/features/recipe/domain/valueObjects/canonical-id.vo.js';
-import { SemanticVersion } from '@/features/recipe/domain/valueObjects/semantic-version.vo.js';
-import { ExpectedDuration } from '@/features/recipe/domain/valueObjects/expected-duration.vo.js';
+import { CanonicalId } from '@/features/recipe/domain/value-objects/canonical-id.vo.js';
+import { SemanticVersion } from '@/features/recipe/domain/value-objects/semantic-version.vo.js';
+import { ExpectedDuration } from '@/features/recipe/domain/value-objects/expected-duration.vo.js';
 
 // Jest globals are available automatically - no need to import
 
@@ -128,6 +129,7 @@ const createMockRecipeRepository = (): jest.Mocked<RecipeRepository> => {
     updateStep: jest.fn(),
     deleteStep: jest.fn(),
     findStepById: jest.fn(),
+    reorderSteps: jest.fn(),
   };
 
   mockRepo.findById.mockImplementation((id: string) => {
@@ -564,24 +566,25 @@ describe('RecipeService', () => {
   });
 
   describe('reorderSteps', () => {
-    it('should reorder steps within a recipe', async () => {
+    it('should delegate the reorder to the atomic repository operation', async () => {
       // Use step IDs that exist in our mock: step-123, step-2, step-3
       const stepIds = [mockStep2.id, mockStep.id, mockStep3.id]; // Use actual mock IDs
 
       await service.reorderSteps('recipe-123', stepIds, 'user-123');
 
-      // Two updates per step: temporary negative, then final order
-      expect(recipeRepository.updateStep).toHaveBeenCalledTimes(6);
+      // Atomicity is the repository's responsibility; the service only
+      // authorizes and delegates.
+      expect(recipeRepository.reorderSteps).toHaveBeenCalledWith('recipe-123', stepIds);
+      expect(recipeRepository.updateStep).not.toHaveBeenCalled();
+    });
 
-      // Verify temporary negative ordering
-      expect(recipeRepository.updateStep).toHaveBeenCalledWith(mockStep2.id, { order: -1 });
-      expect(recipeRepository.updateStep).toHaveBeenCalledWith(mockStep.id, { order: -2 });
-      expect(recipeRepository.updateStep).toHaveBeenCalledWith(mockStep3.id, { order: -3 });
+    it('should not touch the repository when unauthorized', async () => {
+      recipeRepository.findById.mockResolvedValue(createMockRecipe({ authorId: 'someone-else' }));
 
-      // Verify final ordering
-      expect(recipeRepository.updateStep).toHaveBeenCalledWith(mockStep2.id, { order: 0 });
-      expect(recipeRepository.updateStep).toHaveBeenCalledWith(mockStep.id, { order: 1 });
-      expect(recipeRepository.updateStep).toHaveBeenCalledWith(mockStep3.id, { order: 2 });
+      await expect(service.reorderSteps('recipe-123', ['step-123'], 'user-123')).rejects.toThrow(
+        RecipeOwnershipError,
+      );
+      expect(recipeRepository.reorderSteps).not.toHaveBeenCalled();
     });
 
     it('should throw RecipeNotFoundError if recipe not found', async () => {
@@ -592,9 +595,8 @@ describe('RecipeService', () => {
       );
     });
 
-    it('should throw StepNotFoundError if step does not belong to recipe', async () => {
-      recipeRepository.findById.mockResolvedValue(createMockRecipe());
-      recipeRepository.findStepsByRecipeId.mockResolvedValue([mockStep]); // Only mockStep exists
+    it('should propagate StepNotFoundError from the repository when a step does not belong to the recipe', async () => {
+      recipeRepository.reorderSteps.mockRejectedValue(new StepNotFoundError('nonexistent-step'));
 
       await expect(
         service.reorderSteps('recipe-123', ['nonexistent-step'], 'user-123'),

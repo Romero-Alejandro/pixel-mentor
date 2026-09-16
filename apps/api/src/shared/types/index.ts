@@ -1,5 +1,10 @@
 // Express request extensions
-export type { AppRequest, AppRequestHandler, AnyHandler, RouteHandler } from './express.d.js';
+export type {
+  AppRequest,
+  AppRequestHandler,
+  AnyHandler,
+  RouteHandler,
+} from '@/shared/types/express.d.js';
 
 // Common type aliases
 export type {
@@ -10,4 +15,4 @@ export type {
   ISO8601Date,
   JsonResponse,
   ErrorJsonResponse,
-} from './common.types.js';
+} from '@/shared/types/common.types.js';

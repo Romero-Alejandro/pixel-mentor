@@ -5,9 +5,17 @@
  * Enforces business rules, authorization, and validation.
  */
 
-import type { RecipeRepository } from '../../domain/ports/recipe.repository.port.js';
+import type {
+  RecipeRepository,
+  RecipeUpdateInput,
+  RecipeStepUpdateInput,
+} from '@/features/recipe/domain/ports/recipe.repository.port.js';
 import type { AtomRepository } from '@/features/knowledge/domain/ports/atom.repository.port.js';
-import type { Recipe, RecipeStep, StepType } from '../../domain/entities/recipe.entity.js';
+import type {
+  Recipe,
+  RecipeStep,
+  StepType,
+} from '@/features/recipe/domain/entities/recipe.entity.js';
 import { AtomType } from '@/features/knowledge/domain/entities/atom.entity.js';
 
 // Import errors from centralized module
@@ -27,10 +35,10 @@ export {
   StepNotFoundError,
 } from '@/shared/errors/index.js';
 
-// Content data interfaces for typed step content
-export interface ScriptData extends Record<string, unknown> {}
-export interface ActivityData extends Record<string, unknown> {}
-export interface QuestionData extends Record<string, unknown> {}
+// Content data types for typed step content
+export type ScriptData = Record<string, unknown>;
+export type ActivityData = Record<string, unknown>;
+export type QuestionData = Record<string, unknown>;
 export type RecipeCondition = unknown;
 
 // ==================== DTOs ====================
@@ -289,7 +297,7 @@ export class RecipeService {
     );
 
     // Build update data as a single object using spreads to avoid mutating readonly properties
-    const updateData: Record<string, unknown> = {
+    const updateData: RecipeUpdateInput = {
       version: newVersion,
       ...(data.title !== undefined && {
         title: data.title.trim(),
@@ -309,7 +317,7 @@ export class RecipeService {
       }),
     };
 
-    await this.recipeRepository.update(id, updateData as any);
+    await this.recipeRepository.update(id, updateData);
 
     return this.getRecipeById(id);
   }
@@ -433,7 +441,7 @@ export class RecipeService {
     );
 
     // Build update data for the RecipeStep using conditional spreads to omit undefined
-    const updateData: Partial<RecipeStep> = {
+    const updateData: RecipeStepUpdateInput = {
       atomId: effectiveAtomId,
       stepType: effectiveStepType,
       ...(stepData.order !== undefined && { order: stepData.order }),
@@ -493,32 +501,9 @@ export class RecipeService {
       throw new RecipeOwnershipError(recipeId, userId);
     }
 
-    // Verify all steps belong to this recipe
-    const steps = await this.recipeRepository.findStepsByRecipeId(recipeId);
-    const stepIdSet = new Set(steps.map((s) => s.id));
-
-    for (const id of stepIds) {
-      if (!stepIdSet.has(id)) {
-        throw new StepNotFoundError(id);
-      }
-    }
-
-    // Use a transaction to update all steps atomically
-    // First, temporarily set all orders to negative values to avoid unique constraint conflicts
-    const originalOrders = new Map<string, number>();
-    for (let i = 0; i < stepIds.length; i++) {
-      const step = steps.find((s) => s.id === stepIds[i]);
-      if (step) {
-        originalOrders.set(stepIds[i], step.order);
-        // Temporarily set to negative value
-        await this.recipeRepository.updateStep(stepIds[i], { order: -(i + 1) });
-      }
-    }
-
-    // Then set the final order values
-    for (let i = 0; i < stepIds.length; i++) {
-      await this.recipeRepository.updateStep(stepIds[i], { order: i });
-    }
+    // Verify all steps belong to this recipe (inside the tx) and apply the
+    // reorder atomically — see PrismaRecipeRepository.reorderSteps.
+    await this.recipeRepository.reorderSteps(recipeId, stepIds);
   }
 
   /**

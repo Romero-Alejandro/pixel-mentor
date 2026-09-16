@@ -5,7 +5,7 @@
  * All calculations use UTC to ensure consistent behavior across timezones.
  */
 
-import type { StreakInfo } from '../../domain/entities/streak.types';
+import type { StreakInfo } from '@/features/gamification/domain/entities/streak.types.js';
 
 /**
  * Get the start of the day in UTC for a given date.

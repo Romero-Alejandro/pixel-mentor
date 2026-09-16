@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import type { ActivityAttemptRepository } from '../../domain/ports/activity-attempt.repository.port.js';
+import type { ActivityAttemptRepository } from '@/features/activity/domain/ports/activity-attempt.repository.port.js';
 import type { AtomRepository } from '@/features/knowledge/domain/ports/atom.repository.port.js';
 
 export class AttemptActivityUseCase {
@@ -30,6 +30,12 @@ export class AttemptActivityUseCase {
         response.trim().toLowerCase() === atom.content.trim().toLowerCase();
     }
 
+    // Sequential attempt numbering per (user, atom): first/last-attempt accuracy
+    // depends on this being monotonic. Read-then-write; under concurrent attempts
+    // for the same atom a duplicate attemptNo is possible until a unique
+    // constraint on (userId, atomId, attemptNo) + retry is added.
+    const attemptNo = (await this.attemptRepo.getMaxAttemptNoByUserIdAndAtomId(userId, atomId)) + 1;
+
     const attemptId = randomUUID();
     await this.attemptRepo.create({
       id: attemptId,
@@ -38,7 +44,7 @@ export class AttemptActivityUseCase {
       response,
       correct,
       hintUsed: hintUsed ?? 0,
-      attemptNo: 1,
+      attemptNo,
     });
 
     return { attemptId, correct };

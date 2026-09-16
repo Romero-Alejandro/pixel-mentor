@@ -1,4 +1,4 @@
 // Domain entities barrel
-export * from './api-key.entity.js';
-export * from './parental-consent.entity.js';
-export * from './user.entity.js';
+export * from '@/features/auth/domain/entities/api-key.entity.js';
+export * from '@/features/auth/domain/entities/parental-consent.entity.js';
+export * from '@/features/auth/domain/entities/user.entity.js';

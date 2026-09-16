@@ -4,14 +4,18 @@
  * Coordinates all class operations including CRUD, publishing, and lesson management.
  */
 
-import { prisma } from '@/database/client.js';
 import { assertValidUUID } from '@/shared/validators/entity-validators';
+import { moduleLogger } from '@/shared/logger/logger.js';
+
+const logger = moduleLogger('class:service');
 
 import type {
   IClassRepository,
   IClassLessonRepository,
   IClassVersionRepository,
 } from '@/features/class/domain/ports/class.repository.port';
+import type { IRecipeReferencePort } from '@/features/class/domain/ports/recipe-reference.port.js';
+import type { IGroupClassAccessPort } from '@/features/class/domain/ports/group-class-access.port.js';
 import type {
   ClassEntity as Class,
   ClassStatus,
@@ -30,6 +34,8 @@ import {
 export interface CreateClassInput {
   title: string;
   description?: string;
+  targetAgeMin?: number;
+  targetAgeMax?: number;
   lessons?: CreateLessonInput[];
 }
 
@@ -41,6 +47,8 @@ export interface CreateLessonInput {
 export interface UpdateClassInput {
   title?: string;
   description?: string;
+  targetAgeMin?: number;
+  targetAgeMax?: number;
 }
 
 export interface AddLessonInput {
@@ -92,27 +100,37 @@ export class ClassService {
     private classRepo: IClassRepository,
     private lessonRepo: IClassLessonRepository,
     private versionRepo: IClassVersionRepository,
+    private readonly recipeRef?: IRecipeReferencePort,
+    private readonly groupAccess?: IGroupClassAccessPort,
   ) {}
 
   async createClass(tutorId: string, data: CreateClassInput): Promise<Class> {
-    const classEntity = await this.classRepo.create({
-      title: data.title,
-      description: data.description,
-      tutorId,
-      status: 'DRAFT',
-      version: 0,
-    });
-
-    if (data.lessons && data.lessons.length > 0) {
-      for (let i = 0; i < data.lessons.length; i++) {
-        const lesson = data.lessons[i];
-        await this.lessonRepo.create({
-          classId: classEntity.id,
-          recipeId: lesson.recipeId,
-          order: lesson.order ?? i,
-        });
-      }
-    }
+    const classEntity =
+      data.lessons && data.lessons.length > 0
+        ? await this.classRepo.createWithLessons(
+            {
+              title: data.title,
+              description: data.description,
+              tutorId,
+              status: 'DRAFT',
+              version: 0,
+              targetAgeMin: data.targetAgeMin,
+              targetAgeMax: data.targetAgeMax,
+            },
+            data.lessons.map((lesson, i) => ({
+              recipeId: lesson.recipeId,
+              order: lesson.order ?? i,
+            })),
+          )
+        : await this.classRepo.create({
+            title: data.title,
+            description: data.description,
+            tutorId,
+            status: 'DRAFT',
+            version: 0,
+            targetAgeMin: data.targetAgeMin,
+            targetAgeMax: data.targetAgeMax,
+          });
 
     return this.getClass(classEntity.id);
   }
@@ -155,6 +173,8 @@ export class ClassService {
     return this.classRepo.update(classId, {
       title: data.title,
       description: data.description,
+      targetAgeMin: data.targetAgeMin,
+      targetAgeMax: data.targetAgeMax,
     });
   }
 
@@ -228,32 +248,35 @@ export class ClassService {
     const versionString = `${newVersion}.0.0`;
     const slug = this.generateSlug(classEntity.title); // This slug will be for the ClassVersion, not the Class itself
 
-    // Update the Class entity with the generated slug
-    await this.classRepo.update(classId, { slug: slug });
-
-    // Create version first to get its ID
-    await this.versionRepo.create({
-      classId: classId,
+    // Single transaction: version snapshot (with recipe snapshots) + class
+    // status/version/slug update. A partial publish (version without status
+    // flip, or vice versa) would leave students seeing stale content.
+    await this.versionRepo.createPublishedVersion({
+      classId,
       version: versionString,
-      publishedAt: new Date(),
-      isPublished: true,
       title: classEntity.title,
       description: classEntity.description,
       slug,
-      status: 'PUBLISHED',
+      targetAgeMin: classEntity.targetAgeMin,
+      targetAgeMax: classEntity.targetAgeMax,
       lessons: lessons.map((lesson, index) => ({
-        id: crypto.randomUUID(),
-        classVersionId: '', // Set after version creation
         recipeId: lesson.recipeId,
         order: lesson.order ?? index,
         title: lesson.title ?? lesson.recipe?.title ?? 'Untitled Lesson',
-        createdAt: new Date(),
+        duration: lesson.recipe?.expectedDurationMinutes ?? undefined,
+        recipeSnapshot: lesson.recipe
+          ? {
+              id: lesson.recipe.id,
+              title: lesson.recipe.title,
+              expectedDurationMinutes: lesson.recipe.expectedDurationMinutes ?? null,
+              steps: (lesson.recipe.steps ?? []).map((step) => ({
+                id: step.id,
+                order: step.order,
+                script: step.script ?? null,
+              })),
+            }
+          : undefined,
       })),
-    });
-
-    await this.classRepo.update(classId, {
-      status: 'PUBLISHED',
-      version: newVersion,
     });
 
     const updated = await this.classRepo.findById(classId);
@@ -278,7 +301,10 @@ export class ClassService {
       throw new ClassStateError(classId, 'Class is already in DRAFT status');
     }
 
+    // Flip the published flag on the version snapshot too, so slug lookups
+    // (findBySlug filters isPublished=true) stop resolving after unpublish.
     await this.classRepo.update(classId, { status: 'DRAFT' });
+    await this.versionRepo.unpublishByClassId(classId);
 
     const updated = await this.classRepo.findById(classId);
     if (!updated) {
@@ -350,7 +376,10 @@ export class ClassService {
 
     // Validate recipeId exists if being updated
     if (data.recipeId !== undefined) {
-      const recipe = await prisma.recipe.findUnique({ where: { id: data.recipeId } });
+      if (!this.recipeRef) {
+        throw new ClassValidationError('Recipe validation is not configured');
+      }
+      const recipe = await this.recipeRef.findById(data.recipeId);
       if (!recipe) {
         throw new ClassValidationError(`Recipe with ID ${data.recipeId} not found`);
       }
@@ -439,37 +468,23 @@ export class ClassService {
    * @returns True if enrolled, false otherwise
    */
   async isUserEnrolledInClass(userId: string, classId: string): Promise<boolean> {
-    console.warn(
-      `[DEPRECATION] ClassService.isUserEnrolledInClass is deprecated. Use ContentAccessService.canAccessClass instead.`,
+    logger.warn(
+      'ClassService.isUserEnrolledInClass is deprecated. Use ContentAccessService.canAccessClass instead.',
     );
-    console.log(`[DEBUG] Verificando acceso: classId=${classId}, userId=${userId}`);
 
-    // 1. Verificar si la clase existe (sin importar el estado)
-    const classEntity = await prisma.class.findUnique({
-      where: { id: classId },
-    });
-    if (!classEntity) {
-      console.log(`[DEBUG] Clase no encontrada: ${classId}`);
+    if (!this.groupAccess) {
       return false;
     }
 
-    console.log(`[DEBUG] Estado de la clase: ${classEntity.status}`);
+    // 1. Verificar si la clase existe (sin importar el estado)
+    const classExists = await this.groupAccess.classExists(classId);
+    if (!classExists) {
+      logger.debug({ classId }, 'Class not found during enrollment check');
+      return false;
+    }
 
     // 2. Verificar si el usuario es miembro ACTIVO de un grupo que tiene acceso a la clase
-    // FIX: Must filter by status: 'ACTIVE' to match ContentAccessService behavior
-    const groupClass = await prisma.groupClass.findFirst({
-      where: {
-        classId,
-        group: {
-          memberships: {
-            some: { studentId: userId, status: 'ACTIVE' },
-          },
-        },
-      },
-    });
-
-    console.log(`[DEBUG] Resultado de groupClass: ${JSON.stringify(groupClass)}`);
-    return !!groupClass;
+    return this.groupAccess.userHasAccess(userId, classId);
   }
 
   async getLesson(classId: string, lessonId: string): Promise<ClassLessonEntity> {
@@ -493,7 +508,7 @@ export class ClassService {
     try {
       assertValidUUID(idOrSlug);
       return idOrSlug; // It's a UUID, return directly
-    } catch (error) {
+    } catch {
       // Not a UUID, proceed to check as ID (fallback for legacy cases)
       const classEntity = await this.classRepo.findById(idOrSlug);
       if (classEntity) {

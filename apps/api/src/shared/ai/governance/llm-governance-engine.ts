@@ -4,12 +4,12 @@ import type {
   LLMUsageLog,
   TokenUsage,
   CostEstimate,
-} from './governance.types.js';
-import { QuotaService } from './quota-service.js';
-import { LLMRateLimiter } from './llm-rate-limiter.js';
-import { PromptValidator } from './prompt-validator.js';
-import { BudgetGuard } from './budget-guard.js';
-import { estimateTokenUsage, estimateCost } from './token-tracker.js';
+} from '@/shared/ai/governance/governance.types.js';
+import { QuotaService } from '@/shared/ai/governance/quota-service.js';
+import { LLMRateLimiter } from '@/shared/ai/governance/llm-rate-limiter.js';
+import { PromptValidator } from '@/shared/ai/governance/prompt-validator.js';
+import { BudgetGuard } from '@/shared/ai/governance/budget-guard.js';
+import { estimateTokenUsage, estimateCost } from '@/shared/ai/governance/token-tracker.js';
 import { createLogger } from '@/shared/logger/index.js';
 
 const logger = createLogger(undefined, { name: 'llm-governance', level: 'info' });

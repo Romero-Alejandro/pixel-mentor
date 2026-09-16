@@ -1,5 +1,5 @@
 import { createLogger } from '@/shared/logger/index.js';
-import type { BudgetCheck } from './governance.types.js';
+import type { BudgetCheck } from '@/shared/ai/governance/governance.types.js';
 
 const logger = createLogger(undefined, { name: 'budget-guard', level: 'info' });
 

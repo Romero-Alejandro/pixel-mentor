@@ -1,4 +1,4 @@
-import { withTimeout } from '../orchestrate-recipe.use-case';
+import { withTimeout } from '@/features/recipe/application/services/llm-stream-timeout';
 
 // Mock logger to suppress output during tests
 jest.mock('@/shared/logger/logger.js', () => ({
@@ -23,14 +23,6 @@ async function* createDelayedGenerator(values: string[], delayMs: number): Async
     await new Promise((r) => setTimeout(r, delayMs));
     yield value;
   }
-}
-
-/** Creates an async generator that hangs on the second next() call */
-async function* createHangingGenerator(): AsyncGenerator<string> {
-  yield 'first';
-  // This next() will never resolve
-  await new Promise<never>(() => {});
-  yield 'never';
 }
 
 /** Collects all values from an async generator */
@@ -147,6 +139,7 @@ describe('withTimeout', () => {
         [Symbol.asyncIterator]() {
           return this;
         },
+        [Symbol.asyncDispose]: jest.fn(),
       };
 
       const wrapped = withTimeout(source, 20, 5000);

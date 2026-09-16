@@ -1,2 +1,2 @@
 // DI barrel
-export * from './prompt.container.js';
+export * from '@/features/prompt/infrastructure/di/prompt.container.js';

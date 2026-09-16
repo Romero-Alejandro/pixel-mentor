@@ -1,5 +1,5 @@
-import { LEVEL_TITLES } from '../../domain/constants';
-import type { ILevelConfigRepository } from '../../domain/ports/level-config.repository.port';
+import { LEVEL_TITLES } from '@/features/gamification/domain/constants.js';
+import type { ILevelConfigRepository } from '@/features/gamification/domain/ports/level-config.repository.port.js';
 
 const DEFAULT_MAX_LEVEL = 6;
 

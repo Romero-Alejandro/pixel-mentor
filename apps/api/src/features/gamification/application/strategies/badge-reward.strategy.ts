@@ -2,8 +2,11 @@
  * Badge Reward Strategies - Award badges based on achievements.
  */
 
-import type { IRewardStrategy } from './reward-strategy.interface';
-import type { RewardContext, Reward } from './reward.types';
+import type { IRewardStrategy } from '@/features/gamification/application/strategies/reward-strategy.interface.js';
+import type {
+  RewardContext,
+  Reward,
+} from '@/features/gamification/application/strategies/reward.types.js';
 
 import { GameDomainEvents } from '@/shared/events/game-events.port';
 

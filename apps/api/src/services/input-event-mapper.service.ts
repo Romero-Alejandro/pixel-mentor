@@ -8,7 +8,7 @@
 import type {
   PedagogicalState,
   StateEventType,
-} from '../features/evaluation/domain/entities/pedagogical-state-machine.js';
+} from '@/features/evaluation/domain/entities/pedagogical-state-machine.js';
 
 export interface ClassificationResult {
   intent: 'question' | 'statement' | 'navigation' | 'clarification';

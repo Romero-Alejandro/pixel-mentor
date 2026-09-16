@@ -1,4 +1,4 @@
-import type { Competency } from '../entities/competency.entity.js';
+import type { Competency } from '@/features/progress/domain/entities/competency.entity.js';
 
 export interface CompetencyRepository {
   findById(id: string): Promise<Competency | null>;

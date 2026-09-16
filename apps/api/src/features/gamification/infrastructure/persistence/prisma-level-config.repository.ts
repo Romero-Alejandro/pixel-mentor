@@ -1,8 +1,7 @@
 import type {
   LevelConfig,
   ILevelConfigRepository,
-} from '../../domain/ports/level-config.repository.port';
-
+} from '@/features/gamification/domain/ports/level-config.repository.port.js';
 import { prisma } from '@/database/client.js';
 
 export class PrismaLevelConfigRepository implements ILevelConfigRepository {

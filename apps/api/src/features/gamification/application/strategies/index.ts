@@ -1,8 +1,8 @@
 // Application strategies - exports
-export * from './reward.types';
-export * from './reward-strategy.interface';
-export * from './xp-reward.strategy';
-export * from './badge-reward.strategy';
-export * from './streak-bonus.strategy';
-export * from './strategy-registry';
-export * from './strategy-factory';
+export * from '@/features/gamification/application/strategies/reward.types.js';
+export * from '@/features/gamification/application/strategies/reward-strategy.interface.js';
+export * from '@/features/gamification/application/strategies/xp-reward.strategy.js';
+export * from '@/features/gamification/application/strategies/badge-reward.strategy.js';
+export * from '@/features/gamification/application/strategies/streak-bonus.strategy.js';
+export * from '@/features/gamification/application/strategies/strategy-registry.js';
+export * from '@/features/gamification/application/strategies/strategy-factory.js';

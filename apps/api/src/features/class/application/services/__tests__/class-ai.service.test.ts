@@ -21,6 +21,7 @@ const createMockClassRepo = (): jest.Mocked<IClassRepository> => ({
   findBySlug: jest.fn() as any,
   findByTutorId: jest.fn(),
   create: jest.fn(),
+  createWithLessons: jest.fn(),
   update: jest.fn(),
   delete: jest.fn(),
 });
@@ -414,7 +415,6 @@ describe('ClassAIService', () => {
 
       expect(prompt).toContain('"TypeScript"');
       expect(prompt).toContain('Learn types, Use generics');
-      expect(prompt).toContain('Developers');
       expect(prompt).toContain('60 minutes');
       expect(prompt).toContain('4');
     });
@@ -432,17 +432,35 @@ describe('ClassAIService', () => {
       expect(prompt).toContain('Not specified');
     });
 
-    it('should handle missing targetAudience', () => {
+    it('should include age-band guidance when ages are provided', () => {
       const input = {
         topic: 'Topic',
         learningObjectives: ['Obj1'],
         duration: 30,
         numberOfLessons: 1,
+        targetAgeMin: 5,
+        targetAgeMax: 7,
       };
 
       const prompt = (service as any).buildClassGenerationPrompt(input);
 
-      expect(prompt).toContain('General learners');
+      expect(prompt).toContain('children aged 5-7');
+      expect(prompt).toContain('very short lessons');
+    });
+
+    it('should use teen guidance for older audiences', () => {
+      const input = {
+        topic: 'Topic',
+        learningObjectives: ['Obj1'],
+        duration: 60,
+        numberOfLessons: 2,
+        targetAgeMin: 14,
+        targetAgeMax: 16,
+      };
+
+      const prompt = (service as any).buildClassGenerationPrompt(input);
+
+      expect(prompt).toContain('teenagers aged 14-16');
     });
 
     it('should handle missing duration', () => {

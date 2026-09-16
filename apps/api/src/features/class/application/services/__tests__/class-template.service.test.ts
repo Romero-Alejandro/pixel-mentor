@@ -70,6 +70,7 @@ const createMockClassRepo = (): jest.Mocked<IClassRepository> => ({
   findBySlug: jest.fn() as any,
   findByTutorId: jest.fn(),
   create: jest.fn(),
+  createWithLessons: jest.fn(),
   update: jest.fn(),
   delete: jest.fn(),
 });
@@ -566,7 +567,7 @@ describe('ClassTemplateService', () => {
         status: 'DRAFT',
         version: 0,
       });
-      expect(result).toEqual({ classId: 'class-1', title: 'My Template' });
+      expect(result).toEqual(createdClass);
     });
 
     it('should create class with custom title and description', async () => {
@@ -604,7 +605,7 @@ describe('ClassTemplateService', () => {
         status: 'DRAFT',
         version: 0,
       });
-      expect(result.classId).toBe('class-1');
+      expect(result.id).toBe('class-1');
     });
 
     it('should throw TemplateNotFoundError when template does not exist', async () => {

@@ -6,7 +6,10 @@ import type {
   IClassTemplateRepository,
   IClassRepository,
 } from '@/features/class/domain/ports/class.repository.port';
-import type { ClassTemplateEntity } from '@/features/class/domain/entities/class.entity';
+import type {
+  ClassTemplateEntity,
+  ClassEntity,
+} from '@/features/class/domain/entities/class.entity';
 
 // DTOs
 export interface CreateTemplateInput {
@@ -125,7 +128,7 @@ export class ClassTemplateService {
     templateId: string,
     tutorId: string,
     data?: CreateClassFromTemplateInput,
-  ): Promise<{ classId: string; title: string }> {
+  ): Promise<ClassEntity> {
     const template = await this.templateRepo.findById(templateId);
     if (!template) {
       throw new TemplateNotFoundError(templateId);
@@ -144,9 +147,6 @@ export class ClassTemplateService {
       version: 0,
     });
 
-    return {
-      classId: classEntity.id,
-      title: classEntity.title,
-    };
+    return classEntity;
   }
 }

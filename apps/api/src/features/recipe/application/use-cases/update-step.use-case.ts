@@ -1,12 +1,15 @@
-import type { RecipeRepository } from '../../domain/ports/recipe.repository.port.js';
+import type {
+  RecipeRepository,
+  RecipeStepUpdateInput,
+} from '@/features/recipe/domain/ports/recipe.repository.port.js';
 import type { AtomRepository } from '@/features/knowledge/domain/ports/atom.repository.port.js';
 import {
   RecipeNotFoundError,
   RecipeOwnershipError,
   StepNotFoundError,
 } from '@/shared/errors/domain-errors.js';
-import type { RecipeStep, StepType } from '../../domain/entities/recipe.entity.js';
-import { CanonicalId } from '../../domain/valueObjects/canonical-id.vo.js';
+import type { RecipeStep, StepType } from '@/features/recipe/domain/entities/recipe.entity.js';
+import { CanonicalId } from '@/features/recipe/domain/value-objects/canonical-id.vo.js';
 import { AtomType } from '@/features/knowledge/domain/entities/atom.entity.js';
 
 export interface UpdateStepInput {
@@ -70,7 +73,7 @@ export class UpdateStepUseCase {
       existingStep.atomId,
     );
 
-    const updateData: Record<string, unknown> = {
+    const updateData: RecipeStepUpdateInput = {
       atomId: effectiveAtomId,
       stepType: effectiveStepType,
     };
@@ -94,13 +97,13 @@ export class UpdateStepUseCase {
       updateData.script = newScriptContent;
     }
     if (stepData.activity !== undefined) {
-      updateData.activityData = stepData.activity;
+      updateData.activityData = stepData.activity || null;
     }
     if (stepData.question !== undefined) {
-      updateData.question = stepData.question;
+      updateData.question = stepData.question || null;
     }
 
-    const updated = await this.recipeRepository.updateStep(stepId, updateData as any);
+    const updated = await this.recipeRepository.updateStep(stepId, updateData);
     return updated;
   }
 

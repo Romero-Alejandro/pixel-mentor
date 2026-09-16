@@ -2,7 +2,10 @@
  * Pure utility functions for badge progress calculation.
  */
 
-import type { BadgeRequirementType, BadgeProgress } from '../../domain/entities/badge.types';
+import type {
+  BadgeRequirementType,
+  BadgeProgress,
+} from '@/features/gamification/domain/entities/badge.types.js';
 
 /**
  * Check if a badge requirement type is valid.

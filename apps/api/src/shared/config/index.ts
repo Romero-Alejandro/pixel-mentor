@@ -1,6 +1,6 @@
 // Environment configuration
-export { config, envSchema } from './env.js';
-export type { Config } from './env.js';
+export { config, envSchema } from '@/shared/config/env.js';
+export type { Config } from '@/shared/config/env.js';
 
 // Feature flag types and services
 export {
@@ -9,7 +9,7 @@ export {
   getFeatureFlagService,
   resetFeatureFlagService,
   createFeatureFlagService,
-} from './evaluation-flags.js';
+} from '@/shared/config/evaluation-flags.js';
 
 export type {
   EvaluationFlags,
@@ -18,4 +18,4 @@ export type {
   KeywordExtractionConfig,
   EvaluatorType,
   PartialEvaluationFlags,
-} from './evaluation-flags.js';
+} from '@/shared/config/evaluation-flags.js';

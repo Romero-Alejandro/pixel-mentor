@@ -1,2 +1,2 @@
 // DI barrel
-export * from './tts.container.js';
+export * from '@/features/tts/infrastructure/di/tts.container.js';

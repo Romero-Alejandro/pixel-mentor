@@ -1,7 +1,27 @@
-import type { Response, NextFunction } from 'express';
-import type { AppRequest } from '@/features/recipe/infrastructure/http/recipe.routes.js';
+import type { Request, Response, NextFunction } from 'express';
 import { getAIServices, isAIServicesInitialized } from '@/shared/ai/ai-service.provider.js';
 import { GovernanceError } from '@/shared/ai/governance/governance-ai-adapter.js';
+
+/** Structural request type: accepts any request carrying (at most) these fields,
+ * so both the shared AppRequest and feature-local request types are compatible. */
+type GovernanceRequest = Request & {
+  user?: { id?: string; role?: string };
+  llmGovernance?: {
+    userId: string | null;
+    startTime: number;
+    provider: string;
+    postCallRecord: (
+      userId: string | null,
+      provider: string,
+      model: string,
+      path: string,
+      prompt: string,
+      response: string,
+      success: boolean,
+      error?: string,
+    ) => unknown;
+  };
+};
 
 /**
  * Navigation inputs that bypass LLM governance (fast path).
@@ -45,7 +65,7 @@ function isNavigationInput(input: string): boolean {
  * Uses the request's userId (from auth middleware) to check quota and rate limits.
  */
 export function llmGovernanceMiddleware() {
-  return async (req: AppRequest, _res: Response, next: NextFunction): Promise<void> => {
+  return async (req: GovernanceRequest, _res: Response, next: NextFunction): Promise<void> => {
     if (!isAIServicesInitialized()) {
       next();
       return;
@@ -69,22 +89,18 @@ export function llmGovernanceMiddleware() {
     );
 
     if (!decision.allowed) {
-      const error = new GovernanceError(
-        decision.rejectionReason ?? 'LLM request rejected by governance',
-      );
-      // Attach error for Express error handler
-      (error as any).httpStatus = 429;
-      (error as any).code = 'GOVERNANCE_REJECTED';
-      next(error);
+      // GovernanceError already carries httpStatus=429 / code for the error handler
+      next(new GovernanceError(decision.rejectionReason ?? 'LLM request rejected by governance'));
       return;
     }
 
     // Attach governance reference to request for post-call recording
-    (req as any).__llmGovernance = {
-      governance,
+    req.llmGovernance = {
       userId,
       startTime: Date.now(),
       provider: getAIServices().health().primaryProvider,
+      postCallRecord: (...args: Parameters<typeof governance.postCallRecord>) =>
+        governance.postCallRecord(...args),
     };
 
     next();
@@ -96,16 +112,16 @@ export function llmGovernanceMiddleware() {
  * Call this in route handlers after the LLM call completes.
  */
 export function recordLLMUsage(
-  req: AppRequest,
+  req: GovernanceRequest,
   prompt: string,
   response: string,
   success: boolean,
   error?: string,
 ): void {
-  const govData = (req as any).__llmGovernance;
+  const govData = req.llmGovernance;
   if (!govData) return;
 
-  govData.governance.postCallRecord(
+  govData.postCallRecord(
     govData.userId,
     govData.provider,
     'unknown',

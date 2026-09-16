@@ -1,4 +1,5 @@
 import type { IUserRepository } from '@/features/auth/domain/ports/user.repository.port.js';
+import { TokenInvalidError, TokenExpiredError } from '@/features/auth/domain/auth.errors.js';
 import type { IRefreshTokenRepository } from '@/features/auth/domain/ports/refresh-token.repository.port.js';
 import type { IHashingService } from '@/features/auth/domain/ports/hashing.service.port.js';
 import type { ITokenService } from '@/features/auth/domain/ports/token.service.port.js';
@@ -112,9 +113,9 @@ describe('RefreshTokenUseCase', () => {
       mockRefreshTokenRepo.findByUserId.mockResolvedValue(mockStoredToken);
       mockHashingService.compare.mockResolvedValue(false);
 
-      // Act & Assert
+      // Act & Assert — typed error, no reason leaked to the client
       await expect(useCase.execute({ refreshToken: validRefreshToken })).rejects.toThrow(
-        'Invalid refresh token: JTI mismatch',
+        TokenInvalidError,
       );
 
       expect(mockRefreshTokenRepo.deleteByUserId).toHaveBeenCalledWith(validUserId);
@@ -128,9 +129,9 @@ describe('RefreshTokenUseCase', () => {
       });
       mockRefreshTokenRepo.findByUserId.mockResolvedValue(null);
 
-      // Act & Assert
+      // Act & Assert — typed error, no reason leaked to the client
       await expect(useCase.execute({ refreshToken: validRefreshToken })).rejects.toThrow(
-        'Invalid refresh token',
+        TokenInvalidError,
       );
 
       expect(mockRefreshTokenRepo.deleteByUserId).toHaveBeenCalledWith(validUserId);
@@ -167,9 +168,9 @@ describe('RefreshTokenUseCase', () => {
       mockRefreshTokenRepo.findByUserId.mockResolvedValue(expiredToken);
       mockHashingService.compare.mockResolvedValue(true);
 
-      // Act & Assert
+      // Act & Assert — typed error, no reason leaked to the client
       await expect(useCase.execute({ refreshToken: validRefreshToken })).rejects.toThrow(
-        'Refresh token has expired',
+        TokenExpiredError,
       );
     });
   });

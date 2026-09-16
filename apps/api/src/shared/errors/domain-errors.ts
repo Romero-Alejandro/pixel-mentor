@@ -1,6 +1,6 @@
 // ==================== Domain-Specific Error Classes ====================
 
-import { AppError, ErrorCodes } from './app-error.js';
+import { AppError, ErrorCodes } from '@/shared/errors/app-error.js';
 
 // ==================== Authentication & Authorization Errors ====================
 

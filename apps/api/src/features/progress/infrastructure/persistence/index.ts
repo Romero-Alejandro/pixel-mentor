@@ -1,4 +1,4 @@
 // Persistence barrel
-export * from './prisma-competency-mastery.repository.js';
-export * from './prisma-competency.repository.js';
-export * from './prisma-progress.repository.js';
+export * from '@/features/progress/infrastructure/persistence/prisma-competency-mastery.repository.js';
+export * from '@/features/progress/infrastructure/persistence/prisma-competency.repository.js';
+export * from '@/features/progress/infrastructure/persistence/prisma-progress.repository.js';

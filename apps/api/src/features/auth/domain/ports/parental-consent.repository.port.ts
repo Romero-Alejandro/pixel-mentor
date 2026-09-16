@@ -1,4 +1,7 @@
-import type { ParentalConsent, ConsentStatus } from '../entities/parental-consent.entity.js';
+import type {
+  ParentalConsent,
+  ConsentStatus,
+} from '@/features/auth/domain/entities/parental-consent.entity.js';
 
 export interface IParentalConsentRepository {
   findById(id: string): Promise<ParentalConsent | null>;
