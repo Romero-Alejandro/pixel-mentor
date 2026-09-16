@@ -1,6 +1,6 @@
 import { IconUsers, IconChevronRight, IconTrash, IconEdit } from '@tabler/icons-react';
 import { Card } from '@/components/ui/Card';
-import type { Group } from '../services/group.api';
+import type { Group } from '@/features/group/services/group.api';
 
 interface GroupCardProps {
   group: Group;

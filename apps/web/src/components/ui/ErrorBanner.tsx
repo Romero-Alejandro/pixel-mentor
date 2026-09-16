@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 
-import { Button } from './Button';
+import { Button } from '@/components/ui/Button';
 
 import { cn } from '@/utils/cn';
 

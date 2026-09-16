@@ -13,7 +13,7 @@ import {
   IconCircleX,
 } from '@tabler/icons-react';
 
-import { AccuracyTier, TIER_CONFIG } from '../constants/lesson.constants';
+import { AccuracyTier, TIER_CONFIG } from '@/features/lesson/constants/lesson.constants';
 import { useAudio } from '@/contexts/AudioContext';
 import { SpriteAudioEvent } from '@/audio/types/audio-events';
 import { cn } from '@/utils/cn';

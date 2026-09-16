@@ -35,7 +35,7 @@ const debugLog = (...args: unknown[]): void => {
 };
 
 const debugError = (...args: unknown[]): void => {
-  console.error('[TTS ERROR]', ...args);
+  logger.error('[TTS ERROR]', ...args);
 };
 
 export function useTTS(): UseTTSReturn {
@@ -126,30 +126,30 @@ export function useTTS(): UseTTSReturn {
       for (const item of audioQueueRef.current) {
         try {
           URL.revokeObjectURL(item.url);
-        } catch (e) {}
+        } catch {}
       }
       if (currentAudioRef.current) {
         try {
           currentAudioRef.current.element.pause();
           URL.revokeObjectURL(currentAudioRef.current.url);
-        } catch (e) {}
+        } catch {}
       }
       // Clear HTTP audio
       if (httpAudioRef.current) {
         try {
           httpAudioRef.current.pause();
-        } catch (e) {}
+        } catch {}
       }
       if (httpAudioUrlRef.current) {
         try {
           URL.revokeObjectURL(httpAudioUrlRef.current);
-        } catch (e) {}
+        } catch {}
       }
       // Browser TTS
       if (isSpeechSupported) {
         try {
           window.speechSynthesis.cancel();
-        } catch (e) {}
+        } catch {}
       }
     };
   }, [isSpeechSupported]);
@@ -171,7 +171,7 @@ export function useTTS(): UseTTSReturn {
     for (const item of audioQueueRef.current) {
       try {
         URL.revokeObjectURL(item.url);
-      } catch (e) {
+      } catch {
         // ignore
       }
     }
@@ -181,7 +181,7 @@ export function useTTS(): UseTTSReturn {
       try {
         currentAudioRef.current.element.pause();
         URL.revokeObjectURL(currentAudioRef.current.url);
-      } catch (e) {
+      } catch {
         // ignore
       }
       currentAudioRef.current = null;
@@ -191,7 +191,7 @@ export function useTTS(): UseTTSReturn {
     if (httpAudioRef.current) {
       try {
         httpAudioRef.current.pause();
-      } catch (e) {
+      } catch {
         // ignore
       }
       httpAudioRef.current = null;
@@ -199,7 +199,7 @@ export function useTTS(): UseTTSReturn {
     if (httpAudioUrlRef.current) {
       try {
         URL.revokeObjectURL(httpAudioUrlRef.current);
-      } catch (e) {
+      } catch {
         // ignore
       }
       httpAudioUrlRef.current = null;
@@ -399,14 +399,14 @@ export function useTTS(): UseTTSReturn {
         for (const item of audioQueueRef.current) {
           try {
             URL.revokeObjectURL(item.url);
-          } catch (e) {}
+          } catch {}
         }
         audioQueueRef.current = [];
         if (currentAudioRef.current) {
           try {
             currentAudioRef.current.element.pause();
             URL.revokeObjectURL(currentAudioRef.current.url);
-          } catch (e) {}
+          } catch {}
         }
         currentAudioRef.current = null;
       };
@@ -477,7 +477,7 @@ export function useTTS(): UseTTSReturn {
                 if (audioQueueRef.current.length > 0) {
                   const next = audioQueueRef.current.shift()!;
                   currentAudioRef.current = next;
-                  next.element.play().catch((e) => console.error('Play error', e));
+                  next.element.play().catch((e) => logger.error('Play error', e));
                 } else if (streamEndedRef.current) {
                   // Error but stream ended - mark complete and resolve
                   setIsSpeaking(false);
@@ -495,7 +495,7 @@ export function useTTS(): UseTTSReturn {
                 audioQueueRef.current.push(queueItem);
               }
             } catch (err) {
-              console.error('Failed to process audio message', err);
+              logger.error('Failed to process audio message', err);
             }
           });
 
@@ -517,7 +517,7 @@ export function useTTS(): UseTTSReturn {
               }
               // else will resolve in onended handlers
             } catch (err) {
-              console.error('Failed to parse end message', err);
+              logger.error('Failed to parse end message', err);
               eventSource.close();
               cleanupStreamingResources();
               reject(err);
@@ -535,7 +535,7 @@ export function useTTS(): UseTTSReturn {
             }
             try {
               const data = JSON.parse(event.data) as TTSErrorMessageData;
-              console.error('Stream error from server', data);
+              logger.error('Stream error from server', data);
               debugLog('Stream error', {
                 message: data.message,
                 code: data.code,
@@ -548,7 +548,7 @@ export function useTTS(): UseTTSReturn {
               cleanupStreamingResources();
               reject(new Error(data.message || 'Stream error'));
             } catch (err) {
-              console.error('Error parsing SSE error', err);
+              logger.error('Error parsing SSE error', err);
               streamEndedRef.current = true;
               eventSource.close();
               cleanupStreamingResources();
@@ -558,7 +558,7 @@ export function useTTS(): UseTTSReturn {
 
           eventSource.onerror = (err) => {
             if (!streamEndedRef.current) {
-              console.error('EventSource connection error', err);
+              logger.error('EventSource connection error', err);
               eventSource.close();
               cleanupStreamingResources();
               reject(new Error('Connection error'));

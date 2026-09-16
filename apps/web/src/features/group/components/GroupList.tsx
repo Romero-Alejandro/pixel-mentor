@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { IconPlus, IconSearch } from '@tabler/icons-react';
-import { useGroupsStore } from '../stores/group.store';
-import { GroupCard } from './GroupCard';
-import { CreateGroupModal } from './CreateGroupModal';
+import { useGroupsStore } from '@/features/group/stores/group.store';
+import { GroupCard } from '@/features/group/components/GroupCard';
+import { CreateGroupModal } from '@/features/group/components/CreateGroupModal';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { Input } from '@/components/ui/Input';
-import type { Group } from '../services/group.api';
+import type { Group } from '@/features/group/services/group.api';
 
 interface GroupWithCounts extends Group {
   _count?: { memberships: number; classAssignments: number };

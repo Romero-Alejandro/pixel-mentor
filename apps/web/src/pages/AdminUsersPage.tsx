@@ -12,7 +12,7 @@ import {
   IconSearch,
 } from '@tabler/icons-react';
 
-import { useAuth } from '@/features/auth/hooks/useAuth';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 import { api } from '@/services/api';
 import { Button, Spinner, Input } from '@/components/ui';
 

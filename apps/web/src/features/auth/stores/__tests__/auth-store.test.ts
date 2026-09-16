@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 
-import { useAuthUIStore } from '../../features/auth/stores/auth.store';
+import { useAuthUIStore } from '@/features/auth/stores/auth.store';
 
 describe('useAuthUIStore', () => {
   beforeEach(() => {

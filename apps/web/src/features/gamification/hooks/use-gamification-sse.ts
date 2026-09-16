@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { fetchEventSource, type EventSourceMessage } from '@microsoft/fetch-event-source';
 import type { EarnedBadge } from '@pixel-mentor/shared/gamification';
 
-import { useGamificationStore } from '../stores/gamification.store';
+import { useGamificationStore } from '@/features/gamification/stores/gamification.store';
 
 import { getToken } from '@/services/api-client';
 import { logger } from '@/utils/logger';
@@ -84,7 +84,7 @@ export function useGamificationSSE(enabled = true) {
     const connect = () => {
       const token = getToken();
       if (!token) {
-        console.error('[GamificationSSE] No auth token available, cannot connect');
+        logger.error('[GamificationSSE] No auth token available, cannot connect');
         return;
       }
 

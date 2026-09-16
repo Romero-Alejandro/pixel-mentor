@@ -86,7 +86,7 @@ const debugLog = (...args: unknown[]) => {
 };
 
 const debugError = (...args: unknown[]) => {
-  console.error('[Voice ERROR]', ...args);
+  logger.error('[Voice ERROR]', ...args);
 };
 
 export function useVoice(): UseVoiceReturn {
@@ -211,38 +211,38 @@ export function useVoice(): UseVoiceReturn {
       for (const item of audioQueueRef.current) {
         try {
           URL.revokeObjectURL(item.url);
-        } catch (e) {}
+        } catch {}
       }
       audioQueueRef.current = [];
       if (currentAudioRef.current) {
         try {
           currentAudioRef.current.element.pause();
           URL.revokeObjectURL(currentAudioRef.current.url);
-        } catch (e) {}
+        } catch {}
         currentAudioRef.current = null;
       }
       // Clear HTTP audio
       if (httpAudioRef.current) {
         try {
           httpAudioRef.current.pause();
-        } catch (e) {}
+        } catch {}
       }
       if (httpAudioUrlRef.current) {
         try {
           URL.revokeObjectURL(httpAudioUrlRef.current);
-        } catch (e) {}
+        } catch {}
       }
       // Browser TTS
       if (isSpeechSupported) {
         try {
           window.speechSynthesis.cancel();
-        } catch (e) {}
+        } catch {}
       }
       // Recognition
       if (recognitionRef.current) {
         try {
           recognitionRef.current.abort();
-        } catch (e) {}
+        } catch {}
       }
     };
   }, [isSpeechSupported]);
@@ -272,7 +272,7 @@ export function useVoice(): UseVoiceReturn {
     for (const item of audioQueueRef.current) {
       try {
         URL.revokeObjectURL(item.url);
-      } catch (e) {
+      } catch {
         // ignore
       }
     }
@@ -282,7 +282,7 @@ export function useVoice(): UseVoiceReturn {
       try {
         currentAudioRef.current.element.pause();
         URL.revokeObjectURL(currentAudioRef.current.url);
-      } catch (e) {
+      } catch {
         // ignore
       }
       currentAudioRef.current = null;
@@ -292,7 +292,7 @@ export function useVoice(): UseVoiceReturn {
     if (httpAudioRef.current) {
       try {
         httpAudioRef.current.pause();
-      } catch (e) {
+      } catch {
         // ignore
       }
       httpAudioRef.current = null;
@@ -300,7 +300,7 @@ export function useVoice(): UseVoiceReturn {
     if (httpAudioUrlRef.current) {
       try {
         URL.revokeObjectURL(httpAudioUrlRef.current);
-      } catch (e) {
+      } catch {
         // ignore
       }
       httpAudioUrlRef.current = null;
@@ -528,14 +528,14 @@ export function useVoice(): UseVoiceReturn {
         for (const item of audioQueueRef.current) {
           try {
             URL.revokeObjectURL(item.url);
-          } catch (e) {}
+          } catch {}
         }
         audioQueueRef.current = [];
         if (currentAudioRef.current) {
           try {
             currentAudioRef.current.element.pause();
             URL.revokeObjectURL(currentAudioRef.current.url);
-          } catch (e) {}
+          } catch {}
           // NOTE: Do NOT set currentAudioRef.current to null here.
           // This cleanup happens too early and causes race conditions with useTextSync.
           // The reference will be cleared in stopSpeaking() when appropriate.
@@ -599,7 +599,7 @@ export function useVoice(): UseVoiceReturn {
                   const next = audioQueueRef.current.shift()!;
                   currentAudioRef.current = next;
                   chunkIndexRef.current = next.index;
-                  next.element.play().catch((e) => console.error('Play error', e));
+                  next.element.play().catch((e) => logger.error('Play error', e));
                 } else if (streamEndedRef.current) {
                   // Final chunk finished - clear ref and resolve
                   currentAudioRef.current = null;
@@ -612,7 +612,7 @@ export function useVoice(): UseVoiceReturn {
 
               audio.onerror = (e) => {
                 URL.revokeObjectURL(audioUrl);
-                console.error('Chunk playback error', e);
+                logger.error('Chunk playback error', e);
                 if (currentAudioRef.current && currentAudioRef.current.url === audioUrl) {
                   currentAudioRef.current = null;
                 }
@@ -620,7 +620,7 @@ export function useVoice(): UseVoiceReturn {
                   const next = audioQueueRef.current.shift()!;
                   currentAudioRef.current = next;
                   chunkIndexRef.current = next.index;
-                  next.element.play().catch((e) => console.error('Play error', e));
+                  next.element.play().catch((e) => logger.error('Play error', e));
                 } else if (streamEndedRef.current) {
                   cleanupStreamingResources();
                   resolve();
@@ -630,13 +630,13 @@ export function useVoice(): UseVoiceReturn {
               if (!currentAudioRef.current) {
                 currentAudioRef.current = queueItem;
                 chunkIndexRef.current = queueItem.index;
-                audio.play().catch((e) => console.error('Failed to play chunk', e));
+                audio.play().catch((e) => logger.error('Failed to play chunk', e));
                 notifyAudioReady();
               } else {
                 audioQueueRef.current.push(queueItem);
               }
             } catch (err) {
-              console.error('Failed to process audio message', err);
+              logger.error('Failed to process audio message', err);
             }
           });
 
@@ -656,7 +656,7 @@ export function useVoice(): UseVoiceReturn {
               }
               // else will resolve in onended handlers
             } catch (err) {
-              console.error('Failed to parse end message', err);
+              logger.error('Failed to parse end message', err);
               eventSource.close();
               cleanupStreamingResources();
               reject(err);
@@ -674,7 +674,7 @@ export function useVoice(): UseVoiceReturn {
             }
             try {
               const data = JSON.parse(event.data) as TTSErrorMessageData;
-              console.error('Stream error from server', data);
+              logger.error('Stream error from server', data);
               debugLog('Stream error', {
                 message: data.message,
                 code: data.code,
@@ -687,7 +687,7 @@ export function useVoice(): UseVoiceReturn {
               cleanupStreamingResources();
               reject(new Error(data.message || 'Stream error'));
             } catch (err) {
-              console.error('Error parsing SSE error', err);
+              logger.error('Error parsing SSE error', err);
               streamEndedRef.current = true;
               eventSource.close();
               cleanupStreamingResources();
@@ -697,7 +697,7 @@ export function useVoice(): UseVoiceReturn {
 
           eventSource.onerror = (err) => {
             if (!streamEndedRef.current) {
-              console.error('EventSource connection error', err);
+              logger.error('EventSource connection error', err);
               eventSource.close();
               cleanupStreamingResources();
               reject(new Error('Connection error'));
@@ -814,7 +814,7 @@ export function useVoice(): UseVoiceReturn {
     if (recognitionRef.current) {
       try {
         recognitionRef.current.abort();
-      } catch (e) {
+      } catch {
         // Ignore
       }
     }
@@ -885,7 +885,7 @@ export function useVoice(): UseVoiceReturn {
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
-      } catch (e) {
+      } catch {
         // Ignore
       }
     }

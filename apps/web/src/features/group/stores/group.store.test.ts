@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { useGroupsStore } from './group.store';
+import { useGroupsStore } from '@/features/group/stores/group.store';
 
-vi.mock('../services/group.api', () => ({
+vi.mock('@/features/group/services/group.api', () => ({
   groupApi: {
     getGroups: vi.fn(),
     getGroup: vi.fn(),
@@ -19,7 +19,7 @@ vi.mock('../services/group.api', () => ({
   },
 }));
 
-import { groupApi } from '../services/group.api';
+import { groupApi } from '@/features/group/services/group.api';
 
 const mockGroupApi = groupApi as ReturnType<typeof vi.mockObject<typeof groupApi>>;
 

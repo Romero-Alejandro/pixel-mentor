@@ -3,7 +3,7 @@ import { IconMicrophone } from '@tabler/icons-react';
 
 import { useAudio } from '@/contexts/AudioContext';
 import { SpriteAudioEvent } from '@/audio/types/audio-events';
-import { useVoice } from '@/features/voice/hooks/useVoice';
+import { useVoice } from '@/features/voice/hooks/use-voice';
 import { Button } from '@/components/ui';
 
 type VoiceInputState = 'idle' | 'listening' | 'processing';

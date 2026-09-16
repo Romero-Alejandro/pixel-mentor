@@ -19,7 +19,7 @@ const debugLog = (...args: unknown[]): void => {
 };
 
 const debugError = (...args: unknown[]): void => {
-  console.error('[STT ERROR]', ...args);
+  logger.error('[STT ERROR]', ...args);
 };
 
 export function useSTT(): UseSTTReturn {
@@ -54,7 +54,7 @@ export function useSTT(): UseSTTReturn {
     if (recognitionRef.current) {
       try {
         recognitionRef.current.abort();
-      } catch (e) {
+      } catch {
         // Ignore
       }
     }
@@ -125,7 +125,7 @@ export function useSTT(): UseSTTReturn {
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
-      } catch (e) {
+      } catch {
         // Ignore
       }
     }
@@ -157,7 +157,7 @@ export function useSTTCleanup() {
     if (recognitionRef.current) {
       try {
         recognitionRef.current.abort();
-      } catch (e) {}
+      } catch {}
     }
   }, []);
 

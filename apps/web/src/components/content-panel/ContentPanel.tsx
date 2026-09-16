@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 
-import { type ActivityOption } from '../activity-card/ActivityCard';
+import { type ActivityOption } from '@/components/activity-card/ActivityCard';
 
 import { useAudio } from '@/contexts/AudioContext';
 import { SpriteAudioEvent } from '@/audio/types/audio-events';

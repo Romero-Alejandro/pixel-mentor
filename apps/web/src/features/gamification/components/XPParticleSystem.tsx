@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
 import type { RefObject } from 'react';
 
-import { useGamificationStore } from '../stores/gamification.store';
+import { useGamificationStore } from '@/features/gamification/stores/gamification.store';
 
-import { XPParticle } from './XPParticle';
-import { useXPParticles } from './useXPParticles';
+import { XPParticle } from '@/features/gamification/components/XPParticle';
+import { useXPParticles } from '@/features/gamification/components/use-xp-particles';
 
 const XP_COUNTER_SELECTOR = '[data-xp-counter]';
 

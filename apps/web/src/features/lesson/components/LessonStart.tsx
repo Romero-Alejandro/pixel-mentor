@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 
 import { useLessonStore } from '@/features/lesson/stores/lesson.store';
-import { useRecipeInteraction } from '@/features/lesson/hooks/useLessonQueries';
+import { useRecipeInteraction } from '@/features/lesson/hooks/use-lesson-queries';
 import { useAudio } from '@/contexts/AudioContext';
-import { useAlert } from '@/hooks/useConfirmationDialogs';
+import { useAlert } from '@/hooks/use-confirmation-dialogs';
 import { logger } from '@/utils/logger';
 import { SpriteAudioEvent, MicroAudioEvent } from '@/audio/types/audio-events';
 
@@ -25,7 +25,7 @@ export function LessonStart() {
     logger.log('sessionId:', sessionId);
 
     if (!sessionId) {
-      console.error('No sessionId available');
+      logger.error('No sessionId available');
       await alert({ title: 'Error', message: 'No session ID available', variant: 'error' });
       return;
     }
@@ -40,7 +40,7 @@ export function LessonStart() {
 
       logger.log('State updated to:', result.pedagogicalState);
     } catch (error: unknown) {
-      console.error('Failed to start lesson:', error);
+      logger.error('Failed to start lesson:', error);
       const message = error instanceof Error ? error.message : 'Unknown error';
       await alert({
         title: 'Error',

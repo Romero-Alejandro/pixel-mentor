@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { IconRocket, IconLogin2, IconUserPlus, IconAlertCircleFilled } from '@tabler/icons-react';
 
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 import { Button, Input, Card, Spinner } from '@/components/ui';
 import { useAudio } from '@/contexts/AudioContext';
 

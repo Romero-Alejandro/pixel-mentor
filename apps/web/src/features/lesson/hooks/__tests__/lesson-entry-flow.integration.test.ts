@@ -13,7 +13,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
-import type { LessonResponse } from '../useLessonInteractions';
+import type { LessonResponse } from '@/features/lesson/hooks/use-lesson-interactions';
 
 type SpeakFn = (text: string, settings?: Record<string, unknown>) => Promise<boolean>;
 type SetCurrentStateFn = (state: string) => void;

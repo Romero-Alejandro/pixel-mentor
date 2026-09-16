@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from 'react';
 import type { LevelUpInfo } from '@pixel-mentor/shared/gamification';
 
-import { LevelBadge } from './LevelBadge';
+import { LevelBadge } from '@/features/gamification/components/LevelBadge';
 
 import { useAudio } from '@/contexts/AudioContext';
 import { SpriteAudioEvent } from '@/audio/types/audio-events';

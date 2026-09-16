@@ -1,21 +1,21 @@
-export { Button } from './Button';
-export type { ButtonProps } from './Button';
+export { Button } from '@/components/ui/Button';
+export type { ButtonProps } from '@/components/ui/Button';
 
-export { Input } from './Input';
-export type { InputProps } from './Input';
+export { Input } from '@/components/ui/Input';
+export type { InputProps } from '@/components/ui/Input';
 
-export { Card } from './Card';
-export type { CardProps } from './Card';
+export { Card } from '@/components/ui/Card';
+export type { CardProps } from '@/components/ui/Card';
 
-export { Spinner } from './Spinner';
+export { Spinner } from '@/components/ui/Spinner';
 
-export { Badge } from './Badge';
+export { Badge } from '@/components/ui/Badge';
 
-export { Toast } from './Toast';
-export type { ToastProps } from './Toast';
+export { Toast } from '@/components/ui/Toast';
+export type { ToastProps } from '@/components/ui/Toast';
 
-export { Textarea } from './Textarea';
-export type { TextareaProps } from './Textarea';
+export { Textarea } from '@/components/ui/Textarea';
+export type { TextareaProps } from '@/components/ui/Textarea';
 
 export {
   Skeleton,
@@ -25,12 +25,12 @@ export {
   SkeletonLesson,
   SkeletonDashboard,
   SkeletonAuth,
-} from './Skeleton';
+} from '@/components/ui/Skeleton';
 
-export { ErrorBanner, CompactError } from './ErrorBanner';
-export type { ErrorBannerProps, CompactErrorProps } from './ErrorBanner';
+export { ErrorBanner, CompactError } from '@/components/ui/ErrorBanner';
+export type { ErrorBannerProps, CompactErrorProps } from '@/components/ui/ErrorBanner';
 
-export { ErrorBoundary } from './ErrorBoundary';
-export type { ErrorBoundaryProps } from './ErrorBoundary';
+export { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+export type { ErrorBoundaryProps } from '@/components/ui/ErrorBoundary';
 
-export * from './Modal';
+export * from '@/components/ui/Modal';

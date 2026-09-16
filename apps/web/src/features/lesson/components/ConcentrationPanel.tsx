@@ -2,8 +2,9 @@ import { useEffect, useRef } from 'react';
 import { IconRepeat, IconPlayerPlayFilled, IconAlertTriangle } from '@tabler/icons-react';
 import { Spinner } from '@/components/ui';
 import { cn } from '@/utils/cn';
-import { isKaraokeDebugEnabled, type SyncPhase } from '@/features/lesson/hooks/useTextSync';
-import type { ActiveTTSEngine } from '@/features/voice/hooks/useVoice';
+import { isKaraokeDebugEnabled, type SyncPhase } from '@/features/lesson/hooks/use-text-sync';
+import type { ActiveTTSEngine } from '@/features/voice/hooks/use-voice';
+import { logger } from '@/utils/logger';
 
 interface ConcentrationPanelProps {
   words: string[];
@@ -35,7 +36,7 @@ export function ConcentrationPanel({
 
   // BUGFIX: Debug logging for sync state changes
   useEffect(() => {
-    console.log('[ConcentrationPanel] Sync state:', {
+    logger.log('[ConcentrationPanel] Sync state:', {
       isAttemptingSync,
       isSynced,
       wordsLength: words.length,

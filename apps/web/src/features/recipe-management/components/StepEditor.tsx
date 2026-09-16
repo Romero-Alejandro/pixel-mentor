@@ -5,7 +5,23 @@ import type { RecipeStep } from '@pixel-mentor/shared';
 import { Button, Input, Textarea } from '@/components/ui';
 import { useAudio } from '@/contexts/AudioContext';
 
-type StepType = 'content' | 'activity' | 'question' | 'intro' | 'closure';
+export type StepType = 'content' | 'activity' | 'question' | 'intro' | 'closure';
+
+export interface StepEditorSaveData {
+  order: number;
+  stepType: StepType;
+  script?: Record<string, unknown>;
+  activity?: Record<string, unknown>;
+  question?: Record<string, unknown>;
+}
+
+interface StepEditorProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (stepData: StepEditorSaveData) => void;
+  step?: RecipeStep;
+  order: number;
+}
 
 // Helper to extract text from string or {text: string} object
 function extractText(val: unknown): string {
@@ -19,20 +35,6 @@ function extractText(val: unknown): string {
     return (val as { text: string }).text;
   }
   return '';
-}
-
-interface StepEditorProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSave: (stepData: {
-    order: number;
-    stepType: StepType;
-    script?: Record<string, unknown>;
-    activity?: Record<string, unknown>;
-    question?: Record<string, unknown>;
-  }) => void;
-  step?: RecipeStep;
-  order: number;
 }
 
 const STEP_TYPE_OPTIONS: { value: StepType; label: string }[] = [

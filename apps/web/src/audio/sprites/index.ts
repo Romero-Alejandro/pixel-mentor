@@ -1,7 +1,7 @@
 import useSound from 'use-sound';
 
-import { SpriteAudioEvent } from '../types/audio-events';
-import { useAudioStore } from '../../features/audio/stores/audio.store';
+import { SpriteAudioEvent } from '@/audio/types/audio-events';
+import { useAudioStore } from '@/features/audio/stores/audio.store';
 
 import { logger } from '@/utils/logger';
 
@@ -49,7 +49,7 @@ export const useSpriteAudioEvents = () => {
     preload: true,
     onload: () => logger.log('[Audio] Sprite file loaded successfully'),
     onerror: (err: unknown) =>
-      console.error('[Audio] ❌ Sprite file failed to load:', (err as Error)?.message ?? err),
+      logger.error('[Audio] ❌ Sprite file failed to load:', (err as Error)?.message ?? err),
   });
 
   // Log initial state
@@ -75,7 +75,7 @@ export const useSpriteAudioEvents = () => {
     try {
       play({ id: event });
     } catch (e: unknown) {
-      console.error('[Audio] ❌ Error playing', event, ':', (e as Error)?.message ?? e);
+      logger.error('[Audio] ❌ Error playing', event, ':', (e as Error)?.message ?? e);
     }
   };
 

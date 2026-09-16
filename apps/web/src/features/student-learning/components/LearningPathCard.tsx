@@ -1,6 +1,6 @@
 import { IconBook, IconChevronRight, IconTarget } from '@tabler/icons-react';
 import { Card } from '@/components/ui/Card';
-import type { StudentClass } from '../services/student-learning.api';
+import type { StudentClass } from '@/features/student-learning/services/student-learning.api';
 
 interface LearningPathCardProps {
   classItem: StudentClass;

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { IconCloud, IconSchool, IconStarFilled, IconSparkles } from '@tabler/icons-react';
 
-import { buildClassTiers } from '../utils/classContext.util';
-import { MissionNode } from './MissionNode';
+import { buildClassTiers } from '@/features/dashboard/utils/class-context.util';
+import { MissionNode } from '@/features/dashboard/components/MissionNode';
 import type { Class, Session } from '@/services/api';
 
 const ANIMATION_STAGGER_DELAY_MS = 150;

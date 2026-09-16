@@ -3,6 +3,7 @@ import type { BadgeInfo, EarnedBadge } from '@pixel-mentor/shared/gamification';
 
 import { api, type Class, type Session, type User } from '@/services/api';
 import { gamificationApi } from '@/features/gamification/services/gamification.api';
+import { logger } from '@/utils/logger';
 
 interface StreakHistoryEntry {
   date: string;
@@ -54,7 +55,7 @@ export function useDashboardData(user: User | null) {
           streakHistory,
         });
       } catch (e) {
-        console.error('Error loading dashboard data', e);
+        logger.error('Error loading dashboard data', e);
       } finally {
         setIsLoading(false);
       }

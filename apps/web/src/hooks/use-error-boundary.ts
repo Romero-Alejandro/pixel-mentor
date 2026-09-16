@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 
 import { useToast } from '@/contexts/ToastContext';
+import { logger } from '@/utils/logger';
 
 interface UseErrorBoundaryReturn {
   /** Show a non-fatal error as a toast notification */
@@ -19,7 +20,7 @@ export function useErrorBoundary(): UseErrorBoundaryReturn {
   const showError = useCallback(
     (err: Error) => {
       // Log to console for debugging
-      console.error('[useErrorBoundary] Non-fatal error:', err.message);
+      logger.error('[useErrorBoundary] Non-fatal error:', err.message);
       showToast(err.message);
     },
     [showToast],
@@ -27,7 +28,7 @@ export function useErrorBoundary(): UseErrorBoundaryReturn {
 
   const showErrorWithMessage = useCallback(
     (err: Error, message: string) => {
-      console.error('[useErrorBoundary] Non-fatal error:', message, err);
+      logger.error('[useErrorBoundary] Non-fatal error:', message, err);
       showToast(message);
     },
     [showToast],

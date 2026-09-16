@@ -7,11 +7,12 @@
  */
 import { useEffect } from 'react';
 
-import { useVoice } from '@/features/voice/hooks/useVoice';
-import { useVoiceSettings } from '@/features/voice/hooks/useVoiceSettings';
-import { useVoiceSettingsSync } from '@/features/lesson/hooks/useClassOrchestrator';
+import { useVoice } from '@/features/voice/hooks/use-voice';
+import { useVoiceSettings } from '@/features/voice/hooks/use-voice-settings';
+import { useVoiceSettingsSync } from '@/features/lesson/hooks/use-class-orchestrator';
 import { ConcentrationPanel } from '@/features/lesson/components/ConcentrationPanel';
 import { Button } from '@/components/ui';
+import { logger } from '@/utils/logger';
 
 // Generate a long text (~6000+ characters)
 const generateLongText = (): string => {
@@ -51,7 +52,7 @@ export function LongTextTestPage() {
       speakingRate: 1.0,
       pitch: 0,
     }).catch((e) => {
-      console.error('TTS speak error:', e);
+      logger.error('TTS speak error:', e);
     });
   };
 

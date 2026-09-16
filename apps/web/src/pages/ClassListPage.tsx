@@ -5,10 +5,11 @@ import { IconPlus, IconFilter, IconBook, IconArrowLeft } from '@tabler/icons-rea
 import type { ClassStatus } from '@pixel-mentor/shared';
 
 import { useClassStore } from '@/features/class-management/stores/class.store';
-import { useAuth } from '@/features/auth/hooks/useAuth';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useAudio } from '@/contexts/AudioContext';
-import { useAlert, useConfirm } from '@/hooks/useConfirmationDialogs';
+import { useAlert, useConfirm } from '@/hooks/use-confirmation-dialogs';
 import { ClassCard } from '@/features/class-management/components/ClassCard';
+import { CreateClassModal } from '@/features/class-management/components/CreateClassModal';
 import { Button, Card, Spinner, Input } from '@/components/ui';
 
 const STATUS_LABELS: Record<ClassStatus, string> = {
@@ -31,33 +32,23 @@ export function ClassListPage() {
   const alert = useAlert();
   const confirm = useConfirm();
   const { user } = useAuth();
-  const {
-    classes,
-    isLoading,
-    error,
-    fetchClasses,
-    createClass,
-    deleteClass,
-    publishClass,
-    unpublishClass,
-  } = useClassStore(
-    useShallow((state) => ({
-      classes: state.classes,
-      isLoading: state.isLoading,
-      error: state.error,
-      fetchClasses: state.fetchClasses,
-      createClass: state.createClass,
-      deleteClass: state.deleteClass,
-      publishClass: state.publishClass,
-      unpublishClass: state.unpublishClass,
-    })),
-  );
+  const { classes, isLoading, error, fetchClasses, deleteClass, publishClass, unpublishClass } =
+    useClassStore(
+      useShallow((state) => ({
+        classes: state.classes,
+        isLoading: state.isLoading,
+        error: state.error,
+        fetchClasses: state.fetchClasses,
+        deleteClass: state.deleteClass,
+        publishClass: state.publishClass,
+        unpublishClass: state.unpublishClass,
+      })),
+    );
 
   const isTeacher = user?.role === 'TEACHER' || user?.role === 'ADMIN';
   const [statusFilter, setStatusFilter] = useState<ClassStatus | ''>('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [isCreating, setIsCreating] = useState(false);
-  const [createError, setCreateError] = useState<string | null>(null);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
 
   useEffect(() => {
     if (isTeacher) {
@@ -74,18 +65,13 @@ export function ClassListPage() {
     return matchesStatus && matchesSearch;
   });
 
-  const handleCreateClass = async () => {
+  const handleCreateClass = () => {
     playClick();
-    setIsCreating(true);
-    setCreateError(null);
-    try {
-      const newClass = await createClass({ title: 'Nueva clase', description: '' });
-      navigate(`/classes/${newClass.id}/edit`);
-    } catch (err) {
-      setCreateError(err instanceof Error ? err.message : 'Error al crear la clase');
-    } finally {
-      setIsCreating(false);
-    }
+    setCreateModalOpen(true);
+  };
+
+  const handleClassCreated = async (newClass: { id: string }) => {
+    navigate(`/classes/${newClass.id}/edit`);
   };
 
   const handleEditClass = (classId: string) => {
@@ -242,12 +228,7 @@ export function ClassListPage() {
               <h1 className="text-2xl font-black text-sky-700 tracking-tight">Mis Clases</h1>
             </div>
           </div>
-          <Button
-            onClick={handleCreateClass}
-            variant="primary"
-            isLoading={isCreating}
-            className="shadow-sm"
-          >
+          <Button onClick={handleCreateClass} variant="primary" className="shadow-sm">
             <IconPlus className="w-5 h-5 mr-2" />
             Nueva Clase
           </Button>
@@ -255,18 +236,6 @@ export function ClassListPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {createError ? (
-          <div className="mb-6 bg-rose-50 border-4 border-rose-200 rounded-2xl p-4 text-rose-700 font-bold flex items-center justify-between shadow-sm animate-bounce-in">
-            <span>Error al crear clase: {createError}</span>
-            <button
-              onClick={() => setCreateError(null)}
-              className="text-rose-400 hover:text-rose-600 bg-rose-100 rounded-full p-1 transition-colors"
-            >
-              <span className="sr-only">Cerrar</span>×
-            </button>
-          </div>
-        ) : null}
-
         <div className="bg-white rounded-[2rem] p-6 border-4 border-sky-200 shadow-[0_6px_0_0_#bae6fd] mb-8">
           <div className="flex flex-col xl:flex-row gap-4">
             <div className="flex-1">
@@ -373,6 +342,12 @@ export function ClassListPage() {
           </div>
         ) : null}
       </main>
+
+      <CreateClassModal
+        isOpen={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        onCreated={handleClassCreated}
+      />
     </div>
   );
 }

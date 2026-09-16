@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import {
@@ -8,15 +8,19 @@ import {
   IconBook,
   IconPlayerPlay,
   IconPlus,
+  IconEye,
+  IconUsers,
+  IconAlertCircle,
 } from '@tabler/icons-react';
 import type { ClassStatus } from '@pixel-mentor/shared';
 
 import { useClassStore } from '@/features/class-management/stores/class.store';
-import { useAuth } from '@/features/auth/hooks/useAuth';
+import { api } from '@/services/api';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useAudio } from '@/contexts/AudioContext';
-import { useAlert } from '@/hooks/useConfirmationDialogs';
+import { useAlert, useConfirm } from '@/hooks/use-confirmation-dialogs';
 import { ClassLessonList } from '@/features/class-management/components/ClassLessonList';
-import { Button, Card, Spinner, Input, Textarea } from '@/components/ui';
+import { Button, Card, Spinner, Input, Textarea, Modal } from '@/components/ui';
 
 const STATUS_LABELS: Record<ClassStatus, string> = {
   DRAFT: 'Borrador',
@@ -37,6 +41,7 @@ export function ClassEditorPage() {
   const navigate = useNavigate();
   const { playClick, playSelect, playToastSuccess } = useAudio();
   const alert = useAlert();
+  const confirm = useConfirm();
   const { user } = useAuth();
 
   const {
@@ -69,8 +74,18 @@ export function ClassEditorPage() {
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [targetAgeMin, setTargetAgeMin] = useState<number | ''>('');
+  const [targetAgeMax, setTargetAgeMax] = useState<number | ''>('');
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isPreviewing, setIsPreviewing] = useState(false);
+  const [previewVoiceText, setPreviewVoiceText] = useState<string | null>(null);
+  const [previewTitle, setPreviewTitle] = useState<string | null>(null);
+
+  // Serialized snapshot of the last persisted values; the autosave effect
+  // compares against it so it never saves on mount and never saves the
+  // same values twice.
+  const savedSnapshotRef = useRef('');
 
   // If navigating to /classes/new, redirect to list (creation happens there)
   useEffect(() => {
@@ -89,20 +104,117 @@ export function ClassEditorPage() {
     if (currentClass) {
       setTitle(currentClass.title);
       setDescription(currentClass.description ?? '');
+      setTargetAgeMin(currentClass.targetAgeMin ?? '');
+      setTargetAgeMax(currentClass.targetAgeMax ?? '');
+      savedSnapshotRef.current = JSON.stringify([
+        currentClass.title,
+        currentClass.description ?? '',
+        currentClass.targetAgeMin ?? '',
+        currentClass.targetAgeMax ?? '',
+      ]);
     }
   }, [currentClass]);
+
+  const isDraft = currentClass?.status === 'DRAFT';
+
+  // Debounced autosave: persists title/description/ages ~1s after the last
+  // keystroke. Only for DRAFT classes (the API rejects edits otherwise) and
+  // only when the values actually differ from the last saved snapshot.
+  useEffect(() => {
+    if (!currentClass || !classId || !isDraft) return;
+    if (!isEditing) return;
+    if (typeof title !== 'string' || !title.trim()) return; // never autosave an empty title
+
+    const snapshot = JSON.stringify([title, description, targetAgeMin, targetAgeMax]);
+    if (snapshot === savedSnapshotRef.current) return;
+
+    const timer = setTimeout(() => {
+      void updateClass(classId, {
+        title: title.trim(),
+        description,
+        targetAgeMin: targetAgeMin === '' ? null : targetAgeMin,
+        targetAgeMax: targetAgeMax === '' ? null : targetAgeMax,
+      })
+        .then(() => {
+          savedSnapshotRef.current = snapshot;
+          setIsEditing(false);
+          return undefined;
+        })
+        .catch(() => {
+          // Error surfaced by store state; keep isEditing so the user can retry manually.
+        });
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [
+    title,
+    description,
+    targetAgeMin,
+    targetAgeMax,
+    isEditing,
+    isDraft,
+    currentClass,
+    classId,
+    updateClass,
+  ]);
+
+  // Warn before losing unsaved changes on tab close / hard navigation.
+  useEffect(() => {
+    if (!isEditing) return;
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isEditing]);
 
   const handleSave = async () => {
     if (!currentClass || !classId) return;
     setIsSaving(true);
     try {
-      await updateClass(classId, { title, description });
+      await updateClass(classId, {
+        title,
+        description,
+        targetAgeMin: targetAgeMin === '' ? null : targetAgeMin,
+        targetAgeMax: targetAgeMax === '' ? null : targetAgeMax,
+      });
+      savedSnapshotRef.current = JSON.stringify([title, description, targetAgeMin, targetAgeMax]);
       setIsEditing(false);
       playToastSuccess();
     } catch {
       // Error handled in store
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleBack = async () => {
+    if (isEditing) {
+      const leave = await confirm({
+        title: 'Cambios sin guardar',
+        message: 'Hay cambios que aún se están guardando. ¿Seguro que quieres salir?',
+        variant: 'warning',
+      });
+      if (!leave) return;
+    }
+    navigate('/classes');
+  };
+
+  const handlePreview = async () => {
+    if (!currentClass || !classId) return;
+    playClick();
+    setIsPreviewing(true);
+    try {
+      const preview = await api.previewClass(classId);
+      setPreviewVoiceText(preview.voiceText || 'La clase no tiene contenido de voz todavía.');
+      setPreviewTitle(preview.title);
+    } catch (err) {
+      const message =
+        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+        'No se pudo generar la vista previa';
+      await alert({ title: 'Vista previa', message, variant: 'warning' });
+    } finally {
+      setIsPreviewing(false);
     }
   };
 
@@ -125,8 +237,20 @@ export function ClassEditorPage() {
       });
       return;
     }
+    if (targetAgeMin === '' || targetAgeMax === '') {
+      await alert({
+        title: 'Falta el rango de edad',
+        message:
+          'Indica para qué edades está pensada la clase (3 a 18 años). Ayuda a adaptar el contenido a los niños.',
+        variant: 'warning',
+      });
+      return;
+    }
     try {
-      await publishClass(classId);
+      await publishClass(classId, {
+        targetAgeMin,
+        targetAgeMax,
+      });
       playToastSuccess();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error al publicar la clase';
@@ -271,7 +395,7 @@ export function ClassEditorPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => navigate('/classes')}
+              onClick={handleBack}
               className="p-2 rounded-xl hover:bg-sky-50 transition-colors"
             >
               <IconArrowLeft className="w-6 h-6 text-sky-500" />
@@ -304,6 +428,17 @@ export function ClassEditorPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {currentClass.status === 'DRAFT' ? (
+              <Button
+                onClick={handlePreview}
+                variant="secondary"
+                disabled={isPreviewing || !hasDemoLesson}
+                title="Escucha la clase como la escucharía un niño"
+              >
+                <IconEye className="w-5 h-5 mr-2" />
+                {isPreviewing ? 'Generando...' : 'Vista previa'}
+              </Button>
+            ) : null}
             {currentClass.status === 'PUBLISHED' ? (
               <Button onClick={handleUnpublish} variant="danger" disabled={isLoading}>
                 <IconSend className="w-5 h-5 mr-2" />
@@ -358,11 +493,57 @@ export function ClassEditorPage() {
                     className="w-full min-h-[120px]"
                   />
                 </div>
+                {isDraft ? (
+                  <div>
+                    <label className="block text-sm font-bold text-slate-600 mb-2 flex items-center gap-2">
+                      <IconUsers className="w-4 h-4" />
+                      Rango de edad del público infantil
+                    </label>
+                    <div className="flex items-center gap-4 max-w-xs">
+                      <div className="flex-1">
+                        <Input
+                          type="number"
+                          value={targetAgeMin}
+                          onChange={(e) => {
+                            setTargetAgeMin(e.target.value === '' ? '' : Number(e.target.value));
+                            setIsEditing(true);
+                          }}
+                          min={3}
+                          max={18}
+                        />
+                        <span className="text-xs text-slate-500">Edad mínima</span>
+                      </div>
+                      <span className="text-slate-400 font-bold">-</span>
+                      <div className="flex-1">
+                        <Input
+                          type="number"
+                          value={targetAgeMax}
+                          onChange={(e) => {
+                            setTargetAgeMax(e.target.value === '' ? '' : Number(e.target.value));
+                            setIsEditing(true);
+                          }}
+                          min={3}
+                          max={18}
+                        />
+                        <span className="text-xs text-slate-500">Edad máxima</span>
+                      </div>
+                    </div>
+                    {targetAgeMin !== '' && targetAgeMax !== '' && targetAgeMin > targetAgeMax ? (
+                      <p className="text-xs text-rose-600 mt-2 flex items-center gap-1">
+                        <IconAlertCircle className="w-3 h-3" />
+                        La edad mínima no puede ser mayor a la máxima
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
                 {isEditing ? (
-                  <div className="flex justify-end">
+                  <div className="flex justify-end items-center gap-3">
+                    <span className="text-xs font-bold text-sky-500 animate-pulse">
+                      Guardado automático activado
+                    </span>
                     <Button onClick={handleSave} variant="primary" isLoading={isSaving}>
                       <IconCheck className="w-5 h-5 mr-2" />
-                      Guardar cambios
+                      Guardar ahora
                     </Button>
                   </div>
                 ) : null}
@@ -398,6 +579,77 @@ export function ClassEditorPage() {
 
           {/* Sidebar */}
           <div className="space-y-8">
+            {/* Publish checklist (child-appropriateness) */}
+            <Card variant="mission" className="p-6">
+              <h2 className="text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
+                <IconCheck className="w-6 h-6 text-emerald-500" />
+                Checklist para publicar
+              </h2>
+              <div className="space-y-3">
+                {[
+                  {
+                    ok: (currentClass.lessons?.length ?? 0) >= 1,
+                    label: 'Al menos una lección',
+                  },
+                  {
+                    ok: hasDemoLesson,
+                    label: 'Lecciones con unidad asignada',
+                  },
+                  {
+                    ok: targetAgeMin !== '' && targetAgeMax !== '' && targetAgeMin <= targetAgeMax,
+                    label: 'Rango de edad definido (3-18)',
+                  },
+                  {
+                    ok: title.trim().length >= 3,
+                    label: 'Título claro (mínimo 3 letras)',
+                  },
+                ].map((item) => (
+                  <div key={item.label} className="flex items-center gap-3">
+                    <span
+                      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black border-2 ${
+                        item.ok
+                          ? 'bg-emerald-100 text-emerald-600 border-emerald-200'
+                          : 'bg-slate-100 text-slate-300 border-slate-200'
+                      }`}
+                    >
+                      ✓
+                    </span>
+                    <span
+                      className={`text-sm font-bold ${item.ok ? 'text-slate-600' : 'text-slate-400'}`}
+                    >
+                      {item.label}
+                    </span>
+                  </div>
+                ))}
+                {(() => {
+                  const totalMinutes =
+                    currentClass.lessons?.reduce(
+                      (acc, l) => acc + (l.recipe?.expectedDurationMinutes ?? 0),
+                      0,
+                    ) ?? 0;
+                  const avgAge =
+                    targetAgeMin !== '' && targetAgeMax !== ''
+                      ? (targetAgeMin + targetAgeMax) / 2
+                      : null;
+                  const cap = avgAge === null ? null : avgAge <= 7 ? 15 : avgAge <= 12 ? 25 : 45;
+                  if (cap === null || totalMinutes === 0) return null;
+                  return (
+                    <p
+                      className={`text-xs font-bold mt-2 ${
+                        totalMinutes / Math.max(currentClass.lessons?.length ?? 1, 1) <= cap
+                          ? 'text-emerald-600'
+                          : 'text-amber-600'
+                      }`}
+                    >
+                      {totalMinutes / Math.max(currentClass.lessons?.length ?? 1, 1) <= cap
+                        ? `✓ Duración adecuada para la edad (máx ~${cap} min por lección)`
+                        : `⚠ Lecciones largas para la edad: se recomienda ~${cap} min máximo`}
+                    </p>
+                  );
+                })()}
+              </div>
+            </Card>
+
             {/* Demo Status */}
             <Card variant="mission" className="p-6">
               <h2 className="text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
@@ -527,6 +779,26 @@ export function ClassEditorPage() {
           </div>
         </div>
       </main>
+
+      {/* Preview modal: hear the first lesson as a child would */}
+      <Modal
+        isOpen={previewVoiceText !== null}
+        title={`Vista previa${previewTitle ? `: ${previewTitle}` : ''}`}
+        size="lg"
+        onClose={() => setPreviewVoiceText(null)}
+        footer={
+          <Button onClick={() => setPreviewVoiceText(null)} variant="primary" className="w-full">
+            Entendido
+          </Button>
+        }
+      >
+        <div className="bg-sky-50 border-4 border-white shadow-gummy rounded-[1.5rem] p-6">
+          <p className="text-slate-700 font-medium whitespace-pre-wrap">{previewVoiceText}</p>
+        </div>
+        <p className="text-xs text-slate-400 font-bold mt-4 text-center">
+          Esto es lo que escuchará un niño al iniciar la primera lección.
+        </p>
+      </Modal>
     </div>
   );
 }

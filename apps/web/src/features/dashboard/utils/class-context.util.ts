@@ -1,4 +1,7 @@
-import { LESSON_STATUS, type LessonStatus } from '../constants/dashboard.constants';
+import {
+  LESSON_STATUS,
+  type LessonStatus,
+} from '@/features/dashboard/constants/dashboard.constants';
 
 import type { Class, Session } from '@/services/api';
 

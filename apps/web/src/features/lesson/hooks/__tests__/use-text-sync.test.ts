@@ -12,7 +12,7 @@ import {
   computeChunkWordSpansFromTexts,
   calculateWordIndexWithPauses,
   isKaraokeDebugEnabled,
-} from '../useTextSync';
+} from '@/features/lesson/hooks/use-text-sync';
 
 describe('computeChunkWordSpans', () => {
   it('should allocate all words to a single chunk', () => {

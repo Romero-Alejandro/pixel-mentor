@@ -10,13 +10,14 @@ import {
 } from '@tabler/icons-react';
 
 import { useAudio } from '@/contexts/AudioContext';
-import { useAlert } from '@/hooks/useConfirmationDialogs';
+import { useAlert } from '@/hooks/use-confirmation-dialogs';
 import { Button, Input } from '@/components/ui';
 import { getToken } from '@/services/api';
+import { logger } from '@/utils/logger';
 
-interface GeneratedStep {
+export interface GeneratedStep {
   order: number;
-  stepType: 'intro' | 'content' | 'activity' | 'closure';
+  stepType: 'intro' | 'content' | 'activity' | 'question' | 'closure';
   title: string;
   script: {
     transition?: { text: string };
@@ -24,10 +25,14 @@ interface GeneratedStep {
     examples?: Array<{ text: string }>;
     closure?: { text: string };
     instruction?: string;
+    options?: Array<{ text: string; isCorrect: boolean }>;
+    feedback?: { correct?: string; incorrect?: string };
+    question?: { text: string };
+    expectedAnswer?: string;
   };
 }
 
-interface GeneratedRecipeDraft {
+export interface GeneratedRecipeDraft {
   title: string;
   description: string;
   expectedDurationMinutes: number;
@@ -62,7 +67,7 @@ export function AIRecipeGeneratorModal({
     { id: crypto.randomUUID(), text: '' },
   ]);
   const [generatedDraft, setGeneratedDraft] = useState<GeneratedRecipeDraft | null>(null);
-  const [generatedSteps, setGeneratedSteps] = useState<any[]>([]); // For SSE streaming
+  const [generatedSteps, setGeneratedSteps] = useState<GeneratedStep[]>([]); // For SSE streaming
   const [generationProgress, setGenerationProgress] = useState(0); // 0-100
   const [step, setStep] = useState<'form' | 'preview'>('form');
   const [hasOpened, setHasOpened] = useState(false);
@@ -129,28 +134,30 @@ export function AIRecipeGeneratorModal({
     const eventSource = new EventSource(`/api/ai/generate-recipe/stream?${params}`);
 
     // Track steps and progress with local refs that persist across event calls
-    const receivedDataRef = { current: { steps: [] as any[], progress: 0, complete: false } };
+    const receivedDataRef = {
+      current: { steps: [] as GeneratedStep[], progress: 0, complete: false },
+    };
 
     // Handle step events
     eventSource.addEventListener('step', (event: MessageEvent) => {
       try {
-        const data = JSON.parse(event.data);
+        const data = JSON.parse(event.data) as GeneratedStep;
         receivedDataRef.current.steps.push(data);
         setGeneratedSteps([...receivedDataRef.current.steps]);
       } catch (e) {
-        console.error('SSE step parse error:', e);
+        logger.error('SSE step parse error:', e);
       }
     });
 
     // Handle progress events
     eventSource.addEventListener('progress', (event: MessageEvent) => {
       try {
-        const data = JSON.parse(event.data);
+        const data = JSON.parse(event.data) as { progress?: number };
         const progress = data.progress || 0;
         receivedDataRef.current.progress = progress;
         setGenerationProgress(progress);
       } catch (e) {
-        console.error('SSE progress parse error:', e);
+        logger.error('SSE progress parse error:', e);
       }
     });
 
@@ -171,22 +178,22 @@ export function AIRecipeGeneratorModal({
         eventSource.close();
         setIsGenerating(false);
       } catch (e) {
-        console.error('SSE complete parse error:', e);
+        logger.error('SSE complete parse error:', e);
       }
     });
 
     // Handle error events
     eventSource.addEventListener('error', (event: MessageEvent) => {
       try {
-        const data = JSON.parse(event.data);
-        console.error('SSE Error:', data);
+        const data = JSON.parse(event.data) as { message?: string };
+        logger.error('SSE Error:', data);
         alert({
           title: 'Error',
           message: data.message || 'Error al generar la unidad',
           variant: 'error',
         });
       } catch (e) {
-        console.error('SSE error parse error or connection closed:', e);
+        logger.error('SSE error parse error or connection closed:', e);
       }
       eventSource.close();
       setIsGenerating(false);
@@ -201,7 +208,7 @@ export function AIRecipeGeneratorModal({
         !receivedDataRef.current.progress &&
         !receivedDataRef.current.complete
       ) {
-        console.error('EventSource connection error:', err);
+        logger.error('EventSource connection error:', err);
         alert({
           title: 'Error',
           message: 'Error de conexión. Intenta de nuevo.',

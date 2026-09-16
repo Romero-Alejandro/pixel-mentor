@@ -6,7 +6,7 @@ import {
 } from '@tanstack/react-query';
 import { type Recipe, type InteractRecipeOutput } from '@pixel-mentor/shared';
 
-import { api } from '../../../services/api';
+import { api } from '@/services/api';
 
 export const lessonKeys = {
   all: ['recipes'] as const,
@@ -24,20 +24,9 @@ export function useRecipes(activeOnly = true): UseQueryResult<Recipe[]> {
 // Alias for backwards compatibility
 export const useLessons = useRecipes;
 
-export function useStartRecipeDemo(): UseMutationResult<
-  {
-    sessionId: string;
-    pedagogicalState: any;
-    voiceText?: string;
-    meta?: { config: any };
-    isRepeat: boolean;
-    lessonProgress?: { currentStep: number; totalSteps: number };
-    contentSteps?: any[];
-    recipeId: string;
-  },
-  Error,
-  string
-> {
+export type StartRecipeDemoResult = Awaited<ReturnType<typeof api.startRecipeDemo>>;
+
+export function useStartRecipeDemo(): UseMutationResult<StartRecipeDemoResult, Error, string> {
   return useMutation({
     mutationFn: (recipeId: string) => api.startRecipeDemo(recipeId),
   });

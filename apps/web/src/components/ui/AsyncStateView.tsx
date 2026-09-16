@@ -1,5 +1,5 @@
-import { Spinner } from './Spinner';
-import { Button } from './Button';
+import { Spinner } from '@/components/ui/Spinner';
+import { Button } from '@/components/ui/Button';
 
 import { cn } from '@/utils/cn';
 import type { AppError } from '@/types/async-state.types';

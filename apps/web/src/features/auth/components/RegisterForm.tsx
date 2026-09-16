@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { IconWand, IconArrowLeft, IconAlertCircleFilled } from '@tabler/icons-react';
 
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 import { Button, Input, Card } from '@/components/ui';
 import { useAudio } from '@/contexts/AudioContext';
 

@@ -21,7 +21,7 @@ const sizeClasses = {
 };
 
 // Helper interno para evitar objetos en el render
-const renderSafe = (value: any) => {
+const renderSafe = (value: unknown): ReactNode => {
   if (
     typeof value === 'object' &&
     value !== null &&
@@ -29,7 +29,7 @@ const renderSafe = (value: any) => {
     !('$$typeof' in value)
   )
     return '';
-  return value;
+  return value as ReactNode;
 };
 
 export const Modal = memo(

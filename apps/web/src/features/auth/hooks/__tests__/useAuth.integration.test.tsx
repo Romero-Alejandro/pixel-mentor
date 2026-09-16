@@ -98,7 +98,7 @@ vi.mock('@/services/api-client', () => ({
 }));
 
 // authApi mock - Inject probes for API calls
-vi.mock('../../services/auth.api', () => ({
+vi.mock('@/features/auth/services/auth.api', () => ({
   authApi: {
     getCurrentUser: mockGetCurrentUser,
     refreshToken: mockRefreshToken,
@@ -112,7 +112,7 @@ vi.mock('../../services/auth.api', () => ({
 // IMPORTS
 // ============================================
 
-import { useAuth } from '../useAuth';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 
 const mockUser = { id: '1', email: 'test@test.com', name: 'Test', role: 'STUDENT' as const };
 
@@ -140,24 +140,9 @@ describe('Auth Integration Tests - Sesión híbrida (access en memoria + refresh
 
     const { result } = renderHook(() => useAuth(), { wrapper });
 
-    let probe = 0;
-    await waitFor(
-      () => {
-        probe++;
-        console.log('[W]', probe, {
-          loading: result.current.isLoading,
-          auth: result.current.isAuthenticated,
-          userId: result.current.user?.id ?? null,
-          err: result.current.isError,
-        });
-        return result.current.isAuthenticated === true;
-      },
-      { timeout: 3000 },
-    );
-    console.log('[after]', {
-      auth: result.current.isAuthenticated,
-      userId: result.current.user?.id ?? null,
-    });
+    // RTL waitFor retries while the callback THROWS; a falsy return resolves
+    // immediately. Assert inside so an unauthenticated state keeps polling.
+    await waitFor(() => expect(result.current.isAuthenticated).toBe(true), { timeout: 3000 });
 
     expect(mockRefreshToken).toHaveBeenCalledTimes(1);
     expect(mockRefreshToken).toHaveBeenCalledWith();
@@ -174,9 +159,14 @@ describe('Auth Integration Tests - Sesión híbrida (access en memoria + refresh
 
     const { result } = renderHook(() => useAuth(), { wrapper });
 
-    await waitFor(() => result.current.isAuthenticated === false && !result.current.isLoading, {
-      timeout: 5000,
-    });
+    await waitFor(
+      () => {
+        if (result.current.isLoading || result.current.isAuthenticated) {
+          throw new Error('session not settled yet');
+        }
+      },
+      { timeout: 5000 },
+    );
 
     expect(mockRefreshToken).toHaveBeenCalledTimes(1);
     expect(mockGetCurrentUser).not.toHaveBeenCalled();
@@ -189,7 +179,7 @@ describe('Auth Integration Tests - Sesión híbrida (access en memoria + refresh
 
     const { result } = renderHook(() => useAuth(), { wrapper });
 
-    await waitFor(() => result.current.isAuthenticated === true, { timeout: 5000 });
+    await waitFor(() => expect(result.current.isAuthenticated).toBe(true), { timeout: 5000 });
 
     expect(mockRefreshToken).not.toHaveBeenCalled();
     expect(mockGetCurrentUser).toHaveBeenCalledTimes(1);
@@ -203,12 +193,13 @@ describe('Auth Integration Tests - Sesión híbrida (access en memoria + refresh
     });
     mockGetCurrentUser.mockResolvedValueOnce({ user: mockUser });
 
+    // Queue the session-restore mock BEFORE mounting: the queryFn fires during
+    // the initial act flush, so a once-implementation added afterwards is missed.
+    mockRefreshToken.mockResolvedValueOnce({ accessToken: 'restored.access.token' });
+
     const { result } = renderHook(() => useAuth(), { wrapper });
 
-    // Restore a session first so the hook is authenticated, then login as a
-    // different user to exercise onSuccess.
-    mockRefreshToken.mockResolvedValueOnce({ accessToken: 'restored.access.token' });
-    await waitFor(() => result.current.isAuthenticated === true, { timeout: 5000 });
+    await waitFor(() => expect(result.current.isAuthenticated).toBe(true), { timeout: 5000 });
 
     await result.current.login({ identifier: 'test@test.com', password: 'secret123' });
 
@@ -226,7 +217,7 @@ describe('Auth Integration Tests - Sesión híbrida (access en memoria + refresh
 
     const { result } = renderHook(() => useAuth(), { wrapper });
 
-    await waitFor(() => result.current.isAuthenticated === true, { timeout: 5000 });
+    await waitFor(() => expect(result.current.isAuthenticated).toBe(true), { timeout: 5000 });
     expect(result.current.isAuthenticated).toBe(true);
 
     await result.current.logout();

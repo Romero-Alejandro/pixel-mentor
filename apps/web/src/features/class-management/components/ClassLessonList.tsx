@@ -20,17 +20,6 @@ import { Button, Badge, Card, Modal } from '@/components/ui';
 import { RecipeSelector } from '@/features/recipe-management/components';
 import { logger } from '@/utils/logger';
 
-type Recipe = {
-  id: string;
-  title: string;
-  expectedDurationMinutes?: number | null;
-  steps?: { length: number };
-};
-
-type LessonWithRecipe = ClassLesson & {
-  recipe?: Recipe;
-};
-
 const renderSafe = (val: unknown): string => {
   if (!val || (typeof val === 'object' && !Array.isArray(val))) return '';
   return String(val);
@@ -46,7 +35,7 @@ const LessonCard = memo(
     onEdit,
     onDelete,
   }: {
-    lesson: LessonWithRecipe;
+    lesson: ClassLesson;
     index: number;
     isLast: boolean;
     onMoveUp: (index: number) => void;
@@ -121,19 +110,26 @@ const LessonCard = memo(
 
 LessonCard.displayName = 'LessonCard';
 
+interface ClassLessonListProps {
+  lessons: ClassLesson[];
+  onAddLesson: (recipeId: string) => void | Promise<void>;
+  onRemoveLesson: (lessonId: string) => void | Promise<void>;
+  onReorder: (orderedLessonIds: string[]) => void | Promise<void>;
+  onEditLesson?: (lessonId: string, patch: { recipeId: string }) => void | Promise<void>;
+}
+
 export function ClassLessonList({
   lessons,
   onAddLesson,
   onRemoveLesson,
   onReorder,
   onEditLesson,
-}: any) {
+}: ClassLessonListProps) {
   const { playClick } = useAudio();
   const navigate = useNavigate();
-  const { recipes, fetchRecipes, fetchRecipe } = useRecipeStore(
+  const { recipes, fetchRecipe } = useRecipeStore(
     useShallow((s) => ({
       recipes: s.recipes,
-      fetchRecipes: s.fetchRecipes,
       fetchRecipe: s.fetchRecipe,
     })),
   );
@@ -146,6 +142,11 @@ export function ClassLessonList({
     editId: '',
   });
 
+  // Native HTML5 drag & drop state: which card is being dragged and which is
+  // hovered as drop target. No library needed for a simple vertical list.
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dropIndex, setDropIndex] = useState<number | null>(null);
+
   const handleMove = useCallback(
     (idx: number, dir: 'up' | 'down') => {
       playClick();
@@ -155,6 +156,24 @@ export function ClassLessonList({
       onReorder(newOrder.map((l) => l.id));
     },
     [lessons, onReorder, playClick],
+  );
+
+  const handleDrop = useCallback(
+    (targetIndex: number) => {
+      if (dragIndex === null || dragIndex === targetIndex) {
+        setDragIndex(null);
+        setDropIndex(null);
+        return;
+      }
+      playClick();
+      const newOrder = [...lessons];
+      const [moved] = newOrder.splice(dragIndex, 1);
+      newOrder.splice(targetIndex, 0, moved);
+      onReorder(newOrder.map((l) => l.id));
+      setDragIndex(null);
+      setDropIndex(null);
+    },
+    [dragIndex, lessons, onReorder, playClick],
   );
 
   const handleEditConfirm = useCallback(async () => {
@@ -179,15 +198,17 @@ export function ClassLessonList({
     }
   }, [ui.current, onRemoveLesson, playClick]);
 
+  // Fetch recipes only when the list is stale: openEdit used to fire both
+  // fetchRecipe and fetchRecipes on every open, hammering the API.
   const openEdit = useCallback(
-    async (lesson: ClassLesson) => {
+    (lesson: ClassLesson) => {
       playClick();
       setUi((prev) => ({ ...prev, edit: true, current: lesson, editId: lesson.recipeId ?? '' }));
-      if (lesson.recipeId && !recipes.find((r) => r.id === lesson.recipeId))
-        await fetchRecipe(lesson.recipeId);
-      fetchRecipes();
+      if (lesson.recipeId && !recipes.find((r) => r.id === lesson.recipeId)) {
+        void fetchRecipe(lesson.recipeId);
+      }
     },
-    [fetchRecipe, fetchRecipes, recipes, playClick],
+    [fetchRecipe, recipes, playClick],
   );
 
   const selectedRecipe = useMemo(
@@ -207,17 +228,38 @@ export function ClassLessonList({
         </Card>
       ) : (
         <div className="space-y-4">
-          {lessons.map((lesson: any, i: number) => (
-            <LessonCard
+          {lessons.map((lesson, i) => (
+            <div
               key={lesson.id}
-              lesson={lesson}
-              index={i}
-              isLast={i === lessons.length - 1}
-              onMoveUp={(idx: any) => handleMove(idx, 'up')}
-              onMoveDown={(idx: any) => handleMove(idx, 'down')}
-              onEdit={openEdit}
-              onDelete={(l: any) => setUi((p) => ({ ...p, del: true, current: l }))}
-            />
+              draggable
+              onDragStart={() => setDragIndex(i)}
+              onDragEnd={() => {
+                setDragIndex(null);
+                setDropIndex(null);
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                if (dropIndex !== i) setDropIndex(i);
+              }}
+              onDragLeave={() => setDropIndex((prev) => (prev === i ? null : prev))}
+              onDrop={(e) => {
+                e.preventDefault();
+                handleDrop(i);
+              }}
+              className={`rounded-[2rem] transition-opacity ${
+                dragIndex === i ? 'opacity-40' : ''
+              } ${dropIndex === i && dragIndex !== null && dragIndex !== i ? 'ring-4 ring-sky-300' : ''}`}
+            >
+              <LessonCard
+                lesson={lesson}
+                index={i}
+                isLast={i === lessons.length - 1}
+                onMoveUp={(idx) => handleMove(idx, 'up')}
+                onMoveDown={(idx) => handleMove(idx, 'down')}
+                onEdit={openEdit}
+                onDelete={(l) => setUi((p) => ({ ...p, del: true, current: l }))}
+              />
+            </div>
           ))}
           <button
             onClick={() => setUi((p) => ({ ...p, selector: true }))}
@@ -225,6 +267,9 @@ export function ClassLessonList({
           >
             <IconPlus size={32} stroke={4} /> AGREGAR OTRA LECCIÓN
           </button>
+          <p className="text-center text-xs font-bold text-slate-300">
+            Tip: arrastra las tarjetas para reordenarlas ✋
+          </p>
         </div>
       )}
 
@@ -232,7 +277,7 @@ export function ClassLessonList({
       <RecipeSelector
         isOpen={ui.selector}
         onClose={() => setUi((p) => ({ ...p, selector: false }))}
-        onSelect={(rid: any) => {
+        onSelect={(rid) => {
           if (ui.edit) setUi((p) => ({ ...p, editId: rid, selector: false }));
           else {
             onAddLesson(rid);

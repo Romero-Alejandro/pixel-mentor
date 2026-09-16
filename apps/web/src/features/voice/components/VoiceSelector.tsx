@@ -3,7 +3,7 @@ import { IconPlayerPlay, IconCheck, IconChevronDown } from '@tabler/icons-react'
 
 import { useAudio } from '@/contexts/AudioContext';
 import { MicroAudioEvent } from '@/audio/types/audio-events';
-import { VOICE_OPTIONS } from '@/features/voice/hooks/useVoice';
+import { VOICE_OPTIONS } from '@/features/voice/hooks/use-voice';
 
 interface VoiceSelectorProps {
   onVoiceChange?: (voiceUri: string) => void;

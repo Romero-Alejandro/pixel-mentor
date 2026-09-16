@@ -1,6 +1,7 @@
 import { useEffect, useCallback, useRef } from 'react';
 
 import { api, type Session } from '@/services/api';
+import { logger } from '@/utils/logger';
 
 export interface AutoSelectConfig {
   /** Whether to auto-select a session if there's a resumable one */
@@ -87,7 +88,7 @@ export function useAutoSelect(userId: string | null, config: AutoSelectConfig = 
 
       return resumableSessions[0].id;
     } catch (error) {
-      console.error('[useAutoSelect] Error finding resumable session:', error);
+      logger.error('[useAutoSelect] Error finding resumable session:', error);
       return null;
     }
   }, [userId, autoResume, isResumable, isNotTooOld]);
@@ -97,11 +98,14 @@ export function useAutoSelect(userId: string | null, config: AutoSelectConfig = 
     isMountedRef.current = true;
 
     if (userId && autoResume) {
-      findResumableSession().then((sessionId) => {
-        if (isMountedRef.current) {
-          sessionToResumeRef.current = sessionId;
-        }
-      });
+      findResumableSession()
+        .then((sessionId) => {
+          if (isMountedRef.current) {
+            sessionToResumeRef.current = sessionId;
+          }
+          return sessionId;
+        })
+        .catch(logger.error);
     }
 
     return () => {

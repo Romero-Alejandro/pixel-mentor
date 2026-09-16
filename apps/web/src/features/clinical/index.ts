@@ -8,10 +8,14 @@ export type {
   PragmaticModuleCardProps,
   PragmaticStatus,
   RarityLevel,
-} from './types/clinical.types';
-export { SIGNIFICANCE_LEVEL, PRAGMATIC_STATUS, RARITY_LEVEL } from './types/clinical.types';
+} from '@/features/clinical/types/clinical.types';
+export {
+  SIGNIFICANCE_LEVEL,
+  PRAGMATIC_STATUS,
+  RARITY_LEVEL,
+} from '@/features/clinical/types/clinical.types';
 export {
   ClinicalDiscrepancySection,
   DiscrepancyCard,
-} from './components/clinical-discrepancy-card';
-export { PragmaticModuleCard } from './components/pragmatic-module-card';
+} from '@/features/clinical/components/ClinicalDiscrepancyCard';
+export { PragmaticModuleCard } from '@/features/clinical/components/PragmaticModuleCard';

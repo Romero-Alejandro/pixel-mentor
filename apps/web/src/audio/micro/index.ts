@@ -1,7 +1,7 @@
-import { MicroAudioEvent } from '../types/audio-events';
-import { useAudioStore } from '../../features/audio/stores/audio.store';
+import { MicroAudioEvent } from '@/audio/types/audio-events';
+import { useAudioStore } from '@/features/audio/stores/audio.store';
 
-import { playMicroSound, closeAudioContext } from './zzfx';
+import { playMicroSound, closeAudioContext } from '@/audio/micro/zzfx';
 
 export { closeAudioContext };
 

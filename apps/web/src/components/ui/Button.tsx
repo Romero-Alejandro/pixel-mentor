@@ -1,9 +1,9 @@
 import { forwardRef, memo, type ButtonHTMLAttributes } from 'react';
 
-import { useAudio } from '../../contexts/AudioContext';
-import { MicroAudioEvent } from '../../audio/types/audio-events';
+import { useAudio } from '@/contexts/AudioContext';
+import { MicroAudioEvent } from '@/audio/types/audio-events';
 
-import { Spinner } from './Spinner';
+import { Spinner } from '@/components/ui/Spinner';
 
 import { cn } from '@/utils/cn';
 

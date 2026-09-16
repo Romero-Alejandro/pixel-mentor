@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 
-import type { AudioSyncInfo } from '@/features/voice/hooks/useVoice';
+import type { AudioSyncInfo } from '@/features/voice/hooks/use-voice';
+import { logger } from '@/utils/logger';
 
 export interface UseTextSyncOptions {
   text: string;
@@ -223,7 +224,7 @@ export function useTextSync({
     phaseRef.current = phase;
     detailRef.current = detail;
     if (isKaraokeDebugEnabled()) {
-      console.debug('[TextSync]', phase, detail);
+      logger.debug('[TextSync]', phase, detail);
     }
     setState((prev) =>
       prev.phase === phase && prev.detail === detail ? prev : { ...prev, phase, detail },

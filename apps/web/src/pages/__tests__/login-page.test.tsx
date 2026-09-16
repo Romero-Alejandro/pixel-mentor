@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
-import { LoginPage } from '../../pages/LoginPage';
+import { LoginPage } from '@/pages/LoginPage';
 
 // Mock AudioContext
 const mockAudio = {
@@ -19,7 +19,7 @@ vi.mock('@/contexts/AudioContext', () => ({
 }));
 
 // Mock the useAuth hook
-vi.mock('../../features/auth/hooks/useAuth', () => ({
+vi.mock('@/features/auth/hooks/use-auth', () => ({
   useAuth: vi.fn(),
 }));
 
@@ -33,7 +33,7 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-import { useAuth } from '../../features/auth/hooks/useAuth';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 
 describe('LoginPage', () => {
   const mockLogin = vi.fn();

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import type { EarnedBadge } from '@pixel-mentor/shared/gamification';
 
-import { useGamificationStore } from '../stores/gamification.store';
+import { useGamificationStore } from '@/features/gamification/stores/gamification.store';
 
-import { BadgeEarnedToast } from './BadgeEarnedToast';
+import { BadgeEarnedToast } from '@/features/gamification/components/BadgeEarnedToast';
 
 export function BadgeToastQueue() {
   const pendingToasts = useGamificationStore((s) => s.pendingToasts);

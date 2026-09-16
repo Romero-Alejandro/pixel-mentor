@@ -13,8 +13,8 @@ import {
 } from '@tabler/icons-react';
 
 import { useRecipeStore } from '@/features/recipe-management/stores/recipe.store';
-import { useAuth } from '@/features/auth/hooks/useAuth';
-import { useConfirm } from '@/hooks/useConfirmationDialogs';
+import { useAuth } from '@/features/auth/hooks/use-auth';
+import { useConfirm } from '@/hooks/use-confirmation-dialogs';
 import { RecipeCard } from '@/features/recipe-management/components/RecipeCard';
 import { Button, Card, Spinner, Input } from '@/components/ui';
 

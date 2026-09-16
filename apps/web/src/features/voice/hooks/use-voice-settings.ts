@@ -1,6 +1,10 @@
 import { useState, useCallback } from 'react';
 
-import { type VoiceSettings, DEFAULT_VOICE_SETTINGS } from '../components/VoiceSettingsPanel';
+import {
+  type VoiceSettings,
+  DEFAULT_VOICE_SETTINGS,
+} from '@/features/voice/components/VoiceSettingsPanel';
+import { logger } from '@/utils/logger';
 
 /**
  * Hook to manage the voice tutor configuration.
@@ -14,7 +18,7 @@ export function useVoiceSettings() {
       try {
         return { ...DEFAULT_VOICE_SETTINGS, ...JSON.parse(saved) };
       } catch (error) {
-        console.error('Error parsing voice settings:', error);
+        logger.error('Error parsing voice settings:', error);
         return DEFAULT_VOICE_SETTINGS;
       }
     }

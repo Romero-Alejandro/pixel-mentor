@@ -1,5 +1,10 @@
 import { create } from 'zustand';
-import { groupApi, type Group, type GroupMember, type GroupClass } from '../services/group.api';
+import {
+  groupApi,
+  type Group,
+  type GroupMember,
+  type GroupClass,
+} from '@/features/group/services/group.api';
 
 interface GroupsState {
   groups: Group[];

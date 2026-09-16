@@ -1,29 +1,28 @@
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 
-import { useAuth } from './features/auth/hooks/useAuth';
-import { useAuthRedirect } from './features/auth/stores/auth.store';
-import { getToken } from '@/services/api-client';
+import { useAuth } from '@/features/auth/hooks/use-auth';
+import { useAuthRedirect } from '@/features/auth/stores/auth.store';
 import { preloadMascot } from '@/components/mascot/mascot-preload';
-import { useGamificationSSE } from './features/gamification/hooks/useGamificationSSE';
-import { ErrorBoundary, Spinner } from './components/ui';
-import { LoginPage } from './pages/LoginPage';
-import { RegisterPage } from './pages/RegisterPage';
-import { DashboardPage } from './pages/DashboardPage';
-import { LessonPage } from './pages/LessonPage';
-import { MissionReportPage } from './pages/MissionReportPage';
-import { ClassListPage } from './pages/ClassListPage';
-import { ClassEditorPage } from './pages/ClassEditorPage';
-import { ClassTemplatesPage } from './pages/ClassTemplatesPage';
-import { AdminUsersPage } from './pages/AdminUsersPage';
-import { RecipesPage } from './pages/RecipesPage';
-import { RecipeEditorPage } from './pages/RecipeEditorPage';
-import { GamificationTestPage } from './pages/GamificationTestPage';
-import { LongTextTestPage } from './pages/LongTextTestPage';
-import { GroupListPage } from './pages/GroupListPage';
-import { GroupDetailPage } from './pages/GroupDetailPage';
-import { MyLearningPage } from './pages/MyLearningPage';
-import { ClassLessonsPage } from './pages/ClassLessonsPage';
+import { useGamificationSSE } from '@/features/gamification/hooks/use-gamification-sse';
+import { ErrorBoundary, Spinner } from '@/components/ui';
+import { LoginPage } from '@/pages/LoginPage';
+import { RegisterPage } from '@/pages/RegisterPage';
+import { DashboardPage } from '@/pages/DashboardPage';
+import { LessonPage } from '@/pages/LessonPage';
+import { MissionReportPage } from '@/pages/MissionReportPage';
+import { ClassListPage } from '@/pages/ClassListPage';
+import { ClassEditorPage } from '@/pages/ClassEditorPage';
+import { ClassTemplatesPage } from '@/pages/ClassTemplatesPage';
+import { AdminUsersPage } from '@/pages/AdminUsersPage';
+import { RecipesPage } from '@/pages/RecipesPage';
+import { RecipeEditorPage } from '@/pages/RecipeEditorPage';
+import { GamificationTestPage } from '@/pages/GamificationTestPage';
+import { LongTextTestPage } from '@/pages/LongTextTestPage';
+import { GroupListPage } from '@/pages/GroupListPage';
+import { GroupDetailPage } from '@/pages/GroupDetailPage';
+import { MyLearningPage } from '@/pages/MyLearningPage';
+import { ClassLessonsPage } from '@/pages/ClassLessonsPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, isHydrated } = useAuth();
@@ -192,23 +191,6 @@ export default function App() {
       window.clearTimeout(timer);
     };
   }, []);
-
-  // [EDD-TEMP] Register page unload/refresh telemetry
-  if (import.meta.env.DEV) {
-    const handleBeforeUnload = (_event: BeforeUnloadEvent) => {
-      const token = getToken();
-
-      console.debug(`[EDD] [${new Date().toISOString()}] [App]`, `PAGE UNLOAD/REFRESH`, {
-        isAuthenticated,
-        hasToken: !!token,
-        tokenStartsWith: token ? token.substring(0, 10) : null,
-        currentRoute: window.location.pathname,
-      });
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    window.addEventListener('pagehide', handleBeforeUnload);
-  }
 
   return (
     <ErrorBoundary>

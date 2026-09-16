@@ -4,4 +4,4 @@ export {
   WORDS_PER_SECOND,
   MIN_DISPLAY_MS,
   POST_SPEECH_BUFFER_MS,
-} from '../constants/lesson.constants';
+} from '@/features/lesson/constants/lesson.constants';

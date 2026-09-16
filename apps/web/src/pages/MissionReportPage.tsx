@@ -8,13 +8,14 @@ import {
   IconTargetArrow,
   IconChevronRight,
   IconSparkles,
+  IconFlask,
 } from '@tabler/icons-react';
 
 import { api } from '@/services/api';
 import { Button, Card, Spinner } from '@/components/ui';
-import { useAnimatedNumber } from '@/features/dashboard/hooks/useAnimatedNumber';
-import { ClinicalDiscrepancySection } from '@/features/clinical/components/clinical-discrepancy-card';
-import { PragmaticModuleCard } from '@/features/clinical/components/pragmatic-module-card';
+import { useAnimatedNumber } from '@/features/dashboard/hooks/use-animated-number';
+import { ClinicalDiscrepancySection } from '@/features/clinical/components/ClinicalDiscrepancyCard';
+import { PragmaticModuleCard } from '@/features/clinical/components/PragmaticModuleCard';
 import type { Discrepancy, PragmaticModuleData } from '@/features/clinical/types/clinical.types';
 
 interface ReportData {
@@ -27,6 +28,7 @@ interface ReportData {
   streakDays?: number;
   newBadges: Array<{ code: string; name: string; icon: string; xpReward?: number }>;
   conceptsMastered: string[];
+  clinicalReportSimulated?: boolean;
   clinicalDiscrepancies?: Discrepancy[];
   pragmaticModule?: PragmaticModuleData;
 }
@@ -280,10 +282,27 @@ export function MissionReportPage() {
               </div>
             </div>
           ) : clinicalDiscrepancies.length > 0 && pragmaticData ? (
-            <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_0.9fr] gap-6 items-start">
-              <ClinicalDiscrepancySection discrepancies={clinicalDiscrepancies} />
-              <div className="lg:sticky lg:top-6">
-                <PragmaticModuleCard data={pragmaticData} />
+            <div className="space-y-4">
+              {report?.clinicalReportSimulated && (
+                <div
+                  className="flex items-start gap-3 rounded-2xl border-2 border-amber-300 bg-amber-50 px-5 py-4"
+                  role="note"
+                >
+                  <IconFlask className="mt-0.5 shrink-0 text-amber-600" size={20} />
+                  <div>
+                    <p className="text-sm font-black text-amber-800">Informe clínico simulado</p>
+                    <p className="mt-1 text-xs font-medium text-amber-700">
+                      Los valores mostrados se generan a partir de datos de la sesión con fines de
+                      demostración. No constituyen una evaluación clínica real.
+                    </p>
+                  </div>
+                </div>
+              )}
+              <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_0.9fr] gap-6 items-start">
+                <ClinicalDiscrepancySection discrepancies={clinicalDiscrepancies} />
+                <div className="lg:sticky lg:top-6">
+                  <PragmaticModuleCard data={pragmaticData} />
+                </div>
               </div>
             </div>
           ) : report ? (

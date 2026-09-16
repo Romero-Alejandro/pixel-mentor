@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 
 import { api, type Session, type PedagogicalState } from '@/services/api';
-import { useVoice, type VoiceSettings } from '@/features/voice/hooks/useVoice';
-import { useConfirm } from '@/hooks/useConfirmationDialogs';
+import { useVoice, type VoiceSettings } from '@/features/voice/hooks/use-voice';
+import { useConfirm } from '@/hooks/use-confirmation-dialogs';
 import { logger } from '@/utils/logger';
 
 export interface Message {
@@ -25,6 +25,8 @@ export interface MissionReport {
   levelUp?: { from: number; to: number; title: string } | null;
   clinicalDiscrepancies?: import('@/features/clinical/types/clinical.types').Discrepancy[];
   pragmaticModule?: import('@/features/clinical/types/clinical.types').PragmaticModuleData;
+  /** ⚠️ true = sección clínica simulada (placeholder), no evaluación real. */
+  clinicalReportSimulated?: boolean;
 }
 
 export function useSessionLogic(sessionId: string | undefined, voiceSettings: VoiceSettings) {
@@ -120,12 +122,12 @@ export function useSessionLogic(sessionId: string | undefined, voiceSettings: Vo
   }
 
   async function handleReset() {
-    console.log('[RESET] handleReset started', { sessionId, isProcessing });
+    logger.log('[RESET] handleReset started', { sessionId, isProcessing });
     if (!sessionId || isProcessing) {
-      console.log('[RESET] blocked by guard', { sessionId, isProcessing });
+      logger.log('[RESET] blocked by guard', { sessionId, isProcessing });
       return;
     }
-    console.log('[RESET] showing confirm dialog...');
+    logger.log('[RESET] showing confirm dialog...');
     if (
       !(await confirm({
         title: 'Confirmar reinicio',
@@ -133,11 +135,11 @@ export function useSessionLogic(sessionId: string | undefined, voiceSettings: Vo
         variant: 'danger',
       }))
     ) {
-      console.log('[RESET] user cancelled');
+      logger.log('[RESET] user cancelled');
       return;
     }
 
-    console.log('[RESET] calling API...');
+    logger.log('[RESET] calling API...');
     setIsProcessing(true);
     stopSpeaking();
 

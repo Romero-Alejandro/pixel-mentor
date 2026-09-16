@@ -1,45 +1,45 @@
-export { GamificationHeader } from './GamificationHeader';
-export type { GamificationHeaderProps } from './GamificationHeader';
+export { GamificationHeader } from '@/features/gamification/components/GamificationHeader';
+export type { GamificationHeaderProps } from '@/features/gamification/components/GamificationHeader';
 
-export { XPProgress } from './XPProgress';
-export type { XPProgressProps } from './XPProgress';
+export { XPProgress } from '@/features/gamification/components/XPProgress';
+export type { XPProgressProps } from '@/features/gamification/components/XPProgress';
 
-export { LevelBadge } from './LevelBadge';
-export type { LevelBadgeProps } from './LevelBadge';
+export { LevelBadge } from '@/features/gamification/components/LevelBadge';
+export type { LevelBadgeProps } from '@/features/gamification/components/LevelBadge';
 
-export { StreakCounter } from './StreakCounter';
-export type { StreakCounterProps } from './StreakCounter';
+export { StreakCounter } from '@/features/gamification/components/StreakCounter';
+export type { StreakCounterProps } from '@/features/gamification/components/StreakCounter';
 
-export { BadgeGrid } from './BadgeGrid';
-export type { BadgeGridProps } from './BadgeGrid';
+export { BadgeGrid } from '@/features/gamification/components/BadgeGrid';
+export type { BadgeGridProps } from '@/features/gamification/components/BadgeGrid';
 
-export { BadgeCard } from './BadgeCard';
-export type { BadgeCardProps } from './BadgeCard';
+export { BadgeCard } from '@/features/gamification/components/BadgeCard';
+export type { BadgeCardProps } from '@/features/gamification/components/BadgeCard';
 
-export { LevelUpModal } from './LevelUpModal';
-export type { LevelUpModalProps } from './LevelUpModal';
+export { LevelUpModal } from '@/features/gamification/components/LevelUpModal';
+export type { LevelUpModalProps } from '@/features/gamification/components/LevelUpModal';
 
-export { BadgeEarnedModal } from './BadgeEarnedModal';
-export type { BadgeEarnedModalProps } from './BadgeEarnedModal';
+export { BadgeEarnedModal } from '@/features/gamification/components/BadgeEarnedModal';
+export type { BadgeEarnedModalProps } from '@/features/gamification/components/BadgeEarnedModal';
 
-export { BadgeEarnedToast } from './BadgeEarnedToast';
-export type { BadgeEarnedToastProps } from './BadgeEarnedToast';
+export { BadgeEarnedToast } from '@/features/gamification/components/BadgeEarnedToast';
+export type { BadgeEarnedToastProps } from '@/features/gamification/components/BadgeEarnedToast';
 
-export { BadgeToastQueue } from './BadgeToastQueue';
+export { BadgeToastQueue } from '@/features/gamification/components/BadgeToastQueue';
 
-export { StreakWidget } from './StreakWidget';
-export type { StreakWidgetProps } from './StreakWidget';
+export { StreakWidget } from '@/features/gamification/components/StreakWidget';
+export type { StreakWidgetProps } from '@/features/gamification/components/StreakWidget';
 
-export { XPParticle } from './XPParticle';
-export type { XPParticleProps } from './XPParticle';
+export { XPParticle } from '@/features/gamification/components/XPParticle';
+export type { XPParticleProps } from '@/features/gamification/components/XPParticle';
 
-export { XPParticleSystem } from './XPParticleSystem';
+export { XPParticleSystem } from '@/features/gamification/components/XPParticleSystem';
 
-export { useXPParticles } from './useXPParticles';
-export type { UseXPParticlesResult } from './useXPParticles';
+export { useXPParticles } from '@/features/gamification/components/use-xp-particles';
+export type { UseXPParticlesResult } from '@/features/gamification/components/use-xp-particles';
 
-export { CompactGamificationHeader } from './CompactGamificationHeader';
-export type { CompactGamificationHeaderProps } from './CompactGamificationHeader';
+export { CompactGamificationHeader } from '@/features/gamification/components/CompactGamificationHeader';
+export type { CompactGamificationHeaderProps } from '@/features/gamification/components/CompactGamificationHeader';
 
-export { SessionGamificationBar } from './SessionGamificationBar';
-export type { SessionGamificationBarProps } from './SessionGamificationBar';
+export { SessionGamificationBar } from '@/features/gamification/components/SessionGamificationBar';
+export type { SessionGamificationBarProps } from '@/features/gamification/components/SessionGamificationBar';

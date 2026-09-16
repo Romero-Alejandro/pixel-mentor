@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 
-import { useVoice } from '@/features/voice/hooks/useVoice';
+import { useVoice } from '@/features/voice/hooks/use-voice';
 
 // Mock EventSource
 class MockEventSource {

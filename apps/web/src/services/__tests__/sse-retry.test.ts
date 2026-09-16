@@ -13,7 +13,7 @@ import {
   classifySSEError,
   getRetryMessage,
   type SSERetryConfig,
-} from '../sse-retry';
+} from '@/services/sse-retry';
 
 describe('SSE Retry Utilities', () => {
   beforeEach(() => {

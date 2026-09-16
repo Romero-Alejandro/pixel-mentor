@@ -10,8 +10,11 @@ import {
   IconMapPinFilled,
 } from '@tabler/icons-react';
 
-import { LESSON_STATUS, type LessonStatus } from '../constants/dashboard.constants';
-import type { ClassContext } from '../utils/classContext.util';
+import {
+  LESSON_STATUS,
+  type LessonStatus,
+} from '@/features/dashboard/constants/dashboard.constants';
+import type { ClassContext } from '@/features/dashboard/utils/class-context.util';
 import type { Class } from '@/services/api';
 
 interface MissionNodeProps {

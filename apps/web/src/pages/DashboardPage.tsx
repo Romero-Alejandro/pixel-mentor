@@ -15,7 +15,7 @@ import {
   IconStar,
 } from '@tabler/icons-react';
 
-import { useAuth } from '@/features/auth/hooks/useAuth';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useGamificationStore } from '@/features/gamification/stores/gamification.store';
 import { Spinner } from '@/components/ui';
 import { CompactGamificationHeader } from '@/features/gamification/components/CompactGamificationHeader';
@@ -32,7 +32,7 @@ import {
   getGreeting,
   type DashboardTab,
 } from '@/features/dashboard/constants/dashboard.constants';
-import { useDashboardData } from '@/features/dashboard/hooks/useDashboardData';
+import { useDashboardData } from '@/features/dashboard/hooks/use-dashboard-data';
 
 export function DashboardPage() {
   const navigate = useNavigate();

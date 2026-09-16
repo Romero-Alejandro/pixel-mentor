@@ -1,8 +1,9 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { IconMicrophone, IconCheck, IconX, IconReload } from '@tabler/icons-react';
 
-import { useVoice, getRandomConfirmationPhrase } from '@/features/voice/hooks/useVoice';
+import { useVoice, getRandomConfirmationPhrase } from '@/features/voice/hooks/use-voice';
 import { Button, Input } from '@/components/ui';
+import { logger } from '@/utils/logger';
 
 type VoiceInputState = 'idle' | 'listening' | 'processing' | 'confirming' | 'rejected';
 
@@ -62,7 +63,7 @@ export function VoiceInputWithConfirmation({ onConfirm }: VoiceInputWithConfirma
           try {
             await speak(phrase);
           } catch (e) {
-            console.error('Error speaking confirmation:', e);
+            logger.error('Error speaking confirmation:', e);
           }
         }
       }, 500);
@@ -90,7 +91,7 @@ export function VoiceInputWithConfirmation({ onConfirm }: VoiceInputWithConfirma
   const handleYes = useCallback(async () => {
     try {
       await speak(''); // Stop any current speech
-    } catch (e) {
+    } catch {
       // Ignore
     }
     // Small delay to allow speech to stop
@@ -103,7 +104,7 @@ export function VoiceInputWithConfirmation({ onConfirm }: VoiceInputWithConfirma
   const handleNo = useCallback(async () => {
     try {
       await speak('¡Entendido! ¿Puedes repetirlo o escribirlo?');
-    } catch (e) {
+    } catch {
       // Ignore
     }
     setState('rejected');

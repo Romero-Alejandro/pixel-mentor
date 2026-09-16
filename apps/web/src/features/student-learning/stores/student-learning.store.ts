@@ -3,7 +3,7 @@ import {
   studentLearningApi,
   type GroupWithClasses,
   type StudentClass,
-} from '../services/student-learning.api';
+} from '@/features/student-learning/services/student-learning.api';
 
 interface StudentLearningState {
   groups: GroupWithClasses[];

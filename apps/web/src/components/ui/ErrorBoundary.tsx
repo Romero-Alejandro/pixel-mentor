@@ -6,6 +6,8 @@ import {
   IconRefresh,
 } from '@tabler/icons-react';
 
+import { logger } from '@/utils/logger';
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface ErrorBoundaryProps {
@@ -109,8 +111,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     // Log error to hypothetical error service
-    console.error('[ErrorBoundary] Uncaught error:', error);
-    console.error('[ErrorBoundary] Component stack:', errorInfo.componentStack);
+    logger.error('[ErrorBoundary] Uncaught error:', error);
+    logger.error('[ErrorBoundary] Component stack:', errorInfo.componentStack);
 
     // Call custom error handler if provided
     this.props.onError?.(error, errorInfo);

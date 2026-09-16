@@ -238,7 +238,11 @@ function PromptDialog({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           className="w-full mb-6"
-          autoFocus
+          ref={(el) => {
+            // Focus the prompt input when the dialog mounts (a11y-safe
+            // alternative to autoFocus, which jsx-a11y flags as intrusive).
+            el?.focus();
+          }}
         />
         <div className="flex gap-3">
           <Button onClick={onClose} variant="secondary" className="flex-1">

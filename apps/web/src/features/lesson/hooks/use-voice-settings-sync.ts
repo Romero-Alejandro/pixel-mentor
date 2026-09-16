@@ -6,7 +6,7 @@
  */
 
 import { useEffect } from 'react';
-import type { VoiceSettings } from '@/features/voice/hooks/useVoice';
+import type { VoiceSettings } from '@/features/voice/hooks/use-voice';
 
 let _voiceSettings: VoiceSettings = {};
 

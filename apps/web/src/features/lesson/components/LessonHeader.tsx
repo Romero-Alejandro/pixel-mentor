@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
 import { IconArrowLeft, IconRefresh, IconEye, IconEyeOff } from '@tabler/icons-react';
 import { cn } from '@/utils/cn';
-import { UIState } from '../hooks/useLessonState';
+import { UIState } from '@/features/lesson/hooks/use-lesson-state';
 import { VoiceSettingsPanel } from '@/features/voice/components/VoiceSettingsPanel';
-import type { VoiceSettings } from '@/features/voice/hooks/useVoice';
+import type { VoiceSettings } from '@/features/voice/hooks/use-voice';
 
 interface HeaderProps {
   isStart: boolean;

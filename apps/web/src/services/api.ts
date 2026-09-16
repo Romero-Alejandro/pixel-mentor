@@ -28,6 +28,7 @@ import {
   type GenerateClassDraftInput,
   type GenerateClassDraftOutput,
   type ClassLesson,
+  type StartRecipeOutput,
 } from '@pixel-mentor/shared';
 
 import { z } from 'zod';
@@ -38,14 +39,14 @@ import {
   type PragmaticModuleData as SharedPragmaticModuleData,
 } from '@pixel-mentor/shared/schemas/clinical';
 
-import { apiClient, getToken } from './api-client';
+import { apiClient, getToken } from '@/services/api-client';
 import { isValidUUID } from '@/utils/uuid';
 import {
   SSE_RETRY_DEFAULTS,
   calculateBackoffDelay,
   classifySSEError,
   type SSERetryConfig,
-} from './sse-retry';
+} from '@/services/sse-retry';
 
 import { logger } from '@/utils/logger';
 
@@ -69,10 +70,10 @@ export {
 };
 
 // Re-export apiClient for backward compatibility
-export { apiClient, getToken } from './api-client';
+export { apiClient, getToken } from '@/services/api-client';
 
 // Re-export token functions for backward compatibility
-export { setToken, clearToken } from './api-client';
+export { setToken, clearToken } from '@/services/api-client';
 
 export interface StreamInteractHandlers {
   onMessage: (event: EventSourceMessage) => void;
@@ -104,7 +105,7 @@ export const streamInteractWithRecipe = (
   }
   const token = getToken();
   if (!token) {
-    console.error('[API] Authentication token required for streaming');
+    logger.error('[API] Authentication token required for streaming');
     throw new Error('Authentication token required for streaming');
   }
   logger.log('[API] Starting fetchEventSource for streaming:', {
@@ -283,6 +284,8 @@ export const api = {
       currentStreak: z.number().optional(),
       accuracy: z.number().optional(),
       conceptsMastered: z.array(z.string()),
+      /** ⚠️ true = sección clínica simulada (placeholder), ver MissionReportPage. */
+      clinicalReportSimulated: z.boolean().optional(),
       clinicalDiscrepancies: z.array(DiscrepancySchema).optional().default([]),
       pragmaticModule: PragmaticModuleSchema.optional(),
     });
@@ -305,6 +308,7 @@ export const api = {
       currentStreak?: number;
       accuracy: number;
       conceptsMastered: string[];
+      clinicalReportSimulated?: boolean;
       clinicalDiscrepancies: SharedDiscrepancy[];
       pragmaticModule?: SharedPragmaticModuleData;
     };
@@ -326,10 +330,10 @@ export const api = {
     const classes = (data.classes ?? data) as Class[];
     return classes;
   },
-  getClass: async (classId: string) => {
+  getClass: async (classId: string): Promise<Class> => {
     api.validateId(classId, 'Class');
     const { data } = await apiClient.get(`/api/classes/${classId}`);
-    return data;
+    return data as Class;
   },
   createClass: async (data: ClassCreate) => {
     const { data: res } = await apiClient.post('/api/classes', ClassCreateSchema.parse(data));
@@ -359,6 +363,21 @@ export const api = {
     api.validateId(classId, 'Class');
     const { data: res } = await apiClient.post(`/api/classes/${classId}/unpublish`);
     return ClassSchema.parse(res);
+  },
+  /**
+   * Tutor preview: starts a session on the first lesson as if the tutor were
+   * a student, so they can experience the class before publishing.
+   */
+  previewClass: async (
+    classId: string,
+  ): Promise<{ sessionId: string; voiceText: string; title: string | null }> => {
+    api.validateId(classId, 'Class');
+    const { data } = await apiClient.post(`/api/classes/${classId}/preview`);
+    return {
+      sessionId: data.sessionId,
+      voiceText: data.voiceText,
+      title: data.title ?? null,
+    };
   },
   addClassLesson: async (classId: string, lesson: { recipeId: string; order?: number }) => {
     api.validateId(classId, 'Class');
@@ -394,7 +413,8 @@ export const api = {
   // ==================== Class Templates ====================
   listClassTemplates: async () => {
     const { data } = await apiClient.get('/api/class-templates');
-    return ClassTemplateSchema.array().parse(data);
+    // API returns { templates: [...] }
+    return z.object({ templates: z.array(ClassTemplateSchema) }).parse(data).templates;
   },
   createClassTemplate: async (data: ClassTemplateCreate) => {
     const { data: res } = await apiClient.post(
@@ -403,10 +423,11 @@ export const api = {
     );
     return ClassTemplateSchema.parse(res);
   },
-  createClassFromTemplate: async (templateId: string, title: string) => {
+  createClassFromTemplate: async (templateId: string, title?: string) => {
     api.validateId(templateId, 'ClassTemplate');
+    // Title is optional: when omitted the API falls back to the template's name.
     const { data } = await apiClient.post(`/api/class-templates/${templateId}/create-class`, {
-      title,
+      ...(title ? { title } : {}),
     });
     return ClassSchema.parse(data);
   },
@@ -462,12 +483,12 @@ export const api = {
       published?: boolean;
     },
   ) => {
-    console.log('[API updateRecipe] Request:', { recipeId, data });
+    logger.log('[API updateRecipe] Request:', { recipeId, data });
     const { data: res } = await apiClient.patch(`/api/recipes/${recipeId}`, data);
-    console.log('[API updateRecipe] Response:', res);
-    console.log('[API updateRecipe] Parsing with RecipeSchema...');
+    logger.log('[API updateRecipe] Response:', res);
+    logger.log('[API updateRecipe] Parsing with RecipeSchema...');
     const parsed = RecipeSchema.parse(res);
-    console.log('[API updateRecipe] Parsed successfully:', parsed);
+    logger.log('[API updateRecipe] Parsed successfully:', parsed);
     return parsed;
   },
   deleteRecipe: async (recipeId: string) => {
@@ -487,13 +508,13 @@ export const api = {
       question?: Record<string, unknown>;
     },
   ) => {
-    console.log('[API addStep] Sending request:', { recipeId, step: JSON.stringify(step) });
+    logger.log('[API addStep] Sending request:', { recipeId, step: JSON.stringify(step) });
     try {
       const { data } = await apiClient.post(`/api/recipes/${recipeId}/steps`, step);
       return data as RecipeStep;
     } catch (err: unknown) {
       const axiosErr = err as { response?: { status?: number; data?: unknown } };
-      console.error('[API addStep] Error response:', {
+      logger.error('[API addStep] Error response:', {
         status: axiosErr.response?.status,
         data: axiosErr.response?.data,
       });
@@ -526,7 +547,16 @@ export const api = {
     return data;
   },
   // ==================== Recipe Demo ====================
-  startRecipeDemo: async (recipeId: string) => {
+  startRecipeDemo: async (
+    recipeId: string,
+  ): Promise<
+    StartRecipeOutput & {
+      /** Class lesson backing the session, when the recipe was started from a class. */
+      classLessonId: string | null;
+      recipeId?: string;
+      title?: string;
+    }
+  > => {
     api.validateId(recipeId, 'Recipe');
     const { data } = await apiClient.post('/api/sessions/start-recipe', { recipeId });
     return {

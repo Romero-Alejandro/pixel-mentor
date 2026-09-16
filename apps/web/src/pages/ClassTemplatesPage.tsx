@@ -4,9 +4,9 @@ import { useShallow } from 'zustand/react/shallow';
 import { IconPlus, IconTemplate, IconBook, IconArrowRight } from '@tabler/icons-react';
 
 import { useClassStore } from '@/features/class-management/stores/class.store';
-import { useAuth } from '@/features/auth/hooks/useAuth';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useAudio } from '@/contexts/AudioContext';
-import { usePrompt } from '@/hooks/useConfirmationDialogs';
+import { usePrompt } from '@/hooks/use-confirmation-dialogs';
 import { Button, Card, Spinner, Input } from '@/components/ui';
 
 export function ClassTemplatesPage() {

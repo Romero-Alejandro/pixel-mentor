@@ -1,2 +1,5 @@
-export { LearningPathCard, GroupLearningCard } from './LearningPathCard';
-export { StudentLearningView } from './StudentLearningView';
+export {
+  LearningPathCard,
+  GroupLearningCard,
+} from '@/features/student-learning/components/LearningPathCard';
+export { StudentLearningView } from '@/features/student-learning/components/StudentLearningView';

@@ -18,10 +18,16 @@ import type { RecipeStep } from '@pixel-mentor/shared';
 
 import { useRecipeStore } from '@/features/recipe-management/stores/recipe.store';
 import { useAudio } from '@/contexts/AudioContext';
-import { useAlert, useConfirm } from '@/hooks/useConfirmationDialogs';
+import { useAlert, useConfirm } from '@/hooks/use-confirmation-dialogs';
 import { Button, Card, Spinner, Input, Textarea, Badge } from '@/components/ui';
-import { StepEditor } from '@/features/recipe-management/components/StepEditor';
-import { AIRecipeGeneratorModal } from '@/features/recipe-management/components/AIRecipeGeneratorModal';
+import {
+  StepEditor,
+  type StepEditorSaveData,
+} from '@/features/recipe-management/components/StepEditor';
+import {
+  AIRecipeGeneratorModal,
+  type GeneratedRecipeDraft,
+} from '@/features/recipe-management/components/AIRecipeGeneratorModal';
 import { logger } from '@/utils/logger';
 
 // --- Helpers de Lógica ---
@@ -35,10 +41,33 @@ const extractText = (obj: unknown): string => {
   return '';
 };
 
-const renderSafe = (val: any) => (val && typeof val === 'object' ? '' : String(val ?? ''));
+const renderSafe = (val: unknown) => (val && typeof val === 'object' ? '' : String(val ?? ''));
 
-const transformAIScript = (stepType: string, script: any): Record<string, unknown> => {
-  const getT = (val: any) => extractText(val);
+/**
+ * Scripts produced by the AI generator arrive as loosely-typed SSE JSON:
+ * text fields may be plain strings or { text } wrappers, and list items
+ * may be bare values or wrapper objects.
+ */
+interface AIScript {
+  transition?: unknown;
+  content?: unknown;
+  closure?: unknown;
+  instruction?: unknown;
+  question?: unknown;
+  expectedAnswer?: unknown;
+  feedback?: { correct?: unknown; incorrect?: unknown };
+  examples?: unknown[];
+  options?: unknown[];
+}
+
+/** Normalizes a script list item that may be a bare value or a { text } wrapper. */
+const unwrapScriptItem = (item: unknown): unknown =>
+  typeof item === 'object' && item !== null && 'text' in item
+    ? (item as { text?: unknown }).text || item
+    : item;
+
+const transformAIScript = (stepType: string, script: AIScript): Record<string, unknown> => {
+  const getT = (val: unknown) => extractText(val);
   const contentText = getT(script.content) || 'Contenido';
 
   // 🛠️ FIX DE RAÍZ: Estructura EXACTA requerida por el esquema Zod del backend
@@ -51,7 +80,7 @@ const transformAIScript = (stepType: string, script: any): Record<string, unknow
     },
     examples:
       Array.isArray(script.examples) && script.examples.length > 0
-        ? script.examples.map((e: any) => ({ text: getT(e.text || e) }))
+        ? script.examples.map((e) => ({ text: getT(unwrapScriptItem(e)) }))
         : [{ text: contentText }],
     closure: { text: getT(script.closure) || '¡Muy bien!' },
   };
@@ -61,10 +90,16 @@ const transformAIScript = (stepType: string, script: any): Record<string, unknow
     return {
       // instruction debe ser string según ActivityContentSchema
       instruction: getT(script.instruction) || 'Realiza la actividad',
-      options: (script.options || []).map((o: any) => ({
-        text: getT(o.text || o),
-        isCorrect: typeof o.isCorrect === 'boolean' ? o.isCorrect : false,
-      })),
+      options: (script.options ?? []).map((o) => {
+        const isCorrect =
+          typeof o === 'object' && o !== null && 'isCorrect' in o
+            ? (o as { isCorrect?: unknown }).isCorrect
+            : undefined;
+        return {
+          text: getT(unwrapScriptItem(o)),
+          isCorrect: typeof isCorrect === 'boolean' ? isCorrect : false,
+        };
+      }),
       feedback: {
         correct: getT(script.feedback?.correct) || '¡Excelente!',
         incorrect: getT(script.feedback?.incorrect) || 'Intenta de nuevo',
@@ -94,9 +129,27 @@ const transformAIScript = (stepType: string, script: any): Record<string, unknow
 
 // --- Sub-componente de Paso (Memorizado) ---
 
-const StepItem = memo(({ step, index, isLast, onMove, onEdit, onDelete }: any) => {
-  const script = (step as any).script;
+interface StepItemProps {
+  step: RecipeStep;
+  index: number;
+  isLast: boolean;
+  onMove: (index: number, dir: 'up' | 'down') => void;
+  onEdit: (step: RecipeStep) => void;
+  onDelete: (stepId: string) => void;
+}
+
+/** Runtime view of a step's loosely-typed script payload (RecipeStep.script is intentionally open). */
+type StepScriptView = {
+  kind?: string;
+  content?: unknown;
+  instruction?: unknown;
+  question?: unknown;
+};
+
+const StepItem = memo(({ step, index, isLast, onMove, onEdit, onDelete }: StepItemProps) => {
+  const script = step.script as StepScriptView | null | undefined;
   const kind = script?.kind;
+  const stepType = step.stepType ?? 'content';
 
   const title =
     extractText(
@@ -105,9 +158,7 @@ const StepItem = memo(({ step, index, isLast, onMove, onEdit, onDelete }: any) =
         // Activity: use script.instruction (kind === 'activity')
         (kind === 'activity' ? script?.instruction : undefined) ||
         // Question: use script.question (kind === 'question')
-        (kind === 'question' ? script?.question : undefined) ||
-        // Fallback: use step's order
-        undefined,
+        (kind === 'question' ? script?.question : undefined),
     ) || `Paso ${step.order}`;
 
   const colors: Record<string, string> = {
@@ -141,9 +192,9 @@ const StepItem = memo(({ step, index, isLast, onMove, onEdit, onDelete }: any) =
       </div>
       <div className="flex-1 min-w-0">
         <Badge
-          className={`rounded-full px-2.5 py-1 text-xs font-bold border ${colors[step.stepType] || colors.content}`}
+          className={`rounded-full px-2.5 py-1 text-xs font-bold border ${colors[stepType] || colors.content}`}
         >
-          {step.stepType.toUpperCase()}
+          {stepType.toUpperCase()}
         </Badge>
         <p className="text-sm text-slate-700 font-medium line-clamp-2 mt-1">
           {title || `Paso ${step.order}`}
@@ -271,7 +322,7 @@ export function RecipeEditorPage() {
     [form, isNew, recipeId, createRecipe, updateRecipe, navigate, alert, playToastSuccess],
   );
 
-  const handleSaveStep = async (stepData: any) => {
+  const handleSaveStep = async (stepData: StepEditorSaveData) => {
     if (!recipeId || isNew)
       return alert({ title: '¡Espera!', message: 'Guarda primero la unidad ✨' });
     try {
@@ -290,7 +341,7 @@ export function RecipeEditorPage() {
     playClick();
     try {
       const result = await startRecipeDemo(recipeId);
-      console.log('[DEBUG] Result from startRecipeDemo:', result);
+      logger.log('[DEBUG] Result from startRecipeDemo:', result);
       if (result?.classLessonId) {
         playToastSuccess();
         window.location.href = `/lesson/${result.classLessonId}`;
@@ -300,13 +351,13 @@ export function RecipeEditorPage() {
     }
   };
 
-  const handleAIGenerated = async (draft: any) => {
+  const handleAIGenerated = async (draft: GeneratedRecipeDraft) => {
     try {
       let id = recipeId;
 
       // Transformar TODOS los steps ANTES de enviar al backend
       const transformedSteps =
-        draft.steps?.map((step: any) => {
+        draft.steps?.map((step) => {
           const stepType = step.stepType;
           const script = transformAIScript(step.stepType, step.script);
 
@@ -363,7 +414,7 @@ export function RecipeEditorPage() {
           step={s}
           index={i}
           isLast={i === (currentRecipe?.steps?.length || 0) - 1}
-          onMove={async (idx: number, dir: any) => {
+          onMove={async (idx, dir) => {
             const ids = (currentRecipe?.steps || []).map((st) => st.id);
             const target = dir === 'up' ? idx - 1 : idx + 1;
             [ids[idx], ids[target]] = [ids[target], ids[idx]];
@@ -373,7 +424,7 @@ export function RecipeEditorPage() {
               playClick();
             }
           }}
-          onEdit={(st: any) => setStepEditor({ isOpen: true, step: st })}
+          onEdit={(st) => setStepEditor({ isOpen: true, step: st })}
           onDelete={async (sid: string) => {
             if (
               await confirm({

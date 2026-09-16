@@ -44,7 +44,7 @@ interface ClassState {
   // Template actions
   fetchTemplates: () => Promise<void>;
   createTemplate: (data: ClassTemplateCreate) => Promise<ClassTemplate>;
-  createClassFromTemplate: (templateId: string, title: string) => Promise<Class>;
+  createClassFromTemplate: (templateId: string, title?: string) => Promise<Class>;
 
   // AI Generation
   generateClassDraft: (input: GenerateClassDraftInput) => Promise<GenerateClassDraftOutput>;
@@ -77,8 +77,6 @@ export const useClassStore = create<ClassState>()(
         set({ isLoading: true, error: null });
         try {
           const result = await api.getClass(classId);
-          console.log('[DEBUG] Clase cargada:', result);
-          console.log('[DEBUG] Lessons:', result.lessons);
           set({ currentClass: result, isLoading: false });
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : 'Failed to fetch class';
@@ -255,31 +253,34 @@ export const useClassStore = create<ClassState>()(
       },
 
       reorderLessons: async (classId: string, lessonIds: string[]) => {
-        set({ isLoading: true, error: null });
+        // Optimistic: apply the new order locally first so drag & drop feels
+        // instant; roll back to the previous lessons if the API rejects it.
+        const previous = useClassStore.getState();
+        const prevCurrent = previous.currentClass?.id === classId ? previous.currentClass : null;
+        const reordered = lessonIds
+          .map((id) => prevCurrent?.lessons?.find((l) => l.id === id))
+          .filter((l): l is NonNullable<typeof l> => l !== undefined);
+
+        set((state) => {
+          if (!state.currentClass || state.currentClass.id !== classId) return state;
+          const updatedClass: Class = { ...state.currentClass, lessons: reordered };
+          return {
+            classes: state.classes.map((c) => (c.id === classId ? updatedClass : c)),
+            currentClass: updatedClass,
+          };
+        });
+
         try {
           await api.reorderClassLessons(classId, lessonIds);
-          set((state) => {
-            if (!state.currentClass || state.currentClass.id !== classId) {
-              return { isLoading: false };
-            }
-            const currentLessons = state.currentClass.lessons || [];
-            // Reorder lessons based on lessonIds array
-            const reorderedLessons = lessonIds
-              .map((id) => currentLessons.find((l) => l.id === id))
-              .filter((l): l is NonNullable<typeof l> => l !== undefined);
-            const updatedClass: Class = {
-              ...state.currentClass,
-              lessons: reorderedLessons,
-            };
-            return {
-              classes: state.classes.map((c) => (c.id === classId ? updatedClass : c)),
-              currentClass: updatedClass,
-              isLoading: false,
-            };
-          });
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : 'Failed to reorder lessons';
-          set({ error: message, isLoading: false });
+          set({ error: message });
+          if (prevCurrent) {
+            set((state) => ({
+              currentClass: state.currentClass?.id === classId ? prevCurrent : state.currentClass,
+              classes: state.classes.map((c) => (c.id === classId ? prevCurrent : c)),
+            }));
+          }
           throw err;
         }
       },
@@ -311,7 +312,7 @@ export const useClassStore = create<ClassState>()(
         }
       },
 
-      createClassFromTemplate: async (templateId: string, title: string) => {
+      createClassFromTemplate: async (templateId: string, title?: string) => {
         set({ isLoading: true, error: null });
         try {
           const newClass = await api.createClassFromTemplate(templateId, title);

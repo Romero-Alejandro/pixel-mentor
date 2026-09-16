@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
 import { api } from '@/services/api';
 import type { Class } from '@pixel-mentor/shared';
+import { logger } from '@/utils/logger';
 
 export function GroupDetailPage() {
   const { groupId } = useParams<{ groupId: string }>();
@@ -54,9 +55,12 @@ export function GroupDetailPage() {
       setLoadingClasses(true);
       api
         .getMyClasses()
-        .then(setAvailableClasses)
-        .catch(console.error)
-        .finally(() => setLoadingClasses(false));
+        .then((classes) => {
+          setAvailableClasses(classes);
+          return classes;
+        })
+        .finally(() => setLoadingClasses(false))
+        .catch(logger.error);
     }
   }, [showAssignClassModal]);
 
@@ -69,7 +73,7 @@ export function GroupDetailPage() {
       setStudentEmail('');
       setShowAddMembersModal(false);
     } catch (err) {
-      console.error(err);
+      logger.error(err);
     } finally {
       setActionLoading(false);
     }
@@ -81,7 +85,7 @@ export function GroupDetailPage() {
     try {
       await removeMember(groupId, studentId);
     } catch (err) {
-      console.error(err);
+      logger.error(err);
     } finally {
       setActionLoading(false);
     }
@@ -95,7 +99,7 @@ export function GroupDetailPage() {
       setSelectedClassId('');
       setShowAssignClassModal(false);
     } catch (err) {
-      console.error(err);
+      logger.error(err);
     } finally {
       setActionLoading(false);
     }
@@ -107,7 +111,7 @@ export function GroupDetailPage() {
     try {
       await unassignClass(groupId, classId);
     } catch (err) {
-      console.error(err);
+      logger.error(err);
     } finally {
       setActionLoading(false);
     }

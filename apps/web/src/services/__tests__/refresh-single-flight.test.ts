@@ -14,11 +14,11 @@ const { mockRefreshToken } = vi.hoisted(() => ({
 }));
 
 // Mock auth.api BEFORE importing the real api-client under test.
-vi.mock('../../features/auth/services/auth.api', () => ({
+vi.mock('@/features/auth/services/auth.api', () => ({
   authApi: { refreshToken: mockRefreshToken },
 }));
 
-import { refreshAccessToken, getToken, clearToken } from '../../services/api-client';
+import { refreshAccessToken, getToken, clearToken } from '@/services/api-client';
 
 describe('refreshAccessToken single-flight', () => {
   beforeEach(() => {

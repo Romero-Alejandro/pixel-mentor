@@ -77,7 +77,7 @@ export function ClassLessonsPage() {
 
       try {
         const response = await api.getClass(classId);
-        const lessons: ClassLesson[] = response.lessons.map((lesson: any) => ({
+        const lessons: ClassLesson[] = (response.lessons ?? []).map((lesson) => ({
           id: lesson.id,
           title: lesson.title ?? lesson.recipe?.title ?? 'Untitled Lesson',
           recipeId: lesson.recipeId,
@@ -90,8 +90,11 @@ export function ClassLessonsPage() {
           title: response.title,
           lessons: lessons.sort((a, b) => a.order - b.order),
         });
-      } catch (err: any) {
-        setError(err?.response?.data?.error || err?.message || 'Failed to load class data');
+      } catch (err) {
+        const axiosError = err as { response?: { data?: { error?: string } }; message?: string };
+        setError(
+          axiosError?.response?.data?.error || axiosError?.message || 'Failed to load class data',
+        );
       } finally {
         setLoading(false);
       }

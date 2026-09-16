@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // Mock api-client BEFORE importing authApi
-vi.mock('../../services/api-client', () => ({
+vi.mock('@/services/api-client', () => ({
   apiClient: {
     get: vi.fn(),
     post: vi.fn(),
@@ -14,8 +14,8 @@ vi.mock('../../services/api-client', () => ({
 }));
 
 // Now import authApi - it will use the mocked apiClient
-import { authApi } from '../../features/auth/services/auth.api';
-import { apiClient } from '../../services/api-client';
+import { authApi } from '@/features/auth/services/auth.api';
+import { apiClient } from '@/services/api-client';
 
 describe('authApi', () => {
   beforeEach(() => {

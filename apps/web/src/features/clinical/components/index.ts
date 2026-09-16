@@ -1,2 +1,5 @@
-export { ClinicalDiscrepancySection, DiscrepancyCard } from './clinical-discrepancy-card';
-export { PragmaticModuleCard } from './pragmatic-module-card';
+export {
+  ClinicalDiscrepancySection,
+  DiscrepancyCard,
+} from '@/features/clinical/components/ClinicalDiscrepancyCard';
+export { PragmaticModuleCard } from '@/features/clinical/components/PragmaticModuleCard';

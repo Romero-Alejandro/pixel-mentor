@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 
-import { useTextSync } from '../../features/lesson/hooks/useTextSync';
+import { useTextSync } from '@/features/lesson/hooks/use-text-sync';
 
 // Mock audio events
 const eventCallbacks: Map<string, Set<(...args: unknown[]) => void>> = new Map();

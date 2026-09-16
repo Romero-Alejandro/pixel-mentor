@@ -26,7 +26,7 @@ const STEP_COLORS = [
   'bg-rose-200',
 ];
 
-const renderSafe = (value: any): string => {
+const renderSafe = (value: unknown): string => {
   if (value === null || value === undefined || typeof value === 'object') return '';
   return String(value);
 };

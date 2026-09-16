@@ -1,5 +1,5 @@
 import { apiClient } from '@/services/api-client';
-import type { Group } from '../../group/services/group.api';
+import type { Group } from '@/features/group/services/group.api';
 
 export interface GroupWithClasses extends Group {
   classes: StudentClass[];

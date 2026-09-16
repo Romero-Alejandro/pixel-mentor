@@ -1,4 +1,4 @@
-import type { MicroAudioEvent, SpriteAudioEvent } from '../audio/types/audio-events';
+import type { MicroAudioEvent, SpriteAudioEvent } from '@/audio/types/audio-events';
 
 export interface AudioProviderValue {
   // Micro audio methods

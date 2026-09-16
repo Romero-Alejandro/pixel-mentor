@@ -25,10 +25,10 @@ import { ResumeToast } from '@/features/lesson/components/ResumeToast';
 import {
   useClassOrchestrator,
   useVoiceSettingsSync,
-} from '@/features/lesson/hooks/useClassOrchestrator';
-import { useAutoStart } from '@/features/lesson/hooks/useAutoStart';
-import { useTextSync } from '@/features/lesson/hooks/useTextSync';
-import { useVoiceSettings } from '@/features/voice/hooks/useVoiceSettings';
+} from '@/features/lesson/hooks/use-class-orchestrator';
+import { useAutoStart } from '@/features/lesson/hooks/use-auto-start';
+import { useTextSync } from '@/features/lesson/hooks/use-text-sync';
+import { useVoiceSettings } from '@/features/voice/hooks/use-voice-settings';
 import { useLessonStore } from '@/features/lesson/stores/lesson.store';
 import { cn } from '@/utils/cn';
 

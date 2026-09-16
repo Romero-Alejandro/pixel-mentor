@@ -3,7 +3,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
-import { useGroupsStore } from '../stores/group.store';
+import { useGroupsStore } from '@/features/group/stores/group.store';
 
 interface CreateGroupModalProps {
   isOpen: boolean;

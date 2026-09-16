@@ -6,7 +6,7 @@ import { useShallow } from 'zustand/react/shallow';
 import type { Recipe } from '@pixel-mentor/shared';
 
 import { useRecipeStore } from '@/features/recipe-management/stores/recipe.store';
-import { useAuth } from '@/features/auth/hooks/useAuth';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useAudio } from '@/contexts/AudioContext';
 import { Button, Spinner, Badge } from '@/components/ui';
 

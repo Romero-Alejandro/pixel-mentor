@@ -1,8 +1,8 @@
 import type { UserGamificationProfile } from '@pixel-mentor/shared/gamification';
 
-import { LevelBadge } from './LevelBadge';
-import { XPProgress } from './XPProgress';
-import { StreakCounter } from './StreakCounter';
+import { LevelBadge } from '@/features/gamification/components/LevelBadge';
+import { XPProgress } from '@/features/gamification/components/XPProgress';
+import { StreakCounter } from '@/features/gamification/components/StreakCounter';
 
 import { cn } from '@/utils/cn';
 

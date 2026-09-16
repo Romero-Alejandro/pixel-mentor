@@ -3,10 +3,10 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-import App from './App';
-import { AudioProvider } from './contexts/AudioContext';
-import { DialogProvider } from './hooks/useConfirmationDialogs';
-import { ToastProvider } from './contexts/ToastContext';
+import App from '@/App';
+import { AudioProvider } from '@/contexts/AudioContext';
+import { DialogProvider } from '@/hooks/use-confirmation-dialogs';
+import { ToastProvider } from '@/contexts/ToastContext';
 import './index.css';
 
 const queryClient = new QueryClient({

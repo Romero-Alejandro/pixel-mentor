@@ -1,10 +1,10 @@
 import { createContext, useContext, useMemo, ReactNode } from 'react';
 
-import { SpriteAudioEvent } from '../audio/types/audio-events';
-import { useMicroAudio } from '../audio/micro';
-import { useSpriteAudioEvents } from '../audio/sprites';
+import { SpriteAudioEvent } from '@/audio/types/audio-events';
+import { useMicroAudio } from '@/audio/micro';
+import { useSpriteAudioEvents } from '@/audio/sprites';
 
-import { AudioProviderValue } from './AudioContext.types';
+import { AudioProviderValue } from '@/contexts/AudioContext.types';
 
 const AudioContext = createContext<AudioProviderValue | null>(null);
 

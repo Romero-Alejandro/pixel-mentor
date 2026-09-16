@@ -1,8 +1,8 @@
 import { useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { IconBooks, IconAlertTriangle, IconRefresh, IconSchool } from '@tabler/icons-react';
-import { useStudentLearningStore } from '../stores/student-learning.store';
-import { GroupLearningCard } from '../components/LearningPathCard';
+import { useStudentLearningStore } from '@/features/student-learning/stores/student-learning.store';
+import { GroupLearningCard } from '@/features/student-learning/components/LearningPathCard';
 import { Spinner } from '@/components/ui/Spinner';
 import { Button } from '@/components/ui/Button';
 

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { authApi, type User } from '../services/auth.api';
+import { authApi, type User } from '@/features/auth/services/auth.api';
 import { setToken, getToken, clearToken, refreshAccessToken } from '@/services/api-client';
-import { useAuthUIStore } from '../stores/auth.store';
+import { useAuthUIStore } from '@/features/auth/stores/auth.store';
 import { closeAudioContext } from '@/audio/micro/zzfx';
 
 import { logger } from '@/utils/logger';
@@ -24,16 +24,6 @@ export function useAuth(options: UseAuthOptions = {}) {
   // Track initial hydration/completion state to avoid showing spinner prematurely
   // For non-protected routes (isProtected=false), hydration is immediate since no query runs
   const [isHydrated, setIsHydrated] = useState(!isProtected);
-
-  // [EDD-TEMP] Log session recovery attempt
-  if (import.meta.env.DEV) {
-    const token = getToken();
-    console.debug(`[EDD] [${new Date().toISOString()}] [useAuth]`, `Session recovery attempt`, {
-      hasToken: !!token,
-      tokenStartsWith: token ? token.substring(0, 10) : null,
-      currentRoute: window.location.pathname,
-    });
-  }
 
   // Only run the query on protected routes. On public routes (isProtected=false)
   // the query is disabled so login/register work normally.
@@ -116,33 +106,13 @@ export function useAuth(options: UseAuthOptions = {}) {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: { identifier: string; password: string }) => {
-      // [EDD-TEMP] Log login attempt
-      if (import.meta.env.DEV) {
-        console.debug(`[EDD] [${new Date().toISOString()}] [useAuth]`, `Login mutation start`);
-      }
       const result = await authApi.login(credentials);
       return result as AuthResponse;
     },
     onSuccess: (data) => {
-      // [EDD-TEMP] Log login success
-      if (import.meta.env.DEV) {
-        console.debug(`[EDD] [${new Date().toISOString()}] [useAuth]`, `Login SUCCESS`, {
-          userId: data.user.id,
-          userRole: data.user.role,
-        });
-      }
       // The refresh token is delivered by the server as an httpOnly cookie.
       setToken(data.accessToken);
       queryClient.setQueryData(['user'], data.user);
-    },
-    onError: (error) => {
-      // [EDD-TEMP] Log login error
-      if (import.meta.env.DEV) {
-        console.debug(`[EDD] [${new Date().toISOString()}] [useAuth]`, `Login ERROR`, {
-          error,
-          stack: new Error().stack,
-        });
-      }
     },
   });
 
@@ -181,38 +151,15 @@ export function useAuth(options: UseAuthOptions = {}) {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      // [EDD-TEMP] Log logout start
-      if (import.meta.env.DEV) {
-        console.debug(`[EDD] [${new Date().toISOString()}] [useAuth]`, `Logout mutation start`);
-      }
       try {
         // The server revokes the session identified by the httpOnly refresh
         // cookie and clears it; no access token is required for this call.
         await authApi.logout();
-        // [EDD-TEMP] Log logout API success
-        if (import.meta.env.DEV) {
-          console.debug(`[EDD] [${new Date().toISOString()}] [useAuth]`, `Logout API success`);
-        }
       } catch (error) {
         logger.error('Logout API call failed', error);
-        // [EDD-TEMP] Log logout API error (non-blocking)
-        if (import.meta.env.DEV) {
-          console.debug(
-            `[EDD] [${new Date().toISOString()}] [useAuth]`,
-            `Logout API error (non-blocking)`,
-            { error },
-          );
-        }
       }
     },
     onSettled: () => {
-      // [EDD-TEMP] Log cleanup user state
-      if (import.meta.env.DEV) {
-        console.debug(
-          `[EDD] [${new Date().toISOString()}] [useAuth]`,
-          `Logout: cleanupUserState executed`,
-        );
-      }
       cleanupUserState();
     },
   });

@@ -12,11 +12,11 @@
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 
-import type { LessonResponse } from './useLessonInteractions';
-import { SSEError } from './useLessonInteractions';
-import type { useLessonState as UseLessonStateFn } from './useLessonState';
+import type { LessonResponse } from '@/features/lesson/hooks/use-lesson-interactions';
+import { SSEError } from '@/features/lesson/hooks/use-lesson-interactions';
+import type { useLessonState as UseLessonStateFn } from '@/features/lesson/hooks/use-lesson-state';
 import { useLessonStore } from '@/features/lesson/stores/lesson.store';
-import { type VoiceSettings } from '@/features/voice/hooks/useVoice';
+import { type VoiceSettings } from '@/features/voice/hooks/use-voice';
 
 // ---- Error Code → User Message mapping ----
 const ERROR_MESSAGES: Record<string, string> = {

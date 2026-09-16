@@ -14,13 +14,14 @@ import { useShallow } from 'zustand/react/shallow';
 import type { EventSourceMessage } from '@microsoft/fetch-event-source';
 
 import { api, streamInteractWithRecipe, type PedagogicalState } from '@/services/api';
-import { useChatStream } from './useChatStream';
+import { useChatStream } from '@/features/lesson/hooks/use-chat-stream';
 import type {
   VoiceSettings,
   AudioSyncInfo,
   ActiveTTSEngine,
-} from '@/features/voice/hooks/useVoice';
+} from '@/features/voice/hooks/use-voice';
 import { useLessonStore } from '@/features/lesson/stores/lesson.store';
+import { logger } from '@/utils/logger';
 
 // ---- Types ----
 
@@ -174,7 +175,7 @@ export function useLessonInteractions({
     if (lockTimeoutRef.current) clearTimeout(lockTimeoutRef.current);
     lockTimeoutRef.current = setTimeout(() => {
       if (isInteractingRef.current) {
-        console.warn('[useLessonInteractions] Interaction lock force-released after timeout');
+        logger.warn('[useLessonInteractions] Interaction lock force-released after timeout');
         isInteractingRef.current = false;
         store.setIsStreaming(false);
       }

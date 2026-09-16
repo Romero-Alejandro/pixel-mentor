@@ -11,19 +11,23 @@
 
 import { useCallback } from 'react';
 
-import { useLessonInteractions, type Result } from './useLessonInteractions';
-import { useLessonAutoAdvance } from './useLessonAutoAdvance';
-import { useLessonState } from './useLessonState';
-import { getVoiceSettings } from './useVoiceSettingsSync';
-import { useVoice } from '@/features/voice/hooks/useVoice';
+import {
+  useLessonInteractions,
+  type Result,
+} from '@/features/lesson/hooks/use-lesson-interactions';
+import { useLessonAutoAdvance } from '@/features/lesson/hooks/use-lesson-auto-advance';
+import { useLessonState } from '@/features/lesson/hooks/use-lesson-state';
+import { getVoiceSettings } from '@/features/lesson/hooks/use-voice-settings-sync';
+import { useVoice } from '@/features/voice/hooks/use-voice';
 import { useLessonStore } from '@/features/lesson/stores/lesson.store';
 import { api, type SessionStatus } from '@/services/api';
+import { logger } from '@/utils/logger';
 
 // ---- Re-export shared types and hooks ----
 
-export type { Result, LessonResponse } from './useLessonInteractions';
-export { SSEError } from './useLessonInteractions';
-export { useVoiceSettingsSync } from './useVoiceSettingsSync';
+export type { Result, LessonResponse } from '@/features/lesson/hooks/use-lesson-interactions';
+export { SSEError } from '@/features/lesson/hooks/use-lesson-interactions';
+export { useVoiceSettingsSync } from '@/features/lesson/hooks/use-voice-settings-sync';
 
 // Backend terminal statuses: a persisted session in one of these is expired
 // and must never be restored (see isTerminalStatus server-side).
@@ -34,8 +38,7 @@ const TERMINAL_SESSION_STATUSES = {
 
 function isSessionResumable(status: SessionStatus): boolean {
   return (
-    status !== TERMINAL_SESSION_STATUSES.COMPLETED &&
-    status !== TERMINAL_SESSION_STATUSES.ESCALATED
+    status !== TERMINAL_SESSION_STATUSES.COMPLETED && status !== TERMINAL_SESSION_STATUSES.ESCALATED
   );
 }
 
@@ -251,7 +254,7 @@ export function useClassOrchestrator() {
         try {
           await api.resetSession(staleSessionId);
         } catch (error: unknown) {
-          console.error('[LESSON_RESET] Backend reset failed:', error);
+          logger.error('[LESSON_RESET] Backend reset failed:', error);
           lessonState.setError('No se pudo reiniciar la sesion en el servidor. Intenta de nuevo.');
         }
       }
