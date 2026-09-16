@@ -1,11 +1,41 @@
-import type { GroupEntity, GroupWithMembers } from '../../domain/entities/group.entity.js';
+import type {
+  GroupEntity,
+  GroupWithMembers,
+  MemberStatus,
+} from '@/features/group/domain/entities/group.entity.js';
 import type {
   IGroupRepository,
   IGroupMemberRepository,
   IGroupClassRepository,
-} from '../../domain/ports/group.repository.port.js';
-
+} from '@/features/group/domain/ports/group.repository.port.js';
 import { prisma } from '@/database/client.js';
+
+/** Row shape returned by the generated Group delegate. */
+type GroupRow =
+  ReturnType<typeof prisma.group.findUniqueOrThrow> extends Promise<infer R> ? R : never;
+
+const MEMBER_STATUSES: readonly MemberStatus[] = ['ACTIVE', 'INACTIVE', 'COMPLETED'];
+
+/**
+ * Boundary conversion for GroupMember.status: the Prisma enum MemberStatus
+ * shares its members with the domain union, so valid values map 1:1.
+ * Unexpected values throw instead of being persisted or returned unvalidated.
+ */
+function toMemberStatus(value: string): MemberStatus {
+  if ((MEMBER_STATUSES as readonly string[]).includes(value)) return value as MemberStatus;
+  throw new Error(`Unknown group member status: ${value}`);
+}
+
+function mapGroup(group: GroupRow): GroupEntity {
+  return {
+    id: group.id,
+    name: group.name,
+    description: group.description,
+    teacherId: group.teacherId,
+    createdAt: group.createdAt,
+    updatedAt: group.updatedAt,
+  };
+}
 
 export class PrismaGroupRepository implements IGroupRepository {
   async create(data: {
@@ -21,7 +51,7 @@ export class PrismaGroupRepository implements IGroupRepository {
       },
     });
 
-    return group as GroupEntity;
+    return mapGroup(group);
   }
 
   async findById(id: string): Promise<GroupEntity | null> {
@@ -29,7 +59,7 @@ export class PrismaGroupRepository implements IGroupRepository {
       where: { id },
     });
 
-    return group as GroupEntity | null;
+    return group ? mapGroup(group) : null;
   }
 
   async findByTeacherId(
@@ -51,7 +81,7 @@ export class PrismaGroupRepository implements IGroupRepository {
     ]);
 
     return {
-      groups: groups as GroupEntity[],
+      groups: groups.map(mapGroup),
       total,
       page,
       limit,
@@ -68,7 +98,7 @@ export class PrismaGroupRepository implements IGroupRepository {
       data: updateData,
     });
 
-    return group as GroupEntity;
+    return mapGroup(group);
   }
 
   async delete(id: string): Promise<void> {
@@ -86,10 +116,16 @@ export class PrismaGroupRepository implements IGroupRepository {
     if (!group) return null;
 
     return {
-      ...group,
-      members: group.memberships as GroupWithMembers['members'],
+      ...mapGroup(group),
+      members: group.memberships.map((m) => ({
+        id: m.id,
+        groupId: m.groupId,
+        studentId: m.studentId,
+        joinedAt: m.joinedAt,
+        status: toMemberStatus(m.status),
+      })),
       memberCount: group.memberships.length,
-    } as GroupWithMembers;
+    };
   }
 }
 
@@ -103,7 +139,7 @@ export class PrismaGroupMemberRepository implements IGroupMemberRepository {
       data: {
         groupId: data.groupId,
         studentId: data.studentId,
-        status: (data.status as any) || 'ACTIVE',
+        status: data.status ? toMemberStatus(data.status) : 'ACTIVE',
       },
     });
 
@@ -112,7 +148,7 @@ export class PrismaGroupMemberRepository implements IGroupMemberRepository {
       groupId: member.groupId,
       studentId: member.studentId,
       joinedAt: member.joinedAt,
-      status: member.status as string,
+      status: toMemberStatus(member.status),
     };
   }
 
@@ -126,13 +162,12 @@ export class PrismaGroupMemberRepository implements IGroupMemberRepository {
         status: 'ACTIVE' as const,
       })),
     });
-
     return members.map((m) => ({
       id: m.id,
       groupId: m.groupId,
       studentId: m.studentId,
       joinedAt: m.joinedAt,
-      status: m.status as string,
+      status: toMemberStatus(m.status),
     }));
   }
 
@@ -153,7 +188,7 @@ export class PrismaGroupMemberRepository implements IGroupMemberRepository {
     return members.map((m) => ({
       id: m.id,
       studentId: m.studentId,
-      status: m.status as string,
+      status: toMemberStatus(m.status),
       user: m.student ? { name: m.student.name, email: m.student.email } : undefined,
     }));
   }
@@ -168,7 +203,7 @@ export class PrismaGroupMemberRepository implements IGroupMemberRepository {
     return members.map((m) => ({
       id: m.id,
       groupId: m.groupId,
-      status: m.status as string,
+      status: toMemberStatus(m.status),
     }));
   }
 
@@ -186,7 +221,7 @@ export class PrismaGroupMemberRepository implements IGroupMemberRepository {
 
     return {
       id: member.id,
-      status: member.status as string,
+      status: toMemberStatus(member.status),
     };
   }
 
@@ -212,7 +247,7 @@ export class PrismaGroupMemberRepository implements IGroupMemberRepository {
       where: {
         groupId_studentId: { groupId, studentId },
       },
-      data: { status: status as any },
+      data: { status: toMemberStatus(status) },
     });
   }
 }
@@ -281,7 +316,7 @@ export class PrismaGroupClassRepository implements IGroupClassRepository {
       classId: gc.classId,
       order: gc.order,
       class: gc.class
-        ? { id: gc.class.id, title: gc.class.title, status: gc.class.status as string }
+        ? { id: gc.class.id, title: gc.class.title, status: gc.class.status }
         : undefined,
     }));
   }

@@ -1,14 +1,15 @@
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 
-import type { GroupService } from '../../application/services/group.service.js';
+import type { GroupService } from '@/features/group/application/services/group.service.js';
 import {
   GroupNotFoundError,
   GroupOwnershipError,
   StudentNotFoundError,
   ClassNotFoundError,
   GroupValidationError,
-} from '../../application/services/group.service.js';
+} from '@/features/group/application/services/group.service.js';
+import { moduleLogger } from '@/shared/logger/logger.js';
 
 const ROLE_TEACHER = 'TEACHER';
 const ROLE_ADMIN = 'ADMIN';
@@ -19,8 +20,10 @@ interface AuthUser {
 }
 
 function getUserFromRequest(req: Request): AuthUser | null {
-  return (req as any).user ?? null;
+  return (req as Request & { user?: AuthUser }).user ?? null;
 }
+
+const logger = moduleLogger('group:routes');
 
 const createGroupSchema = z.object({
   name: z.string().min(1, 'Group name is required'),
@@ -83,7 +86,7 @@ export function createGroupRoutes(groupService: GroupService): Router {
         res.status(400).json({ error: error.message });
         return;
       }
-      console.error('Create group error:', error);
+      logger.error({ err: error }, 'Create group failed');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -107,7 +110,7 @@ export function createGroupRoutes(groupService: GroupService): Router {
       const result = await groupService.getGroupsByTeacher(user.id, { page, limit });
       res.json(result);
     } catch (error) {
-      console.error('Get groups error:', error);
+      logger.error({ err: error }, 'List groups failed');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -144,7 +147,7 @@ export function createGroupRoutes(groupService: GroupService): Router {
         res.status(404).json({ error: error.message });
         return;
       }
-      console.error('Get group error:', error);
+      logger.error({ err: error }, 'Get group failed');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -183,7 +186,7 @@ export function createGroupRoutes(groupService: GroupService): Router {
         res.status(403).json({ error: error.message });
         return;
       }
-      console.error('Update group error:', error);
+      logger.error({ err: error }, 'Update group failed');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -212,7 +215,7 @@ export function createGroupRoutes(groupService: GroupService): Router {
         res.status(403).json({ error: error.message });
         return;
       }
-      console.error('Delete group error:', error);
+      logger.error({ err: error }, 'Delete group failed');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -255,7 +258,7 @@ export function createGroupRoutes(groupService: GroupService): Router {
         res.status(404).json({ error: error.message });
         return;
       }
-      console.error('Add members error:', error);
+      logger.error({ err: error }, 'Add group members failed');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -279,7 +282,7 @@ export function createGroupRoutes(groupService: GroupService): Router {
         res.status(403).json({ error: error.message });
         return;
       }
-      console.error('Get members error:', error);
+      logger.error({ err: error }, 'List group members failed');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -312,7 +315,7 @@ export function createGroupRoutes(groupService: GroupService): Router {
         res.status(403).json({ error: error.message });
         return;
       }
-      console.error('Remove member error:', error);
+      logger.error({ err: error }, 'Remove group member failed');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -359,7 +362,7 @@ export function createGroupRoutes(groupService: GroupService): Router {
         res.status(400).json({ error: error.message });
         return;
       }
-      console.error('Assign class error:', error);
+      logger.error({ err: error }, 'Assign class to group failed');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -391,7 +394,7 @@ export function createGroupRoutes(groupService: GroupService): Router {
         res.status(403).json({ error: error.message });
         return;
       }
-      console.error('Get classes error:', error);
+      logger.error({ err: error }, 'List group classes failed');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -424,7 +427,7 @@ export function createGroupRoutes(groupService: GroupService): Router {
         res.status(403).json({ error: error.message });
         return;
       }
-      console.error('Unassign class error:', error);
+      logger.error({ err: error }, 'Unassign class from group failed');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -463,7 +466,7 @@ export function createGroupRoutes(groupService: GroupService): Router {
         res.status(404).json({ error: error.message });
         return;
       }
-      console.error('Reorder classes error:', error);
+      logger.error({ err: error }, 'Reorder group classes failed');
       res.status(500).json({ error: 'Internal server error' });
     }
   });

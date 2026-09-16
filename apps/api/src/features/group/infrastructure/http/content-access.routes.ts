@@ -1,6 +1,10 @@
 import { Router, type Request, type Response } from 'express';
 
-import type { ContentAccessService } from '../../application/services/content-access.service.js';
+import type { ContentAccessService } from '@/features/group/application/services/content-access.service.js';
+import type { UserRole } from '@/features/auth/domain/entities/user.entity.js';
+import { moduleLogger } from '@/shared/logger/logger.js';
+
+const logger = moduleLogger('content-access:routes');
 
 interface AuthUser {
   id: string;
@@ -8,7 +12,15 @@ interface AuthUser {
 }
 
 function getUserFromRequest(req: Request): AuthUser | null {
-  return (req as any).user ?? null;
+  return (req as Request & { user?: AuthUser }).user ?? null;
+}
+
+const USER_ROLES: readonly UserRole[] = ['STUDENT', 'TEACHER', 'ADMIN'];
+
+/** Boundary guard for the JWT role string; unknown values fall back to STUDENT. */
+function toUserRole(role: string): UserRole {
+  const roleMatch = USER_ROLES.find((candidate) => candidate === role);
+  return roleMatch ?? 'STUDENT';
 }
 
 export function createContentAccessRoutes(contentAccessService: ContentAccessService): Router {
@@ -24,11 +36,11 @@ export function createContentAccessRoutes(contentAccessService: ContentAccessSer
 
       const content = await contentAccessService.getAccessibleContentForUser(
         user.id,
-        user.role as any,
+        toUserRole(user.role),
       );
       res.json(content);
     } catch (error) {
-      console.error('Get accessible content error:', error);
+      logger.error({ err: error }, 'Get accessible content failed');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -43,13 +55,13 @@ export function createContentAccessRoutes(contentAccessService: ContentAccessSer
 
       const canAccess = await contentAccessService.canAccessClass(
         user.id,
-        user.role as any,
+        toUserRole(user.role),
         String(req.params.classId),
       );
 
       res.json({ canAccess });
     } catch (error) {
-      console.error('Check content access error:', error);
+      logger.error({ err: error }, 'Check content access failed');
       res.status(500).json({ error: 'Internal server error' });
     }
   });

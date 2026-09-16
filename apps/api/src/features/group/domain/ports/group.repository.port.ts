@@ -1,4 +1,7 @@
-import type { GroupEntity, GroupWithMembers } from '../entities/group.entity.js';
+import type {
+  GroupEntity,
+  GroupWithMembers,
+} from '@/features/group/domain/entities/group.entity.js';
 
 export interface IGroupRepository {
   create(data: { name: string; description?: string; teacherId: string }): Promise<GroupEntity>;
