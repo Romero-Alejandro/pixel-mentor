@@ -11,13 +11,12 @@
  */
 
 import { createLogger } from '@/shared/logger/logger.js';
-import { prisma } from '@/database/client.js';
-import { GamificationConfig } from '../../config/gamification.config.js';
+import { GamificationConfig } from '@/features/gamification/config/gamification.config.js';
 
-import type { RewardContext } from '../strategies/reward.types.js';
-import type { StrategyRegistry } from '../strategies/strategy-registry.js';
-import type { StreakService } from './streak.service.js';
-import { mutexManager } from './mutex-manager.service.js';
+import type { RewardContext } from '@/features/gamification/application/strategies/reward.types.js';
+import type { StrategyRegistry } from '@/features/gamification/application/strategies/strategy-registry.js';
+import type { StreakService } from '@/features/gamification/application/services/streak.service.js';
+import { mutexManager } from '@/features/gamification/application/services/mutex-manager.service.js';
 
 import type { EventBus } from '@/shared/events/event-bus.port';
 import { getEventBus } from '@/shared/events/event-bus.port';
@@ -33,13 +32,17 @@ import type {
 } from '@/shared/events/game-events.port';
 import { GameDomainEvents, GameEngineEvents } from '@/shared/events/game-events.port';
 import type {
+  GamificationTxClient,
+  IGamificationTransactionService,
+} from '@/features/gamification/domain/ports/gamification-transaction.port.js';
+import type {
   IUserGamificationRepository,
   IBadgeRepository,
   IGamificationAuditRepository,
   RewardResult,
   GamificationProfile,
   GamificationAuditLogEntry,
-} from '../../domain/ports/gamification.ports';
+} from '@/features/gamification/domain/ports/gamification.ports.js';
 import type { ProgressRepository } from '@/features/progress/domain/ports/progress.repository.port';
 
 /**
@@ -54,6 +57,14 @@ export const LEVEL_TITLES: Record<number, string> = {
   6: 'Montaña',
 };
 
+/** XP-award outcome returned by {@link GameEngineCore.applyXPInTx}. */
+interface XpUpdateResult {
+  newTotalXP: number;
+  leveledUp: boolean;
+  newLevel?: number;
+  newLevelTitle?: string;
+}
+
 export class GameEngineCore {
   private eventBus: EventBus;
   private unsubscribers: Array<() => void> = [];
@@ -65,6 +76,7 @@ export class GameEngineCore {
     private strategyRegistry: StrategyRegistry,
     private streakService: StreakService,
     private progressRepo: ProgressRepository,
+    private readonly transactionService: IGamificationTransactionService,
     eventBus?: EventBus,
     logger?: ReturnType<typeof createLogger>,
     private auditRepo?: IGamificationAuditRepository,
@@ -194,66 +206,24 @@ export class GameEngineCore {
 
       // Use atomic transaction for all state changes
       if (xpToAward > 0 || strategyResult.badgesToAward.length > 0) {
-        await prisma.$transaction(async (tx) => {
-          // Apply XP rewards atomically
-          let newTotalXP = 0;
-          let leveledUp = false;
-          let newLevel: number | undefined;
-          let newLevelTitle: string | undefined;
+        await this.transactionService.execute(async (tx) => {
+          // Apply XP rewards atomically (single update; level is derived,
+          // not stored, so no second write is needed unless leveling up)
+          const xpResult =
+            xpToAward > 0
+              ? await this.applyXPInTx(tx, userId, xpToAward)
+              : { newTotalXP: 0, leveledUp: false, newLevel: undefined, newLevelTitle: undefined };
 
-          if (xpToAward > 0) {
-            const profile = await this.userGamificationRepo.findByUserId(userId);
-            const previousLevel = profile?.level ?? 1;
-
-            const updated = await tx.userGamification.update({
-              where: { userId },
-              data: {
-                totalXP: { increment: xpToAward },
-              },
-            });
-
-            newTotalXP = updated.totalXP;
-            await tx.userGamification.update({
-              where: { userId },
-              data: { level: updated.level },
-            });
-
-            newLevel = updated.level;
-            newLevelTitle =
-              updated.level > previousLevel ? await this.getLevelTitle(updated.level) : undefined;
-            leveledUp = updated.level > previousLevel;
-          }
-
-          // Award badges within the same transaction
-          for (const badge of strategyResult.badgesToAward) {
-            const badgeRec = await tx.badge.findUnique({ where: { code: badge.code } });
-            if (!badgeRec) continue;
-
-            const existing = await tx.userBadge.findUnique({
-              where: { userId_badgeId: { userId, badgeId: badgeRec.id } },
-            });
-
-            if (!existing) {
-              let userGamification = await tx.userGamification.findUnique({ where: { userId } });
-              if (!userGamification) {
-                userGamification = await tx.userGamification.create({
-                  data: { userId, totalXP: 0, currentStreak: 0, longestStreak: 0, level: 1 },
-                });
-              }
-
-              await tx.userBadge.create({
-                data: { userId, badgeId: badgeRec.id, userGamificationId: userGamification.id },
-              });
-              newBadges.push({ code: badge.code, name: badge.name, icon: badge.icon });
-            }
-          }
+          // Award badges within the same transaction (batched)
+          const badgesEarned = await this.awardBadgesInTx(tx, userId, strategyResult.badgesToAward);
+          newBadges.push(...badgesEarned);
 
           const result: RewardResult = {
             xpAwarded: xpToAward,
-            newTotalXP,
-            leveledUp,
-            newLevel,
-            newLevelTitle,
+            newTotalXP: xpResult.newTotalXP,
+            leveledUp: xpResult.leveledUp,
+            newLevel: xpResult.newLevel,
+            newLevelTitle: xpResult.newLevelTitle,
             badgesEarned: newBadges,
             streakUpdated: false,
           };
@@ -301,16 +271,100 @@ export class GameEngineCore {
     }
   }
 
-  private async getLevelTitle(level: number): Promise<string> {
-    const titles: Record<number, string> = {
-      1: 'Semilla',
-      2: 'Brote',
-      3: 'Flor',
-      4: 'Árbol',
-      5: 'Bosque',
-      6: 'Campeón',
+  private getLevelTitle(level: number): string {
+    return LEVEL_TITLES[level] ?? `Nivel ${level}`;
+  }
+
+  /**
+   * Apply an XP increment inside an active reward transaction.
+   *
+   * Single `update` (the redundant `level` write is gone: `level` is derived
+   * from totalXP on read, so writing it back is a no-op). Detects level-up by
+   * comparing the previous level (read from the repository) with the row
+   * returned by the update.
+   */
+  private async applyXPInTx(
+    tx: GamificationTxClient,
+    userId: string,
+    xpToAward: number,
+  ): Promise<XpUpdateResult> {
+    const profile = await this.userGamificationRepo.findByUserId(userId);
+    const previousLevel = profile?.level ?? 1;
+
+    const updated = await tx.userGamification.update({
+      where: { userId },
+      data: { totalXP: { increment: xpToAward } },
+    });
+
+    const leveledUp = updated.level > previousLevel;
+    if (leveledUp) {
+      // Level-up only: persist the new level so profile reads stay consistent
+      await tx.userGamification.update({ where: { userId }, data: { level: updated.level } });
+    }
+
+    return {
+      newTotalXP: updated.totalXP,
+      leveledUp,
+      newLevel: leveledUp ? updated.level : undefined,
+      newLevelTitle: leveledUp ? this.getLevelTitle(updated.level) : undefined,
     };
-    return titles[level] ?? `Nivel ${level}`;
+  }
+
+  /**
+   * Award badges inside an active reward transaction.
+   *
+   * Single round-trip per concern (no per-badge sequential lookups):
+   * - One `userGamification.findUnique` for the whole batch
+   * - Resolves all badge codes at once via `findMany({ code: { in } })`
+   * - Resolves existing user-badges at once via `findMany({ userId, badgeId: { in } })`
+   *
+   * Returns the newly created badges (code/name/icon) for UI events.
+   */
+  private async awardBadgesInTx(
+    tx: GamificationTxClient,
+    userId: string,
+    badgesToAward: ReadonlyArray<{ code: string }>,
+  ): Promise<Array<{ code: string; name: string; icon: string }>> {
+    if (badgesToAward.length === 0) return [];
+
+    const newBadges: Array<{ code: string; name: string; icon: string }> = [];
+
+    let userGamification = await tx.userGamification.findUnique({ where: { userId } });
+    if (!userGamification) {
+      userGamification = await tx.userGamification.create({
+        data: { userId, totalXP: 0, currentStreak: 0, longestStreak: 0, level: 1 },
+      });
+    }
+
+    const badgeRecords = await tx.badge.findMany({
+      where: { code: { in: badgesToAward.map((b) => b.code) } },
+    });
+    if (badgeRecords.length === 0) return [];
+
+    const existing = await tx.userBadge.findMany({
+      where: { userId, badgeId: { in: badgeRecords.map((b) => b.id) } },
+    });
+    const existingBadgeIds = new Set(existing.map((b) => b.badgeId));
+
+    const missingBadgeIds = badgeRecords
+      .filter((b) => !existingBadgeIds.has(b.id))
+      .map((b) => b.id);
+    if (missingBadgeIds.length === 0) return [];
+
+    await tx.userBadge.createMany({
+      data: missingBadgeIds.map((badgeId) => ({
+        userId,
+        badgeId,
+        userGamificationId: userGamification.id,
+      })),
+    });
+
+    for (const badgeRec of badgeRecords) {
+      if (!existingBadgeIds.has(badgeRec.id)) {
+        newBadges.push({ code: badgeRec.code, name: badgeRec.name, icon: badgeRec.icon });
+      }
+    }
+    return newBadges;
   }
 
   /**
@@ -353,39 +407,16 @@ export class GameEngineCore {
         const newBadges: Array<{ code: string; name: string; icon: string }> = [];
 
         // Use atomic transaction for all state changes
-        await prisma.$transaction(async (tx) => {
-          const updated = await tx.userGamification.update({
-            where: { userId },
-            data: { totalXP: { increment: perfectBonus } },
-          });
+        await this.transactionService.execute(async (tx) => {
+          const xpResult = await this.applyXPInTx(tx, userId, perfectBonus);
 
-          // Award badges within transaction
-          for (const badge of strategyResult.badgesToAward) {
-            const badgeRec = await tx.badge.findUnique({ where: { code: badge.code } });
-            if (!badgeRec) continue;
-
-            const existing = await tx.userBadge.findUnique({
-              where: { userId_badgeId: { userId, badgeId: badgeRec.id } },
-            });
-
-            if (!existing) {
-              let userGamification = await tx.userGamification.findUnique({ where: { userId } });
-              if (!userGamification) {
-                userGamification = await tx.userGamification.create({
-                  data: { userId, totalXP: 0, currentStreak: 0, longestStreak: 0, level: 1 },
-                });
-              }
-
-              await tx.userBadge.create({
-                data: { userId, badgeId: badgeRec.id, userGamificationId: userGamification.id },
-              });
-              newBadges.push({ code: badge.code, name: badge.name, icon: badge.icon });
-            }
-          }
+          // Award badges within transaction (batched)
+          const badgesEarned = await this.awardBadgesInTx(tx, userId, strategyResult.badgesToAward);
+          newBadges.push(...badgesEarned);
 
           const result: RewardResult = {
             xpAwarded: perfectBonus,
-            newTotalXP: updated.totalXP,
+            newTotalXP: xpResult.newTotalXP,
             leveledUp: false,
             newLevel: undefined,
             newLevelTitle: undefined,
@@ -472,66 +503,23 @@ export class GameEngineCore {
 
       // Use atomic transaction for all state changes
       if (totalStreakBonus > 0 || strategyResult.badgesToAward.length > 0) {
-        await prisma.$transaction(async (tx) => {
-          let newTotalXP = 0;
-          let leveledUp = false;
-          let newLevel: number | undefined;
-          let newLevelTitle: string | undefined;
+        await this.transactionService.execute(async (tx) => {
+          // Apply streak bonus XP (single update; level is derived, not stored)
+          const xpResult =
+            totalStreakBonus > 0
+              ? await this.applyXPInTx(tx, userId, totalStreakBonus)
+              : { newTotalXP: 0, leveledUp: false, newLevel: undefined, newLevelTitle: undefined };
 
-          // Apply streak bonus XP
-          if (totalStreakBonus > 0) {
-            const profile = await this.userGamificationRepo.findByUserId(userId);
-            const previousLevel = profile?.level ?? 1;
-
-            const updated = await tx.userGamification.update({
-              where: { userId },
-              data: {
-                totalXP: { increment: totalStreakBonus },
-              },
-            });
-
-            newTotalXP = updated.totalXP;
-            await tx.userGamification.update({
-              where: { userId },
-              data: { level: updated.level },
-            });
-
-            newLevel = updated.level;
-            newLevelTitle =
-              updated.level > previousLevel ? await this.getLevelTitle(updated.level) : undefined;
-            leveledUp = updated.level > previousLevel;
-          }
-
-          // Award badges within transaction
-          for (const badge of strategyResult.badgesToAward) {
-            const badgeRec = await tx.badge.findUnique({ where: { code: badge.code } });
-            if (!badgeRec) continue;
-
-            const existing = await tx.userBadge.findUnique({
-              where: { userId_badgeId: { userId, badgeId: badgeRec.id } },
-            });
-
-            if (!existing) {
-              let userGamification = await tx.userGamification.findUnique({ where: { userId } });
-              if (!userGamification) {
-                userGamification = await tx.userGamification.create({
-                  data: { userId, totalXP: 0, currentStreak: 0, longestStreak: 0, level: 1 },
-                });
-              }
-
-              await tx.userBadge.create({
-                data: { userId, badgeId: badgeRec.id, userGamificationId: userGamification.id },
-              });
-              newBadges.push({ code: badge.code, name: badge.name, icon: badge.icon });
-            }
-          }
+          // Award badges within transaction (batched)
+          const badgesEarned = await this.awardBadgesInTx(tx, userId, strategyResult.badgesToAward);
+          newBadges.push(...badgesEarned);
 
           const result: RewardResult = {
             xpAwarded: totalStreakBonus,
-            newTotalXP,
-            leveledUp,
-            newLevel,
-            newLevelTitle,
+            newTotalXP: xpResult.newTotalXP,
+            leveledUp: xpResult.leveledUp,
+            newLevel: xpResult.newLevel,
+            newLevelTitle: xpResult.newLevelTitle,
             badgesEarned: newBadges,
             streakUpdated: true,
             newStreak: streakResult.currentStreak,

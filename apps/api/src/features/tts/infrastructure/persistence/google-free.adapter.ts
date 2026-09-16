@@ -3,8 +3,7 @@ import type { Readable } from 'node:stream';
 import * as googleTTS from '@sefinek/google-tts-api';
 import type pino from 'pino';
 
-import { AudioProcessor } from './audio-processor.js';
-
+import { AudioProcessor } from '@/features/tts/infrastructure/persistence/audio-processor.js';
 import { TTSStreamService } from '@/features/tts/infrastructure/persistence/tts-factory.js';
 import type {
   TTSService,
@@ -52,12 +51,7 @@ export class GoogleFreeTTSAdapter implements TTSService {
 
     try {
       const textChunks = this.splitTextIntoChunks(text, 200);
-      const audioChunks: Buffer[] = [];
-
-      for (const chunk of textChunks) {
-        const base64 = await googleTTS.getAudioBase64(chunk, { lang, slow });
-        audioChunks.push(Buffer.from(base64, 'base64'));
-      }
+      const audioChunks = await this.synthesizeChunks(textChunks, lang, slow);
 
       // Usamos el tipo Buffer global para evitar errores de SharedArrayBuffer
       let audioBuffer: Buffer = Buffer.concat(audioChunks);
@@ -123,6 +117,32 @@ export class GoogleFreeTTSAdapter implements TTSService {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Synthesizes all chunks in parallel with bounded concurrency (pool of
+   * workers pulling from a shared index), preserving chunk order in the
+   * result so the concatenated audio matches the source text.
+   *
+   * Mirrors the concurrent pattern already used by TTSStreamService.
+   */
+  private async synthesizeChunks(chunks: string[], lang: string, slow: boolean): Promise<Buffer[]> {
+    const MAX_CONCURRENT_SYNTHESIS = 5;
+
+    const results: Buffer[] = new Array(chunks.length);
+    let nextIndex = 0;
+
+    const workerCount = Math.min(MAX_CONCURRENT_SYNTHESIS, chunks.length);
+    const workers = Array.from({ length: workerCount }, async () => {
+      while (nextIndex < chunks.length) {
+        const index = nextIndex++;
+        const base64 = await googleTTS.getAudioBase64(chunks[index], { lang, slow });
+        results[index] = Buffer.from(base64, 'base64');
+      }
+    });
+
+    await Promise.all(workers);
+    return results;
   }
 
   /**
