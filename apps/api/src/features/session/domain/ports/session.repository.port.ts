@@ -1,13 +1,17 @@
-import type { Session, SessionStatus, SessionCheckpoint } from '../entities/session.entity';
+import type {
+  Session,
+  SessionStatus,
+  SessionCheckpoint,
+} from '@/features/session/domain/entities/session.entity.js';
 
 export interface SessionRepository {
   findById(id: string): Promise<Session | null>;
 
   findByStudentAndRecipe(studentId: string, recipeId: string): Promise<Session | null>;
 
-  findByStudent(studentId: string): Promise<Session[]>;
+  findByStudent(studentId: string, limit?: number): Promise<Session[]>;
 
-  findActiveByStudent(studentId: string): Promise<Session[]>;
+  findActiveByStudent(studentId: string, limit?: number): Promise<Session[]>;
 
   create(
     session: Omit<Session, 'startedAt' | 'lastActivityAt' | 'completedAt' | 'escalatedAt' | 'meta'>,

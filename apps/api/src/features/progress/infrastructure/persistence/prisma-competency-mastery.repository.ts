@@ -1,7 +1,13 @@
-import type { CompetencyMastery } from '../../domain/entities/competency-mastery.entity.js';
-import type { CompetencyMasteryRepository } from '../../domain/ports/competency-mastery.repository.port.js';
-
+import type { CompetencyMastery } from '@/features/progress/domain/entities/competency-mastery.entity.js';
+import type { CompetencyMasteryRepository } from '@/features/progress/domain/ports/competency-mastery.repository.port.js';
 import { prisma } from '@/database/client.js';
+
+/**
+ * Safety cap for per-user mastery listings. A student has at most one row per
+ * competency; 500 comfortably covers any realistic catalog while bounding the
+ * query. Raise explicitly per call site — larger reads should paginate.
+ */
+const DEFAULT_MASTERY_LIST_LIMIT = 500;
 
 export class PrismaCompetencyMasteryRepository implements CompetencyMasteryRepository {
   async findById(id: string): Promise<CompetencyMastery | null> {
@@ -9,9 +15,10 @@ export class PrismaCompetencyMasteryRepository implements CompetencyMasteryRepos
     return raw ? this.mapToDomain(raw) : null;
   }
 
-  async findByUserId(userId: string): Promise<CompetencyMastery[]> {
+  async findByUserId(userId: string, limit?: number): Promise<CompetencyMastery[]> {
     const raw = await prisma.competencyMastery.findMany({
       where: { userId },
+      take: limit ?? DEFAULT_MASTERY_LIST_LIMIT,
     });
     return raw.map(this.mapToDomain);
   }

@@ -48,6 +48,13 @@ const mapSessionToDomain = (entity: PrismaSession): Session => ({
   failedAttempts: entity.failedAttempts ?? undefined,
 });
 
+/**
+ * Safety cap for per-student session listings: bounds payload even when the
+ * caller omits an explicit limit. Raise explicitly if a consumer ever needs
+ * more history — it should then paginate instead.
+ */
+const DEFAULT_SESSION_LIST_LIMIT = 100;
+
 export class PrismaSessionRepository implements SessionRepository {
   async findById(id: string): Promise<Session | null> {
     const session = await prisma.session.findUnique({ where: { id } });
@@ -61,21 +68,23 @@ export class PrismaSessionRepository implements SessionRepository {
     return session ? mapSessionToDomain(session) : null;
   }
 
-  async findByStudent(studentId: string): Promise<Session[]> {
+  async findByStudent(studentId: string, limit?: number): Promise<Session[]> {
     const sessions = await prisma.session.findMany({
       where: { studentId },
       orderBy: { startedAt: 'desc' },
+      take: limit ?? DEFAULT_SESSION_LIST_LIMIT,
     });
     return sessions.map(mapSessionToDomain);
   }
 
-  async findActiveByStudent(studentId: string): Promise<Session[]> {
+  async findActiveByStudent(studentId: string, limit?: number): Promise<Session[]> {
     const sessions = await prisma.session.findMany({
       where: {
         studentId,
         status: { in: ['ACTIVE', 'PAUSED_FOR_QUESTION', 'AWAITING_CONFIRMATION', 'PAUSED_IDLE'] },
       },
       orderBy: { lastActivityAt: 'desc' },
+      take: limit ?? DEFAULT_SESSION_LIST_LIMIT,
     });
     return sessions.map(mapSessionToDomain);
   }

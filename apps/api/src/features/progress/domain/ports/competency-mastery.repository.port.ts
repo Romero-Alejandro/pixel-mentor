@@ -1,8 +1,8 @@
-import type { CompetencyMastery } from '../entities/competency-mastery.entity.js';
+import type { CompetencyMastery } from '@/features/progress/domain/entities/competency-mastery.entity.js';
 
 export interface CompetencyMasteryRepository {
   findById(id: string): Promise<CompetencyMastery | null>;
-  findByUserId(userId: string): Promise<CompetencyMastery[]>;
+  findByUserId(userId: string, limit?: number): Promise<CompetencyMastery[]>;
   findByUserIdAndCompetencyId(
     userId: string,
     competencyId: string,
