@@ -1,4 +1,5 @@
 import { prisma } from '@/database/client';
+import { moduleLogger } from '@/shared/logger/logger.js';
 import type {
   AdvisoryLockId,
   AdvisoryLockManager,
@@ -13,6 +14,9 @@ import {
 
 export class PostgresAdvisoryLockManager implements AdvisoryLockManager {
   private static instance: PostgresAdvisoryLockManager;
+
+  /** Shared logger — this file previously swallowed errors silently. */
+  private readonly logger = moduleLogger('session:advisory-lock');
 
   static getInstance(): PostgresAdvisoryLockManager {
     if (!PostgresAdvisoryLockManager.instance) {
@@ -53,7 +57,14 @@ export class PostgresAdvisoryLockManager implements AdvisoryLockManager {
     try {
       const result = await prisma.$executeRaw`SELECT pg_advisory_unlock(${lockValue})`;
       return result === 1;
-    } catch {
+    } catch (error) {
+      // Non-throwing by contract: releaseLock runs inside `finally` blocks
+      // (withLock, orchestrate-recipe) where a throw would mask the original
+      // error. Log so "DB down" is not indistinguishable from "not lock owner".
+      this.logger.error(
+        { err: error, lockId, lockValue: lockValue.toString() },
+        'Failed to release advisory lock (database may be unreachable)',
+      );
       return false;
     }
   }
@@ -66,7 +77,13 @@ export class PostgresAdvisoryLockManager implements AdvisoryLockManager {
         [{ lock_status: boolean }]
       >`SELECT pg_advisory_lock_status(${lockValue}) as lock_status`;
       return result[0]?.lock_status ?? false;
-    } catch {
+    } catch (error) {
+      // Non-throwing by contract: callers treat `false` as "not locked".
+      // Log so a connection failure is observable instead of silent.
+      this.logger.error(
+        { err: error, lockId, lockValue: lockValue.toString() },
+        'Failed to check advisory lock status (database may be unreachable)',
+      );
       return false;
     }
   }

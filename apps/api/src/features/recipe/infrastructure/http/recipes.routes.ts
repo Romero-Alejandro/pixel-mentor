@@ -29,6 +29,70 @@ import {
   normalizeStepData,
 } from '@/shared/dto/index';
 import type { AppRequest } from '@/shared/types/express.d.js';
+import type {
+  Recipe,
+  RecipeStep,
+  StepType,
+} from '@/features/recipe/domain/entities/recipe.entity.js';
+
+/** JSON-serializable step as returned by the recipes API. */
+type RecipeStepResponse = RecipeStep & { stepType: StepType };
+
+/** JSON-serializable recipe as returned by the recipes API. */
+interface RecipeApiResponse {
+  id: string;
+  canonicalId: string;
+  title: string;
+  description?: string;
+  expectedDurationMinutes?: number;
+  version: string;
+  published: boolean;
+  moduleId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  steps: RecipeStepResponse[];
+}
+
+/** Unwrap the CanonicalId VO (or a raw string, defensively) to its string form. */
+function canonicalIdToString(value: Recipe['canonicalId']): string {
+  return typeof value === 'string' ? value : value.value;
+}
+
+/** Unwrap the ExpectedDuration VO to plain minutes. */
+function durationToMinutes(value: Recipe['expectedDurationMinutes']): number | undefined {
+  if (value === undefined) return undefined;
+  return typeof value === 'number' ? value : value.minutes;
+}
+
+/** Serialize the SemanticVersion VO (or a raw value, defensively). */
+function versionToString(value: Recipe['version']): string {
+  return typeof value === 'object' ? value.toString() : String(value);
+}
+
+/** Map domain steps to the API shape, defaulting stepType like the UI expects. */
+function mapRecipeSteps(steps: readonly RecipeStep[]): RecipeStepResponse[] {
+  return steps.map((step) => ({
+    ...step,
+    stepType: step.stepType ?? 'content',
+  }));
+}
+
+/** Transform a domain Recipe into its JSON-serializable API response. */
+function toRecipeResponse(recipe: Recipe): RecipeApiResponse {
+  return {
+    id: recipe.id,
+    canonicalId: canonicalIdToString(recipe.canonicalId),
+    title: recipe.title,
+    description: recipe.description,
+    expectedDurationMinutes: durationToMinutes(recipe.expectedDurationMinutes),
+    version: versionToString(recipe.version),
+    published: recipe.published,
+    moduleId: recipe.moduleId,
+    createdAt: recipe.createdAt?.toISOString(),
+    updatedAt: recipe.updatedAt?.toISOString(),
+    steps: mapRecipeSteps(recipe.steps ?? []),
+  };
+}
 
 export interface RecipesRouterDependencies {
   getRecipeUseCase: GetRecipeUseCase;
@@ -78,32 +142,7 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
           return;
         }
 
-        // Transform domain objects to plain objects for JSON response
-        const plainRecipe = {
-          id: recipe.id,
-          canonicalId:
-            typeof recipe.canonicalId === 'object'
-              ? (recipe.canonicalId as any).value
-              : recipe.canonicalId,
-          title: recipe.title,
-          description: recipe.description,
-          expectedDurationMinutes:
-            typeof recipe.expectedDurationMinutes === 'object'
-              ? (recipe.expectedDurationMinutes as any).minutes
-              : recipe.expectedDurationMinutes,
-          version:
-            typeof recipe.version === 'object'
-              ? (recipe.version as any).toString()
-              : recipe.version,
-          published: recipe.published,
-          moduleId: recipe.moduleId,
-          createdAt: recipe.createdAt?.toISOString(),
-          updatedAt: recipe.updatedAt?.toISOString(),
-          steps: (recipe.steps || []).map((step: any) => ({
-            ...step,
-            stepType: step.stepType || 'content',
-          })),
-        };
+        const plainRecipe = toRecipeResponse(recipe);
 
         response.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
         response.json(plainRecipe);
@@ -170,10 +209,7 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
 
         const validated = CreateRecipeInputSchema.parse(request.body);
 
-        // Normalizar steps si existen (vienen del AI generator en formato UI)
-        const normalizedSteps = ((validated as any).steps || []).map((step: any) =>
-          normalizeStepData(step),
-        );
+        const normalizedSteps = (validated.steps ?? []).map((step) => normalizeStepData(step));
 
         const recipe = await createRecipeUseCase.execute(
           {
@@ -187,32 +223,7 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
           userId,
         );
 
-        // Transform domain objects to plain objects for JSON response
-        const plainRecipe = {
-          id: recipe.id,
-          canonicalId:
-            typeof recipe.canonicalId === 'object'
-              ? (recipe.canonicalId as any).value
-              : recipe.canonicalId,
-          title: recipe.title,
-          description: recipe.description,
-          expectedDurationMinutes:
-            typeof recipe.expectedDurationMinutes === 'object'
-              ? (recipe.expectedDurationMinutes as any).minutes
-              : recipe.expectedDurationMinutes,
-          version:
-            typeof recipe.version === 'object'
-              ? (recipe.version as any).toString()
-              : recipe.version,
-          published: recipe.published,
-          moduleId: recipe.moduleId,
-          createdAt: recipe.createdAt?.toISOString(),
-          updatedAt: recipe.updatedAt?.toISOString(),
-          steps: (recipe.steps || []).map((step: any) => ({
-            ...step,
-            stepType: step.stepType || 'content',
-          })),
-        };
+        const plainRecipe = toRecipeResponse(recipe);
 
         response.status(201).json(plainRecipe);
       } catch (error) {
@@ -258,7 +269,7 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
           throw validationError;
         }
 
-        console.log('[PATCH recipe] validated data:', JSON.stringify(validated));
+        request.logger?.debug({ validated }, '[PATCH recipe] Validated data');
 
         const recipe = await updateRecipeUseCase.execute(
           recipeId,
@@ -272,29 +283,7 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
           userId,
         );
 
-        // Transform domain objects to plain objects for JSON response
-        const plainRecipe = {
-          id: recipe.id,
-          canonicalId:
-            typeof recipe.canonicalId === 'object'
-              ? (recipe.canonicalId as any).value
-              : recipe.canonicalId,
-          title: recipe.title,
-          description: recipe.description,
-          expectedDurationMinutes:
-            typeof recipe.expectedDurationMinutes === 'object'
-              ? (recipe.expectedDurationMinutes as any).minutes
-              : recipe.expectedDurationMinutes,
-          version:
-            typeof recipe.version === 'object'
-              ? (recipe.version as any).toString()
-              : recipe.version,
-          published: recipe.published,
-          moduleId: recipe.moduleId,
-          createdAt: recipe.createdAt?.toISOString(),
-          updatedAt: recipe.updatedAt?.toISOString(),
-          steps: recipe.steps || [],
-        };
+        const plainRecipe = toRecipeResponse(recipe);
 
         response.json(plainRecipe);
       } catch (error) {
@@ -359,29 +348,23 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
     '/:id/steps',
     // @ts-expect-error - Express 5 compatibility
     async (request: AppRequest, response: Response, next: NextFunction): Promise<void> => {
-      console.log('[addStep POST] Request received');
       try {
         const userId = request.user?.id;
-        console.log('[addStep] userId:', userId);
         if (!userId) {
           response.status(401).json({ error: 'Unauthorized' });
           return;
         }
 
         const recipeId = request.params.id as string;
-        console.log('[addStep] recipeId:', recipeId);
-        console.log('[addStep] Request body:', JSON.stringify(request.body));
-        request.logger?.debug({ body: JSON.stringify(request.body) }, '[addStep] Request body');
+        request.logger?.debug({ recipeId }, '[addStep] Request received');
 
         let validated: RecipeStepInput;
         try {
           // Normalizar datos del formato UI al formato Zod
           const normalized = normalizeStepData(request.body);
-          console.log('[addStep] Normalized data:', JSON.stringify(normalized));
 
           // Validar con Zod schema
           validated = RecipeStepInputSchema.parse(normalized);
-          console.log('[addStep] Zod validated:', JSON.stringify(validated));
         } catch (validationError) {
           if (validationError instanceof z.ZodError) {
             const errorMessages = validationError.issues
@@ -412,20 +395,16 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
             order: validated.order,
             conceptId: validated.conceptId ?? undefined,
             activityId: validated.activityId ?? undefined,
-            stepType: (validated.stepType as any) ?? undefined,
-            script: validated.script as any,
-            activity: validated.activity as any,
-            question: validated.question as any,
+            stepType: validated.stepType,
+            script: validated.script,
+            activity: validated.activity,
+            question: validated.question,
           },
           userId,
         );
-        console.log('[addStep route] Result:', JSON.stringify(step, null, 2));
-
         response.status(201).json(step);
       } catch (error) {
-        // Log the full error for debugging
-        console.error('[addStep] Full error:', error);
-        console.error('[addStep] Error stack:', error instanceof Error ? error.stack : 'No stack');
+        request.logger?.error({ err: error }, '[addStep] Failed');
         if (error instanceof z.ZodError) {
           const errorMessages = error.issues
             .map((issue) => {
@@ -524,10 +503,10 @@ export function createRecipesRouter(deps: RecipesRouterDependencies): Router {
             order: validated.order,
             conceptId: validated.conceptId ?? undefined,
             activityId: validated.activityId ?? undefined,
-            stepType: (validated.stepType as any) ?? undefined,
-            script: validated.script as any,
-            activity: validated.activity as any,
-            question: validated.question as any,
+            stepType: validated.stepType,
+            script: validated.script,
+            activity: validated.activity,
+            question: validated.question,
           },
           userId,
         );
