@@ -2,6 +2,11 @@ import eslintConfigPrettier from 'eslint-config-prettier';
 import prettierPlugin from 'eslint-plugin-prettier';
 import { base, reactConfig, server } from '@pixel-mentor/eslint-config-custom';
 
+// Scope a config-entry file pattern to the API app. Keeps leading `**/` globs
+// (layer-specific entries like `**/infrastructure/**`) layer-scoped.
+const scopeToApi = (pattern) =>
+  pattern.startsWith('**/') ? `apps/api/${pattern}` : `apps/api/**/${pattern}`;
+
 export default [
   // Base TypeScript rules for entire monorepo
   {
@@ -43,10 +48,13 @@ export default [
   },
 
   // Backend Node.js API
-  // server is an array of configs; we apply each with files restricted to api/
+  // server is an array of configs; scope each entry's file patterns to apps/api.
+  // NOTE: conf is spread BEFORE files and files are explicitly rewritten —
+  // conf carries its own `files` key (e.g. ['**/*.ts']) which would otherwise
+  // override the api restriction and leak server rules monorepo-wide.
   ...server.map((conf) => ({
-    files: ['apps/api/**/*.ts'],
     ...conf,
+    files: conf.files.map(scopeToApi),
     rules: {
       ...conf.rules,
       'no-var': 'off',
