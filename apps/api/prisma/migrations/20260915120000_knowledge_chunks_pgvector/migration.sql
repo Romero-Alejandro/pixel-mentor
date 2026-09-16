@@ -12,7 +12,15 @@
 -- enforced per query (see PrismaKnowledgeChunkRepository.searchRelevantChunks).
 CREATE EXTENSION IF NOT EXISTS vector;
 
--- JSONB array of numbers → vector literal ('[a,b,c]').
+-- JSONB array of numbers → vector literal.
+-- A JSONB array of numbers cast to text already yields '[1.5,2.5,...]' —
+-- exactly the literal format pgvector accepts for the vector type. The only
+-- difference is the space jsonb inserts after each comma, which the
+-- translate() strips. This keeps the whole transform a pure scalar
+-- expression: ALTER COLUMN ... TYPE ... USING forbids subqueries, so the
+-- previous jsonb_array_elements_text(...) approach failed with
+-- "cannot use subquery in transform expression".
+--
 -- NULL, non-array JSONB and zero-length arrays become NULL (no embedding).
 -- Malformed rows (non-numeric values) surface as cast errors: corrupt data
 -- should fail loudly, not silently degrade search quality.
@@ -24,10 +32,7 @@ ALTER TABLE "knowledge_chunks"
         OR jsonb_typeof("embedding") <> 'array'
         OR jsonb_array_length("embedding") = 0
       THEN NULL::vector
-      ELSE (
-        SELECT ('[' || string_agg(t.value, ',' ORDER BY t.ord) || ']')::vector
-        FROM jsonb_array_elements_text("embedding") WITH ORDINALITY AS t(value, ord)
-      )
+      ELSE translate("embedding"::text, ' ', '')::vector
     END
   );
 
