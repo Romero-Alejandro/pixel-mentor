@@ -19139,7 +19139,6 @@ export namespace Prisma {
     atomId: number
     index: number
     chunkText: number
-    embedding: number
     tsvector: number
     version: number
     isImmutable: number
@@ -19188,7 +19187,6 @@ export namespace Prisma {
     atomId?: true
     index?: true
     chunkText?: true
-    embedding?: true
     tsvector?: true
     version?: true
     isImmutable?: true
@@ -19288,7 +19286,6 @@ export namespace Prisma {
     atomId: string
     index: number
     chunkText: string
-    embedding: JsonValue | null
     tsvector: string | null
     version: number
     isImmutable: boolean
@@ -19320,7 +19317,6 @@ export namespace Prisma {
     atomId?: boolean
     index?: boolean
     chunkText?: boolean
-    embedding?: boolean
     tsvector?: boolean
     version?: boolean
     isImmutable?: boolean
@@ -19334,7 +19330,6 @@ export namespace Prisma {
     atomId?: boolean
     index?: boolean
     chunkText?: boolean
-    embedding?: boolean
     tsvector?: boolean
     version?: boolean
     isImmutable?: boolean
@@ -19348,7 +19343,6 @@ export namespace Prisma {
     atomId?: boolean
     index?: boolean
     chunkText?: boolean
-    embedding?: boolean
     tsvector?: boolean
     version?: boolean
     isImmutable?: boolean
@@ -19362,7 +19356,6 @@ export namespace Prisma {
     atomId?: boolean
     index?: boolean
     chunkText?: boolean
-    embedding?: boolean
     tsvector?: boolean
     version?: boolean
     isImmutable?: boolean
@@ -19370,7 +19363,7 @@ export namespace Prisma {
     updatedAt?: boolean
   }
 
-  export type KnowledgeChunkOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "atomId" | "index" | "chunkText" | "embedding" | "tsvector" | "version" | "isImmutable" | "createdAt" | "updatedAt", ExtArgs["result"]["knowledgeChunk"]>
+  export type KnowledgeChunkOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "atomId" | "index" | "chunkText" | "tsvector" | "version" | "isImmutable" | "createdAt" | "updatedAt", ExtArgs["result"]["knowledgeChunk"]>
   export type KnowledgeChunkInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     atom?: boolean | AtomDefaultArgs<ExtArgs>
   }
@@ -19391,7 +19384,6 @@ export namespace Prisma {
       atomId: string
       index: number
       chunkText: string
-      embedding: Prisma.JsonValue | null
       tsvector: string | null
       version: number
       isImmutable: boolean
@@ -19825,7 +19817,6 @@ export namespace Prisma {
     readonly atomId: FieldRef<"KnowledgeChunk", 'String'>
     readonly index: FieldRef<"KnowledgeChunk", 'Int'>
     readonly chunkText: FieldRef<"KnowledgeChunk", 'String'>
-    readonly embedding: FieldRef<"KnowledgeChunk", 'Json'>
     readonly tsvector: FieldRef<"KnowledgeChunk", 'String'>
     readonly version: FieldRef<"KnowledgeChunk", 'Int'>
     readonly isImmutable: FieldRef<"KnowledgeChunk", 'Boolean'>
@@ -43744,10 +43735,14 @@ export namespace Prisma {
 
   export type ClassAvgAggregateOutputType = {
     version: number | null
+    targetAgeMin: number | null
+    targetAgeMax: number | null
   }
 
   export type ClassSumAggregateOutputType = {
     version: number | null
+    targetAgeMin: number | null
+    targetAgeMax: number | null
   }
 
   export type ClassMinAggregateOutputType = {
@@ -43762,6 +43757,8 @@ export namespace Prisma {
     currentVersionId: string | null
     status: $Enums.ClassStatus | null
     version: number | null
+    targetAgeMin: number | null
+    targetAgeMax: number | null
   }
 
   export type ClassMaxAggregateOutputType = {
@@ -43776,6 +43773,8 @@ export namespace Prisma {
     currentVersionId: string | null
     status: $Enums.ClassStatus | null
     version: number | null
+    targetAgeMin: number | null
+    targetAgeMax: number | null
   }
 
   export type ClassCountAggregateOutputType = {
@@ -43790,16 +43789,22 @@ export namespace Prisma {
     currentVersionId: number
     status: number
     version: number
+    targetAgeMin: number
+    targetAgeMax: number
     _all: number
   }
 
 
   export type ClassAvgAggregateInputType = {
     version?: true
+    targetAgeMin?: true
+    targetAgeMax?: true
   }
 
   export type ClassSumAggregateInputType = {
     version?: true
+    targetAgeMin?: true
+    targetAgeMax?: true
   }
 
   export type ClassMinAggregateInputType = {
@@ -43814,6 +43819,8 @@ export namespace Prisma {
     currentVersionId?: true
     status?: true
     version?: true
+    targetAgeMin?: true
+    targetAgeMax?: true
   }
 
   export type ClassMaxAggregateInputType = {
@@ -43828,6 +43835,8 @@ export namespace Prisma {
     currentVersionId?: true
     status?: true
     version?: true
+    targetAgeMin?: true
+    targetAgeMax?: true
   }
 
   export type ClassCountAggregateInputType = {
@@ -43842,6 +43851,8 @@ export namespace Prisma {
     currentVersionId?: true
     status?: true
     version?: true
+    targetAgeMin?: true
+    targetAgeMax?: true
     _all?: true
   }
 
@@ -43943,6 +43954,8 @@ export namespace Prisma {
     currentVersionId: string | null
     status: $Enums.ClassStatus
     version: number
+    targetAgeMin: number | null
+    targetAgeMax: number | null
     _count: ClassCountAggregateOutputType | null
     _avg: ClassAvgAggregateOutputType | null
     _sum: ClassSumAggregateOutputType | null
@@ -43976,6 +43989,8 @@ export namespace Prisma {
     currentVersionId?: boolean
     status?: boolean
     version?: boolean
+    targetAgeMin?: boolean
+    targetAgeMax?: boolean
     tutor?: boolean | UserDefaultArgs<ExtArgs>
     classTemplate?: boolean | Class$classTemplateArgs<ExtArgs>
     versions?: boolean | Class$versionsArgs<ExtArgs>
@@ -43996,6 +44011,8 @@ export namespace Prisma {
     currentVersionId?: boolean
     status?: boolean
     version?: boolean
+    targetAgeMin?: boolean
+    targetAgeMax?: boolean
     tutor?: boolean | UserDefaultArgs<ExtArgs>
     classTemplate?: boolean | Class$classTemplateArgs<ExtArgs>
   }, ExtArgs["result"]["class"]>
@@ -44012,6 +44029,8 @@ export namespace Prisma {
     currentVersionId?: boolean
     status?: boolean
     version?: boolean
+    targetAgeMin?: boolean
+    targetAgeMax?: boolean
     tutor?: boolean | UserDefaultArgs<ExtArgs>
     classTemplate?: boolean | Class$classTemplateArgs<ExtArgs>
   }, ExtArgs["result"]["class"]>
@@ -44028,9 +44047,11 @@ export namespace Prisma {
     currentVersionId?: boolean
     status?: boolean
     version?: boolean
+    targetAgeMin?: boolean
+    targetAgeMax?: boolean
   }
 
-  export type ClassOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "shortId" | "title" | "description" | "createdAt" | "updatedAt" | "tutorId" | "classTemplateId" | "currentVersionId" | "status" | "version", ExtArgs["result"]["class"]>
+  export type ClassOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "shortId" | "title" | "description" | "createdAt" | "updatedAt" | "tutorId" | "classTemplateId" | "currentVersionId" | "status" | "version" | "targetAgeMin" | "targetAgeMax", ExtArgs["result"]["class"]>
   export type ClassInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     tutor?: boolean | UserDefaultArgs<ExtArgs>
     classTemplate?: boolean | Class$classTemplateArgs<ExtArgs>
@@ -44069,6 +44090,8 @@ export namespace Prisma {
       currentVersionId: string | null
       status: $Enums.ClassStatus
       version: number
+      targetAgeMin: number | null
+      targetAgeMax: number | null
     }, ExtArgs["result"]["class"]>
     composites: {}
   }
@@ -44508,6 +44531,8 @@ export namespace Prisma {
     readonly currentVersionId: FieldRef<"Class", 'String'>
     readonly status: FieldRef<"Class", 'ClassStatus'>
     readonly version: FieldRef<"Class", 'Int'>
+    readonly targetAgeMin: FieldRef<"Class", 'Int'>
+    readonly targetAgeMax: FieldRef<"Class", 'Int'>
   }
     
 
@@ -46145,8 +46170,20 @@ export namespace Prisma {
 
   export type AggregateClassVersion = {
     _count: ClassVersionCountAggregateOutputType | null
+    _avg: ClassVersionAvgAggregateOutputType | null
+    _sum: ClassVersionSumAggregateOutputType | null
     _min: ClassVersionMinAggregateOutputType | null
     _max: ClassVersionMaxAggregateOutputType | null
+  }
+
+  export type ClassVersionAvgAggregateOutputType = {
+    targetAgeMin: number | null
+    targetAgeMax: number | null
+  }
+
+  export type ClassVersionSumAggregateOutputType = {
+    targetAgeMin: number | null
+    targetAgeMax: number | null
   }
 
   export type ClassVersionMinAggregateOutputType = {
@@ -46159,6 +46196,8 @@ export namespace Prisma {
     description: string | null
     slug: string | null
     status: $Enums.ClassStatus | null
+    targetAgeMin: number | null
+    targetAgeMax: number | null
   }
 
   export type ClassVersionMaxAggregateOutputType = {
@@ -46171,6 +46210,8 @@ export namespace Prisma {
     description: string | null
     slug: string | null
     status: $Enums.ClassStatus | null
+    targetAgeMin: number | null
+    targetAgeMax: number | null
   }
 
   export type ClassVersionCountAggregateOutputType = {
@@ -46183,9 +46224,21 @@ export namespace Prisma {
     description: number
     slug: number
     status: number
+    targetAgeMin: number
+    targetAgeMax: number
     _all: number
   }
 
+
+  export type ClassVersionAvgAggregateInputType = {
+    targetAgeMin?: true
+    targetAgeMax?: true
+  }
+
+  export type ClassVersionSumAggregateInputType = {
+    targetAgeMin?: true
+    targetAgeMax?: true
+  }
 
   export type ClassVersionMinAggregateInputType = {
     id?: true
@@ -46197,6 +46250,8 @@ export namespace Prisma {
     description?: true
     slug?: true
     status?: true
+    targetAgeMin?: true
+    targetAgeMax?: true
   }
 
   export type ClassVersionMaxAggregateInputType = {
@@ -46209,6 +46264,8 @@ export namespace Prisma {
     description?: true
     slug?: true
     status?: true
+    targetAgeMin?: true
+    targetAgeMax?: true
   }
 
   export type ClassVersionCountAggregateInputType = {
@@ -46221,6 +46278,8 @@ export namespace Prisma {
     description?: true
     slug?: true
     status?: true
+    targetAgeMin?: true
+    targetAgeMax?: true
     _all?: true
   }
 
@@ -46262,6 +46321,18 @@ export namespace Prisma {
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
      * 
+     * Select which fields to average
+    **/
+    _avg?: ClassVersionAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: ClassVersionSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
      * Select which fields to find the minimum value
     **/
     _min?: ClassVersionMinAggregateInputType
@@ -46292,6 +46363,8 @@ export namespace Prisma {
     take?: number
     skip?: number
     _count?: ClassVersionCountAggregateInputType | true
+    _avg?: ClassVersionAvgAggregateInputType
+    _sum?: ClassVersionSumAggregateInputType
     _min?: ClassVersionMinAggregateInputType
     _max?: ClassVersionMaxAggregateInputType
   }
@@ -46306,7 +46379,11 @@ export namespace Prisma {
     description: string | null
     slug: string
     status: $Enums.ClassStatus
+    targetAgeMin: number | null
+    targetAgeMax: number | null
     _count: ClassVersionCountAggregateOutputType | null
+    _avg: ClassVersionAvgAggregateOutputType | null
+    _sum: ClassVersionSumAggregateOutputType | null
     _min: ClassVersionMinAggregateOutputType | null
     _max: ClassVersionMaxAggregateOutputType | null
   }
@@ -46335,6 +46412,8 @@ export namespace Prisma {
     description?: boolean
     slug?: boolean
     status?: boolean
+    targetAgeMin?: boolean
+    targetAgeMax?: boolean
     class?: boolean | ClassDefaultArgs<ExtArgs>
     lessons?: boolean | ClassVersion$lessonsArgs<ExtArgs>
     _count?: boolean | ClassVersionCountOutputTypeDefaultArgs<ExtArgs>
@@ -46350,6 +46429,8 @@ export namespace Prisma {
     description?: boolean
     slug?: boolean
     status?: boolean
+    targetAgeMin?: boolean
+    targetAgeMax?: boolean
     class?: boolean | ClassDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["classVersion"]>
 
@@ -46363,6 +46444,8 @@ export namespace Prisma {
     description?: boolean
     slug?: boolean
     status?: boolean
+    targetAgeMin?: boolean
+    targetAgeMax?: boolean
     class?: boolean | ClassDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["classVersion"]>
 
@@ -46376,9 +46459,11 @@ export namespace Prisma {
     description?: boolean
     slug?: boolean
     status?: boolean
+    targetAgeMin?: boolean
+    targetAgeMax?: boolean
   }
 
-  export type ClassVersionOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "classId" | "version" | "publishedAt" | "isPublished" | "title" | "description" | "slug" | "status", ExtArgs["result"]["classVersion"]>
+  export type ClassVersionOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "classId" | "version" | "publishedAt" | "isPublished" | "title" | "description" | "slug" | "status" | "targetAgeMin" | "targetAgeMax", ExtArgs["result"]["classVersion"]>
   export type ClassVersionInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     class?: boolean | ClassDefaultArgs<ExtArgs>
     lessons?: boolean | ClassVersion$lessonsArgs<ExtArgs>
@@ -46407,6 +46492,8 @@ export namespace Prisma {
       description: string | null
       slug: string
       status: $Enums.ClassStatus
+      targetAgeMin: number | null
+      targetAgeMax: number | null
     }, ExtArgs["result"]["classVersion"]>
     composites: {}
   }
@@ -46841,6 +46928,8 @@ export namespace Prisma {
     readonly description: FieldRef<"ClassVersion", 'String'>
     readonly slug: FieldRef<"ClassVersion", 'String'>
     readonly status: FieldRef<"ClassVersion", 'ClassStatus'>
+    readonly targetAgeMin: FieldRef<"ClassVersion", 'Int'>
+    readonly targetAgeMax: FieldRef<"ClassVersion", 'Int'>
   }
     
 
@@ -51922,7 +52011,6 @@ export namespace Prisma {
     atomId: 'atomId',
     index: 'index',
     chunkText: 'chunkText',
-    embedding: 'embedding',
     tsvector: 'tsvector',
     version: 'version',
     isImmutable: 'isImmutable',
@@ -52219,7 +52307,9 @@ export namespace Prisma {
     classTemplateId: 'classTemplateId',
     currentVersionId: 'currentVersionId',
     status: 'status',
-    version: 'version'
+    version: 'version',
+    targetAgeMin: 'targetAgeMin',
+    targetAgeMax: 'targetAgeMax'
   };
 
   export type ClassScalarFieldEnum = (typeof ClassScalarFieldEnum)[keyof typeof ClassScalarFieldEnum]
@@ -52247,7 +52337,9 @@ export namespace Prisma {
     title: 'title',
     description: 'description',
     slug: 'slug',
-    status: 'status'
+    status: 'status',
+    targetAgeMin: 'targetAgeMin',
+    targetAgeMax: 'targetAgeMax'
   };
 
   export type ClassVersionScalarFieldEnum = (typeof ClassVersionScalarFieldEnum)[keyof typeof ClassVersionScalarFieldEnum]
@@ -53586,7 +53678,6 @@ export namespace Prisma {
     atomId?: StringFilter<"KnowledgeChunk"> | string
     index?: IntFilter<"KnowledgeChunk"> | number
     chunkText?: StringFilter<"KnowledgeChunk"> | string
-    embedding?: JsonNullableFilter<"KnowledgeChunk">
     tsvector?: StringNullableFilter<"KnowledgeChunk"> | string | null
     version?: IntFilter<"KnowledgeChunk"> | number
     isImmutable?: BoolFilter<"KnowledgeChunk"> | boolean
@@ -53600,7 +53691,6 @@ export namespace Prisma {
     atomId?: SortOrder
     index?: SortOrder
     chunkText?: SortOrder
-    embedding?: SortOrderInput | SortOrder
     tsvector?: SortOrderInput | SortOrder
     version?: SortOrder
     isImmutable?: SortOrder
@@ -53617,7 +53707,6 @@ export namespace Prisma {
     atomId?: StringFilter<"KnowledgeChunk"> | string
     index?: IntFilter<"KnowledgeChunk"> | number
     chunkText?: StringFilter<"KnowledgeChunk"> | string
-    embedding?: JsonNullableFilter<"KnowledgeChunk">
     tsvector?: StringNullableFilter<"KnowledgeChunk"> | string | null
     version?: IntFilter<"KnowledgeChunk"> | number
     isImmutable?: BoolFilter<"KnowledgeChunk"> | boolean
@@ -53631,7 +53720,6 @@ export namespace Prisma {
     atomId?: SortOrder
     index?: SortOrder
     chunkText?: SortOrder
-    embedding?: SortOrderInput | SortOrder
     tsvector?: SortOrderInput | SortOrder
     version?: SortOrder
     isImmutable?: SortOrder
@@ -53652,7 +53740,6 @@ export namespace Prisma {
     atomId?: StringWithAggregatesFilter<"KnowledgeChunk"> | string
     index?: IntWithAggregatesFilter<"KnowledgeChunk"> | number
     chunkText?: StringWithAggregatesFilter<"KnowledgeChunk"> | string
-    embedding?: JsonNullableWithAggregatesFilter<"KnowledgeChunk">
     tsvector?: StringNullableWithAggregatesFilter<"KnowledgeChunk"> | string | null
     version?: IntWithAggregatesFilter<"KnowledgeChunk"> | number
     isImmutable?: BoolWithAggregatesFilter<"KnowledgeChunk"> | boolean
@@ -55129,6 +55216,8 @@ export namespace Prisma {
     currentVersionId?: StringNullableFilter<"Class"> | string | null
     status?: EnumClassStatusFilter<"Class"> | $Enums.ClassStatus
     version?: IntFilter<"Class"> | number
+    targetAgeMin?: IntNullableFilter<"Class"> | number | null
+    targetAgeMax?: IntNullableFilter<"Class"> | number | null
     tutor?: XOR<UserScalarRelationFilter, UserWhereInput>
     classTemplate?: XOR<ClassTemplateNullableScalarRelationFilter, ClassTemplateWhereInput> | null
     versions?: ClassVersionListRelationFilter
@@ -55148,6 +55237,8 @@ export namespace Prisma {
     currentVersionId?: SortOrderInput | SortOrder
     status?: SortOrder
     version?: SortOrder
+    targetAgeMin?: SortOrderInput | SortOrder
+    targetAgeMax?: SortOrderInput | SortOrder
     tutor?: UserOrderByWithRelationInput
     classTemplate?: ClassTemplateOrderByWithRelationInput
     versions?: ClassVersionOrderByRelationAggregateInput
@@ -55170,6 +55261,8 @@ export namespace Prisma {
     currentVersionId?: StringNullableFilter<"Class"> | string | null
     status?: EnumClassStatusFilter<"Class"> | $Enums.ClassStatus
     version?: IntFilter<"Class"> | number
+    targetAgeMin?: IntNullableFilter<"Class"> | number | null
+    targetAgeMax?: IntNullableFilter<"Class"> | number | null
     tutor?: XOR<UserScalarRelationFilter, UserWhereInput>
     classTemplate?: XOR<ClassTemplateNullableScalarRelationFilter, ClassTemplateWhereInput> | null
     versions?: ClassVersionListRelationFilter
@@ -55189,6 +55282,8 @@ export namespace Prisma {
     currentVersionId?: SortOrderInput | SortOrder
     status?: SortOrder
     version?: SortOrder
+    targetAgeMin?: SortOrderInput | SortOrder
+    targetAgeMax?: SortOrderInput | SortOrder
     _count?: ClassCountOrderByAggregateInput
     _avg?: ClassAvgOrderByAggregateInput
     _max?: ClassMaxOrderByAggregateInput
@@ -55211,6 +55306,8 @@ export namespace Prisma {
     currentVersionId?: StringNullableWithAggregatesFilter<"Class"> | string | null
     status?: EnumClassStatusWithAggregatesFilter<"Class"> | $Enums.ClassStatus
     version?: IntWithAggregatesFilter<"Class"> | number
+    targetAgeMin?: IntNullableWithAggregatesFilter<"Class"> | number | null
+    targetAgeMax?: IntNullableWithAggregatesFilter<"Class"> | number | null
   }
 
   export type ClassLessonWhereInput = {
@@ -55297,6 +55394,8 @@ export namespace Prisma {
     description?: StringNullableFilter<"ClassVersion"> | string | null
     slug?: StringFilter<"ClassVersion"> | string
     status?: EnumClassStatusFilter<"ClassVersion"> | $Enums.ClassStatus
+    targetAgeMin?: IntNullableFilter<"ClassVersion"> | number | null
+    targetAgeMax?: IntNullableFilter<"ClassVersion"> | number | null
     class?: XOR<ClassScalarRelationFilter, ClassWhereInput>
     lessons?: ClassVersionLessonListRelationFilter
   }
@@ -55311,6 +55410,8 @@ export namespace Prisma {
     description?: SortOrderInput | SortOrder
     slug?: SortOrder
     status?: SortOrder
+    targetAgeMin?: SortOrderInput | SortOrder
+    targetAgeMax?: SortOrderInput | SortOrder
     class?: ClassOrderByWithRelationInput
     lessons?: ClassVersionLessonOrderByRelationAggregateInput
   }
@@ -55329,6 +55430,8 @@ export namespace Prisma {
     description?: StringNullableFilter<"ClassVersion"> | string | null
     slug?: StringFilter<"ClassVersion"> | string
     status?: EnumClassStatusFilter<"ClassVersion"> | $Enums.ClassStatus
+    targetAgeMin?: IntNullableFilter<"ClassVersion"> | number | null
+    targetAgeMax?: IntNullableFilter<"ClassVersion"> | number | null
     class?: XOR<ClassScalarRelationFilter, ClassWhereInput>
     lessons?: ClassVersionLessonListRelationFilter
   }, "id" | "classId_version">
@@ -55343,9 +55446,13 @@ export namespace Prisma {
     description?: SortOrderInput | SortOrder
     slug?: SortOrder
     status?: SortOrder
+    targetAgeMin?: SortOrderInput | SortOrder
+    targetAgeMax?: SortOrderInput | SortOrder
     _count?: ClassVersionCountOrderByAggregateInput
+    _avg?: ClassVersionAvgOrderByAggregateInput
     _max?: ClassVersionMaxOrderByAggregateInput
     _min?: ClassVersionMinOrderByAggregateInput
+    _sum?: ClassVersionSumOrderByAggregateInput
   }
 
   export type ClassVersionScalarWhereWithAggregatesInput = {
@@ -55361,6 +55468,8 @@ export namespace Prisma {
     description?: StringNullableWithAggregatesFilter<"ClassVersion"> | string | null
     slug?: StringWithAggregatesFilter<"ClassVersion"> | string
     status?: EnumClassStatusWithAggregatesFilter<"ClassVersion"> | $Enums.ClassStatus
+    targetAgeMin?: IntNullableWithAggregatesFilter<"ClassVersion"> | number | null
+    targetAgeMax?: IntNullableWithAggregatesFilter<"ClassVersion"> | number | null
   }
 
   export type ClassVersionLessonWhereInput = {
@@ -56732,7 +56841,6 @@ export namespace Prisma {
     id?: string
     index: number
     chunkText: string
-    embedding?: NullableJsonNullValueInput | InputJsonValue
     tsvector?: string | null
     version?: number
     isImmutable?: boolean
@@ -56746,7 +56854,6 @@ export namespace Prisma {
     atomId: string
     index: number
     chunkText: string
-    embedding?: NullableJsonNullValueInput | InputJsonValue
     tsvector?: string | null
     version?: number
     isImmutable?: boolean
@@ -56758,7 +56865,6 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     index?: IntFieldUpdateOperationsInput | number
     chunkText?: StringFieldUpdateOperationsInput | string
-    embedding?: NullableJsonNullValueInput | InputJsonValue
     tsvector?: NullableStringFieldUpdateOperationsInput | string | null
     version?: IntFieldUpdateOperationsInput | number
     isImmutable?: BoolFieldUpdateOperationsInput | boolean
@@ -56772,7 +56878,6 @@ export namespace Prisma {
     atomId?: StringFieldUpdateOperationsInput | string
     index?: IntFieldUpdateOperationsInput | number
     chunkText?: StringFieldUpdateOperationsInput | string
-    embedding?: NullableJsonNullValueInput | InputJsonValue
     tsvector?: NullableStringFieldUpdateOperationsInput | string | null
     version?: IntFieldUpdateOperationsInput | number
     isImmutable?: BoolFieldUpdateOperationsInput | boolean
@@ -56785,7 +56890,6 @@ export namespace Prisma {
     atomId: string
     index: number
     chunkText: string
-    embedding?: NullableJsonNullValueInput | InputJsonValue
     tsvector?: string | null
     version?: number
     isImmutable?: boolean
@@ -56797,7 +56901,6 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     index?: IntFieldUpdateOperationsInput | number
     chunkText?: StringFieldUpdateOperationsInput | string
-    embedding?: NullableJsonNullValueInput | InputJsonValue
     tsvector?: NullableStringFieldUpdateOperationsInput | string | null
     version?: IntFieldUpdateOperationsInput | number
     isImmutable?: BoolFieldUpdateOperationsInput | boolean
@@ -56810,7 +56913,6 @@ export namespace Prisma {
     atomId?: StringFieldUpdateOperationsInput | string
     index?: IntFieldUpdateOperationsInput | number
     chunkText?: StringFieldUpdateOperationsInput | string
-    embedding?: NullableJsonNullValueInput | InputJsonValue
     tsvector?: NullableStringFieldUpdateOperationsInput | string | null
     version?: IntFieldUpdateOperationsInput | number
     isImmutable?: BoolFieldUpdateOperationsInput | boolean
@@ -58325,6 +58427,8 @@ export namespace Prisma {
     currentVersionId?: string | null
     status?: $Enums.ClassStatus
     version?: number
+    targetAgeMin?: number | null
+    targetAgeMax?: number | null
     tutor: UserCreateNestedOneWithoutCreatedClassesInput
     classTemplate?: ClassTemplateCreateNestedOneWithoutClassesInput
     versions?: ClassVersionCreateNestedManyWithoutClassInput
@@ -58344,6 +58448,8 @@ export namespace Prisma {
     currentVersionId?: string | null
     status?: $Enums.ClassStatus
     version?: number
+    targetAgeMin?: number | null
+    targetAgeMax?: number | null
     versions?: ClassVersionUncheckedCreateNestedManyWithoutClassInput
     lessons?: ClassLessonUncheckedCreateNestedManyWithoutClassInput
     groupAssignments?: GroupClassUncheckedCreateNestedManyWithoutClassInput
@@ -58359,6 +58465,8 @@ export namespace Prisma {
     currentVersionId?: NullableStringFieldUpdateOperationsInput | string | null
     status?: EnumClassStatusFieldUpdateOperationsInput | $Enums.ClassStatus
     version?: IntFieldUpdateOperationsInput | number
+    targetAgeMin?: NullableIntFieldUpdateOperationsInput | number | null
+    targetAgeMax?: NullableIntFieldUpdateOperationsInput | number | null
     tutor?: UserUpdateOneRequiredWithoutCreatedClassesNestedInput
     classTemplate?: ClassTemplateUpdateOneWithoutClassesNestedInput
     versions?: ClassVersionUpdateManyWithoutClassNestedInput
@@ -58378,6 +58486,8 @@ export namespace Prisma {
     currentVersionId?: NullableStringFieldUpdateOperationsInput | string | null
     status?: EnumClassStatusFieldUpdateOperationsInput | $Enums.ClassStatus
     version?: IntFieldUpdateOperationsInput | number
+    targetAgeMin?: NullableIntFieldUpdateOperationsInput | number | null
+    targetAgeMax?: NullableIntFieldUpdateOperationsInput | number | null
     versions?: ClassVersionUncheckedUpdateManyWithoutClassNestedInput
     lessons?: ClassLessonUncheckedUpdateManyWithoutClassNestedInput
     groupAssignments?: GroupClassUncheckedUpdateManyWithoutClassNestedInput
@@ -58395,6 +58505,8 @@ export namespace Prisma {
     currentVersionId?: string | null
     status?: $Enums.ClassStatus
     version?: number
+    targetAgeMin?: number | null
+    targetAgeMax?: number | null
   }
 
   export type ClassUpdateManyMutationInput = {
@@ -58407,6 +58519,8 @@ export namespace Prisma {
     currentVersionId?: NullableStringFieldUpdateOperationsInput | string | null
     status?: EnumClassStatusFieldUpdateOperationsInput | $Enums.ClassStatus
     version?: IntFieldUpdateOperationsInput | number
+    targetAgeMin?: NullableIntFieldUpdateOperationsInput | number | null
+    targetAgeMax?: NullableIntFieldUpdateOperationsInput | number | null
   }
 
   export type ClassUncheckedUpdateManyInput = {
@@ -58421,6 +58535,8 @@ export namespace Prisma {
     currentVersionId?: NullableStringFieldUpdateOperationsInput | string | null
     status?: EnumClassStatusFieldUpdateOperationsInput | $Enums.ClassStatus
     version?: IntFieldUpdateOperationsInput | number
+    targetAgeMin?: NullableIntFieldUpdateOperationsInput | number | null
+    targetAgeMax?: NullableIntFieldUpdateOperationsInput | number | null
   }
 
   export type ClassLessonCreateInput = {
@@ -58500,6 +58616,8 @@ export namespace Prisma {
     description?: string | null
     slug: string
     status?: $Enums.ClassStatus
+    targetAgeMin?: number | null
+    targetAgeMax?: number | null
     class: ClassCreateNestedOneWithoutVersionsInput
     lessons?: ClassVersionLessonCreateNestedManyWithoutClassVersionInput
   }
@@ -58514,6 +58632,8 @@ export namespace Prisma {
     description?: string | null
     slug: string
     status?: $Enums.ClassStatus
+    targetAgeMin?: number | null
+    targetAgeMax?: number | null
     lessons?: ClassVersionLessonUncheckedCreateNestedManyWithoutClassVersionInput
   }
 
@@ -58526,6 +58646,8 @@ export namespace Prisma {
     description?: NullableStringFieldUpdateOperationsInput | string | null
     slug?: StringFieldUpdateOperationsInput | string
     status?: EnumClassStatusFieldUpdateOperationsInput | $Enums.ClassStatus
+    targetAgeMin?: NullableIntFieldUpdateOperationsInput | number | null
+    targetAgeMax?: NullableIntFieldUpdateOperationsInput | number | null
     class?: ClassUpdateOneRequiredWithoutVersionsNestedInput
     lessons?: ClassVersionLessonUpdateManyWithoutClassVersionNestedInput
   }
@@ -58540,6 +58662,8 @@ export namespace Prisma {
     description?: NullableStringFieldUpdateOperationsInput | string | null
     slug?: StringFieldUpdateOperationsInput | string
     status?: EnumClassStatusFieldUpdateOperationsInput | $Enums.ClassStatus
+    targetAgeMin?: NullableIntFieldUpdateOperationsInput | number | null
+    targetAgeMax?: NullableIntFieldUpdateOperationsInput | number | null
     lessons?: ClassVersionLessonUncheckedUpdateManyWithoutClassVersionNestedInput
   }
 
@@ -58553,6 +58677,8 @@ export namespace Prisma {
     description?: string | null
     slug: string
     status?: $Enums.ClassStatus
+    targetAgeMin?: number | null
+    targetAgeMax?: number | null
   }
 
   export type ClassVersionUpdateManyMutationInput = {
@@ -58564,6 +58690,8 @@ export namespace Prisma {
     description?: NullableStringFieldUpdateOperationsInput | string | null
     slug?: StringFieldUpdateOperationsInput | string
     status?: EnumClassStatusFieldUpdateOperationsInput | $Enums.ClassStatus
+    targetAgeMin?: NullableIntFieldUpdateOperationsInput | number | null
+    targetAgeMax?: NullableIntFieldUpdateOperationsInput | number | null
   }
 
   export type ClassVersionUncheckedUpdateManyInput = {
@@ -58576,6 +58704,8 @@ export namespace Prisma {
     description?: NullableStringFieldUpdateOperationsInput | string | null
     slug?: StringFieldUpdateOperationsInput | string
     status?: EnumClassStatusFieldUpdateOperationsInput | $Enums.ClassStatus
+    targetAgeMin?: NullableIntFieldUpdateOperationsInput | number | null
+    targetAgeMax?: NullableIntFieldUpdateOperationsInput | number | null
   }
 
   export type ClassVersionLessonCreateInput = {
@@ -59976,7 +60106,6 @@ export namespace Prisma {
     atomId?: SortOrder
     index?: SortOrder
     chunkText?: SortOrder
-    embedding?: SortOrder
     tsvector?: SortOrder
     version?: SortOrder
     isImmutable?: SortOrder
@@ -61032,10 +61161,14 @@ export namespace Prisma {
     currentVersionId?: SortOrder
     status?: SortOrder
     version?: SortOrder
+    targetAgeMin?: SortOrder
+    targetAgeMax?: SortOrder
   }
 
   export type ClassAvgOrderByAggregateInput = {
     version?: SortOrder
+    targetAgeMin?: SortOrder
+    targetAgeMax?: SortOrder
   }
 
   export type ClassMaxOrderByAggregateInput = {
@@ -61050,6 +61183,8 @@ export namespace Prisma {
     currentVersionId?: SortOrder
     status?: SortOrder
     version?: SortOrder
+    targetAgeMin?: SortOrder
+    targetAgeMax?: SortOrder
   }
 
   export type ClassMinOrderByAggregateInput = {
@@ -61064,10 +61199,14 @@ export namespace Prisma {
     currentVersionId?: SortOrder
     status?: SortOrder
     version?: SortOrder
+    targetAgeMin?: SortOrder
+    targetAgeMax?: SortOrder
   }
 
   export type ClassSumOrderByAggregateInput = {
     version?: SortOrder
+    targetAgeMin?: SortOrder
+    targetAgeMax?: SortOrder
   }
 
   export type EnumClassStatusWithAggregatesFilter<$PrismaModel = never> = {
@@ -61143,6 +61282,13 @@ export namespace Prisma {
     description?: SortOrder
     slug?: SortOrder
     status?: SortOrder
+    targetAgeMin?: SortOrder
+    targetAgeMax?: SortOrder
+  }
+
+  export type ClassVersionAvgOrderByAggregateInput = {
+    targetAgeMin?: SortOrder
+    targetAgeMax?: SortOrder
   }
 
   export type ClassVersionMaxOrderByAggregateInput = {
@@ -61155,6 +61301,8 @@ export namespace Prisma {
     description?: SortOrder
     slug?: SortOrder
     status?: SortOrder
+    targetAgeMin?: SortOrder
+    targetAgeMax?: SortOrder
   }
 
   export type ClassVersionMinOrderByAggregateInput = {
@@ -61167,6 +61315,13 @@ export namespace Prisma {
     description?: SortOrder
     slug?: SortOrder
     status?: SortOrder
+    targetAgeMin?: SortOrder
+    targetAgeMax?: SortOrder
+  }
+
+  export type ClassVersionSumOrderByAggregateInput = {
+    targetAgeMin?: SortOrder
+    targetAgeMax?: SortOrder
   }
 
   export type ClassVersionScalarRelationFilter = {
@@ -65235,6 +65390,8 @@ export namespace Prisma {
     currentVersionId?: string | null
     status?: $Enums.ClassStatus
     version?: number
+    targetAgeMin?: number | null
+    targetAgeMax?: number | null
     classTemplate?: ClassTemplateCreateNestedOneWithoutClassesInput
     versions?: ClassVersionCreateNestedManyWithoutClassInput
     lessons?: ClassLessonCreateNestedManyWithoutClassInput
@@ -65252,6 +65409,8 @@ export namespace Prisma {
     currentVersionId?: string | null
     status?: $Enums.ClassStatus
     version?: number
+    targetAgeMin?: number | null
+    targetAgeMax?: number | null
     versions?: ClassVersionUncheckedCreateNestedManyWithoutClassInput
     lessons?: ClassLessonUncheckedCreateNestedManyWithoutClassInput
     groupAssignments?: GroupClassUncheckedCreateNestedManyWithoutClassInput
@@ -65771,6 +65930,8 @@ export namespace Prisma {
     currentVersionId?: StringNullableFilter<"Class"> | string | null
     status?: EnumClassStatusFilter<"Class"> | $Enums.ClassStatus
     version?: IntFilter<"Class"> | number
+    targetAgeMin?: IntNullableFilter<"Class"> | number | null
+    targetAgeMax?: IntNullableFilter<"Class"> | number | null
   }
 
   export type ClassTemplateUpsertWithWhereUniqueWithoutTutorInput = {
@@ -67858,7 +68019,6 @@ export namespace Prisma {
     id?: string
     index: number
     chunkText: string
-    embedding?: NullableJsonNullValueInput | InputJsonValue
     tsvector?: string | null
     version?: number
     isImmutable?: boolean
@@ -67870,7 +68030,6 @@ export namespace Prisma {
     id?: string
     index: number
     chunkText: string
-    embedding?: NullableJsonNullValueInput | InputJsonValue
     tsvector?: string | null
     version?: number
     isImmutable?: boolean
@@ -68032,7 +68191,6 @@ export namespace Prisma {
     atomId?: StringFilter<"KnowledgeChunk"> | string
     index?: IntFilter<"KnowledgeChunk"> | number
     chunkText?: StringFilter<"KnowledgeChunk"> | string
-    embedding?: JsonNullableFilter<"KnowledgeChunk">
     tsvector?: StringNullableFilter<"KnowledgeChunk"> | string | null
     version?: IntFilter<"KnowledgeChunk"> | number
     isImmutable?: BoolFilter<"KnowledgeChunk"> | boolean
@@ -71482,6 +71640,8 @@ export namespace Prisma {
     currentVersionId?: string | null
     status?: $Enums.ClassStatus
     version?: number
+    targetAgeMin?: number | null
+    targetAgeMax?: number | null
     tutor: UserCreateNestedOneWithoutCreatedClassesInput
     versions?: ClassVersionCreateNestedManyWithoutClassInput
     lessons?: ClassLessonCreateNestedManyWithoutClassInput
@@ -71499,6 +71659,8 @@ export namespace Prisma {
     currentVersionId?: string | null
     status?: $Enums.ClassStatus
     version?: number
+    targetAgeMin?: number | null
+    targetAgeMax?: number | null
     versions?: ClassVersionUncheckedCreateNestedManyWithoutClassInput
     lessons?: ClassLessonUncheckedCreateNestedManyWithoutClassInput
     groupAssignments?: GroupClassUncheckedCreateNestedManyWithoutClassInput
@@ -71694,6 +71856,8 @@ export namespace Prisma {
     description?: string | null
     slug: string
     status?: $Enums.ClassStatus
+    targetAgeMin?: number | null
+    targetAgeMax?: number | null
     lessons?: ClassVersionLessonCreateNestedManyWithoutClassVersionInput
   }
 
@@ -71706,6 +71870,8 @@ export namespace Prisma {
     description?: string | null
     slug: string
     status?: $Enums.ClassStatus
+    targetAgeMin?: number | null
+    targetAgeMax?: number | null
     lessons?: ClassVersionLessonUncheckedCreateNestedManyWithoutClassVersionInput
   }
 
@@ -71898,6 +72064,8 @@ export namespace Prisma {
     description?: StringNullableFilter<"ClassVersion"> | string | null
     slug?: StringFilter<"ClassVersion"> | string
     status?: EnumClassStatusFilter<"ClassVersion"> | $Enums.ClassStatus
+    targetAgeMin?: IntNullableFilter<"ClassVersion"> | number | null
+    targetAgeMax?: IntNullableFilter<"ClassVersion"> | number | null
   }
 
   export type ClassLessonUpsertWithWhereUniqueWithoutClassInput = {
@@ -71953,6 +72121,8 @@ export namespace Prisma {
     currentVersionId?: string | null
     status?: $Enums.ClassStatus
     version?: number
+    targetAgeMin?: number | null
+    targetAgeMax?: number | null
     tutor: UserCreateNestedOneWithoutCreatedClassesInput
     classTemplate?: ClassTemplateCreateNestedOneWithoutClassesInput
     versions?: ClassVersionCreateNestedManyWithoutClassInput
@@ -71971,6 +72141,8 @@ export namespace Prisma {
     currentVersionId?: string | null
     status?: $Enums.ClassStatus
     version?: number
+    targetAgeMin?: number | null
+    targetAgeMax?: number | null
     versions?: ClassVersionUncheckedCreateNestedManyWithoutClassInput
     groupAssignments?: GroupClassUncheckedCreateNestedManyWithoutClassInput
   }
@@ -72048,6 +72220,8 @@ export namespace Prisma {
     currentVersionId?: NullableStringFieldUpdateOperationsInput | string | null
     status?: EnumClassStatusFieldUpdateOperationsInput | $Enums.ClassStatus
     version?: IntFieldUpdateOperationsInput | number
+    targetAgeMin?: NullableIntFieldUpdateOperationsInput | number | null
+    targetAgeMax?: NullableIntFieldUpdateOperationsInput | number | null
     tutor?: UserUpdateOneRequiredWithoutCreatedClassesNestedInput
     classTemplate?: ClassTemplateUpdateOneWithoutClassesNestedInput
     versions?: ClassVersionUpdateManyWithoutClassNestedInput
@@ -72066,6 +72240,8 @@ export namespace Prisma {
     currentVersionId?: NullableStringFieldUpdateOperationsInput | string | null
     status?: EnumClassStatusFieldUpdateOperationsInput | $Enums.ClassStatus
     version?: IntFieldUpdateOperationsInput | number
+    targetAgeMin?: NullableIntFieldUpdateOperationsInput | number | null
+    targetAgeMax?: NullableIntFieldUpdateOperationsInput | number | null
     versions?: ClassVersionUncheckedUpdateManyWithoutClassNestedInput
     groupAssignments?: GroupClassUncheckedUpdateManyWithoutClassNestedInput
   }
@@ -72133,6 +72309,8 @@ export namespace Prisma {
     currentVersionId?: string | null
     status?: $Enums.ClassStatus
     version?: number
+    targetAgeMin?: number | null
+    targetAgeMax?: number | null
     tutor: UserCreateNestedOneWithoutCreatedClassesInput
     classTemplate?: ClassTemplateCreateNestedOneWithoutClassesInput
     lessons?: ClassLessonCreateNestedManyWithoutClassInput
@@ -72151,6 +72329,8 @@ export namespace Prisma {
     currentVersionId?: string | null
     status?: $Enums.ClassStatus
     version?: number
+    targetAgeMin?: number | null
+    targetAgeMax?: number | null
     lessons?: ClassLessonUncheckedCreateNestedManyWithoutClassInput
     groupAssignments?: GroupClassUncheckedCreateNestedManyWithoutClassInput
   }
@@ -72211,6 +72391,8 @@ export namespace Prisma {
     currentVersionId?: NullableStringFieldUpdateOperationsInput | string | null
     status?: EnumClassStatusFieldUpdateOperationsInput | $Enums.ClassStatus
     version?: IntFieldUpdateOperationsInput | number
+    targetAgeMin?: NullableIntFieldUpdateOperationsInput | number | null
+    targetAgeMax?: NullableIntFieldUpdateOperationsInput | number | null
     tutor?: UserUpdateOneRequiredWithoutCreatedClassesNestedInput
     classTemplate?: ClassTemplateUpdateOneWithoutClassesNestedInput
     lessons?: ClassLessonUpdateManyWithoutClassNestedInput
@@ -72229,6 +72411,8 @@ export namespace Prisma {
     currentVersionId?: NullableStringFieldUpdateOperationsInput | string | null
     status?: EnumClassStatusFieldUpdateOperationsInput | $Enums.ClassStatus
     version?: IntFieldUpdateOperationsInput | number
+    targetAgeMin?: NullableIntFieldUpdateOperationsInput | number | null
+    targetAgeMax?: NullableIntFieldUpdateOperationsInput | number | null
     lessons?: ClassLessonUncheckedUpdateManyWithoutClassNestedInput
     groupAssignments?: GroupClassUncheckedUpdateManyWithoutClassNestedInput
   }
@@ -72258,6 +72442,8 @@ export namespace Prisma {
     description?: string | null
     slug: string
     status?: $Enums.ClassStatus
+    targetAgeMin?: number | null
+    targetAgeMax?: number | null
     class: ClassCreateNestedOneWithoutVersionsInput
   }
 
@@ -72271,6 +72457,8 @@ export namespace Prisma {
     description?: string | null
     slug: string
     status?: $Enums.ClassStatus
+    targetAgeMin?: number | null
+    targetAgeMax?: number | null
   }
 
   export type ClassVersionCreateOrConnectWithoutLessonsInput = {
@@ -72345,6 +72533,8 @@ export namespace Prisma {
     description?: NullableStringFieldUpdateOperationsInput | string | null
     slug?: StringFieldUpdateOperationsInput | string
     status?: EnumClassStatusFieldUpdateOperationsInput | $Enums.ClassStatus
+    targetAgeMin?: NullableIntFieldUpdateOperationsInput | number | null
+    targetAgeMax?: NullableIntFieldUpdateOperationsInput | number | null
     class?: ClassUpdateOneRequiredWithoutVersionsNestedInput
   }
 
@@ -72358,6 +72548,8 @@ export namespace Prisma {
     description?: NullableStringFieldUpdateOperationsInput | string | null
     slug?: StringFieldUpdateOperationsInput | string
     status?: EnumClassStatusFieldUpdateOperationsInput | $Enums.ClassStatus
+    targetAgeMin?: NullableIntFieldUpdateOperationsInput | number | null
+    targetAgeMax?: NullableIntFieldUpdateOperationsInput | number | null
   }
 
   export type RecipeUpsertWithoutClassVersionLessonsInput = {
@@ -72848,6 +73040,8 @@ export namespace Prisma {
     currentVersionId?: string | null
     status?: $Enums.ClassStatus
     version?: number
+    targetAgeMin?: number | null
+    targetAgeMax?: number | null
     tutor: UserCreateNestedOneWithoutCreatedClassesInput
     classTemplate?: ClassTemplateCreateNestedOneWithoutClassesInput
     versions?: ClassVersionCreateNestedManyWithoutClassInput
@@ -72866,6 +73060,8 @@ export namespace Prisma {
     currentVersionId?: string | null
     status?: $Enums.ClassStatus
     version?: number
+    targetAgeMin?: number | null
+    targetAgeMax?: number | null
     versions?: ClassVersionUncheckedCreateNestedManyWithoutClassInput
     lessons?: ClassLessonUncheckedCreateNestedManyWithoutClassInput
   }
@@ -72927,6 +73123,8 @@ export namespace Prisma {
     currentVersionId?: NullableStringFieldUpdateOperationsInput | string | null
     status?: EnumClassStatusFieldUpdateOperationsInput | $Enums.ClassStatus
     version?: IntFieldUpdateOperationsInput | number
+    targetAgeMin?: NullableIntFieldUpdateOperationsInput | number | null
+    targetAgeMax?: NullableIntFieldUpdateOperationsInput | number | null
     tutor?: UserUpdateOneRequiredWithoutCreatedClassesNestedInput
     classTemplate?: ClassTemplateUpdateOneWithoutClassesNestedInput
     versions?: ClassVersionUpdateManyWithoutClassNestedInput
@@ -72945,6 +73143,8 @@ export namespace Prisma {
     currentVersionId?: NullableStringFieldUpdateOperationsInput | string | null
     status?: EnumClassStatusFieldUpdateOperationsInput | $Enums.ClassStatus
     version?: IntFieldUpdateOperationsInput | number
+    targetAgeMin?: NullableIntFieldUpdateOperationsInput | number | null
+    targetAgeMax?: NullableIntFieldUpdateOperationsInput | number | null
     versions?: ClassVersionUncheckedUpdateManyWithoutClassNestedInput
     lessons?: ClassLessonUncheckedUpdateManyWithoutClassNestedInput
   }
@@ -73049,6 +73249,8 @@ export namespace Prisma {
     currentVersionId?: string | null
     status?: $Enums.ClassStatus
     version?: number
+    targetAgeMin?: number | null
+    targetAgeMax?: number | null
   }
 
   export type ClassTemplateCreateManyTutorInput = {
@@ -73370,6 +73572,8 @@ export namespace Prisma {
     currentVersionId?: NullableStringFieldUpdateOperationsInput | string | null
     status?: EnumClassStatusFieldUpdateOperationsInput | $Enums.ClassStatus
     version?: IntFieldUpdateOperationsInput | number
+    targetAgeMin?: NullableIntFieldUpdateOperationsInput | number | null
+    targetAgeMax?: NullableIntFieldUpdateOperationsInput | number | null
     classTemplate?: ClassTemplateUpdateOneWithoutClassesNestedInput
     versions?: ClassVersionUpdateManyWithoutClassNestedInput
     lessons?: ClassLessonUpdateManyWithoutClassNestedInput
@@ -73387,6 +73591,8 @@ export namespace Prisma {
     currentVersionId?: NullableStringFieldUpdateOperationsInput | string | null
     status?: EnumClassStatusFieldUpdateOperationsInput | $Enums.ClassStatus
     version?: IntFieldUpdateOperationsInput | number
+    targetAgeMin?: NullableIntFieldUpdateOperationsInput | number | null
+    targetAgeMax?: NullableIntFieldUpdateOperationsInput | number | null
     versions?: ClassVersionUncheckedUpdateManyWithoutClassNestedInput
     lessons?: ClassLessonUncheckedUpdateManyWithoutClassNestedInput
     groupAssignments?: GroupClassUncheckedUpdateManyWithoutClassNestedInput
@@ -73403,6 +73609,8 @@ export namespace Prisma {
     currentVersionId?: NullableStringFieldUpdateOperationsInput | string | null
     status?: EnumClassStatusFieldUpdateOperationsInput | $Enums.ClassStatus
     version?: IntFieldUpdateOperationsInput | number
+    targetAgeMin?: NullableIntFieldUpdateOperationsInput | number | null
+    targetAgeMax?: NullableIntFieldUpdateOperationsInput | number | null
   }
 
   export type ClassTemplateUpdateWithoutTutorInput = {
@@ -74215,7 +74423,6 @@ export namespace Prisma {
     id?: string
     index: number
     chunkText: string
-    embedding?: NullableJsonNullValueInput | InputJsonValue
     tsvector?: string | null
     version?: number
     isImmutable?: boolean
@@ -74415,7 +74622,6 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     index?: IntFieldUpdateOperationsInput | number
     chunkText?: StringFieldUpdateOperationsInput | string
-    embedding?: NullableJsonNullValueInput | InputJsonValue
     tsvector?: NullableStringFieldUpdateOperationsInput | string | null
     version?: IntFieldUpdateOperationsInput | number
     isImmutable?: BoolFieldUpdateOperationsInput | boolean
@@ -74427,7 +74633,6 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     index?: IntFieldUpdateOperationsInput | number
     chunkText?: StringFieldUpdateOperationsInput | string
-    embedding?: NullableJsonNullValueInput | InputJsonValue
     tsvector?: NullableStringFieldUpdateOperationsInput | string | null
     version?: IntFieldUpdateOperationsInput | number
     isImmutable?: BoolFieldUpdateOperationsInput | boolean
@@ -74439,7 +74644,6 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     index?: IntFieldUpdateOperationsInput | number
     chunkText?: StringFieldUpdateOperationsInput | string
-    embedding?: NullableJsonNullValueInput | InputJsonValue
     tsvector?: NullableStringFieldUpdateOperationsInput | string | null
     version?: IntFieldUpdateOperationsInput | number
     isImmutable?: BoolFieldUpdateOperationsInput | boolean
@@ -74794,6 +74998,8 @@ export namespace Prisma {
     currentVersionId?: string | null
     status?: $Enums.ClassStatus
     version?: number
+    targetAgeMin?: number | null
+    targetAgeMax?: number | null
   }
 
   export type ClassUpdateWithoutClassTemplateInput = {
@@ -74806,6 +75012,8 @@ export namespace Prisma {
     currentVersionId?: NullableStringFieldUpdateOperationsInput | string | null
     status?: EnumClassStatusFieldUpdateOperationsInput | $Enums.ClassStatus
     version?: IntFieldUpdateOperationsInput | number
+    targetAgeMin?: NullableIntFieldUpdateOperationsInput | number | null
+    targetAgeMax?: NullableIntFieldUpdateOperationsInput | number | null
     tutor?: UserUpdateOneRequiredWithoutCreatedClassesNestedInput
     versions?: ClassVersionUpdateManyWithoutClassNestedInput
     lessons?: ClassLessonUpdateManyWithoutClassNestedInput
@@ -74823,6 +75031,8 @@ export namespace Prisma {
     currentVersionId?: NullableStringFieldUpdateOperationsInput | string | null
     status?: EnumClassStatusFieldUpdateOperationsInput | $Enums.ClassStatus
     version?: IntFieldUpdateOperationsInput | number
+    targetAgeMin?: NullableIntFieldUpdateOperationsInput | number | null
+    targetAgeMax?: NullableIntFieldUpdateOperationsInput | number | null
     versions?: ClassVersionUncheckedUpdateManyWithoutClassNestedInput
     lessons?: ClassLessonUncheckedUpdateManyWithoutClassNestedInput
     groupAssignments?: GroupClassUncheckedUpdateManyWithoutClassNestedInput
@@ -74839,6 +75049,8 @@ export namespace Prisma {
     currentVersionId?: NullableStringFieldUpdateOperationsInput | string | null
     status?: EnumClassStatusFieldUpdateOperationsInput | $Enums.ClassStatus
     version?: IntFieldUpdateOperationsInput | number
+    targetAgeMin?: NullableIntFieldUpdateOperationsInput | number | null
+    targetAgeMax?: NullableIntFieldUpdateOperationsInput | number | null
   }
 
   export type ClassVersionCreateManyClassInput = {
@@ -74850,6 +75062,8 @@ export namespace Prisma {
     description?: string | null
     slug: string
     status?: $Enums.ClassStatus
+    targetAgeMin?: number | null
+    targetAgeMax?: number | null
   }
 
   export type ClassLessonCreateManyClassInput = {
@@ -74877,6 +75091,8 @@ export namespace Prisma {
     description?: NullableStringFieldUpdateOperationsInput | string | null
     slug?: StringFieldUpdateOperationsInput | string
     status?: EnumClassStatusFieldUpdateOperationsInput | $Enums.ClassStatus
+    targetAgeMin?: NullableIntFieldUpdateOperationsInput | number | null
+    targetAgeMax?: NullableIntFieldUpdateOperationsInput | number | null
     lessons?: ClassVersionLessonUpdateManyWithoutClassVersionNestedInput
   }
 
@@ -74889,6 +75105,8 @@ export namespace Prisma {
     description?: NullableStringFieldUpdateOperationsInput | string | null
     slug?: StringFieldUpdateOperationsInput | string
     status?: EnumClassStatusFieldUpdateOperationsInput | $Enums.ClassStatus
+    targetAgeMin?: NullableIntFieldUpdateOperationsInput | number | null
+    targetAgeMax?: NullableIntFieldUpdateOperationsInput | number | null
     lessons?: ClassVersionLessonUncheckedUpdateManyWithoutClassVersionNestedInput
   }
 
@@ -74901,6 +75119,8 @@ export namespace Prisma {
     description?: NullableStringFieldUpdateOperationsInput | string | null
     slug?: StringFieldUpdateOperationsInput | string
     status?: EnumClassStatusFieldUpdateOperationsInput | $Enums.ClassStatus
+    targetAgeMin?: NullableIntFieldUpdateOperationsInput | number | null
+    targetAgeMax?: NullableIntFieldUpdateOperationsInput | number | null
   }
 
   export type ClassLessonUpdateWithoutClassInput = {

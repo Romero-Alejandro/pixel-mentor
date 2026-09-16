@@ -264,7 +264,6 @@ exports.Prisma.KnowledgeChunkScalarFieldEnum = {
   atomId: 'atomId',
   index: 'index',
   chunkText: 'chunkText',
-  embedding: 'embedding',
   tsvector: 'tsvector',
   version: 'version',
   isImmutable: 'isImmutable',
@@ -495,7 +494,9 @@ exports.Prisma.ClassScalarFieldEnum = {
   classTemplateId: 'classTemplateId',
   currentVersionId: 'currentVersionId',
   status: 'status',
-  version: 'version'
+  version: 'version',
+  targetAgeMin: 'targetAgeMin',
+  targetAgeMax: 'targetAgeMax'
 };
 
 exports.Prisma.ClassLessonScalarFieldEnum = {
@@ -517,7 +518,9 @@ exports.Prisma.ClassVersionScalarFieldEnum = {
   title: 'title',
   description: 'description',
   slug: 'slug',
-  status: 'status'
+  status: 'status',
+  targetAgeMin: 'targetAgeMin',
+  targetAgeMax: 'targetAgeMax'
 };
 
 exports.Prisma.ClassVersionLessonScalarFieldEnum = {

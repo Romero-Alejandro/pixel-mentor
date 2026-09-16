@@ -373,16 +373,18 @@ model AtomOption {
 }
 
 model KnowledgeChunk {
-  id          String   @id @default(uuid())
+  id          String                 @id @default(uuid())
   atomId      String
-  index       Int      @db.SmallInt
-  chunkText   String   @db.Text
-  embedding   Json?
+  index       Int                    @db.SmallInt
+  chunkText   String                 @db.Text
+  // Native pgvector column (no fixed dimension: providers use 768 or 1536).
+  // Unsupported = opaque to the Prisma query builder; accessed via queryRaw.
+  embedding   Unsupported("vector")?
   tsvector    String?
-  version     Int      @default(1)
-  isImmutable Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  version     Int                    @default(1)
+  isImmutable Boolean                @default(true)
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
 
   atom Atom @relation(fields: [atomId], references: [id], onDelete: Cascade)
 
@@ -765,6 +767,10 @@ model Class {
   status  ClassStatus @default(DRAFT)
   version Int         @default(0)
 
+  // Target audience (children)
+  targetAgeMin Int? @db.SmallInt
+  targetAgeMax Int? @db.SmallInt
+
   // Lessons in the current draft
   lessons ClassLesson[]
 
@@ -773,6 +779,7 @@ model Class {
 
   @@index([tutorId])
   @@index([status])
+  @@index([status, tutorId])
   @@map("classes")
 }
 
@@ -811,6 +818,10 @@ model ClassVersion {
   description String?
   slug        String      @db.VarChar(255)
   status      ClassStatus @default(PUBLISHED)
+
+  // Target audience snapshot
+  targetAgeMin Int? @db.SmallInt
+  targetAgeMax Int? @db.SmallInt
 
   // Lessons snapshot for this version
   lessons ClassVersionLesson[]

@@ -377,7 +377,9 @@ model KnowledgeChunk {
   atomId      String
   index       Int      @db.SmallInt
   chunkText   String   @db.Text
-  embedding   Json?
+  // Native pgvector column (no fixed dimension: providers use 768 or 1536).
+  // Unsupported = opaque to the Prisma query builder; accessed via queryRaw.
+  embedding   Unsupported("vector")?
   tsvector    String?
   version     Int      @default(1)
   isImmutable Boolean  @default(true)
