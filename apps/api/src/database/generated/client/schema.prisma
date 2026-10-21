@@ -117,18 +117,19 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  sessions         Session[]
-  apiKeys          ApiKey[]
-  attempts         ActivityAttempt[]
-  progressEntries  UserProgress[]
-  competencies     CompetencyMastery[]
-  events           EventLog[]
-  consent          ParentalConsent?
-  userGamification UserGamification?
-  userBadges       UserBadge[]
-  dailyActivities  DailyActivity[]
-  xpTransactions   XpTransaction[]
-  refreshTokens    RefreshToken[]
+  sessions              Session[]
+  apiKeys               ApiKey[]
+  attempts              ActivityAttempt[]
+  progressEntries       UserProgress[]
+  competencies          CompetencyMastery[]
+  events                EventLog[]
+  consent               ParentalConsent?
+  userGamification      UserGamification?
+  userBadges            UserBadge[]
+  dailyActivities       DailyActivity[]
+  xpTransactions        XpTransaction[]
+  gamificationAuditLogs GamificationAuditLog[]
+  refreshTokens         RefreshToken[]
 
   // Class relations
   createdClasses Class[]         @relation("ClassAuthor")
@@ -733,6 +734,11 @@ model GamificationAuditLog {
   succeeded     Boolean  @default(true)
   errorMessage  String?  @db.Text
   createdAt     DateTime @default(now())
+
+  // Audit rows belong to the user they describe: deleting the account deletes
+  // its trail, like daily_activities and user_badges. Without the FK, deleting a
+  // user left unaddressable rows holding their data.
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, eventType, createdAt])
   @@index([userId])

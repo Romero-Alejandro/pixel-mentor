@@ -4700,6 +4700,7 @@ export namespace Prisma {
     userBadges: number
     dailyActivities: number
     xpTransactions: number
+    gamificationAuditLogs: number
     refreshTokens: number
     createdClasses: number
     classTemplates: number
@@ -4718,6 +4719,7 @@ export namespace Prisma {
     userBadges?: boolean | UserCountOutputTypeCountUserBadgesArgs
     dailyActivities?: boolean | UserCountOutputTypeCountDailyActivitiesArgs
     xpTransactions?: boolean | UserCountOutputTypeCountXpTransactionsArgs
+    gamificationAuditLogs?: boolean | UserCountOutputTypeCountGamificationAuditLogsArgs
     refreshTokens?: boolean | UserCountOutputTypeCountRefreshTokensArgs
     createdClasses?: boolean | UserCountOutputTypeCountCreatedClassesArgs
     classTemplates?: boolean | UserCountOutputTypeCountClassTemplatesArgs
@@ -4798,6 +4800,13 @@ export namespace Prisma {
    */
   export type UserCountOutputTypeCountXpTransactionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: XpTransactionWhereInput
+  }
+
+  /**
+   * UserCountOutputType without action
+   */
+  export type UserCountOutputTypeCountGamificationAuditLogsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: GamificationAuditLogWhereInput
   }
 
   /**
@@ -5815,6 +5824,7 @@ export namespace Prisma {
     userBadges?: boolean | User$userBadgesArgs<ExtArgs>
     dailyActivities?: boolean | User$dailyActivitiesArgs<ExtArgs>
     xpTransactions?: boolean | User$xpTransactionsArgs<ExtArgs>
+    gamificationAuditLogs?: boolean | User$gamificationAuditLogsArgs<ExtArgs>
     refreshTokens?: boolean | User$refreshTokensArgs<ExtArgs>
     createdClasses?: boolean | User$createdClassesArgs<ExtArgs>
     classTemplates?: boolean | User$classTemplatesArgs<ExtArgs>
@@ -5879,6 +5889,7 @@ export namespace Prisma {
     userBadges?: boolean | User$userBadgesArgs<ExtArgs>
     dailyActivities?: boolean | User$dailyActivitiesArgs<ExtArgs>
     xpTransactions?: boolean | User$xpTransactionsArgs<ExtArgs>
+    gamificationAuditLogs?: boolean | User$gamificationAuditLogsArgs<ExtArgs>
     refreshTokens?: boolean | User$refreshTokensArgs<ExtArgs>
     createdClasses?: boolean | User$createdClassesArgs<ExtArgs>
     classTemplates?: boolean | User$classTemplatesArgs<ExtArgs>
@@ -5904,6 +5915,7 @@ export namespace Prisma {
       userBadges: Prisma.$UserBadgePayload<ExtArgs>[]
       dailyActivities: Prisma.$DailyActivityPayload<ExtArgs>[]
       xpTransactions: Prisma.$XpTransactionPayload<ExtArgs>[]
+      gamificationAuditLogs: Prisma.$GamificationAuditLogPayload<ExtArgs>[]
       refreshTokens: Prisma.$RefreshTokenPayload<ExtArgs>[]
       createdClasses: Prisma.$ClassPayload<ExtArgs>[]
       classTemplates: Prisma.$ClassTemplatePayload<ExtArgs>[]
@@ -6328,6 +6340,7 @@ export namespace Prisma {
     userBadges<T extends User$userBadgesArgs<ExtArgs> = {}>(args?: Subset<T, User$userBadgesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$UserBadgePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     dailyActivities<T extends User$dailyActivitiesArgs<ExtArgs> = {}>(args?: Subset<T, User$dailyActivitiesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DailyActivityPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     xpTransactions<T extends User$xpTransactionsArgs<ExtArgs> = {}>(args?: Subset<T, User$xpTransactionsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$XpTransactionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    gamificationAuditLogs<T extends User$gamificationAuditLogsArgs<ExtArgs> = {}>(args?: Subset<T, User$gamificationAuditLogsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$GamificationAuditLogPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     refreshTokens<T extends User$refreshTokensArgs<ExtArgs> = {}>(args?: Subset<T, User$refreshTokensArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$RefreshTokenPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     createdClasses<T extends User$createdClassesArgs<ExtArgs> = {}>(args?: Subset<T, User$createdClassesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ClassPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     classTemplates<T extends User$classTemplatesArgs<ExtArgs> = {}>(args?: Subset<T, User$classTemplatesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ClassTemplatePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -7013,6 +7026,30 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: XpTransactionScalarFieldEnum | XpTransactionScalarFieldEnum[]
+  }
+
+  /**
+   * User.gamificationAuditLogs
+   */
+  export type User$gamificationAuditLogsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the GamificationAuditLog
+     */
+    select?: GamificationAuditLogSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the GamificationAuditLog
+     */
+    omit?: GamificationAuditLogOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: GamificationAuditLogInclude<ExtArgs> | null
+    where?: GamificationAuditLogWhereInput
+    orderBy?: GamificationAuditLogOrderByWithRelationInput | GamificationAuditLogOrderByWithRelationInput[]
+    cursor?: GamificationAuditLogWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: GamificationAuditLogScalarFieldEnum | GamificationAuditLogScalarFieldEnum[]
   }
 
   /**
@@ -41938,6 +41975,7 @@ export namespace Prisma {
     succeeded?: boolean
     errorMessage?: boolean
     createdAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["gamificationAuditLog"]>
 
   export type GamificationAuditLogSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -41950,6 +41988,7 @@ export namespace Prisma {
     succeeded?: boolean
     errorMessage?: boolean
     createdAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["gamificationAuditLog"]>
 
   export type GamificationAuditLogSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -41962,6 +42001,7 @@ export namespace Prisma {
     succeeded?: boolean
     errorMessage?: boolean
     createdAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["gamificationAuditLog"]>
 
   export type GamificationAuditLogSelectScalar = {
@@ -41977,10 +42017,21 @@ export namespace Prisma {
   }
 
   export type GamificationAuditLogOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "eventType" | "details" | "xpAwarded" | "badgesAwarded" | "succeeded" | "errorMessage" | "createdAt", ExtArgs["result"]["gamificationAuditLog"]>
+  export type GamificationAuditLogInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
+  export type GamificationAuditLogIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
+  export type GamificationAuditLogIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
 
   export type $GamificationAuditLogPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "GamificationAuditLog"
-    objects: {}
+    objects: {
+      user: Prisma.$UserPayload<ExtArgs>
+    }
     scalars: $Extensions.GetPayloadResult<{
       id: string
       userId: string
@@ -42385,6 +42436,7 @@ export namespace Prisma {
    */
   export interface Prisma__GamificationAuditLogClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
+    user<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -42440,6 +42492,10 @@ export namespace Prisma {
      */
     omit?: GamificationAuditLogOmit<ExtArgs> | null
     /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: GamificationAuditLogInclude<ExtArgs> | null
+    /**
      * Filter, which GamificationAuditLog to fetch.
      */
     where: GamificationAuditLogWhereUniqueInput
@@ -42458,6 +42514,10 @@ export namespace Prisma {
      */
     omit?: GamificationAuditLogOmit<ExtArgs> | null
     /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: GamificationAuditLogInclude<ExtArgs> | null
+    /**
      * Filter, which GamificationAuditLog to fetch.
      */
     where: GamificationAuditLogWhereUniqueInput
@@ -42475,6 +42535,10 @@ export namespace Prisma {
      * Omit specific fields from the GamificationAuditLog
      */
     omit?: GamificationAuditLogOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: GamificationAuditLogInclude<ExtArgs> | null
     /**
      * Filter, which GamificationAuditLog to fetch.
      */
@@ -42524,6 +42588,10 @@ export namespace Prisma {
      */
     omit?: GamificationAuditLogOmit<ExtArgs> | null
     /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: GamificationAuditLogInclude<ExtArgs> | null
+    /**
      * Filter, which GamificationAuditLog to fetch.
      */
     where?: GamificationAuditLogWhereInput
@@ -42572,6 +42640,10 @@ export namespace Prisma {
      */
     omit?: GamificationAuditLogOmit<ExtArgs> | null
     /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: GamificationAuditLogInclude<ExtArgs> | null
+    /**
      * Filter, which GamificationAuditLogs to fetch.
      */
     where?: GamificationAuditLogWhereInput
@@ -42615,6 +42687,10 @@ export namespace Prisma {
      */
     omit?: GamificationAuditLogOmit<ExtArgs> | null
     /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: GamificationAuditLogInclude<ExtArgs> | null
+    /**
      * The data needed to create a GamificationAuditLog.
      */
     data: XOR<GamificationAuditLogCreateInput, GamificationAuditLogUncheckedCreateInput>
@@ -42648,6 +42724,10 @@ export namespace Prisma {
      */
     data: GamificationAuditLogCreateManyInput | GamificationAuditLogCreateManyInput[]
     skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: GamificationAuditLogIncludeCreateManyAndReturn<ExtArgs> | null
   }
 
   /**
@@ -42662,6 +42742,10 @@ export namespace Prisma {
      * Omit specific fields from the GamificationAuditLog
      */
     omit?: GamificationAuditLogOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: GamificationAuditLogInclude<ExtArgs> | null
     /**
      * The data needed to update a GamificationAuditLog.
      */
@@ -42714,6 +42798,10 @@ export namespace Prisma {
      * Limit how many GamificationAuditLogs to update.
      */
     limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: GamificationAuditLogIncludeUpdateManyAndReturn<ExtArgs> | null
   }
 
   /**
@@ -42728,6 +42816,10 @@ export namespace Prisma {
      * Omit specific fields from the GamificationAuditLog
      */
     omit?: GamificationAuditLogOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: GamificationAuditLogInclude<ExtArgs> | null
     /**
      * The filter to search for the GamificationAuditLog to update in case it exists.
      */
@@ -42754,6 +42846,10 @@ export namespace Prisma {
      * Omit specific fields from the GamificationAuditLog
      */
     omit?: GamificationAuditLogOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: GamificationAuditLogInclude<ExtArgs> | null
     /**
      * Filter which GamificationAuditLog to delete.
      */
@@ -42786,6 +42882,10 @@ export namespace Prisma {
      * Omit specific fields from the GamificationAuditLog
      */
     omit?: GamificationAuditLogOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: GamificationAuditLogInclude<ExtArgs> | null
   }
 
 
@@ -53999,6 +54099,7 @@ export namespace Prisma {
     userBadges?: UserBadgeListRelationFilter
     dailyActivities?: DailyActivityListRelationFilter
     xpTransactions?: XpTransactionListRelationFilter
+    gamificationAuditLogs?: GamificationAuditLogListRelationFilter
     refreshTokens?: RefreshTokenListRelationFilter
     createdClasses?: ClassListRelationFilter
     classTemplates?: ClassTemplateListRelationFilter
@@ -54030,6 +54131,7 @@ export namespace Prisma {
     userBadges?: UserBadgeOrderByRelationAggregateInput
     dailyActivities?: DailyActivityOrderByRelationAggregateInput
     xpTransactions?: XpTransactionOrderByRelationAggregateInput
+    gamificationAuditLogs?: GamificationAuditLogOrderByRelationAggregateInput
     refreshTokens?: RefreshTokenOrderByRelationAggregateInput
     createdClasses?: ClassOrderByRelationAggregateInput
     classTemplates?: ClassTemplateOrderByRelationAggregateInput
@@ -54064,6 +54166,7 @@ export namespace Prisma {
     userBadges?: UserBadgeListRelationFilter
     dailyActivities?: DailyActivityListRelationFilter
     xpTransactions?: XpTransactionListRelationFilter
+    gamificationAuditLogs?: GamificationAuditLogListRelationFilter
     refreshTokens?: RefreshTokenListRelationFilter
     createdClasses?: ClassListRelationFilter
     classTemplates?: ClassTemplateListRelationFilter
@@ -56372,6 +56475,7 @@ export namespace Prisma {
     succeeded?: BoolFilter<"GamificationAuditLog"> | boolean
     errorMessage?: StringNullableFilter<"GamificationAuditLog"> | string | null
     createdAt?: DateTimeFilter<"GamificationAuditLog"> | Date | string
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
   }
 
   export type GamificationAuditLogOrderByWithRelationInput = {
@@ -56384,6 +56488,7 @@ export namespace Prisma {
     succeeded?: SortOrder
     errorMessage?: SortOrderInput | SortOrder
     createdAt?: SortOrder
+    user?: UserOrderByWithRelationInput
   }
 
   export type GamificationAuditLogWhereUniqueInput = Prisma.AtLeast<{
@@ -56399,6 +56504,7 @@ export namespace Prisma {
     succeeded?: BoolFilter<"GamificationAuditLog"> | boolean
     errorMessage?: StringNullableFilter<"GamificationAuditLog"> | string | null
     createdAt?: DateTimeFilter<"GamificationAuditLog"> | Date | string
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
   }, "id">
 
   export type GamificationAuditLogOrderByWithAggregationInput = {
@@ -57123,6 +57229,7 @@ export namespace Prisma {
     userBadges?: UserBadgeCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
     xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
@@ -57154,6 +57261,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
     xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
@@ -57185,6 +57293,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
     xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
@@ -57216,6 +57325,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
     xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
@@ -59631,7 +59741,6 @@ export namespace Prisma {
 
   export type GamificationAuditLogCreateInput = {
     id?: string
-    userId: string
     eventType: string
     details?: NullableJsonNullValueInput | InputJsonValue
     xpAwarded?: number
@@ -59639,6 +59748,7 @@ export namespace Prisma {
     succeeded?: boolean
     errorMessage?: string | null
     createdAt?: Date | string
+    user: UserCreateNestedOneWithoutGamificationAuditLogsInput
   }
 
   export type GamificationAuditLogUncheckedCreateInput = {
@@ -59655,7 +59765,6 @@ export namespace Prisma {
 
   export type GamificationAuditLogUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
-    userId?: StringFieldUpdateOperationsInput | string
     eventType?: StringFieldUpdateOperationsInput | string
     details?: NullableJsonNullValueInput | InputJsonValue
     xpAwarded?: IntFieldUpdateOperationsInput | number
@@ -59663,6 +59772,7 @@ export namespace Prisma {
     succeeded?: BoolFieldUpdateOperationsInput | boolean
     errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutGamificationAuditLogsNestedInput
   }
 
   export type GamificationAuditLogUncheckedUpdateInput = {
@@ -59691,7 +59801,6 @@ export namespace Prisma {
 
   export type GamificationAuditLogUpdateManyMutationInput = {
     id?: StringFieldUpdateOperationsInput | string
-    userId?: StringFieldUpdateOperationsInput | string
     eventType?: StringFieldUpdateOperationsInput | string
     details?: NullableJsonNullValueInput | InputJsonValue
     xpAwarded?: IntFieldUpdateOperationsInput | number
@@ -60533,6 +60642,12 @@ export namespace Prisma {
     none?: XpTransactionWhereInput
   }
 
+  export type GamificationAuditLogListRelationFilter = {
+    every?: GamificationAuditLogWhereInput
+    some?: GamificationAuditLogWhereInput
+    none?: GamificationAuditLogWhereInput
+  }
+
   export type RefreshTokenListRelationFilter = {
     every?: RefreshTokenWhereInput
     some?: RefreshTokenWhereInput
@@ -60607,6 +60722,10 @@ export namespace Prisma {
   }
 
   export type XpTransactionOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type GamificationAuditLogOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -63087,6 +63206,13 @@ export namespace Prisma {
     connect?: XpTransactionWhereUniqueInput | XpTransactionWhereUniqueInput[]
   }
 
+  export type GamificationAuditLogCreateNestedManyWithoutUserInput = {
+    create?: XOR<GamificationAuditLogCreateWithoutUserInput, GamificationAuditLogUncheckedCreateWithoutUserInput> | GamificationAuditLogCreateWithoutUserInput[] | GamificationAuditLogUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: GamificationAuditLogCreateOrConnectWithoutUserInput | GamificationAuditLogCreateOrConnectWithoutUserInput[]
+    createMany?: GamificationAuditLogCreateManyUserInputEnvelope
+    connect?: GamificationAuditLogWhereUniqueInput | GamificationAuditLogWhereUniqueInput[]
+  }
+
   export type RefreshTokenCreateNestedManyWithoutUserInput = {
     create?: XOR<RefreshTokenCreateWithoutUserInput, RefreshTokenUncheckedCreateWithoutUserInput> | RefreshTokenCreateWithoutUserInput[] | RefreshTokenUncheckedCreateWithoutUserInput[]
     connectOrCreate?: RefreshTokenCreateOrConnectWithoutUserInput | RefreshTokenCreateOrConnectWithoutUserInput[]
@@ -63202,6 +63328,13 @@ export namespace Prisma {
     connectOrCreate?: XpTransactionCreateOrConnectWithoutUserInput | XpTransactionCreateOrConnectWithoutUserInput[]
     createMany?: XpTransactionCreateManyUserInputEnvelope
     connect?: XpTransactionWhereUniqueInput | XpTransactionWhereUniqueInput[]
+  }
+
+  export type GamificationAuditLogUncheckedCreateNestedManyWithoutUserInput = {
+    create?: XOR<GamificationAuditLogCreateWithoutUserInput, GamificationAuditLogUncheckedCreateWithoutUserInput> | GamificationAuditLogCreateWithoutUserInput[] | GamificationAuditLogUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: GamificationAuditLogCreateOrConnectWithoutUserInput | GamificationAuditLogCreateOrConnectWithoutUserInput[]
+    createMany?: GamificationAuditLogCreateManyUserInputEnvelope
+    connect?: GamificationAuditLogWhereUniqueInput | GamificationAuditLogWhereUniqueInput[]
   }
 
   export type RefreshTokenUncheckedCreateNestedManyWithoutUserInput = {
@@ -63422,6 +63555,20 @@ export namespace Prisma {
     update?: XpTransactionUpdateWithWhereUniqueWithoutUserInput | XpTransactionUpdateWithWhereUniqueWithoutUserInput[]
     updateMany?: XpTransactionUpdateManyWithWhereWithoutUserInput | XpTransactionUpdateManyWithWhereWithoutUserInput[]
     deleteMany?: XpTransactionScalarWhereInput | XpTransactionScalarWhereInput[]
+  }
+
+  export type GamificationAuditLogUpdateManyWithoutUserNestedInput = {
+    create?: XOR<GamificationAuditLogCreateWithoutUserInput, GamificationAuditLogUncheckedCreateWithoutUserInput> | GamificationAuditLogCreateWithoutUserInput[] | GamificationAuditLogUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: GamificationAuditLogCreateOrConnectWithoutUserInput | GamificationAuditLogCreateOrConnectWithoutUserInput[]
+    upsert?: GamificationAuditLogUpsertWithWhereUniqueWithoutUserInput | GamificationAuditLogUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: GamificationAuditLogCreateManyUserInputEnvelope
+    set?: GamificationAuditLogWhereUniqueInput | GamificationAuditLogWhereUniqueInput[]
+    disconnect?: GamificationAuditLogWhereUniqueInput | GamificationAuditLogWhereUniqueInput[]
+    delete?: GamificationAuditLogWhereUniqueInput | GamificationAuditLogWhereUniqueInput[]
+    connect?: GamificationAuditLogWhereUniqueInput | GamificationAuditLogWhereUniqueInput[]
+    update?: GamificationAuditLogUpdateWithWhereUniqueWithoutUserInput | GamificationAuditLogUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: GamificationAuditLogUpdateManyWithWhereWithoutUserInput | GamificationAuditLogUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: GamificationAuditLogScalarWhereInput | GamificationAuditLogScalarWhereInput[]
   }
 
   export type RefreshTokenUpdateManyWithoutUserNestedInput = {
@@ -63652,6 +63799,20 @@ export namespace Prisma {
     update?: XpTransactionUpdateWithWhereUniqueWithoutUserInput | XpTransactionUpdateWithWhereUniqueWithoutUserInput[]
     updateMany?: XpTransactionUpdateManyWithWhereWithoutUserInput | XpTransactionUpdateManyWithWhereWithoutUserInput[]
     deleteMany?: XpTransactionScalarWhereInput | XpTransactionScalarWhereInput[]
+  }
+
+  export type GamificationAuditLogUncheckedUpdateManyWithoutUserNestedInput = {
+    create?: XOR<GamificationAuditLogCreateWithoutUserInput, GamificationAuditLogUncheckedCreateWithoutUserInput> | GamificationAuditLogCreateWithoutUserInput[] | GamificationAuditLogUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: GamificationAuditLogCreateOrConnectWithoutUserInput | GamificationAuditLogCreateOrConnectWithoutUserInput[]
+    upsert?: GamificationAuditLogUpsertWithWhereUniqueWithoutUserInput | GamificationAuditLogUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: GamificationAuditLogCreateManyUserInputEnvelope
+    set?: GamificationAuditLogWhereUniqueInput | GamificationAuditLogWhereUniqueInput[]
+    disconnect?: GamificationAuditLogWhereUniqueInput | GamificationAuditLogWhereUniqueInput[]
+    delete?: GamificationAuditLogWhereUniqueInput | GamificationAuditLogWhereUniqueInput[]
+    connect?: GamificationAuditLogWhereUniqueInput | GamificationAuditLogWhereUniqueInput[]
+    update?: GamificationAuditLogUpdateWithWhereUniqueWithoutUserInput | GamificationAuditLogUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: GamificationAuditLogUpdateManyWithWhereWithoutUserInput | GamificationAuditLogUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: GamificationAuditLogScalarWhereInput | GamificationAuditLogScalarWhereInput[]
   }
 
   export type RefreshTokenUncheckedUpdateManyWithoutUserNestedInput = {
@@ -65644,6 +65805,20 @@ export namespace Prisma {
     update?: XOR<XOR<UserUpdateToOneWithWhereWithoutDailyActivitiesInput, UserUpdateWithoutDailyActivitiesInput>, UserUncheckedUpdateWithoutDailyActivitiesInput>
   }
 
+  export type UserCreateNestedOneWithoutGamificationAuditLogsInput = {
+    create?: XOR<UserCreateWithoutGamificationAuditLogsInput, UserUncheckedCreateWithoutGamificationAuditLogsInput>
+    connectOrCreate?: UserCreateOrConnectWithoutGamificationAuditLogsInput
+    connect?: UserWhereUniqueInput
+  }
+
+  export type UserUpdateOneRequiredWithoutGamificationAuditLogsNestedInput = {
+    create?: XOR<UserCreateWithoutGamificationAuditLogsInput, UserUncheckedCreateWithoutGamificationAuditLogsInput>
+    connectOrCreate?: UserCreateOrConnectWithoutGamificationAuditLogsInput
+    upsert?: UserUpsertWithoutGamificationAuditLogsInput
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutGamificationAuditLogsInput, UserUpdateWithoutGamificationAuditLogsInput>, UserUncheckedUpdateWithoutGamificationAuditLogsInput>
+  }
+
   export type UserCreateNestedOneWithoutRefreshTokensInput = {
     create?: XOR<UserCreateWithoutRefreshTokensInput, UserUncheckedCreateWithoutRefreshTokensInput>
     connectOrCreate?: UserCreateOrConnectWithoutRefreshTokensInput
@@ -66972,6 +67147,38 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
+  export type GamificationAuditLogCreateWithoutUserInput = {
+    id?: string
+    eventType: string
+    details?: NullableJsonNullValueInput | InputJsonValue
+    xpAwarded?: number
+    badgesAwarded?: NullableJsonNullValueInput | InputJsonValue
+    succeeded?: boolean
+    errorMessage?: string | null
+    createdAt?: Date | string
+  }
+
+  export type GamificationAuditLogUncheckedCreateWithoutUserInput = {
+    id?: string
+    eventType: string
+    details?: NullableJsonNullValueInput | InputJsonValue
+    xpAwarded?: number
+    badgesAwarded?: NullableJsonNullValueInput | InputJsonValue
+    succeeded?: boolean
+    errorMessage?: string | null
+    createdAt?: Date | string
+  }
+
+  export type GamificationAuditLogCreateOrConnectWithoutUserInput = {
+    where: GamificationAuditLogWhereUniqueInput
+    create: XOR<GamificationAuditLogCreateWithoutUserInput, GamificationAuditLogUncheckedCreateWithoutUserInput>
+  }
+
+  export type GamificationAuditLogCreateManyUserInputEnvelope = {
+    data: GamificationAuditLogCreateManyUserInput | GamificationAuditLogCreateManyUserInput[]
+    skipDuplicates?: boolean
+  }
+
   export type RefreshTokenCreateWithoutUserInput = {
     id?: string
     tokenHash: string
@@ -67519,6 +67726,37 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"XpTransaction"> | Date | string
   }
 
+  export type GamificationAuditLogUpsertWithWhereUniqueWithoutUserInput = {
+    where: GamificationAuditLogWhereUniqueInput
+    update: XOR<GamificationAuditLogUpdateWithoutUserInput, GamificationAuditLogUncheckedUpdateWithoutUserInput>
+    create: XOR<GamificationAuditLogCreateWithoutUserInput, GamificationAuditLogUncheckedCreateWithoutUserInput>
+  }
+
+  export type GamificationAuditLogUpdateWithWhereUniqueWithoutUserInput = {
+    where: GamificationAuditLogWhereUniqueInput
+    data: XOR<GamificationAuditLogUpdateWithoutUserInput, GamificationAuditLogUncheckedUpdateWithoutUserInput>
+  }
+
+  export type GamificationAuditLogUpdateManyWithWhereWithoutUserInput = {
+    where: GamificationAuditLogScalarWhereInput
+    data: XOR<GamificationAuditLogUpdateManyMutationInput, GamificationAuditLogUncheckedUpdateManyWithoutUserInput>
+  }
+
+  export type GamificationAuditLogScalarWhereInput = {
+    AND?: GamificationAuditLogScalarWhereInput | GamificationAuditLogScalarWhereInput[]
+    OR?: GamificationAuditLogScalarWhereInput[]
+    NOT?: GamificationAuditLogScalarWhereInput | GamificationAuditLogScalarWhereInput[]
+    id?: StringFilter<"GamificationAuditLog"> | string
+    userId?: StringFilter<"GamificationAuditLog"> | string
+    eventType?: StringFilter<"GamificationAuditLog"> | string
+    details?: JsonNullableFilter<"GamificationAuditLog">
+    xpAwarded?: IntFilter<"GamificationAuditLog"> | number
+    badgesAwarded?: JsonNullableFilter<"GamificationAuditLog">
+    succeeded?: BoolFilter<"GamificationAuditLog"> | boolean
+    errorMessage?: StringNullableFilter<"GamificationAuditLog"> | string | null
+    createdAt?: DateTimeFilter<"GamificationAuditLog"> | Date | string
+  }
+
   export type RefreshTokenUpsertWithWhereUniqueWithoutUserInput = {
     where: RefreshTokenWhereUniqueInput
     update: XOR<RefreshTokenUpdateWithoutUserInput, RefreshTokenUncheckedUpdateWithoutUserInput>
@@ -67722,6 +67960,7 @@ export namespace Prisma {
     userBadges?: UserBadgeCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
     xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
@@ -67752,6 +67991,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
     xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
@@ -67798,6 +68038,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
     xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
@@ -67828,6 +68069,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
     xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
@@ -67858,6 +68100,7 @@ export namespace Prisma {
     userBadges?: UserBadgeCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
     xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
@@ -67888,6 +68131,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
     xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
@@ -67934,6 +68178,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
     xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
@@ -67964,6 +68209,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
     xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
@@ -68189,6 +68435,7 @@ export namespace Prisma {
     userBadges?: UserBadgeCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
     xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
@@ -68219,6 +68466,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
     xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
@@ -68552,6 +68800,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
     xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
@@ -68582,6 +68831,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
     xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
@@ -70154,6 +70404,7 @@ export namespace Prisma {
     userBadges?: UserBadgeCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
     xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
@@ -70184,6 +70435,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
     xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
@@ -70373,6 +70625,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
     xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
@@ -70403,6 +70656,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
     xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
@@ -71471,6 +71725,7 @@ export namespace Prisma {
     userBadges?: UserBadgeCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
     xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
@@ -71501,6 +71756,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
     xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
@@ -71645,6 +71901,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
     xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
@@ -71675,6 +71932,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
     xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
@@ -71815,6 +72073,7 @@ export namespace Prisma {
     userBadges?: UserBadgeCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
     xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
@@ -71845,6 +72104,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
     xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
@@ -71969,6 +72229,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
     xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
@@ -71999,6 +72260,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
     xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
@@ -72119,6 +72381,7 @@ export namespace Prisma {
     userBadges?: UserBadgeCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
     xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
@@ -72149,6 +72412,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
     xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
@@ -72218,6 +72482,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
     xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
@@ -72248,6 +72513,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
     xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
@@ -72307,6 +72573,7 @@ export namespace Prisma {
     userBadges?: UserBadgeCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
     xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
@@ -72337,6 +72604,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
     xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
@@ -72428,6 +72696,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
     xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
@@ -72458,6 +72727,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
     xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
@@ -72539,6 +72809,7 @@ export namespace Prisma {
     userBadges?: UserBadgeCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
     xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
@@ -72569,6 +72840,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
     xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
@@ -72639,6 +72911,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
     xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
@@ -72669,6 +72942,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
     xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
@@ -72715,6 +72989,7 @@ export namespace Prisma {
     userGamification?: UserGamificationCreateNestedOneWithoutUserInput
     userBadges?: UserBadgeCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
@@ -72745,6 +73020,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUncheckedCreateNestedOneWithoutUserInput
     userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
@@ -72791,6 +73067,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUpdateOneWithoutUserNestedInput
     userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
@@ -72821,6 +73098,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUncheckedUpdateOneWithoutUserNestedInput
     userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
@@ -72891,6 +73169,7 @@ export namespace Prisma {
     userGamification?: UserGamificationCreateNestedOneWithoutUserInput
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
     xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
@@ -72921,6 +73200,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUncheckedCreateNestedOneWithoutUserInput
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
     xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
@@ -73023,6 +73303,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUpdateOneWithoutUserNestedInput
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
     xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
@@ -73053,6 +73334,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUncheckedUpdateOneWithoutUserNestedInput
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
     xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
@@ -73151,6 +73433,7 @@ export namespace Prisma {
     userGamification?: UserGamificationCreateNestedOneWithoutUserInput
     userBadges?: UserBadgeCreateNestedManyWithoutUserInput
     xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
@@ -73181,6 +73464,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUncheckedCreateNestedOneWithoutUserInput
     userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
     xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
@@ -73227,6 +73511,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUpdateOneWithoutUserNestedInput
     userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
     xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
@@ -73256,6 +73541,147 @@ export namespace Prisma {
     consent?: ParentalConsentUncheckedUpdateOneWithoutStudentNestedInput
     userGamification?: UserGamificationUncheckedUpdateOneWithoutUserNestedInput
     userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedUpdateManyWithoutUserNestedInput
+    refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+    createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
+    classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
+    recipes?: RecipeUncheckedUpdateManyWithoutAuthorNestedInput
+    createdGroups?: GroupUncheckedUpdateManyWithoutTeacherNestedInput
+    memberships?: GroupMemberUncheckedUpdateManyWithoutStudentNestedInput
+  }
+
+  export type UserCreateWithoutGamificationAuditLogsInput = {
+    id?: string
+    email: string
+    username?: string | null
+    passwordHash: string
+    name: string
+    role?: $Enums.Role
+    age?: number | null
+    quota?: number
+    cohort?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    sessions?: SessionCreateNestedManyWithoutStudentInput
+    apiKeys?: ApiKeyCreateNestedManyWithoutUserInput
+    attempts?: ActivityAttemptCreateNestedManyWithoutUserInput
+    progressEntries?: UserProgressCreateNestedManyWithoutUserInput
+    competencies?: CompetencyMasteryCreateNestedManyWithoutUserInput
+    events?: EventLogCreateNestedManyWithoutUserInput
+    consent?: ParentalConsentCreateNestedOneWithoutStudentInput
+    userGamification?: UserGamificationCreateNestedOneWithoutUserInput
+    userBadges?: UserBadgeCreateNestedManyWithoutUserInput
+    dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
+    refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
+    createdClasses?: ClassCreateNestedManyWithoutTutorInput
+    classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
+    recipes?: RecipeCreateNestedManyWithoutAuthorInput
+    createdGroups?: GroupCreateNestedManyWithoutTeacherInput
+    memberships?: GroupMemberCreateNestedManyWithoutStudentInput
+  }
+
+  export type UserUncheckedCreateWithoutGamificationAuditLogsInput = {
+    id?: string
+    email: string
+    username?: string | null
+    passwordHash: string
+    name: string
+    role?: $Enums.Role
+    age?: number | null
+    quota?: number
+    cohort?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    sessions?: SessionUncheckedCreateNestedManyWithoutStudentInput
+    apiKeys?: ApiKeyUncheckedCreateNestedManyWithoutUserInput
+    attempts?: ActivityAttemptUncheckedCreateNestedManyWithoutUserInput
+    progressEntries?: UserProgressUncheckedCreateNestedManyWithoutUserInput
+    competencies?: CompetencyMasteryUncheckedCreateNestedManyWithoutUserInput
+    events?: EventLogUncheckedCreateNestedManyWithoutUserInput
+    consent?: ParentalConsentUncheckedCreateNestedOneWithoutStudentInput
+    userGamification?: UserGamificationUncheckedCreateNestedOneWithoutUserInput
+    userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
+    dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
+    refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+    createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
+    classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
+    recipes?: RecipeUncheckedCreateNestedManyWithoutAuthorInput
+    createdGroups?: GroupUncheckedCreateNestedManyWithoutTeacherInput
+    memberships?: GroupMemberUncheckedCreateNestedManyWithoutStudentInput
+  }
+
+  export type UserCreateOrConnectWithoutGamificationAuditLogsInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutGamificationAuditLogsInput, UserUncheckedCreateWithoutGamificationAuditLogsInput>
+  }
+
+  export type UserUpsertWithoutGamificationAuditLogsInput = {
+    update: XOR<UserUpdateWithoutGamificationAuditLogsInput, UserUncheckedUpdateWithoutGamificationAuditLogsInput>
+    create: XOR<UserCreateWithoutGamificationAuditLogsInput, UserUncheckedCreateWithoutGamificationAuditLogsInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutGamificationAuditLogsInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutGamificationAuditLogsInput, UserUncheckedUpdateWithoutGamificationAuditLogsInput>
+  }
+
+  export type UserUpdateWithoutGamificationAuditLogsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    username?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    role?: EnumRoleFieldUpdateOperationsInput | $Enums.Role
+    age?: NullableIntFieldUpdateOperationsInput | number | null
+    quota?: IntFieldUpdateOperationsInput | number
+    cohort?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    sessions?: SessionUpdateManyWithoutStudentNestedInput
+    apiKeys?: ApiKeyUpdateManyWithoutUserNestedInput
+    attempts?: ActivityAttemptUpdateManyWithoutUserNestedInput
+    progressEntries?: UserProgressUpdateManyWithoutUserNestedInput
+    competencies?: CompetencyMasteryUpdateManyWithoutUserNestedInput
+    events?: EventLogUpdateManyWithoutUserNestedInput
+    consent?: ParentalConsentUpdateOneWithoutStudentNestedInput
+    userGamification?: UserGamificationUpdateOneWithoutUserNestedInput
+    userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
+    dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
+    refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
+    createdClasses?: ClassUpdateManyWithoutTutorNestedInput
+    classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
+    recipes?: RecipeUpdateManyWithoutAuthorNestedInput
+    createdGroups?: GroupUpdateManyWithoutTeacherNestedInput
+    memberships?: GroupMemberUpdateManyWithoutStudentNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutGamificationAuditLogsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    username?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    role?: EnumRoleFieldUpdateOperationsInput | $Enums.Role
+    age?: NullableIntFieldUpdateOperationsInput | number | null
+    quota?: IntFieldUpdateOperationsInput | number
+    cohort?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    sessions?: SessionUncheckedUpdateManyWithoutStudentNestedInput
+    apiKeys?: ApiKeyUncheckedUpdateManyWithoutUserNestedInput
+    attempts?: ActivityAttemptUncheckedUpdateManyWithoutUserNestedInput
+    progressEntries?: UserProgressUncheckedUpdateManyWithoutUserNestedInput
+    competencies?: CompetencyMasteryUncheckedUpdateManyWithoutUserNestedInput
+    events?: EventLogUncheckedUpdateManyWithoutUserNestedInput
+    consent?: ParentalConsentUncheckedUpdateOneWithoutStudentNestedInput
+    userGamification?: UserGamificationUncheckedUpdateOneWithoutUserNestedInput
+    userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
+    dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
     xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
@@ -73288,6 +73714,7 @@ export namespace Prisma {
     userBadges?: UserBadgeCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
     xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
     recipes?: RecipeCreateNestedManyWithoutAuthorInput
@@ -73318,6 +73745,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
     xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
     recipes?: RecipeUncheckedCreateNestedManyWithoutAuthorInput
@@ -73364,6 +73792,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
     xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
     recipes?: RecipeUpdateManyWithoutAuthorNestedInput
@@ -73394,6 +73823,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
     xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
     recipes?: RecipeUncheckedUpdateManyWithoutAuthorNestedInput
@@ -73424,6 +73854,7 @@ export namespace Prisma {
     userBadges?: UserBadgeCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
     xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     recipes?: RecipeCreateNestedManyWithoutAuthorInput
@@ -73454,6 +73885,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
     xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     recipes?: RecipeUncheckedCreateNestedManyWithoutAuthorInput
@@ -73546,6 +73978,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
     xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     recipes?: RecipeUpdateManyWithoutAuthorNestedInput
@@ -73576,6 +74009,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
     xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     recipes?: RecipeUncheckedUpdateManyWithoutAuthorNestedInput
@@ -73622,6 +74056,7 @@ export namespace Prisma {
     userBadges?: UserBadgeCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
     xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
     recipes?: RecipeCreateNestedManyWithoutAuthorInput
@@ -73652,6 +74087,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
     xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
     recipes?: RecipeUncheckedCreateNestedManyWithoutAuthorInput
@@ -73811,6 +74247,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
     xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
     recipes?: RecipeUpdateManyWithoutAuthorNestedInput
@@ -73841,6 +74278,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
     xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
     recipes?: RecipeUncheckedUpdateManyWithoutAuthorNestedInput
@@ -74470,6 +74908,7 @@ export namespace Prisma {
     userBadges?: UserBadgeCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
     xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
@@ -74500,6 +74939,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
     xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
@@ -74594,6 +75034,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
     xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
@@ -74624,6 +75065,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
     xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
@@ -74711,6 +75153,7 @@ export namespace Prisma {
     userBadges?: UserBadgeCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
     xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
@@ -74741,6 +75184,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
     xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
@@ -74818,6 +75262,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
     xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
@@ -74848,6 +75293,7 @@ export namespace Prisma {
     userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
     xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
+    gamificationAuditLogs?: GamificationAuditLogUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
@@ -75085,6 +75531,17 @@ export namespace Prisma {
     source: $Enums.XpSource
     sourceRef: string
     balanceAfter: number
+    createdAt?: Date | string
+  }
+
+  export type GamificationAuditLogCreateManyUserInput = {
+    id?: string
+    eventType: string
+    details?: NullableJsonNullValueInput | InputJsonValue
+    xpAwarded?: number
+    badgesAwarded?: NullableJsonNullValueInput | InputJsonValue
+    succeeded?: boolean
+    errorMessage?: string | null
     createdAt?: Date | string
   }
 
@@ -75419,6 +75876,39 @@ export namespace Prisma {
     source?: EnumXpSourceFieldUpdateOperationsInput | $Enums.XpSource
     sourceRef?: StringFieldUpdateOperationsInput | string
     balanceAfter?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type GamificationAuditLogUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    eventType?: StringFieldUpdateOperationsInput | string
+    details?: NullableJsonNullValueInput | InputJsonValue
+    xpAwarded?: IntFieldUpdateOperationsInput | number
+    badgesAwarded?: NullableJsonNullValueInput | InputJsonValue
+    succeeded?: BoolFieldUpdateOperationsInput | boolean
+    errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type GamificationAuditLogUncheckedUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    eventType?: StringFieldUpdateOperationsInput | string
+    details?: NullableJsonNullValueInput | InputJsonValue
+    xpAwarded?: IntFieldUpdateOperationsInput | number
+    badgesAwarded?: NullableJsonNullValueInput | InputJsonValue
+    succeeded?: BoolFieldUpdateOperationsInput | boolean
+    errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type GamificationAuditLogUncheckedUpdateManyWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    eventType?: StringFieldUpdateOperationsInput | string
+    details?: NullableJsonNullValueInput | InputJsonValue
+    xpAwarded?: IntFieldUpdateOperationsInput | number
+    badgesAwarded?: NullableJsonNullValueInput | InputJsonValue
+    succeeded?: BoolFieldUpdateOperationsInput | boolean
+    errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 

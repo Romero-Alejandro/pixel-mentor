@@ -70,6 +70,4 @@ export interface GamificationAuditLogEntry {
 
 export interface IGamificationAuditRepository {
   logEvent(entry: GamificationAuditLogEntry): Promise<void>;
-  getLogsByUserId(userId: string, limit?: number): Promise<GamificationAuditLogEntry[]>;
-  getLogsByEventType(eventType: string, limit?: number): Promise<GamificationAuditLogEntry[]>;
 }
