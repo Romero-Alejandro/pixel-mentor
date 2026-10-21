@@ -1,4 +1,5 @@
 import { fetchEventSource, type EventSourceMessage } from '@microsoft/fetch-event-source';
+import type { ActivityResponse } from '@pixel-mentor/shared/activities';
 import {
   RecipeSchema,
   SessionSchema,
@@ -97,8 +98,10 @@ export interface StreamInteractRetryConfig extends Partial<SSERetryConfig> {
 export const streamInteractWithRecipe = (
   sessionId: string,
   studentInput: string,
+  optionId: string | undefined,
   handlers: StreamInteractHandlers,
   retryConfig?: StreamInteractRetryConfig,
+  activityResponse?: ActivityResponse,
 ): AbortController => {
   if (import.meta.env.VITE_ENABLE_STREAMING !== 'true') {
     throw new Error('Streaming disabled');
@@ -133,7 +136,13 @@ export const streamInteractWithRecipe = (
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ sessionId, studentInput, interactionId }),
+      body: JSON.stringify({
+        sessionId,
+        studentInput,
+        ...(optionId ? { optionId } : {}),
+        ...(activityResponse ? { activityResponse } : {}),
+        interactionId,
+      }),
       signal: controller.signal,
       onmessage: (event) => {
         if (event.event === 'end') endReceived = true;
@@ -240,8 +249,18 @@ export const api = {
     const { data } = await apiClient.get(`/api/classes/lessons/${lessonId}/class`);
     return data.classId;
   },
-  interactWithRecipe: async (sessionId: string, studentInput: string) => {
-    const { data } = await apiClient.post('/api/recipe/interact', { sessionId, studentInput });
+  interactWithRecipe: async (
+    sessionId: string,
+    studentInput: string,
+    optionId?: string,
+    activityResponse?: ActivityResponse,
+  ) => {
+    const { data } = await apiClient.post('/api/recipe/interact', {
+      sessionId,
+      studentInput,
+      ...(optionId ? { optionId } : {}),
+      ...(activityResponse ? { activityResponse } : {}),
+    });
     return InteractRecipeOutputSchema.parse(data);
   },
   getSession: async (sessionId: string) => {

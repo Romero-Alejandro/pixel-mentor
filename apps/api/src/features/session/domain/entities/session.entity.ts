@@ -34,8 +34,12 @@ export interface SessionCheckpoint {
   readonly questionCount?: number;
   readonly lastQuestionTime?: string | null;
   readonly skippedActivities?: string[];
+  /** Fase 2: atoms that already consumed their one-time adaptivity hint. */
+  readonly activityHints?: string[];
   readonly failedAttempts?: number;
   readonly totalWrongAnswers?: number;
+  /** Epoch ms when the current step started requiring student input (for attempt elapsedMs). */
+  readonly stepEnteredAt?: number;
 }
 
 export interface Session {

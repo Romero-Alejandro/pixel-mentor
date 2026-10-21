@@ -144,6 +144,12 @@ export type EventLog = $Result.DefaultSelection<Prisma.$EventLogPayload>
  */
 export type UserGamification = $Result.DefaultSelection<Prisma.$UserGamificationPayload>
 /**
+ * Model XpTransaction
+ * Append-only XP ledger. Source of truth for a user's XP.
+ * `(userId, source, sourceRef)` makes every award idempotent.
+ */
+export type XpTransaction = $Result.DefaultSelection<Prisma.$XpTransactionPayload>
+/**
  * Model Badge
  * 
  */
@@ -342,6 +348,17 @@ export const MemberStatus: {
 
 export type MemberStatus = (typeof MemberStatus)[keyof typeof MemberStatus]
 
+
+export const XpSource: {
+  LESSON: 'LESSON',
+  BADGE: 'BADGE',
+  STREAK_DAILY: 'STREAK_DAILY',
+  STREAK_MILESTONE: 'STREAK_MILESTONE',
+  ADMIN_ADJUSTMENT: 'ADMIN_ADJUSTMENT'
+};
+
+export type XpSource = (typeof XpSource)[keyof typeof XpSource]
+
 }
 
 export type Role = $Enums.Role
@@ -387,6 +404,10 @@ export const ClassStatus: typeof $Enums.ClassStatus
 export type MemberStatus = $Enums.MemberStatus
 
 export const MemberStatus: typeof $Enums.MemberStatus
+
+export type XpSource = $Enums.XpSource
+
+export const XpSource: typeof $Enums.XpSource
 
 /**
  * ##  Prisma Client ʲˢ
@@ -765,6 +786,16 @@ export class PrismaClient<
     * ```
     */
   get userGamification(): Prisma.UserGamificationDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.xpTransaction`: Exposes CRUD operations for the **XpTransaction** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more XpTransactions
+    * const xpTransactions = await prisma.xpTransaction.findMany()
+    * ```
+    */
+  get xpTransaction(): Prisma.XpTransactionDelegate<ExtArgs, ClientOptions>;
 
   /**
    * `prisma.badge`: Exposes CRUD operations for the **Badge** model.
@@ -1372,6 +1403,7 @@ export namespace Prisma {
     CompetencyMastery: 'CompetencyMastery',
     EventLog: 'EventLog',
     UserGamification: 'UserGamification',
+    XpTransaction: 'XpTransaction',
     Badge: 'Badge',
     UserBadge: 'UserBadge',
     LevelConfig: 'LevelConfig',
@@ -1404,7 +1436,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "user" | "apiKey" | "parentalConsent" | "level" | "module" | "recipe" | "recipeStep" | "concept" | "activity" | "atom" | "atomOption" | "knowledgeChunk" | "session" | "interaction" | "teacherReviewTicket" | "asset" | "assetAttachment" | "competency" | "atomCompetency" | "tag" | "recipeTag" | "userProgress" | "activityAttempt" | "competencyMastery" | "eventLog" | "userGamification" | "badge" | "userBadge" | "levelConfig" | "dailyActivity" | "gamificationAuditLog" | "refreshToken" | "classTemplate" | "class" | "classLesson" | "classVersion" | "classVersionLesson" | "group" | "groupMember" | "groupClass"
+      modelProps: "user" | "apiKey" | "parentalConsent" | "level" | "module" | "recipe" | "recipeStep" | "concept" | "activity" | "atom" | "atomOption" | "knowledgeChunk" | "session" | "interaction" | "teacherReviewTicket" | "asset" | "assetAttachment" | "competency" | "atomCompetency" | "tag" | "recipeTag" | "userProgress" | "activityAttempt" | "competencyMastery" | "eventLog" | "userGamification" | "xpTransaction" | "badge" | "userBadge" | "levelConfig" | "dailyActivity" | "gamificationAuditLog" | "refreshToken" | "classTemplate" | "class" | "classLesson" | "classVersion" | "classVersionLesson" | "group" | "groupMember" | "groupClass"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -3332,6 +3364,80 @@ export namespace Prisma {
           }
         }
       }
+      XpTransaction: {
+        payload: Prisma.$XpTransactionPayload<ExtArgs>
+        fields: Prisma.XpTransactionFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.XpTransactionFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$XpTransactionPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.XpTransactionFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$XpTransactionPayload>
+          }
+          findFirst: {
+            args: Prisma.XpTransactionFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$XpTransactionPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.XpTransactionFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$XpTransactionPayload>
+          }
+          findMany: {
+            args: Prisma.XpTransactionFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$XpTransactionPayload>[]
+          }
+          create: {
+            args: Prisma.XpTransactionCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$XpTransactionPayload>
+          }
+          createMany: {
+            args: Prisma.XpTransactionCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.XpTransactionCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$XpTransactionPayload>[]
+          }
+          delete: {
+            args: Prisma.XpTransactionDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$XpTransactionPayload>
+          }
+          update: {
+            args: Prisma.XpTransactionUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$XpTransactionPayload>
+          }
+          deleteMany: {
+            args: Prisma.XpTransactionDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.XpTransactionUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.XpTransactionUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$XpTransactionPayload>[]
+          }
+          upsert: {
+            args: Prisma.XpTransactionUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$XpTransactionPayload>
+          }
+          aggregate: {
+            args: Prisma.XpTransactionAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateXpTransaction>
+          }
+          groupBy: {
+            args: Prisma.XpTransactionGroupByArgs<ExtArgs>
+            result: $Utils.Optional<XpTransactionGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.XpTransactionCountArgs<ExtArgs>
+            result: $Utils.Optional<XpTransactionCountAggregateOutputType> | number
+          }
+        }
+      }
       Badge: {
         payload: Prisma.$BadgePayload<ExtArgs>
         fields: Prisma.BadgeFieldRefs
@@ -4490,6 +4596,7 @@ export namespace Prisma {
     competencyMastery?: CompetencyMasteryOmit
     eventLog?: EventLogOmit
     userGamification?: UserGamificationOmit
+    xpTransaction?: XpTransactionOmit
     badge?: BadgeOmit
     userBadge?: UserBadgeOmit
     levelConfig?: LevelConfigOmit
@@ -4592,6 +4699,7 @@ export namespace Prisma {
     events: number
     userBadges: number
     dailyActivities: number
+    xpTransactions: number
     refreshTokens: number
     createdClasses: number
     classTemplates: number
@@ -4609,6 +4717,7 @@ export namespace Prisma {
     events?: boolean | UserCountOutputTypeCountEventsArgs
     userBadges?: boolean | UserCountOutputTypeCountUserBadgesArgs
     dailyActivities?: boolean | UserCountOutputTypeCountDailyActivitiesArgs
+    xpTransactions?: boolean | UserCountOutputTypeCountXpTransactionsArgs
     refreshTokens?: boolean | UserCountOutputTypeCountRefreshTokensArgs
     createdClasses?: boolean | UserCountOutputTypeCountCreatedClassesArgs
     classTemplates?: boolean | UserCountOutputTypeCountClassTemplatesArgs
@@ -4682,6 +4791,13 @@ export namespace Prisma {
    */
   export type UserCountOutputTypeCountDailyActivitiesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: DailyActivityWhereInput
+  }
+
+  /**
+   * UserCountOutputType without action
+   */
+  export type UserCountOutputTypeCountXpTransactionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: XpTransactionWhereInput
   }
 
   /**
@@ -5698,6 +5814,7 @@ export namespace Prisma {
     userGamification?: boolean | User$userGamificationArgs<ExtArgs>
     userBadges?: boolean | User$userBadgesArgs<ExtArgs>
     dailyActivities?: boolean | User$dailyActivitiesArgs<ExtArgs>
+    xpTransactions?: boolean | User$xpTransactionsArgs<ExtArgs>
     refreshTokens?: boolean | User$refreshTokensArgs<ExtArgs>
     createdClasses?: boolean | User$createdClassesArgs<ExtArgs>
     classTemplates?: boolean | User$classTemplatesArgs<ExtArgs>
@@ -5761,6 +5878,7 @@ export namespace Prisma {
     userGamification?: boolean | User$userGamificationArgs<ExtArgs>
     userBadges?: boolean | User$userBadgesArgs<ExtArgs>
     dailyActivities?: boolean | User$dailyActivitiesArgs<ExtArgs>
+    xpTransactions?: boolean | User$xpTransactionsArgs<ExtArgs>
     refreshTokens?: boolean | User$refreshTokensArgs<ExtArgs>
     createdClasses?: boolean | User$createdClassesArgs<ExtArgs>
     classTemplates?: boolean | User$classTemplatesArgs<ExtArgs>
@@ -5785,6 +5903,7 @@ export namespace Prisma {
       userGamification: Prisma.$UserGamificationPayload<ExtArgs> | null
       userBadges: Prisma.$UserBadgePayload<ExtArgs>[]
       dailyActivities: Prisma.$DailyActivityPayload<ExtArgs>[]
+      xpTransactions: Prisma.$XpTransactionPayload<ExtArgs>[]
       refreshTokens: Prisma.$RefreshTokenPayload<ExtArgs>[]
       createdClasses: Prisma.$ClassPayload<ExtArgs>[]
       classTemplates: Prisma.$ClassTemplatePayload<ExtArgs>[]
@@ -6208,6 +6327,7 @@ export namespace Prisma {
     userGamification<T extends User$userGamificationArgs<ExtArgs> = {}>(args?: Subset<T, User$userGamificationArgs<ExtArgs>>): Prisma__UserGamificationClient<$Result.GetResult<Prisma.$UserGamificationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     userBadges<T extends User$userBadgesArgs<ExtArgs> = {}>(args?: Subset<T, User$userBadgesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$UserBadgePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     dailyActivities<T extends User$dailyActivitiesArgs<ExtArgs> = {}>(args?: Subset<T, User$dailyActivitiesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DailyActivityPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    xpTransactions<T extends User$xpTransactionsArgs<ExtArgs> = {}>(args?: Subset<T, User$xpTransactionsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$XpTransactionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     refreshTokens<T extends User$refreshTokensArgs<ExtArgs> = {}>(args?: Subset<T, User$refreshTokensArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$RefreshTokenPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     createdClasses<T extends User$createdClassesArgs<ExtArgs> = {}>(args?: Subset<T, User$createdClassesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ClassPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     classTemplates<T extends User$classTemplatesArgs<ExtArgs> = {}>(args?: Subset<T, User$classTemplatesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ClassTemplatePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -6869,6 +6989,30 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: DailyActivityScalarFieldEnum | DailyActivityScalarFieldEnum[]
+  }
+
+  /**
+   * User.xpTransactions
+   */
+  export type User$xpTransactionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the XpTransaction
+     */
+    select?: XpTransactionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the XpTransaction
+     */
+    omit?: XpTransactionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: XpTransactionInclude<ExtArgs> | null
+    where?: XpTransactionWhereInput
+    orderBy?: XpTransactionOrderByWithRelationInput | XpTransactionOrderByWithRelationInput[]
+    cursor?: XpTransactionWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: XpTransactionScalarFieldEnum | XpTransactionScalarFieldEnum[]
   }
 
   /**
@@ -31530,12 +31674,14 @@ export namespace Prisma {
 
   export type ActivityAttemptAvgAggregateOutputType = {
     attemptNo: number | null
+    score: number | null
     elapsedMs: number | null
     hintUsed: number | null
   }
 
   export type ActivityAttemptSumAggregateOutputType = {
     attemptNo: number | null
+    score: number | null
     elapsedMs: number | null
     hintUsed: number | null
   }
@@ -31547,6 +31693,7 @@ export namespace Prisma {
     atomOptionId: string | null
     attemptNo: number | null
     correct: boolean | null
+    score: number | null
     elapsedMs: number | null
     hintUsed: number | null
     createdAt: Date | null
@@ -31559,6 +31706,7 @@ export namespace Prisma {
     atomOptionId: string | null
     attemptNo: number | null
     correct: boolean | null
+    score: number | null
     elapsedMs: number | null
     hintUsed: number | null
     createdAt: Date | null
@@ -31572,6 +31720,7 @@ export namespace Prisma {
     attemptNo: number
     response: number
     correct: number
+    score: number
     elapsedMs: number
     hintUsed: number
     meta: number
@@ -31582,12 +31731,14 @@ export namespace Prisma {
 
   export type ActivityAttemptAvgAggregateInputType = {
     attemptNo?: true
+    score?: true
     elapsedMs?: true
     hintUsed?: true
   }
 
   export type ActivityAttemptSumAggregateInputType = {
     attemptNo?: true
+    score?: true
     elapsedMs?: true
     hintUsed?: true
   }
@@ -31599,6 +31750,7 @@ export namespace Prisma {
     atomOptionId?: true
     attemptNo?: true
     correct?: true
+    score?: true
     elapsedMs?: true
     hintUsed?: true
     createdAt?: true
@@ -31611,6 +31763,7 @@ export namespace Prisma {
     atomOptionId?: true
     attemptNo?: true
     correct?: true
+    score?: true
     elapsedMs?: true
     hintUsed?: true
     createdAt?: true
@@ -31624,6 +31777,7 @@ export namespace Prisma {
     attemptNo?: true
     response?: true
     correct?: true
+    score?: true
     elapsedMs?: true
     hintUsed?: true
     meta?: true
@@ -31725,6 +31879,7 @@ export namespace Prisma {
     attemptNo: number
     response: JsonValue | null
     correct: boolean | null
+    score: number | null
     elapsedMs: number | null
     hintUsed: number
     meta: JsonValue | null
@@ -31758,6 +31913,7 @@ export namespace Prisma {
     attemptNo?: boolean
     response?: boolean
     correct?: boolean
+    score?: boolean
     elapsedMs?: boolean
     hintUsed?: boolean
     meta?: boolean
@@ -31775,6 +31931,7 @@ export namespace Prisma {
     attemptNo?: boolean
     response?: boolean
     correct?: boolean
+    score?: boolean
     elapsedMs?: boolean
     hintUsed?: boolean
     meta?: boolean
@@ -31792,6 +31949,7 @@ export namespace Prisma {
     attemptNo?: boolean
     response?: boolean
     correct?: boolean
+    score?: boolean
     elapsedMs?: boolean
     hintUsed?: boolean
     meta?: boolean
@@ -31809,13 +31967,14 @@ export namespace Prisma {
     attemptNo?: boolean
     response?: boolean
     correct?: boolean
+    score?: boolean
     elapsedMs?: boolean
     hintUsed?: boolean
     meta?: boolean
     createdAt?: boolean
   }
 
-  export type ActivityAttemptOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "atomId" | "atomOptionId" | "attemptNo" | "response" | "correct" | "elapsedMs" | "hintUsed" | "meta" | "createdAt", ExtArgs["result"]["activityAttempt"]>
+  export type ActivityAttemptOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "atomId" | "atomOptionId" | "attemptNo" | "response" | "correct" | "score" | "elapsedMs" | "hintUsed" | "meta" | "createdAt", ExtArgs["result"]["activityAttempt"]>
   export type ActivityAttemptInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | UserDefaultArgs<ExtArgs>
     atom?: boolean | AtomDefaultArgs<ExtArgs>
@@ -31847,6 +32006,7 @@ export namespace Prisma {
       attemptNo: number
       response: Prisma.JsonValue | null
       correct: boolean | null
+      score: number | null
       elapsedMs: number | null
       hintUsed: number
       meta: Prisma.JsonValue | null
@@ -32284,6 +32444,7 @@ export namespace Prisma {
     readonly attemptNo: FieldRef<"ActivityAttempt", 'Int'>
     readonly response: FieldRef<"ActivityAttempt", 'Json'>
     readonly correct: FieldRef<"ActivityAttempt", 'Boolean'>
+    readonly score: FieldRef<"ActivityAttempt", 'Float'>
     readonly elapsedMs: FieldRef<"ActivityAttempt", 'Int'>
     readonly hintUsed: FieldRef<"ActivityAttempt", 'Int'>
     readonly meta: FieldRef<"ActivityAttempt", 'Json'>
@@ -34950,14 +35111,12 @@ export namespace Prisma {
     totalXP: number | null
     currentStreak: number | null
     longestStreak: number | null
-    level: number | null
   }
 
   export type UserGamificationSumAggregateOutputType = {
     totalXP: number | null
     currentStreak: number | null
     longestStreak: number | null
-    level: number | null
   }
 
   export type UserGamificationMinAggregateOutputType = {
@@ -34967,7 +35126,6 @@ export namespace Prisma {
     currentStreak: number | null
     longestStreak: number | null
     lastActivityAt: Date | null
-    level: number | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -34979,7 +35137,6 @@ export namespace Prisma {
     currentStreak: number | null
     longestStreak: number | null
     lastActivityAt: Date | null
-    level: number | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -34991,7 +35148,6 @@ export namespace Prisma {
     currentStreak: number
     longestStreak: number
     lastActivityAt: number
-    level: number
     createdAt: number
     updatedAt: number
     _all: number
@@ -35002,14 +35158,12 @@ export namespace Prisma {
     totalXP?: true
     currentStreak?: true
     longestStreak?: true
-    level?: true
   }
 
   export type UserGamificationSumAggregateInputType = {
     totalXP?: true
     currentStreak?: true
     longestStreak?: true
-    level?: true
   }
 
   export type UserGamificationMinAggregateInputType = {
@@ -35019,7 +35173,6 @@ export namespace Prisma {
     currentStreak?: true
     longestStreak?: true
     lastActivityAt?: true
-    level?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -35031,7 +35184,6 @@ export namespace Prisma {
     currentStreak?: true
     longestStreak?: true
     lastActivityAt?: true
-    level?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -35043,7 +35195,6 @@ export namespace Prisma {
     currentStreak?: true
     longestStreak?: true
     lastActivityAt?: true
-    level?: true
     createdAt?: true
     updatedAt?: true
     _all?: true
@@ -35142,7 +35293,6 @@ export namespace Prisma {
     currentStreak: number
     longestStreak: number
     lastActivityAt: Date | null
-    level: number
     createdAt: Date
     updatedAt: Date
     _count: UserGamificationCountAggregateOutputType | null
@@ -35173,7 +35323,6 @@ export namespace Prisma {
     currentStreak?: boolean
     longestStreak?: boolean
     lastActivityAt?: boolean
-    level?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
@@ -35188,7 +35337,6 @@ export namespace Prisma {
     currentStreak?: boolean
     longestStreak?: boolean
     lastActivityAt?: boolean
-    level?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
@@ -35201,7 +35349,6 @@ export namespace Prisma {
     currentStreak?: boolean
     longestStreak?: boolean
     lastActivityAt?: boolean
-    level?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
@@ -35214,12 +35361,11 @@ export namespace Prisma {
     currentStreak?: boolean
     longestStreak?: boolean
     lastActivityAt?: boolean
-    level?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type UserGamificationOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "totalXP" | "currentStreak" | "longestStreak" | "lastActivityAt" | "level" | "createdAt" | "updatedAt", ExtArgs["result"]["userGamification"]>
+  export type UserGamificationOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "totalXP" | "currentStreak" | "longestStreak" | "lastActivityAt" | "createdAt" | "updatedAt", ExtArgs["result"]["userGamification"]>
   export type UserGamificationInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | UserDefaultArgs<ExtArgs>
     badges?: boolean | UserGamification$badgesArgs<ExtArgs>
@@ -35245,7 +35391,6 @@ export namespace Prisma {
       currentStreak: number
       longestStreak: number
       lastActivityAt: Date | null
-      level: number
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["userGamification"]>
@@ -35679,7 +35824,6 @@ export namespace Prisma {
     readonly currentStreak: FieldRef<"UserGamification", 'Int'>
     readonly longestStreak: FieldRef<"UserGamification", 'Int'>
     readonly lastActivityAt: FieldRef<"UserGamification", 'DateTime'>
-    readonly level: FieldRef<"UserGamification", 'Int'>
     readonly createdAt: FieldRef<"UserGamification", 'DateTime'>
     readonly updatedAt: FieldRef<"UserGamification", 'DateTime'>
   }
@@ -36117,6 +36261,1128 @@ export namespace Prisma {
      * Choose, which related nodes to fetch as well
      */
     include?: UserGamificationInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model XpTransaction
+   */
+
+  export type AggregateXpTransaction = {
+    _count: XpTransactionCountAggregateOutputType | null
+    _avg: XpTransactionAvgAggregateOutputType | null
+    _sum: XpTransactionSumAggregateOutputType | null
+    _min: XpTransactionMinAggregateOutputType | null
+    _max: XpTransactionMaxAggregateOutputType | null
+  }
+
+  export type XpTransactionAvgAggregateOutputType = {
+    amount: number | null
+    balanceAfter: number | null
+  }
+
+  export type XpTransactionSumAggregateOutputType = {
+    amount: number | null
+    balanceAfter: number | null
+  }
+
+  export type XpTransactionMinAggregateOutputType = {
+    id: string | null
+    userId: string | null
+    amount: number | null
+    source: $Enums.XpSource | null
+    sourceRef: string | null
+    balanceAfter: number | null
+    createdAt: Date | null
+  }
+
+  export type XpTransactionMaxAggregateOutputType = {
+    id: string | null
+    userId: string | null
+    amount: number | null
+    source: $Enums.XpSource | null
+    sourceRef: string | null
+    balanceAfter: number | null
+    createdAt: Date | null
+  }
+
+  export type XpTransactionCountAggregateOutputType = {
+    id: number
+    userId: number
+    amount: number
+    source: number
+    sourceRef: number
+    balanceAfter: number
+    createdAt: number
+    _all: number
+  }
+
+
+  export type XpTransactionAvgAggregateInputType = {
+    amount?: true
+    balanceAfter?: true
+  }
+
+  export type XpTransactionSumAggregateInputType = {
+    amount?: true
+    balanceAfter?: true
+  }
+
+  export type XpTransactionMinAggregateInputType = {
+    id?: true
+    userId?: true
+    amount?: true
+    source?: true
+    sourceRef?: true
+    balanceAfter?: true
+    createdAt?: true
+  }
+
+  export type XpTransactionMaxAggregateInputType = {
+    id?: true
+    userId?: true
+    amount?: true
+    source?: true
+    sourceRef?: true
+    balanceAfter?: true
+    createdAt?: true
+  }
+
+  export type XpTransactionCountAggregateInputType = {
+    id?: true
+    userId?: true
+    amount?: true
+    source?: true
+    sourceRef?: true
+    balanceAfter?: true
+    createdAt?: true
+    _all?: true
+  }
+
+  export type XpTransactionAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which XpTransaction to aggregate.
+     */
+    where?: XpTransactionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of XpTransactions to fetch.
+     */
+    orderBy?: XpTransactionOrderByWithRelationInput | XpTransactionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: XpTransactionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` XpTransactions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` XpTransactions.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned XpTransactions
+    **/
+    _count?: true | XpTransactionCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: XpTransactionAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: XpTransactionSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: XpTransactionMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: XpTransactionMaxAggregateInputType
+  }
+
+  export type GetXpTransactionAggregateType<T extends XpTransactionAggregateArgs> = {
+        [P in keyof T & keyof AggregateXpTransaction]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateXpTransaction[P]>
+      : GetScalarType<T[P], AggregateXpTransaction[P]>
+  }
+
+
+
+
+  export type XpTransactionGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: XpTransactionWhereInput
+    orderBy?: XpTransactionOrderByWithAggregationInput | XpTransactionOrderByWithAggregationInput[]
+    by: XpTransactionScalarFieldEnum[] | XpTransactionScalarFieldEnum
+    having?: XpTransactionScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: XpTransactionCountAggregateInputType | true
+    _avg?: XpTransactionAvgAggregateInputType
+    _sum?: XpTransactionSumAggregateInputType
+    _min?: XpTransactionMinAggregateInputType
+    _max?: XpTransactionMaxAggregateInputType
+  }
+
+  export type XpTransactionGroupByOutputType = {
+    id: string
+    userId: string
+    amount: number
+    source: $Enums.XpSource
+    sourceRef: string
+    balanceAfter: number
+    createdAt: Date
+    _count: XpTransactionCountAggregateOutputType | null
+    _avg: XpTransactionAvgAggregateOutputType | null
+    _sum: XpTransactionSumAggregateOutputType | null
+    _min: XpTransactionMinAggregateOutputType | null
+    _max: XpTransactionMaxAggregateOutputType | null
+  }
+
+  type GetXpTransactionGroupByPayload<T extends XpTransactionGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<XpTransactionGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof XpTransactionGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], XpTransactionGroupByOutputType[P]>
+            : GetScalarType<T[P], XpTransactionGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type XpTransactionSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    amount?: boolean
+    source?: boolean
+    sourceRef?: boolean
+    balanceAfter?: boolean
+    createdAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["xpTransaction"]>
+
+  export type XpTransactionSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    amount?: boolean
+    source?: boolean
+    sourceRef?: boolean
+    balanceAfter?: boolean
+    createdAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["xpTransaction"]>
+
+  export type XpTransactionSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    amount?: boolean
+    source?: boolean
+    sourceRef?: boolean
+    balanceAfter?: boolean
+    createdAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["xpTransaction"]>
+
+  export type XpTransactionSelectScalar = {
+    id?: boolean
+    userId?: boolean
+    amount?: boolean
+    source?: boolean
+    sourceRef?: boolean
+    balanceAfter?: boolean
+    createdAt?: boolean
+  }
+
+  export type XpTransactionOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "amount" | "source" | "sourceRef" | "balanceAfter" | "createdAt", ExtArgs["result"]["xpTransaction"]>
+  export type XpTransactionInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
+  export type XpTransactionIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
+  export type XpTransactionIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
+
+  export type $XpTransactionPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "XpTransaction"
+    objects: {
+      user: Prisma.$UserPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      userId: string
+      amount: number
+      source: $Enums.XpSource
+      sourceRef: string
+      balanceAfter: number
+      createdAt: Date
+    }, ExtArgs["result"]["xpTransaction"]>
+    composites: {}
+  }
+
+  type XpTransactionGetPayload<S extends boolean | null | undefined | XpTransactionDefaultArgs> = $Result.GetResult<Prisma.$XpTransactionPayload, S>
+
+  type XpTransactionCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<XpTransactionFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: XpTransactionCountAggregateInputType | true
+    }
+
+  export interface XpTransactionDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['XpTransaction'], meta: { name: 'XpTransaction' } }
+    /**
+     * Find zero or one XpTransaction that matches the filter.
+     * @param {XpTransactionFindUniqueArgs} args - Arguments to find a XpTransaction
+     * @example
+     * // Get one XpTransaction
+     * const xpTransaction = await prisma.xpTransaction.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends XpTransactionFindUniqueArgs>(args: SelectSubset<T, XpTransactionFindUniqueArgs<ExtArgs>>): Prisma__XpTransactionClient<$Result.GetResult<Prisma.$XpTransactionPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one XpTransaction that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {XpTransactionFindUniqueOrThrowArgs} args - Arguments to find a XpTransaction
+     * @example
+     * // Get one XpTransaction
+     * const xpTransaction = await prisma.xpTransaction.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends XpTransactionFindUniqueOrThrowArgs>(args: SelectSubset<T, XpTransactionFindUniqueOrThrowArgs<ExtArgs>>): Prisma__XpTransactionClient<$Result.GetResult<Prisma.$XpTransactionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first XpTransaction that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {XpTransactionFindFirstArgs} args - Arguments to find a XpTransaction
+     * @example
+     * // Get one XpTransaction
+     * const xpTransaction = await prisma.xpTransaction.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends XpTransactionFindFirstArgs>(args?: SelectSubset<T, XpTransactionFindFirstArgs<ExtArgs>>): Prisma__XpTransactionClient<$Result.GetResult<Prisma.$XpTransactionPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first XpTransaction that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {XpTransactionFindFirstOrThrowArgs} args - Arguments to find a XpTransaction
+     * @example
+     * // Get one XpTransaction
+     * const xpTransaction = await prisma.xpTransaction.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends XpTransactionFindFirstOrThrowArgs>(args?: SelectSubset<T, XpTransactionFindFirstOrThrowArgs<ExtArgs>>): Prisma__XpTransactionClient<$Result.GetResult<Prisma.$XpTransactionPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more XpTransactions that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {XpTransactionFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all XpTransactions
+     * const xpTransactions = await prisma.xpTransaction.findMany()
+     * 
+     * // Get first 10 XpTransactions
+     * const xpTransactions = await prisma.xpTransaction.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const xpTransactionWithIdOnly = await prisma.xpTransaction.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends XpTransactionFindManyArgs>(args?: SelectSubset<T, XpTransactionFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$XpTransactionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a XpTransaction.
+     * @param {XpTransactionCreateArgs} args - Arguments to create a XpTransaction.
+     * @example
+     * // Create one XpTransaction
+     * const XpTransaction = await prisma.xpTransaction.create({
+     *   data: {
+     *     // ... data to create a XpTransaction
+     *   }
+     * })
+     * 
+     */
+    create<T extends XpTransactionCreateArgs>(args: SelectSubset<T, XpTransactionCreateArgs<ExtArgs>>): Prisma__XpTransactionClient<$Result.GetResult<Prisma.$XpTransactionPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many XpTransactions.
+     * @param {XpTransactionCreateManyArgs} args - Arguments to create many XpTransactions.
+     * @example
+     * // Create many XpTransactions
+     * const xpTransaction = await prisma.xpTransaction.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends XpTransactionCreateManyArgs>(args?: SelectSubset<T, XpTransactionCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many XpTransactions and returns the data saved in the database.
+     * @param {XpTransactionCreateManyAndReturnArgs} args - Arguments to create many XpTransactions.
+     * @example
+     * // Create many XpTransactions
+     * const xpTransaction = await prisma.xpTransaction.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many XpTransactions and only return the `id`
+     * const xpTransactionWithIdOnly = await prisma.xpTransaction.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends XpTransactionCreateManyAndReturnArgs>(args?: SelectSubset<T, XpTransactionCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$XpTransactionPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a XpTransaction.
+     * @param {XpTransactionDeleteArgs} args - Arguments to delete one XpTransaction.
+     * @example
+     * // Delete one XpTransaction
+     * const XpTransaction = await prisma.xpTransaction.delete({
+     *   where: {
+     *     // ... filter to delete one XpTransaction
+     *   }
+     * })
+     * 
+     */
+    delete<T extends XpTransactionDeleteArgs>(args: SelectSubset<T, XpTransactionDeleteArgs<ExtArgs>>): Prisma__XpTransactionClient<$Result.GetResult<Prisma.$XpTransactionPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one XpTransaction.
+     * @param {XpTransactionUpdateArgs} args - Arguments to update one XpTransaction.
+     * @example
+     * // Update one XpTransaction
+     * const xpTransaction = await prisma.xpTransaction.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends XpTransactionUpdateArgs>(args: SelectSubset<T, XpTransactionUpdateArgs<ExtArgs>>): Prisma__XpTransactionClient<$Result.GetResult<Prisma.$XpTransactionPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more XpTransactions.
+     * @param {XpTransactionDeleteManyArgs} args - Arguments to filter XpTransactions to delete.
+     * @example
+     * // Delete a few XpTransactions
+     * const { count } = await prisma.xpTransaction.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends XpTransactionDeleteManyArgs>(args?: SelectSubset<T, XpTransactionDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more XpTransactions.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {XpTransactionUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many XpTransactions
+     * const xpTransaction = await prisma.xpTransaction.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends XpTransactionUpdateManyArgs>(args: SelectSubset<T, XpTransactionUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more XpTransactions and returns the data updated in the database.
+     * @param {XpTransactionUpdateManyAndReturnArgs} args - Arguments to update many XpTransactions.
+     * @example
+     * // Update many XpTransactions
+     * const xpTransaction = await prisma.xpTransaction.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more XpTransactions and only return the `id`
+     * const xpTransactionWithIdOnly = await prisma.xpTransaction.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends XpTransactionUpdateManyAndReturnArgs>(args: SelectSubset<T, XpTransactionUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$XpTransactionPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one XpTransaction.
+     * @param {XpTransactionUpsertArgs} args - Arguments to update or create a XpTransaction.
+     * @example
+     * // Update or create a XpTransaction
+     * const xpTransaction = await prisma.xpTransaction.upsert({
+     *   create: {
+     *     // ... data to create a XpTransaction
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the XpTransaction we want to update
+     *   }
+     * })
+     */
+    upsert<T extends XpTransactionUpsertArgs>(args: SelectSubset<T, XpTransactionUpsertArgs<ExtArgs>>): Prisma__XpTransactionClient<$Result.GetResult<Prisma.$XpTransactionPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of XpTransactions.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {XpTransactionCountArgs} args - Arguments to filter XpTransactions to count.
+     * @example
+     * // Count the number of XpTransactions
+     * const count = await prisma.xpTransaction.count({
+     *   where: {
+     *     // ... the filter for the XpTransactions we want to count
+     *   }
+     * })
+    **/
+    count<T extends XpTransactionCountArgs>(
+      args?: Subset<T, XpTransactionCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], XpTransactionCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a XpTransaction.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {XpTransactionAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends XpTransactionAggregateArgs>(args: Subset<T, XpTransactionAggregateArgs>): Prisma.PrismaPromise<GetXpTransactionAggregateType<T>>
+
+    /**
+     * Group by XpTransaction.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {XpTransactionGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends XpTransactionGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: XpTransactionGroupByArgs['orderBy'] }
+        : { orderBy?: XpTransactionGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, XpTransactionGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetXpTransactionGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the XpTransaction model
+   */
+  readonly fields: XpTransactionFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for XpTransaction.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__XpTransactionClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    user<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the XpTransaction model
+   */
+  interface XpTransactionFieldRefs {
+    readonly id: FieldRef<"XpTransaction", 'String'>
+    readonly userId: FieldRef<"XpTransaction", 'String'>
+    readonly amount: FieldRef<"XpTransaction", 'Int'>
+    readonly source: FieldRef<"XpTransaction", 'XpSource'>
+    readonly sourceRef: FieldRef<"XpTransaction", 'String'>
+    readonly balanceAfter: FieldRef<"XpTransaction", 'Int'>
+    readonly createdAt: FieldRef<"XpTransaction", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * XpTransaction findUnique
+   */
+  export type XpTransactionFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the XpTransaction
+     */
+    select?: XpTransactionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the XpTransaction
+     */
+    omit?: XpTransactionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: XpTransactionInclude<ExtArgs> | null
+    /**
+     * Filter, which XpTransaction to fetch.
+     */
+    where: XpTransactionWhereUniqueInput
+  }
+
+  /**
+   * XpTransaction findUniqueOrThrow
+   */
+  export type XpTransactionFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the XpTransaction
+     */
+    select?: XpTransactionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the XpTransaction
+     */
+    omit?: XpTransactionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: XpTransactionInclude<ExtArgs> | null
+    /**
+     * Filter, which XpTransaction to fetch.
+     */
+    where: XpTransactionWhereUniqueInput
+  }
+
+  /**
+   * XpTransaction findFirst
+   */
+  export type XpTransactionFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the XpTransaction
+     */
+    select?: XpTransactionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the XpTransaction
+     */
+    omit?: XpTransactionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: XpTransactionInclude<ExtArgs> | null
+    /**
+     * Filter, which XpTransaction to fetch.
+     */
+    where?: XpTransactionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of XpTransactions to fetch.
+     */
+    orderBy?: XpTransactionOrderByWithRelationInput | XpTransactionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for XpTransactions.
+     */
+    cursor?: XpTransactionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` XpTransactions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` XpTransactions.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of XpTransactions.
+     */
+    distinct?: XpTransactionScalarFieldEnum | XpTransactionScalarFieldEnum[]
+  }
+
+  /**
+   * XpTransaction findFirstOrThrow
+   */
+  export type XpTransactionFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the XpTransaction
+     */
+    select?: XpTransactionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the XpTransaction
+     */
+    omit?: XpTransactionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: XpTransactionInclude<ExtArgs> | null
+    /**
+     * Filter, which XpTransaction to fetch.
+     */
+    where?: XpTransactionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of XpTransactions to fetch.
+     */
+    orderBy?: XpTransactionOrderByWithRelationInput | XpTransactionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for XpTransactions.
+     */
+    cursor?: XpTransactionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` XpTransactions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` XpTransactions.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of XpTransactions.
+     */
+    distinct?: XpTransactionScalarFieldEnum | XpTransactionScalarFieldEnum[]
+  }
+
+  /**
+   * XpTransaction findMany
+   */
+  export type XpTransactionFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the XpTransaction
+     */
+    select?: XpTransactionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the XpTransaction
+     */
+    omit?: XpTransactionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: XpTransactionInclude<ExtArgs> | null
+    /**
+     * Filter, which XpTransactions to fetch.
+     */
+    where?: XpTransactionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of XpTransactions to fetch.
+     */
+    orderBy?: XpTransactionOrderByWithRelationInput | XpTransactionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing XpTransactions.
+     */
+    cursor?: XpTransactionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` XpTransactions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` XpTransactions.
+     */
+    skip?: number
+    distinct?: XpTransactionScalarFieldEnum | XpTransactionScalarFieldEnum[]
+  }
+
+  /**
+   * XpTransaction create
+   */
+  export type XpTransactionCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the XpTransaction
+     */
+    select?: XpTransactionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the XpTransaction
+     */
+    omit?: XpTransactionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: XpTransactionInclude<ExtArgs> | null
+    /**
+     * The data needed to create a XpTransaction.
+     */
+    data: XOR<XpTransactionCreateInput, XpTransactionUncheckedCreateInput>
+  }
+
+  /**
+   * XpTransaction createMany
+   */
+  export type XpTransactionCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many XpTransactions.
+     */
+    data: XpTransactionCreateManyInput | XpTransactionCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * XpTransaction createManyAndReturn
+   */
+  export type XpTransactionCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the XpTransaction
+     */
+    select?: XpTransactionSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the XpTransaction
+     */
+    omit?: XpTransactionOmit<ExtArgs> | null
+    /**
+     * The data used to create many XpTransactions.
+     */
+    data: XpTransactionCreateManyInput | XpTransactionCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: XpTransactionIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * XpTransaction update
+   */
+  export type XpTransactionUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the XpTransaction
+     */
+    select?: XpTransactionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the XpTransaction
+     */
+    omit?: XpTransactionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: XpTransactionInclude<ExtArgs> | null
+    /**
+     * The data needed to update a XpTransaction.
+     */
+    data: XOR<XpTransactionUpdateInput, XpTransactionUncheckedUpdateInput>
+    /**
+     * Choose, which XpTransaction to update.
+     */
+    where: XpTransactionWhereUniqueInput
+  }
+
+  /**
+   * XpTransaction updateMany
+   */
+  export type XpTransactionUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update XpTransactions.
+     */
+    data: XOR<XpTransactionUpdateManyMutationInput, XpTransactionUncheckedUpdateManyInput>
+    /**
+     * Filter which XpTransactions to update
+     */
+    where?: XpTransactionWhereInput
+    /**
+     * Limit how many XpTransactions to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * XpTransaction updateManyAndReturn
+   */
+  export type XpTransactionUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the XpTransaction
+     */
+    select?: XpTransactionSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the XpTransaction
+     */
+    omit?: XpTransactionOmit<ExtArgs> | null
+    /**
+     * The data used to update XpTransactions.
+     */
+    data: XOR<XpTransactionUpdateManyMutationInput, XpTransactionUncheckedUpdateManyInput>
+    /**
+     * Filter which XpTransactions to update
+     */
+    where?: XpTransactionWhereInput
+    /**
+     * Limit how many XpTransactions to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: XpTransactionIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * XpTransaction upsert
+   */
+  export type XpTransactionUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the XpTransaction
+     */
+    select?: XpTransactionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the XpTransaction
+     */
+    omit?: XpTransactionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: XpTransactionInclude<ExtArgs> | null
+    /**
+     * The filter to search for the XpTransaction to update in case it exists.
+     */
+    where: XpTransactionWhereUniqueInput
+    /**
+     * In case the XpTransaction found by the `where` argument doesn't exist, create a new XpTransaction with this data.
+     */
+    create: XOR<XpTransactionCreateInput, XpTransactionUncheckedCreateInput>
+    /**
+     * In case the XpTransaction was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<XpTransactionUpdateInput, XpTransactionUncheckedUpdateInput>
+  }
+
+  /**
+   * XpTransaction delete
+   */
+  export type XpTransactionDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the XpTransaction
+     */
+    select?: XpTransactionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the XpTransaction
+     */
+    omit?: XpTransactionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: XpTransactionInclude<ExtArgs> | null
+    /**
+     * Filter which XpTransaction to delete.
+     */
+    where: XpTransactionWhereUniqueInput
+  }
+
+  /**
+   * XpTransaction deleteMany
+   */
+  export type XpTransactionDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which XpTransactions to delete
+     */
+    where?: XpTransactionWhereInput
+    /**
+     * Limit how many XpTransactions to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * XpTransaction without action
+   */
+  export type XpTransactionDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the XpTransaction
+     */
+    select?: XpTransactionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the XpTransaction
+     */
+    omit?: XpTransactionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: XpTransactionInclude<ExtArgs> | null
   }
 
 
@@ -52159,6 +53425,7 @@ export namespace Prisma {
     attemptNo: 'attemptNo',
     response: 'response',
     correct: 'correct',
+    score: 'score',
     elapsedMs: 'elapsedMs',
     hintUsed: 'hintUsed',
     meta: 'meta',
@@ -52198,12 +53465,24 @@ export namespace Prisma {
     currentStreak: 'currentStreak',
     longestStreak: 'longestStreak',
     lastActivityAt: 'lastActivityAt',
-    level: 'level',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   };
 
   export type UserGamificationScalarFieldEnum = (typeof UserGamificationScalarFieldEnum)[keyof typeof UserGamificationScalarFieldEnum]
+
+
+  export const XpTransactionScalarFieldEnum: {
+    id: 'id',
+    userId: 'userId',
+    amount: 'amount',
+    source: 'source',
+    sourceRef: 'sourceRef',
+    balanceAfter: 'balanceAfter',
+    createdAt: 'createdAt'
+  };
+
+  export type XpTransactionScalarFieldEnum = (typeof XpTransactionScalarFieldEnum)[keyof typeof XpTransactionScalarFieldEnum]
 
 
   export const BadgeScalarFieldEnum: {
@@ -52650,6 +53929,20 @@ export namespace Prisma {
 
 
   /**
+   * Reference to a field of type 'XpSource'
+   */
+  export type EnumXpSourceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'XpSource'>
+    
+
+
+  /**
+   * Reference to a field of type 'XpSource[]'
+   */
+  export type ListEnumXpSourceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'XpSource[]'>
+    
+
+
+  /**
    * Reference to a field of type 'ClassStatus'
    */
   export type EnumClassStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ClassStatus'>
@@ -52705,6 +53998,7 @@ export namespace Prisma {
     userGamification?: XOR<UserGamificationNullableScalarRelationFilter, UserGamificationWhereInput> | null
     userBadges?: UserBadgeListRelationFilter
     dailyActivities?: DailyActivityListRelationFilter
+    xpTransactions?: XpTransactionListRelationFilter
     refreshTokens?: RefreshTokenListRelationFilter
     createdClasses?: ClassListRelationFilter
     classTemplates?: ClassTemplateListRelationFilter
@@ -52735,6 +54029,7 @@ export namespace Prisma {
     userGamification?: UserGamificationOrderByWithRelationInput
     userBadges?: UserBadgeOrderByRelationAggregateInput
     dailyActivities?: DailyActivityOrderByRelationAggregateInput
+    xpTransactions?: XpTransactionOrderByRelationAggregateInput
     refreshTokens?: RefreshTokenOrderByRelationAggregateInput
     createdClasses?: ClassOrderByRelationAggregateInput
     classTemplates?: ClassTemplateOrderByRelationAggregateInput
@@ -52768,6 +54063,7 @@ export namespace Prisma {
     userGamification?: XOR<UserGamificationNullableScalarRelationFilter, UserGamificationWhereInput> | null
     userBadges?: UserBadgeListRelationFilter
     dailyActivities?: DailyActivityListRelationFilter
+    xpTransactions?: XpTransactionListRelationFilter
     refreshTokens?: RefreshTokenListRelationFilter
     createdClasses?: ClassListRelationFilter
     classTemplates?: ClassTemplateListRelationFilter
@@ -54454,6 +55750,7 @@ export namespace Prisma {
     attemptNo?: IntFilter<"ActivityAttempt"> | number
     response?: JsonNullableFilter<"ActivityAttempt">
     correct?: BoolNullableFilter<"ActivityAttempt"> | boolean | null
+    score?: FloatNullableFilter<"ActivityAttempt"> | number | null
     elapsedMs?: IntNullableFilter<"ActivityAttempt"> | number | null
     hintUsed?: IntFilter<"ActivityAttempt"> | number
     meta?: JsonNullableFilter<"ActivityAttempt">
@@ -54471,6 +55768,7 @@ export namespace Prisma {
     attemptNo?: SortOrder
     response?: SortOrderInput | SortOrder
     correct?: SortOrderInput | SortOrder
+    score?: SortOrderInput | SortOrder
     elapsedMs?: SortOrderInput | SortOrder
     hintUsed?: SortOrder
     meta?: SortOrderInput | SortOrder
@@ -54482,6 +55780,7 @@ export namespace Prisma {
 
   export type ActivityAttemptWhereUniqueInput = Prisma.AtLeast<{
     id?: string
+    userId_atomId_attemptNo?: ActivityAttemptUserIdAtomIdAttemptNoCompoundUniqueInput
     AND?: ActivityAttemptWhereInput | ActivityAttemptWhereInput[]
     OR?: ActivityAttemptWhereInput[]
     NOT?: ActivityAttemptWhereInput | ActivityAttemptWhereInput[]
@@ -54491,6 +55790,7 @@ export namespace Prisma {
     attemptNo?: IntFilter<"ActivityAttempt"> | number
     response?: JsonNullableFilter<"ActivityAttempt">
     correct?: BoolNullableFilter<"ActivityAttempt"> | boolean | null
+    score?: FloatNullableFilter<"ActivityAttempt"> | number | null
     elapsedMs?: IntNullableFilter<"ActivityAttempt"> | number | null
     hintUsed?: IntFilter<"ActivityAttempt"> | number
     meta?: JsonNullableFilter<"ActivityAttempt">
@@ -54498,7 +55798,7 @@ export namespace Prisma {
     user?: XOR<UserScalarRelationFilter, UserWhereInput>
     atom?: XOR<AtomScalarRelationFilter, AtomWhereInput>
     selectedOption?: XOR<AtomOptionNullableScalarRelationFilter, AtomOptionWhereInput> | null
-  }, "id">
+  }, "id" | "userId_atomId_attemptNo">
 
   export type ActivityAttemptOrderByWithAggregationInput = {
     id?: SortOrder
@@ -54508,6 +55808,7 @@ export namespace Prisma {
     attemptNo?: SortOrder
     response?: SortOrderInput | SortOrder
     correct?: SortOrderInput | SortOrder
+    score?: SortOrderInput | SortOrder
     elapsedMs?: SortOrderInput | SortOrder
     hintUsed?: SortOrder
     meta?: SortOrderInput | SortOrder
@@ -54530,6 +55831,7 @@ export namespace Prisma {
     attemptNo?: IntWithAggregatesFilter<"ActivityAttempt"> | number
     response?: JsonNullableWithAggregatesFilter<"ActivityAttempt">
     correct?: BoolNullableWithAggregatesFilter<"ActivityAttempt"> | boolean | null
+    score?: FloatNullableWithAggregatesFilter<"ActivityAttempt"> | number | null
     elapsedMs?: IntNullableWithAggregatesFilter<"ActivityAttempt"> | number | null
     hintUsed?: IntWithAggregatesFilter<"ActivityAttempt"> | number
     meta?: JsonNullableWithAggregatesFilter<"ActivityAttempt">
@@ -54670,7 +55972,6 @@ export namespace Prisma {
     currentStreak?: IntFilter<"UserGamification"> | number
     longestStreak?: IntFilter<"UserGamification"> | number
     lastActivityAt?: DateTimeNullableFilter<"UserGamification"> | Date | string | null
-    level?: IntFilter<"UserGamification"> | number
     createdAt?: DateTimeFilter<"UserGamification"> | Date | string
     updatedAt?: DateTimeFilter<"UserGamification"> | Date | string
     user?: XOR<UserScalarRelationFilter, UserWhereInput>
@@ -54684,7 +55985,6 @@ export namespace Prisma {
     currentStreak?: SortOrder
     longestStreak?: SortOrder
     lastActivityAt?: SortOrderInput | SortOrder
-    level?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     user?: UserOrderByWithRelationInput
@@ -54701,7 +56001,6 @@ export namespace Prisma {
     currentStreak?: IntFilter<"UserGamification"> | number
     longestStreak?: IntFilter<"UserGamification"> | number
     lastActivityAt?: DateTimeNullableFilter<"UserGamification"> | Date | string | null
-    level?: IntFilter<"UserGamification"> | number
     createdAt?: DateTimeFilter<"UserGamification"> | Date | string
     updatedAt?: DateTimeFilter<"UserGamification"> | Date | string
     user?: XOR<UserScalarRelationFilter, UserWhereInput>
@@ -54715,7 +56014,6 @@ export namespace Prisma {
     currentStreak?: SortOrder
     longestStreak?: SortOrder
     lastActivityAt?: SortOrderInput | SortOrder
-    level?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: UserGamificationCountOrderByAggregateInput
@@ -54735,9 +56033,76 @@ export namespace Prisma {
     currentStreak?: IntWithAggregatesFilter<"UserGamification"> | number
     longestStreak?: IntWithAggregatesFilter<"UserGamification"> | number
     lastActivityAt?: DateTimeNullableWithAggregatesFilter<"UserGamification"> | Date | string | null
-    level?: IntWithAggregatesFilter<"UserGamification"> | number
     createdAt?: DateTimeWithAggregatesFilter<"UserGamification"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"UserGamification"> | Date | string
+  }
+
+  export type XpTransactionWhereInput = {
+    AND?: XpTransactionWhereInput | XpTransactionWhereInput[]
+    OR?: XpTransactionWhereInput[]
+    NOT?: XpTransactionWhereInput | XpTransactionWhereInput[]
+    id?: StringFilter<"XpTransaction"> | string
+    userId?: StringFilter<"XpTransaction"> | string
+    amount?: IntFilter<"XpTransaction"> | number
+    source?: EnumXpSourceFilter<"XpTransaction"> | $Enums.XpSource
+    sourceRef?: StringFilter<"XpTransaction"> | string
+    balanceAfter?: IntFilter<"XpTransaction"> | number
+    createdAt?: DateTimeFilter<"XpTransaction"> | Date | string
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
+  }
+
+  export type XpTransactionOrderByWithRelationInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    amount?: SortOrder
+    source?: SortOrder
+    sourceRef?: SortOrder
+    balanceAfter?: SortOrder
+    createdAt?: SortOrder
+    user?: UserOrderByWithRelationInput
+  }
+
+  export type XpTransactionWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    userId_source_sourceRef?: XpTransactionUserIdSourceSourceRefCompoundUniqueInput
+    AND?: XpTransactionWhereInput | XpTransactionWhereInput[]
+    OR?: XpTransactionWhereInput[]
+    NOT?: XpTransactionWhereInput | XpTransactionWhereInput[]
+    userId?: StringFilter<"XpTransaction"> | string
+    amount?: IntFilter<"XpTransaction"> | number
+    source?: EnumXpSourceFilter<"XpTransaction"> | $Enums.XpSource
+    sourceRef?: StringFilter<"XpTransaction"> | string
+    balanceAfter?: IntFilter<"XpTransaction"> | number
+    createdAt?: DateTimeFilter<"XpTransaction"> | Date | string
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
+  }, "id" | "userId_source_sourceRef">
+
+  export type XpTransactionOrderByWithAggregationInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    amount?: SortOrder
+    source?: SortOrder
+    sourceRef?: SortOrder
+    balanceAfter?: SortOrder
+    createdAt?: SortOrder
+    _count?: XpTransactionCountOrderByAggregateInput
+    _avg?: XpTransactionAvgOrderByAggregateInput
+    _max?: XpTransactionMaxOrderByAggregateInput
+    _min?: XpTransactionMinOrderByAggregateInput
+    _sum?: XpTransactionSumOrderByAggregateInput
+  }
+
+  export type XpTransactionScalarWhereWithAggregatesInput = {
+    AND?: XpTransactionScalarWhereWithAggregatesInput | XpTransactionScalarWhereWithAggregatesInput[]
+    OR?: XpTransactionScalarWhereWithAggregatesInput[]
+    NOT?: XpTransactionScalarWhereWithAggregatesInput | XpTransactionScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"XpTransaction"> | string
+    userId?: StringWithAggregatesFilter<"XpTransaction"> | string
+    amount?: IntWithAggregatesFilter<"XpTransaction"> | number
+    source?: EnumXpSourceWithAggregatesFilter<"XpTransaction"> | $Enums.XpSource
+    sourceRef?: StringWithAggregatesFilter<"XpTransaction"> | string
+    balanceAfter?: IntWithAggregatesFilter<"XpTransaction"> | number
+    createdAt?: DateTimeWithAggregatesFilter<"XpTransaction"> | Date | string
   }
 
   export type BadgeWhereInput = {
@@ -55757,6 +57122,7 @@ export namespace Prisma {
     userGamification?: UserGamificationCreateNestedOneWithoutUserInput
     userBadges?: UserBadgeCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
@@ -55787,6 +57153,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUncheckedCreateNestedOneWithoutUserInput
     userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
@@ -55817,6 +57184,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUpdateOneWithoutUserNestedInput
     userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
@@ -55847,6 +57215,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUncheckedUpdateOneWithoutUserNestedInput
     userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
@@ -57640,6 +59009,7 @@ export namespace Prisma {
     attemptNo?: number
     response?: NullableJsonNullValueInput | InputJsonValue
     correct?: boolean | null
+    score?: number | null
     elapsedMs?: number | null
     hintUsed?: number
     meta?: NullableJsonNullValueInput | InputJsonValue
@@ -57657,6 +59027,7 @@ export namespace Prisma {
     attemptNo?: number
     response?: NullableJsonNullValueInput | InputJsonValue
     correct?: boolean | null
+    score?: number | null
     elapsedMs?: number | null
     hintUsed?: number
     meta?: NullableJsonNullValueInput | InputJsonValue
@@ -57668,6 +59039,7 @@ export namespace Prisma {
     attemptNo?: IntFieldUpdateOperationsInput | number
     response?: NullableJsonNullValueInput | InputJsonValue
     correct?: NullableBoolFieldUpdateOperationsInput | boolean | null
+    score?: NullableFloatFieldUpdateOperationsInput | number | null
     elapsedMs?: NullableIntFieldUpdateOperationsInput | number | null
     hintUsed?: IntFieldUpdateOperationsInput | number
     meta?: NullableJsonNullValueInput | InputJsonValue
@@ -57685,6 +59057,7 @@ export namespace Prisma {
     attemptNo?: IntFieldUpdateOperationsInput | number
     response?: NullableJsonNullValueInput | InputJsonValue
     correct?: NullableBoolFieldUpdateOperationsInput | boolean | null
+    score?: NullableFloatFieldUpdateOperationsInput | number | null
     elapsedMs?: NullableIntFieldUpdateOperationsInput | number | null
     hintUsed?: IntFieldUpdateOperationsInput | number
     meta?: NullableJsonNullValueInput | InputJsonValue
@@ -57699,6 +59072,7 @@ export namespace Prisma {
     attemptNo?: number
     response?: NullableJsonNullValueInput | InputJsonValue
     correct?: boolean | null
+    score?: number | null
     elapsedMs?: number | null
     hintUsed?: number
     meta?: NullableJsonNullValueInput | InputJsonValue
@@ -57710,6 +59084,7 @@ export namespace Prisma {
     attemptNo?: IntFieldUpdateOperationsInput | number
     response?: NullableJsonNullValueInput | InputJsonValue
     correct?: NullableBoolFieldUpdateOperationsInput | boolean | null
+    score?: NullableFloatFieldUpdateOperationsInput | number | null
     elapsedMs?: NullableIntFieldUpdateOperationsInput | number | null
     hintUsed?: IntFieldUpdateOperationsInput | number
     meta?: NullableJsonNullValueInput | InputJsonValue
@@ -57724,6 +59099,7 @@ export namespace Prisma {
     attemptNo?: IntFieldUpdateOperationsInput | number
     response?: NullableJsonNullValueInput | InputJsonValue
     correct?: NullableBoolFieldUpdateOperationsInput | boolean | null
+    score?: NullableFloatFieldUpdateOperationsInput | number | null
     elapsedMs?: NullableIntFieldUpdateOperationsInput | number | null
     hintUsed?: IntFieldUpdateOperationsInput | number
     meta?: NullableJsonNullValueInput | InputJsonValue
@@ -57851,7 +59227,6 @@ export namespace Prisma {
     currentStreak?: number
     longestStreak?: number
     lastActivityAt?: Date | string | null
-    level?: number
     createdAt?: Date | string
     updatedAt?: Date | string
     user: UserCreateNestedOneWithoutUserGamificationInput
@@ -57865,7 +59240,6 @@ export namespace Prisma {
     currentStreak?: number
     longestStreak?: number
     lastActivityAt?: Date | string | null
-    level?: number
     createdAt?: Date | string
     updatedAt?: Date | string
     badges?: UserBadgeUncheckedCreateNestedManyWithoutUserGamificationInput
@@ -57877,7 +59251,6 @@ export namespace Prisma {
     currentStreak?: IntFieldUpdateOperationsInput | number
     longestStreak?: IntFieldUpdateOperationsInput | number
     lastActivityAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    level?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutUserGamificationNestedInput
@@ -57891,7 +59264,6 @@ export namespace Prisma {
     currentStreak?: IntFieldUpdateOperationsInput | number
     longestStreak?: IntFieldUpdateOperationsInput | number
     lastActivityAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    level?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     badges?: UserBadgeUncheckedUpdateManyWithoutUserGamificationNestedInput
@@ -57904,7 +59276,6 @@ export namespace Prisma {
     currentStreak?: number
     longestStreak?: number
     lastActivityAt?: Date | string | null
-    level?: number
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -57915,7 +59286,6 @@ export namespace Prisma {
     currentStreak?: IntFieldUpdateOperationsInput | number
     longestStreak?: IntFieldUpdateOperationsInput | number
     lastActivityAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    level?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -57927,9 +59297,77 @@ export namespace Prisma {
     currentStreak?: IntFieldUpdateOperationsInput | number
     longestStreak?: IntFieldUpdateOperationsInput | number
     lastActivityAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    level?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type XpTransactionCreateInput = {
+    id?: string
+    amount: number
+    source: $Enums.XpSource
+    sourceRef: string
+    balanceAfter: number
+    createdAt?: Date | string
+    user: UserCreateNestedOneWithoutXpTransactionsInput
+  }
+
+  export type XpTransactionUncheckedCreateInput = {
+    id?: string
+    userId: string
+    amount: number
+    source: $Enums.XpSource
+    sourceRef: string
+    balanceAfter: number
+    createdAt?: Date | string
+  }
+
+  export type XpTransactionUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    amount?: IntFieldUpdateOperationsInput | number
+    source?: EnumXpSourceFieldUpdateOperationsInput | $Enums.XpSource
+    sourceRef?: StringFieldUpdateOperationsInput | string
+    balanceAfter?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutXpTransactionsNestedInput
+  }
+
+  export type XpTransactionUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    amount?: IntFieldUpdateOperationsInput | number
+    source?: EnumXpSourceFieldUpdateOperationsInput | $Enums.XpSource
+    sourceRef?: StringFieldUpdateOperationsInput | string
+    balanceAfter?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type XpTransactionCreateManyInput = {
+    id?: string
+    userId: string
+    amount: number
+    source: $Enums.XpSource
+    sourceRef: string
+    balanceAfter: number
+    createdAt?: Date | string
+  }
+
+  export type XpTransactionUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    amount?: IntFieldUpdateOperationsInput | number
+    source?: EnumXpSourceFieldUpdateOperationsInput | $Enums.XpSource
+    sourceRef?: StringFieldUpdateOperationsInput | string
+    balanceAfter?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type XpTransactionUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    amount?: IntFieldUpdateOperationsInput | number
+    source?: EnumXpSourceFieldUpdateOperationsInput | $Enums.XpSource
+    sourceRef?: StringFieldUpdateOperationsInput | string
+    balanceAfter?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type BadgeCreateInput = {
@@ -59089,6 +60527,12 @@ export namespace Prisma {
     none?: DailyActivityWhereInput
   }
 
+  export type XpTransactionListRelationFilter = {
+    every?: XpTransactionWhereInput
+    some?: XpTransactionWhereInput
+    none?: XpTransactionWhereInput
+  }
+
   export type RefreshTokenListRelationFilter = {
     every?: RefreshTokenWhereInput
     some?: RefreshTokenWhereInput
@@ -59159,6 +60603,10 @@ export namespace Prisma {
   }
 
   export type DailyActivityOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type XpTransactionOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -60678,6 +62126,12 @@ export namespace Prisma {
     isNot?: AtomOptionWhereInput | null
   }
 
+  export type ActivityAttemptUserIdAtomIdAttemptNoCompoundUniqueInput = {
+    userId: string
+    atomId: string
+    attemptNo: number
+  }
+
   export type ActivityAttemptCountOrderByAggregateInput = {
     id?: SortOrder
     userId?: SortOrder
@@ -60686,6 +62140,7 @@ export namespace Prisma {
     attemptNo?: SortOrder
     response?: SortOrder
     correct?: SortOrder
+    score?: SortOrder
     elapsedMs?: SortOrder
     hintUsed?: SortOrder
     meta?: SortOrder
@@ -60694,6 +62149,7 @@ export namespace Prisma {
 
   export type ActivityAttemptAvgOrderByAggregateInput = {
     attemptNo?: SortOrder
+    score?: SortOrder
     elapsedMs?: SortOrder
     hintUsed?: SortOrder
   }
@@ -60705,6 +62161,7 @@ export namespace Prisma {
     atomOptionId?: SortOrder
     attemptNo?: SortOrder
     correct?: SortOrder
+    score?: SortOrder
     elapsedMs?: SortOrder
     hintUsed?: SortOrder
     createdAt?: SortOrder
@@ -60717,6 +62174,7 @@ export namespace Prisma {
     atomOptionId?: SortOrder
     attemptNo?: SortOrder
     correct?: SortOrder
+    score?: SortOrder
     elapsedMs?: SortOrder
     hintUsed?: SortOrder
     createdAt?: SortOrder
@@ -60724,6 +62182,7 @@ export namespace Prisma {
 
   export type ActivityAttemptSumOrderByAggregateInput = {
     attemptNo?: SortOrder
+    score?: SortOrder
     elapsedMs?: SortOrder
     hintUsed?: SortOrder
   }
@@ -60827,7 +62286,6 @@ export namespace Prisma {
     currentStreak?: SortOrder
     longestStreak?: SortOrder
     lastActivityAt?: SortOrder
-    level?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -60836,7 +62294,6 @@ export namespace Prisma {
     totalXP?: SortOrder
     currentStreak?: SortOrder
     longestStreak?: SortOrder
-    level?: SortOrder
   }
 
   export type UserGamificationMaxOrderByAggregateInput = {
@@ -60846,7 +62303,6 @@ export namespace Prisma {
     currentStreak?: SortOrder
     longestStreak?: SortOrder
     lastActivityAt?: SortOrder
-    level?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -60858,7 +62314,6 @@ export namespace Prisma {
     currentStreak?: SortOrder
     longestStreak?: SortOrder
     lastActivityAt?: SortOrder
-    level?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -60867,7 +62322,69 @@ export namespace Prisma {
     totalXP?: SortOrder
     currentStreak?: SortOrder
     longestStreak?: SortOrder
-    level?: SortOrder
+  }
+
+  export type EnumXpSourceFilter<$PrismaModel = never> = {
+    equals?: $Enums.XpSource | EnumXpSourceFieldRefInput<$PrismaModel>
+    in?: $Enums.XpSource[] | ListEnumXpSourceFieldRefInput<$PrismaModel>
+    notIn?: $Enums.XpSource[] | ListEnumXpSourceFieldRefInput<$PrismaModel>
+    not?: NestedEnumXpSourceFilter<$PrismaModel> | $Enums.XpSource
+  }
+
+  export type XpTransactionUserIdSourceSourceRefCompoundUniqueInput = {
+    userId: string
+    source: $Enums.XpSource
+    sourceRef: string
+  }
+
+  export type XpTransactionCountOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    amount?: SortOrder
+    source?: SortOrder
+    sourceRef?: SortOrder
+    balanceAfter?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type XpTransactionAvgOrderByAggregateInput = {
+    amount?: SortOrder
+    balanceAfter?: SortOrder
+  }
+
+  export type XpTransactionMaxOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    amount?: SortOrder
+    source?: SortOrder
+    sourceRef?: SortOrder
+    balanceAfter?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type XpTransactionMinOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    amount?: SortOrder
+    source?: SortOrder
+    sourceRef?: SortOrder
+    balanceAfter?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type XpTransactionSumOrderByAggregateInput = {
+    amount?: SortOrder
+    balanceAfter?: SortOrder
+  }
+
+  export type EnumXpSourceWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.XpSource | EnumXpSourceFieldRefInput<$PrismaModel>
+    in?: $Enums.XpSource[] | ListEnumXpSourceFieldRefInput<$PrismaModel>
+    notIn?: $Enums.XpSource[] | ListEnumXpSourceFieldRefInput<$PrismaModel>
+    not?: NestedEnumXpSourceWithAggregatesFilter<$PrismaModel> | $Enums.XpSource
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumXpSourceFilter<$PrismaModel>
+    _max?: NestedEnumXpSourceFilter<$PrismaModel>
   }
 
   export type BadgeCountOrderByAggregateInput = {
@@ -61563,6 +63080,13 @@ export namespace Prisma {
     connect?: DailyActivityWhereUniqueInput | DailyActivityWhereUniqueInput[]
   }
 
+  export type XpTransactionCreateNestedManyWithoutUserInput = {
+    create?: XOR<XpTransactionCreateWithoutUserInput, XpTransactionUncheckedCreateWithoutUserInput> | XpTransactionCreateWithoutUserInput[] | XpTransactionUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: XpTransactionCreateOrConnectWithoutUserInput | XpTransactionCreateOrConnectWithoutUserInput[]
+    createMany?: XpTransactionCreateManyUserInputEnvelope
+    connect?: XpTransactionWhereUniqueInput | XpTransactionWhereUniqueInput[]
+  }
+
   export type RefreshTokenCreateNestedManyWithoutUserInput = {
     create?: XOR<RefreshTokenCreateWithoutUserInput, RefreshTokenUncheckedCreateWithoutUserInput> | RefreshTokenCreateWithoutUserInput[] | RefreshTokenUncheckedCreateWithoutUserInput[]
     connectOrCreate?: RefreshTokenCreateOrConnectWithoutUserInput | RefreshTokenCreateOrConnectWithoutUserInput[]
@@ -61671,6 +63195,13 @@ export namespace Prisma {
     connectOrCreate?: DailyActivityCreateOrConnectWithoutUserInput | DailyActivityCreateOrConnectWithoutUserInput[]
     createMany?: DailyActivityCreateManyUserInputEnvelope
     connect?: DailyActivityWhereUniqueInput | DailyActivityWhereUniqueInput[]
+  }
+
+  export type XpTransactionUncheckedCreateNestedManyWithoutUserInput = {
+    create?: XOR<XpTransactionCreateWithoutUserInput, XpTransactionUncheckedCreateWithoutUserInput> | XpTransactionCreateWithoutUserInput[] | XpTransactionUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: XpTransactionCreateOrConnectWithoutUserInput | XpTransactionCreateOrConnectWithoutUserInput[]
+    createMany?: XpTransactionCreateManyUserInputEnvelope
+    connect?: XpTransactionWhereUniqueInput | XpTransactionWhereUniqueInput[]
   }
 
   export type RefreshTokenUncheckedCreateNestedManyWithoutUserInput = {
@@ -61877,6 +63408,20 @@ export namespace Prisma {
     update?: DailyActivityUpdateWithWhereUniqueWithoutUserInput | DailyActivityUpdateWithWhereUniqueWithoutUserInput[]
     updateMany?: DailyActivityUpdateManyWithWhereWithoutUserInput | DailyActivityUpdateManyWithWhereWithoutUserInput[]
     deleteMany?: DailyActivityScalarWhereInput | DailyActivityScalarWhereInput[]
+  }
+
+  export type XpTransactionUpdateManyWithoutUserNestedInput = {
+    create?: XOR<XpTransactionCreateWithoutUserInput, XpTransactionUncheckedCreateWithoutUserInput> | XpTransactionCreateWithoutUserInput[] | XpTransactionUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: XpTransactionCreateOrConnectWithoutUserInput | XpTransactionCreateOrConnectWithoutUserInput[]
+    upsert?: XpTransactionUpsertWithWhereUniqueWithoutUserInput | XpTransactionUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: XpTransactionCreateManyUserInputEnvelope
+    set?: XpTransactionWhereUniqueInput | XpTransactionWhereUniqueInput[]
+    disconnect?: XpTransactionWhereUniqueInput | XpTransactionWhereUniqueInput[]
+    delete?: XpTransactionWhereUniqueInput | XpTransactionWhereUniqueInput[]
+    connect?: XpTransactionWhereUniqueInput | XpTransactionWhereUniqueInput[]
+    update?: XpTransactionUpdateWithWhereUniqueWithoutUserInput | XpTransactionUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: XpTransactionUpdateManyWithWhereWithoutUserInput | XpTransactionUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: XpTransactionScalarWhereInput | XpTransactionScalarWhereInput[]
   }
 
   export type RefreshTokenUpdateManyWithoutUserNestedInput = {
@@ -62093,6 +63638,20 @@ export namespace Prisma {
     update?: DailyActivityUpdateWithWhereUniqueWithoutUserInput | DailyActivityUpdateWithWhereUniqueWithoutUserInput[]
     updateMany?: DailyActivityUpdateManyWithWhereWithoutUserInput | DailyActivityUpdateManyWithWhereWithoutUserInput[]
     deleteMany?: DailyActivityScalarWhereInput | DailyActivityScalarWhereInput[]
+  }
+
+  export type XpTransactionUncheckedUpdateManyWithoutUserNestedInput = {
+    create?: XOR<XpTransactionCreateWithoutUserInput, XpTransactionUncheckedCreateWithoutUserInput> | XpTransactionCreateWithoutUserInput[] | XpTransactionUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: XpTransactionCreateOrConnectWithoutUserInput | XpTransactionCreateOrConnectWithoutUserInput[]
+    upsert?: XpTransactionUpsertWithWhereUniqueWithoutUserInput | XpTransactionUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: XpTransactionCreateManyUserInputEnvelope
+    set?: XpTransactionWhereUniqueInput | XpTransactionWhereUniqueInput[]
+    disconnect?: XpTransactionWhereUniqueInput | XpTransactionWhereUniqueInput[]
+    delete?: XpTransactionWhereUniqueInput | XpTransactionWhereUniqueInput[]
+    connect?: XpTransactionWhereUniqueInput | XpTransactionWhereUniqueInput[]
+    update?: XpTransactionUpdateWithWhereUniqueWithoutUserInput | XpTransactionUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: XpTransactionUpdateManyWithWhereWithoutUserInput | XpTransactionUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: XpTransactionScalarWhereInput | XpTransactionScalarWhereInput[]
   }
 
   export type RefreshTokenUncheckedUpdateManyWithoutUserNestedInput = {
@@ -63969,6 +65528,24 @@ export namespace Prisma {
     deleteMany?: UserBadgeScalarWhereInput | UserBadgeScalarWhereInput[]
   }
 
+  export type UserCreateNestedOneWithoutXpTransactionsInput = {
+    create?: XOR<UserCreateWithoutXpTransactionsInput, UserUncheckedCreateWithoutXpTransactionsInput>
+    connectOrCreate?: UserCreateOrConnectWithoutXpTransactionsInput
+    connect?: UserWhereUniqueInput
+  }
+
+  export type EnumXpSourceFieldUpdateOperationsInput = {
+    set?: $Enums.XpSource
+  }
+
+  export type UserUpdateOneRequiredWithoutXpTransactionsNestedInput = {
+    create?: XOR<UserCreateWithoutXpTransactionsInput, UserUncheckedCreateWithoutXpTransactionsInput>
+    connectOrCreate?: UserCreateOrConnectWithoutXpTransactionsInput
+    upsert?: UserUpsertWithoutXpTransactionsInput
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutXpTransactionsInput, UserUpdateWithoutXpTransactionsInput>, UserUncheckedUpdateWithoutXpTransactionsInput>
+  }
+
   export type UserBadgeCreateNestedManyWithoutBadgeInput = {
     create?: XOR<UserBadgeCreateWithoutBadgeInput, UserBadgeUncheckedCreateWithoutBadgeInput> | UserBadgeCreateWithoutBadgeInput[] | UserBadgeUncheckedCreateWithoutBadgeInput[]
     connectOrCreate?: UserBadgeCreateOrConnectWithoutBadgeInput | UserBadgeCreateOrConnectWithoutBadgeInput[]
@@ -65014,6 +66591,23 @@ export namespace Prisma {
     _max?: NestedEnumEventTypeFilter<$PrismaModel>
   }
 
+  export type NestedEnumXpSourceFilter<$PrismaModel = never> = {
+    equals?: $Enums.XpSource | EnumXpSourceFieldRefInput<$PrismaModel>
+    in?: $Enums.XpSource[] | ListEnumXpSourceFieldRefInput<$PrismaModel>
+    notIn?: $Enums.XpSource[] | ListEnumXpSourceFieldRefInput<$PrismaModel>
+    not?: NestedEnumXpSourceFilter<$PrismaModel> | $Enums.XpSource
+  }
+
+  export type NestedEnumXpSourceWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.XpSource | EnumXpSourceFieldRefInput<$PrismaModel>
+    in?: $Enums.XpSource[] | ListEnumXpSourceFieldRefInput<$PrismaModel>
+    notIn?: $Enums.XpSource[] | ListEnumXpSourceFieldRefInput<$PrismaModel>
+    not?: NestedEnumXpSourceWithAggregatesFilter<$PrismaModel> | $Enums.XpSource
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumXpSourceFilter<$PrismaModel>
+    _max?: NestedEnumXpSourceFilter<$PrismaModel>
+  }
+
   export type NestedEnumClassStatusFilter<$PrismaModel = never> = {
     equals?: $Enums.ClassStatus | EnumClassStatusFieldRefInput<$PrismaModel>
     in?: $Enums.ClassStatus[] | ListEnumClassStatusFieldRefInput<$PrismaModel>
@@ -65133,6 +66727,7 @@ export namespace Prisma {
     attemptNo?: number
     response?: NullableJsonNullValueInput | InputJsonValue
     correct?: boolean | null
+    score?: number | null
     elapsedMs?: number | null
     hintUsed?: number
     meta?: NullableJsonNullValueInput | InputJsonValue
@@ -65148,6 +66743,7 @@ export namespace Prisma {
     attemptNo?: number
     response?: NullableJsonNullValueInput | InputJsonValue
     correct?: boolean | null
+    score?: number | null
     elapsedMs?: number | null
     hintUsed?: number
     meta?: NullableJsonNullValueInput | InputJsonValue
@@ -65281,7 +66877,6 @@ export namespace Prisma {
     currentStreak?: number
     longestStreak?: number
     lastActivityAt?: Date | string | null
-    level?: number
     createdAt?: Date | string
     updatedAt?: Date | string
     badges?: UserBadgeCreateNestedManyWithoutUserGamificationInput
@@ -65293,7 +66888,6 @@ export namespace Prisma {
     currentStreak?: number
     longestStreak?: number
     lastActivityAt?: Date | string | null
-    level?: number
     createdAt?: Date | string
     updatedAt?: Date | string
     badges?: UserBadgeUncheckedCreateNestedManyWithoutUserGamificationInput
@@ -65347,6 +66941,34 @@ export namespace Prisma {
 
   export type DailyActivityCreateManyUserInputEnvelope = {
     data: DailyActivityCreateManyUserInput | DailyActivityCreateManyUserInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type XpTransactionCreateWithoutUserInput = {
+    id?: string
+    amount: number
+    source: $Enums.XpSource
+    sourceRef: string
+    balanceAfter: number
+    createdAt?: Date | string
+  }
+
+  export type XpTransactionUncheckedCreateWithoutUserInput = {
+    id?: string
+    amount: number
+    source: $Enums.XpSource
+    sourceRef: string
+    balanceAfter: number
+    createdAt?: Date | string
+  }
+
+  export type XpTransactionCreateOrConnectWithoutUserInput = {
+    where: XpTransactionWhereUniqueInput
+    create: XOR<XpTransactionCreateWithoutUserInput, XpTransactionUncheckedCreateWithoutUserInput>
+  }
+
+  export type XpTransactionCreateManyUserInputEnvelope = {
+    data: XpTransactionCreateManyUserInput | XpTransactionCreateManyUserInput[]
     skipDuplicates?: boolean
   }
 
@@ -65654,6 +67276,7 @@ export namespace Prisma {
     attemptNo?: IntFilter<"ActivityAttempt"> | number
     response?: JsonNullableFilter<"ActivityAttempt">
     correct?: BoolNullableFilter<"ActivityAttempt"> | boolean | null
+    score?: FloatNullableFilter<"ActivityAttempt"> | number | null
     elapsedMs?: IntNullableFilter<"ActivityAttempt"> | number | null
     hintUsed?: IntFilter<"ActivityAttempt"> | number
     meta?: JsonNullableFilter<"ActivityAttempt">
@@ -65798,7 +67421,6 @@ export namespace Prisma {
     currentStreak?: IntFieldUpdateOperationsInput | number
     longestStreak?: IntFieldUpdateOperationsInput | number
     lastActivityAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    level?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     badges?: UserBadgeUpdateManyWithoutUserGamificationNestedInput
@@ -65810,7 +67432,6 @@ export namespace Prisma {
     currentStreak?: IntFieldUpdateOperationsInput | number
     longestStreak?: IntFieldUpdateOperationsInput | number
     lastActivityAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    level?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     badges?: UserBadgeUncheckedUpdateManyWithoutUserGamificationNestedInput
@@ -65867,6 +67488,35 @@ export namespace Prisma {
     userId?: StringFilter<"DailyActivity"> | string
     date?: DateTimeFilter<"DailyActivity"> | Date | string
     createdAt?: DateTimeFilter<"DailyActivity"> | Date | string
+  }
+
+  export type XpTransactionUpsertWithWhereUniqueWithoutUserInput = {
+    where: XpTransactionWhereUniqueInput
+    update: XOR<XpTransactionUpdateWithoutUserInput, XpTransactionUncheckedUpdateWithoutUserInput>
+    create: XOR<XpTransactionCreateWithoutUserInput, XpTransactionUncheckedCreateWithoutUserInput>
+  }
+
+  export type XpTransactionUpdateWithWhereUniqueWithoutUserInput = {
+    where: XpTransactionWhereUniqueInput
+    data: XOR<XpTransactionUpdateWithoutUserInput, XpTransactionUncheckedUpdateWithoutUserInput>
+  }
+
+  export type XpTransactionUpdateManyWithWhereWithoutUserInput = {
+    where: XpTransactionScalarWhereInput
+    data: XOR<XpTransactionUpdateManyMutationInput, XpTransactionUncheckedUpdateManyWithoutUserInput>
+  }
+
+  export type XpTransactionScalarWhereInput = {
+    AND?: XpTransactionScalarWhereInput | XpTransactionScalarWhereInput[]
+    OR?: XpTransactionScalarWhereInput[]
+    NOT?: XpTransactionScalarWhereInput | XpTransactionScalarWhereInput[]
+    id?: StringFilter<"XpTransaction"> | string
+    userId?: StringFilter<"XpTransaction"> | string
+    amount?: IntFilter<"XpTransaction"> | number
+    source?: EnumXpSourceFilter<"XpTransaction"> | $Enums.XpSource
+    sourceRef?: StringFilter<"XpTransaction"> | string
+    balanceAfter?: IntFilter<"XpTransaction"> | number
+    createdAt?: DateTimeFilter<"XpTransaction"> | Date | string
   }
 
   export type RefreshTokenUpsertWithWhereUniqueWithoutUserInput = {
@@ -66071,6 +67721,7 @@ export namespace Prisma {
     userGamification?: UserGamificationCreateNestedOneWithoutUserInput
     userBadges?: UserBadgeCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
@@ -66100,6 +67751,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUncheckedCreateNestedOneWithoutUserInput
     userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
@@ -66145,6 +67797,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUpdateOneWithoutUserNestedInput
     userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
@@ -66174,6 +67827,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUncheckedUpdateOneWithoutUserNestedInput
     userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
@@ -66203,6 +67857,7 @@ export namespace Prisma {
     userGamification?: UserGamificationCreateNestedOneWithoutUserInput
     userBadges?: UserBadgeCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
@@ -66232,6 +67887,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUncheckedCreateNestedOneWithoutUserInput
     userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
@@ -66277,6 +67933,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUpdateOneWithoutUserNestedInput
     userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
@@ -66306,6 +67963,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUncheckedUpdateOneWithoutUserNestedInput
     userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
@@ -66530,6 +68188,7 @@ export namespace Prisma {
     userGamification?: UserGamificationCreateNestedOneWithoutUserInput
     userBadges?: UserBadgeCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
@@ -66559,6 +68218,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUncheckedCreateNestedOneWithoutUserInput
     userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
@@ -66891,6 +68551,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUpdateOneWithoutUserNestedInput
     userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
@@ -66920,6 +68581,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUncheckedUpdateOneWithoutUserNestedInput
     userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
@@ -67952,6 +69614,7 @@ export namespace Prisma {
     attemptNo?: number
     response?: NullableJsonNullValueInput | InputJsonValue
     correct?: boolean | null
+    score?: number | null
     elapsedMs?: number | null
     hintUsed?: number
     meta?: NullableJsonNullValueInput | InputJsonValue
@@ -67967,6 +69630,7 @@ export namespace Prisma {
     attemptNo?: number
     response?: NullableJsonNullValueInput | InputJsonValue
     correct?: boolean | null
+    score?: number | null
     elapsedMs?: number | null
     hintUsed?: number
     meta?: NullableJsonNullValueInput | InputJsonValue
@@ -68254,6 +69918,7 @@ export namespace Prisma {
     attemptNo?: number
     response?: NullableJsonNullValueInput | InputJsonValue
     correct?: boolean | null
+    score?: number | null
     elapsedMs?: number | null
     hintUsed?: number
     meta?: NullableJsonNullValueInput | InputJsonValue
@@ -68269,6 +69934,7 @@ export namespace Prisma {
     attemptNo?: number
     response?: NullableJsonNullValueInput | InputJsonValue
     correct?: boolean | null
+    score?: number | null
     elapsedMs?: number | null
     hintUsed?: number
     meta?: NullableJsonNullValueInput | InputJsonValue
@@ -68487,6 +70153,7 @@ export namespace Prisma {
     userGamification?: UserGamificationCreateNestedOneWithoutUserInput
     userBadges?: UserBadgeCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
@@ -68516,6 +70183,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUncheckedCreateNestedOneWithoutUserInput
     userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
@@ -68704,6 +70372,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUpdateOneWithoutUserNestedInput
     userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
@@ -68733,6 +70402,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUncheckedUpdateOneWithoutUserNestedInput
     userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
@@ -69800,6 +71470,7 @@ export namespace Prisma {
     userGamification?: UserGamificationCreateNestedOneWithoutUserInput
     userBadges?: UserBadgeCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
@@ -69829,6 +71500,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUncheckedCreateNestedOneWithoutUserInput
     userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
@@ -69972,6 +71644,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUpdateOneWithoutUserNestedInput
     userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
@@ -70001,6 +71674,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUncheckedUpdateOneWithoutUserNestedInput
     userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
@@ -70140,6 +71814,7 @@ export namespace Prisma {
     userGamification?: UserGamificationCreateNestedOneWithoutUserInput
     userBadges?: UserBadgeCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
@@ -70169,6 +71844,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUncheckedCreateNestedOneWithoutUserInput
     userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
@@ -70292,6 +71968,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUpdateOneWithoutUserNestedInput
     userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
@@ -70321,6 +71998,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUncheckedUpdateOneWithoutUserNestedInput
     userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
@@ -70440,6 +72118,7 @@ export namespace Prisma {
     userGamification?: UserGamificationCreateNestedOneWithoutUserInput
     userBadges?: UserBadgeCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
@@ -70469,6 +72148,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUncheckedCreateNestedOneWithoutUserInput
     userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
@@ -70537,6 +72217,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUpdateOneWithoutUserNestedInput
     userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
@@ -70566,6 +72247,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUncheckedUpdateOneWithoutUserNestedInput
     userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
@@ -70624,6 +72306,7 @@ export namespace Prisma {
     userGamification?: UserGamificationCreateNestedOneWithoutUserInput
     userBadges?: UserBadgeCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
@@ -70653,6 +72336,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUncheckedCreateNestedOneWithoutUserInput
     userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
@@ -70743,6 +72427,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUpdateOneWithoutUserNestedInput
     userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
@@ -70772,6 +72457,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUncheckedUpdateOneWithoutUserNestedInput
     userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
@@ -70852,6 +72538,7 @@ export namespace Prisma {
     consent?: ParentalConsentCreateNestedOneWithoutStudentInput
     userBadges?: UserBadgeCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
@@ -70881,6 +72568,7 @@ export namespace Prisma {
     consent?: ParentalConsentUncheckedCreateNestedOneWithoutStudentInput
     userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
@@ -70950,6 +72638,7 @@ export namespace Prisma {
     consent?: ParentalConsentUpdateOneWithoutStudentNestedInput
     userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
@@ -70979,6 +72668,7 @@ export namespace Prisma {
     consent?: ParentalConsentUncheckedUpdateOneWithoutStudentNestedInput
     userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
@@ -71001,6 +72691,142 @@ export namespace Prisma {
   export type UserBadgeUpdateManyWithWhereWithoutUserGamificationInput = {
     where: UserBadgeScalarWhereInput
     data: XOR<UserBadgeUpdateManyMutationInput, UserBadgeUncheckedUpdateManyWithoutUserGamificationInput>
+  }
+
+  export type UserCreateWithoutXpTransactionsInput = {
+    id?: string
+    email: string
+    username?: string | null
+    passwordHash: string
+    name: string
+    role?: $Enums.Role
+    age?: number | null
+    quota?: number
+    cohort?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    sessions?: SessionCreateNestedManyWithoutStudentInput
+    apiKeys?: ApiKeyCreateNestedManyWithoutUserInput
+    attempts?: ActivityAttemptCreateNestedManyWithoutUserInput
+    progressEntries?: UserProgressCreateNestedManyWithoutUserInput
+    competencies?: CompetencyMasteryCreateNestedManyWithoutUserInput
+    events?: EventLogCreateNestedManyWithoutUserInput
+    consent?: ParentalConsentCreateNestedOneWithoutStudentInput
+    userGamification?: UserGamificationCreateNestedOneWithoutUserInput
+    userBadges?: UserBadgeCreateNestedManyWithoutUserInput
+    dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
+    refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
+    createdClasses?: ClassCreateNestedManyWithoutTutorInput
+    classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
+    recipes?: RecipeCreateNestedManyWithoutAuthorInput
+    createdGroups?: GroupCreateNestedManyWithoutTeacherInput
+    memberships?: GroupMemberCreateNestedManyWithoutStudentInput
+  }
+
+  export type UserUncheckedCreateWithoutXpTransactionsInput = {
+    id?: string
+    email: string
+    username?: string | null
+    passwordHash: string
+    name: string
+    role?: $Enums.Role
+    age?: number | null
+    quota?: number
+    cohort?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    sessions?: SessionUncheckedCreateNestedManyWithoutStudentInput
+    apiKeys?: ApiKeyUncheckedCreateNestedManyWithoutUserInput
+    attempts?: ActivityAttemptUncheckedCreateNestedManyWithoutUserInput
+    progressEntries?: UserProgressUncheckedCreateNestedManyWithoutUserInput
+    competencies?: CompetencyMasteryUncheckedCreateNestedManyWithoutUserInput
+    events?: EventLogUncheckedCreateNestedManyWithoutUserInput
+    consent?: ParentalConsentUncheckedCreateNestedOneWithoutStudentInput
+    userGamification?: UserGamificationUncheckedCreateNestedOneWithoutUserInput
+    userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
+    dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
+    refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+    createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
+    classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
+    recipes?: RecipeUncheckedCreateNestedManyWithoutAuthorInput
+    createdGroups?: GroupUncheckedCreateNestedManyWithoutTeacherInput
+    memberships?: GroupMemberUncheckedCreateNestedManyWithoutStudentInput
+  }
+
+  export type UserCreateOrConnectWithoutXpTransactionsInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutXpTransactionsInput, UserUncheckedCreateWithoutXpTransactionsInput>
+  }
+
+  export type UserUpsertWithoutXpTransactionsInput = {
+    update: XOR<UserUpdateWithoutXpTransactionsInput, UserUncheckedUpdateWithoutXpTransactionsInput>
+    create: XOR<UserCreateWithoutXpTransactionsInput, UserUncheckedCreateWithoutXpTransactionsInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutXpTransactionsInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutXpTransactionsInput, UserUncheckedUpdateWithoutXpTransactionsInput>
+  }
+
+  export type UserUpdateWithoutXpTransactionsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    username?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    role?: EnumRoleFieldUpdateOperationsInput | $Enums.Role
+    age?: NullableIntFieldUpdateOperationsInput | number | null
+    quota?: IntFieldUpdateOperationsInput | number
+    cohort?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    sessions?: SessionUpdateManyWithoutStudentNestedInput
+    apiKeys?: ApiKeyUpdateManyWithoutUserNestedInput
+    attempts?: ActivityAttemptUpdateManyWithoutUserNestedInput
+    progressEntries?: UserProgressUpdateManyWithoutUserNestedInput
+    competencies?: CompetencyMasteryUpdateManyWithoutUserNestedInput
+    events?: EventLogUpdateManyWithoutUserNestedInput
+    consent?: ParentalConsentUpdateOneWithoutStudentNestedInput
+    userGamification?: UserGamificationUpdateOneWithoutUserNestedInput
+    userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
+    dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
+    refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
+    createdClasses?: ClassUpdateManyWithoutTutorNestedInput
+    classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
+    recipes?: RecipeUpdateManyWithoutAuthorNestedInput
+    createdGroups?: GroupUpdateManyWithoutTeacherNestedInput
+    memberships?: GroupMemberUpdateManyWithoutStudentNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutXpTransactionsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    username?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    role?: EnumRoleFieldUpdateOperationsInput | $Enums.Role
+    age?: NullableIntFieldUpdateOperationsInput | number | null
+    quota?: IntFieldUpdateOperationsInput | number
+    cohort?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    sessions?: SessionUncheckedUpdateManyWithoutStudentNestedInput
+    apiKeys?: ApiKeyUncheckedUpdateManyWithoutUserNestedInput
+    attempts?: ActivityAttemptUncheckedUpdateManyWithoutUserNestedInput
+    progressEntries?: UserProgressUncheckedUpdateManyWithoutUserNestedInput
+    competencies?: CompetencyMasteryUncheckedUpdateManyWithoutUserNestedInput
+    events?: EventLogUncheckedUpdateManyWithoutUserNestedInput
+    consent?: ParentalConsentUncheckedUpdateOneWithoutStudentNestedInput
+    userGamification?: UserGamificationUncheckedUpdateOneWithoutUserNestedInput
+    userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
+    dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
+    refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+    createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
+    classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
+    recipes?: RecipeUncheckedUpdateManyWithoutAuthorNestedInput
+    createdGroups?: GroupUncheckedUpdateManyWithoutTeacherNestedInput
+    memberships?: GroupMemberUncheckedUpdateManyWithoutStudentNestedInput
   }
 
   export type UserBadgeCreateWithoutBadgeInput = {
@@ -71064,6 +72890,7 @@ export namespace Prisma {
     consent?: ParentalConsentCreateNestedOneWithoutStudentInput
     userGamification?: UserGamificationCreateNestedOneWithoutUserInput
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
@@ -71093,6 +72920,7 @@ export namespace Prisma {
     consent?: ParentalConsentUncheckedCreateNestedOneWithoutStudentInput
     userGamification?: UserGamificationUncheckedCreateNestedOneWithoutUserInput
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
@@ -71141,7 +72969,6 @@ export namespace Prisma {
     currentStreak?: number
     longestStreak?: number
     lastActivityAt?: Date | string | null
-    level?: number
     createdAt?: Date | string
     updatedAt?: Date | string
     user: UserCreateNestedOneWithoutUserGamificationInput
@@ -71154,7 +72981,6 @@ export namespace Prisma {
     currentStreak?: number
     longestStreak?: number
     lastActivityAt?: Date | string | null
-    level?: number
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -71196,6 +73022,7 @@ export namespace Prisma {
     consent?: ParentalConsentUpdateOneWithoutStudentNestedInput
     userGamification?: UserGamificationUpdateOneWithoutUserNestedInput
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
@@ -71225,6 +73052,7 @@ export namespace Prisma {
     consent?: ParentalConsentUncheckedUpdateOneWithoutStudentNestedInput
     userGamification?: UserGamificationUncheckedUpdateOneWithoutUserNestedInput
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
@@ -71285,7 +73113,6 @@ export namespace Prisma {
     currentStreak?: IntFieldUpdateOperationsInput | number
     longestStreak?: IntFieldUpdateOperationsInput | number
     lastActivityAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    level?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutUserGamificationNestedInput
@@ -71298,7 +73125,6 @@ export namespace Prisma {
     currentStreak?: IntFieldUpdateOperationsInput | number
     longestStreak?: IntFieldUpdateOperationsInput | number
     lastActivityAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    level?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -71324,6 +73150,7 @@ export namespace Prisma {
     consent?: ParentalConsentCreateNestedOneWithoutStudentInput
     userGamification?: UserGamificationCreateNestedOneWithoutUserInput
     userBadges?: UserBadgeCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
@@ -71353,6 +73180,7 @@ export namespace Prisma {
     consent?: ParentalConsentUncheckedCreateNestedOneWithoutStudentInput
     userGamification?: UserGamificationUncheckedCreateNestedOneWithoutUserInput
     userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
@@ -71398,6 +73226,7 @@ export namespace Prisma {
     consent?: ParentalConsentUpdateOneWithoutStudentNestedInput
     userGamification?: UserGamificationUpdateOneWithoutUserNestedInput
     userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
@@ -71427,6 +73256,7 @@ export namespace Prisma {
     consent?: ParentalConsentUncheckedUpdateOneWithoutStudentNestedInput
     userGamification?: UserGamificationUncheckedUpdateOneWithoutUserNestedInput
     userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
@@ -71457,6 +73287,7 @@ export namespace Prisma {
     userGamification?: UserGamificationCreateNestedOneWithoutUserInput
     userBadges?: UserBadgeCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
     recipes?: RecipeCreateNestedManyWithoutAuthorInput
@@ -71486,6 +73317,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUncheckedCreateNestedOneWithoutUserInput
     userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
     recipes?: RecipeUncheckedCreateNestedManyWithoutAuthorInput
@@ -71531,6 +73363,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUpdateOneWithoutUserNestedInput
     userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
     recipes?: RecipeUpdateManyWithoutAuthorNestedInput
@@ -71560,6 +73393,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUncheckedUpdateOneWithoutUserNestedInput
     userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
     recipes?: RecipeUncheckedUpdateManyWithoutAuthorNestedInput
@@ -71589,6 +73423,7 @@ export namespace Prisma {
     userGamification?: UserGamificationCreateNestedOneWithoutUserInput
     userBadges?: UserBadgeCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     recipes?: RecipeCreateNestedManyWithoutAuthorInput
@@ -71618,6 +73453,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUncheckedCreateNestedOneWithoutUserInput
     userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     recipes?: RecipeUncheckedCreateNestedManyWithoutAuthorInput
@@ -71709,6 +73545,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUpdateOneWithoutUserNestedInput
     userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     recipes?: RecipeUpdateManyWithoutAuthorNestedInput
@@ -71738,6 +73575,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUncheckedUpdateOneWithoutUserNestedInput
     userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     recipes?: RecipeUncheckedUpdateManyWithoutAuthorNestedInput
@@ -71783,6 +73621,7 @@ export namespace Prisma {
     userGamification?: UserGamificationCreateNestedOneWithoutUserInput
     userBadges?: UserBadgeCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
     recipes?: RecipeCreateNestedManyWithoutAuthorInput
@@ -71812,6 +73651,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUncheckedCreateNestedOneWithoutUserInput
     userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
     recipes?: RecipeUncheckedCreateNestedManyWithoutAuthorInput
@@ -71970,6 +73810,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUpdateOneWithoutUserNestedInput
     userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
     recipes?: RecipeUpdateManyWithoutAuthorNestedInput
@@ -71999,6 +73840,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUncheckedUpdateOneWithoutUserNestedInput
     userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
     recipes?: RecipeUncheckedUpdateManyWithoutAuthorNestedInput
@@ -72627,6 +74469,7 @@ export namespace Prisma {
     userGamification?: UserGamificationCreateNestedOneWithoutUserInput
     userBadges?: UserBadgeCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
@@ -72656,6 +74499,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUncheckedCreateNestedOneWithoutUserInput
     userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
@@ -72749,6 +74593,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUpdateOneWithoutUserNestedInput
     userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
@@ -72778,6 +74623,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUncheckedUpdateOneWithoutUserNestedInput
     userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
@@ -72864,6 +74710,7 @@ export namespace Prisma {
     userGamification?: UserGamificationCreateNestedOneWithoutUserInput
     userBadges?: UserBadgeCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     createdClasses?: ClassCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateCreateNestedManyWithoutTutorInput
@@ -72893,6 +74740,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUncheckedCreateNestedOneWithoutUserInput
     userBadges?: UserBadgeUncheckedCreateNestedManyWithoutUserInput
     dailyActivities?: DailyActivityUncheckedCreateNestedManyWithoutUserInput
+    xpTransactions?: XpTransactionUncheckedCreateNestedManyWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     createdClasses?: ClassUncheckedCreateNestedManyWithoutTutorInput
     classTemplates?: ClassTemplateUncheckedCreateNestedManyWithoutTutorInput
@@ -72969,6 +74817,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUpdateOneWithoutUserNestedInput
     userBadges?: UserBadgeUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUpdateManyWithoutTutorNestedInput
@@ -72998,6 +74847,7 @@ export namespace Prisma {
     userGamification?: UserGamificationUncheckedUpdateOneWithoutUserNestedInput
     userBadges?: UserBadgeUncheckedUpdateManyWithoutUserNestedInput
     dailyActivities?: DailyActivityUncheckedUpdateManyWithoutUserNestedInput
+    xpTransactions?: XpTransactionUncheckedUpdateManyWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     createdClasses?: ClassUncheckedUpdateManyWithoutTutorNestedInput
     classTemplates?: ClassTemplateUncheckedUpdateManyWithoutTutorNestedInput
@@ -73183,6 +75033,7 @@ export namespace Prisma {
     attemptNo?: number
     response?: NullableJsonNullValueInput | InputJsonValue
     correct?: boolean | null
+    score?: number | null
     elapsedMs?: number | null
     hintUsed?: number
     meta?: NullableJsonNullValueInput | InputJsonValue
@@ -73225,6 +75076,15 @@ export namespace Prisma {
   export type DailyActivityCreateManyUserInput = {
     id?: string
     date: Date | string
+    createdAt?: Date | string
+  }
+
+  export type XpTransactionCreateManyUserInput = {
+    id?: string
+    amount: number
+    source: $Enums.XpSource
+    sourceRef: string
+    balanceAfter: number
     createdAt?: Date | string
   }
 
@@ -73381,6 +75241,7 @@ export namespace Prisma {
     attemptNo?: IntFieldUpdateOperationsInput | number
     response?: NullableJsonNullValueInput | InputJsonValue
     correct?: NullableBoolFieldUpdateOperationsInput | boolean | null
+    score?: NullableFloatFieldUpdateOperationsInput | number | null
     elapsedMs?: NullableIntFieldUpdateOperationsInput | number | null
     hintUsed?: IntFieldUpdateOperationsInput | number
     meta?: NullableJsonNullValueInput | InputJsonValue
@@ -73396,6 +75257,7 @@ export namespace Prisma {
     attemptNo?: IntFieldUpdateOperationsInput | number
     response?: NullableJsonNullValueInput | InputJsonValue
     correct?: NullableBoolFieldUpdateOperationsInput | boolean | null
+    score?: NullableFloatFieldUpdateOperationsInput | number | null
     elapsedMs?: NullableIntFieldUpdateOperationsInput | number | null
     hintUsed?: IntFieldUpdateOperationsInput | number
     meta?: NullableJsonNullValueInput | InputJsonValue
@@ -73409,6 +75271,7 @@ export namespace Prisma {
     attemptNo?: IntFieldUpdateOperationsInput | number
     response?: NullableJsonNullValueInput | InputJsonValue
     correct?: NullableBoolFieldUpdateOperationsInput | boolean | null
+    score?: NullableFloatFieldUpdateOperationsInput | number | null
     elapsedMs?: NullableIntFieldUpdateOperationsInput | number | null
     hintUsed?: IntFieldUpdateOperationsInput | number
     meta?: NullableJsonNullValueInput | InputJsonValue
@@ -73529,6 +75392,33 @@ export namespace Prisma {
   export type DailyActivityUncheckedUpdateManyWithoutUserInput = {
     id?: StringFieldUpdateOperationsInput | string
     date?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type XpTransactionUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    amount?: IntFieldUpdateOperationsInput | number
+    source?: EnumXpSourceFieldUpdateOperationsInput | $Enums.XpSource
+    sourceRef?: StringFieldUpdateOperationsInput | string
+    balanceAfter?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type XpTransactionUncheckedUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    amount?: IntFieldUpdateOperationsInput | number
+    source?: EnumXpSourceFieldUpdateOperationsInput | $Enums.XpSource
+    sourceRef?: StringFieldUpdateOperationsInput | string
+    balanceAfter?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type XpTransactionUncheckedUpdateManyWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    amount?: IntFieldUpdateOperationsInput | number
+    source?: EnumXpSourceFieldUpdateOperationsInput | $Enums.XpSource
+    sourceRef?: StringFieldUpdateOperationsInput | string
+    balanceAfter?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -74402,6 +76292,7 @@ export namespace Prisma {
     attemptNo?: number
     response?: NullableJsonNullValueInput | InputJsonValue
     correct?: boolean | null
+    score?: number | null
     elapsedMs?: number | null
     hintUsed?: number
     meta?: NullableJsonNullValueInput | InputJsonValue
@@ -74551,6 +76442,7 @@ export namespace Prisma {
     attemptNo?: IntFieldUpdateOperationsInput | number
     response?: NullableJsonNullValueInput | InputJsonValue
     correct?: NullableBoolFieldUpdateOperationsInput | boolean | null
+    score?: NullableFloatFieldUpdateOperationsInput | number | null
     elapsedMs?: NullableIntFieldUpdateOperationsInput | number | null
     hintUsed?: IntFieldUpdateOperationsInput | number
     meta?: NullableJsonNullValueInput | InputJsonValue
@@ -74566,6 +76458,7 @@ export namespace Prisma {
     attemptNo?: IntFieldUpdateOperationsInput | number
     response?: NullableJsonNullValueInput | InputJsonValue
     correct?: NullableBoolFieldUpdateOperationsInput | boolean | null
+    score?: NullableFloatFieldUpdateOperationsInput | number | null
     elapsedMs?: NullableIntFieldUpdateOperationsInput | number | null
     hintUsed?: IntFieldUpdateOperationsInput | number
     meta?: NullableJsonNullValueInput | InputJsonValue
@@ -74579,6 +76472,7 @@ export namespace Prisma {
     attemptNo?: IntFieldUpdateOperationsInput | number
     response?: NullableJsonNullValueInput | InputJsonValue
     correct?: NullableBoolFieldUpdateOperationsInput | boolean | null
+    score?: NullableFloatFieldUpdateOperationsInput | number | null
     elapsedMs?: NullableIntFieldUpdateOperationsInput | number | null
     hintUsed?: IntFieldUpdateOperationsInput | number
     meta?: NullableJsonNullValueInput | InputJsonValue
@@ -74658,6 +76552,7 @@ export namespace Prisma {
     attemptNo?: number
     response?: NullableJsonNullValueInput | InputJsonValue
     correct?: boolean | null
+    score?: number | null
     elapsedMs?: number | null
     hintUsed?: number
     meta?: NullableJsonNullValueInput | InputJsonValue
@@ -74669,6 +76564,7 @@ export namespace Prisma {
     attemptNo?: IntFieldUpdateOperationsInput | number
     response?: NullableJsonNullValueInput | InputJsonValue
     correct?: NullableBoolFieldUpdateOperationsInput | boolean | null
+    score?: NullableFloatFieldUpdateOperationsInput | number | null
     elapsedMs?: NullableIntFieldUpdateOperationsInput | number | null
     hintUsed?: IntFieldUpdateOperationsInput | number
     meta?: NullableJsonNullValueInput | InputJsonValue
@@ -74684,6 +76580,7 @@ export namespace Prisma {
     attemptNo?: IntFieldUpdateOperationsInput | number
     response?: NullableJsonNullValueInput | InputJsonValue
     correct?: NullableBoolFieldUpdateOperationsInput | boolean | null
+    score?: NullableFloatFieldUpdateOperationsInput | number | null
     elapsedMs?: NullableIntFieldUpdateOperationsInput | number | null
     hintUsed?: IntFieldUpdateOperationsInput | number
     meta?: NullableJsonNullValueInput | InputJsonValue
@@ -74697,6 +76594,7 @@ export namespace Prisma {
     attemptNo?: IntFieldUpdateOperationsInput | number
     response?: NullableJsonNullValueInput | InputJsonValue
     correct?: NullableBoolFieldUpdateOperationsInput | boolean | null
+    score?: NullableFloatFieldUpdateOperationsInput | number | null
     elapsedMs?: NullableIntFieldUpdateOperationsInput | number | null
     hintUsed?: IntFieldUpdateOperationsInput | number
     meta?: NullableJsonNullValueInput | InputJsonValue

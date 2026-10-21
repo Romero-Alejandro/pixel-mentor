@@ -34,6 +34,8 @@ export const SessionCheckpointSchema = z.object({
   questionCount: z.number().optional(),
   lastQuestionTime: z.string().nullish(),
   skippedActivities: z.array(z.string()).optional(),
+  /** Fase 2: atoms that already consumed their adaptivity hint. */
+  activityHints: z.array(z.string()).optional(),
   failedAttempts: z.number().optional(),
   totalWrongAnswers: z.number().optional(),
 });

@@ -22,6 +22,7 @@ import type {
 } from '@/features/voice/hooks/use-voice';
 import { useLessonStore } from '@/features/lesson/stores/lesson.store';
 import { logger } from '@/utils/logger';
+import type { ActivityResponse } from '@pixel-mentor/shared/activities';
 
 // ---- Types ----
 
@@ -43,7 +44,11 @@ export interface LessonResponse {
     };
     activity?: {
       instruction: string | { text: string };
-      options?: Array<{ text: string; isCorrect: boolean }>;
+      /** Client-facing options: { id, text } only — `isCorrect` never ships to the client. */
+      options?: Array<{ id: string; text: string }>;
+      /** ordering format: items without the correct order (client shuffles). */
+      items?: Array<{ id: string; text: string }>;
+      feedback?: { correct?: string; incorrect?: string; partial?: string };
     };
   };
   /** Backend SSE sends 'staticContent' — alias for resolvedStaticContent */
@@ -58,7 +63,11 @@ export interface LessonResponse {
     };
     activity?: {
       instruction: string | { text: string };
-      options?: Array<{ text: string; isCorrect: boolean }>;
+      /** Client-facing options: { id, text } only — `isCorrect` never ships to the client. */
+      options?: Array<{ id: string; text: string }>;
+      /** ordering format: items without the correct order (client shuffles). */
+      items?: Array<{ id: string; text: string }>;
+      feedback?: { correct?: string; incorrect?: string; partial?: string };
     };
   };
   contentSteps?: {
@@ -72,10 +81,24 @@ export interface LessonResponse {
     };
     activity?: {
       instruction: string | { text: string };
-      options?: Array<{ text: string; isCorrect: boolean }>;
+      /** Client-facing options: { id, text } only — `isCorrect` never ships to the client. */
+      options?: Array<{ id: string; text: string }>;
+      /** ordering format: items without the correct order (client shuffles). */
+      items?: Array<{ id: string; text: string }>;
+      feedback?: { correct?: string; incorrect?: string; partial?: string };
     };
   };
   xpEarned?: number;
+  /** Id of the correct MCQ option, revealed only after grading. */
+  correctOptionId?: string;
+  /** Format-generic reveal for Fase 1 formats, only present after grading. */
+  correctAnswer?: unknown;
+  /** Activity format of the graded step, when applicable. */
+  activityFormat?: string;
+  /** Partial score 0..1 for multi-answer formats. */
+  score?: number;
+  /** ms the client should wait before auto-advancing (adaptivity pacing). */
+  autoAdvanceDelayMs?: number;
   /** True when the backend resumed an existing session (step-level resume). */
   resumed?: boolean;
   /** True when the client must drive the start flow (AWAITING_START). */
@@ -230,7 +253,11 @@ export function useLessonInteractions({
   // ---- Core Interaction ----
 
   const doInteract = useCallback(
-    async (input: string, retries = 3): Promise<LessonResponse | null> => {
+    async (
+      input: string,
+      opts?: { optionId?: string; activityResponse?: ActivityResponse },
+      retries = 3,
+    ): Promise<LessonResponse | null> => {
       if (isInteractingRef.current) return null;
 
       const sid = sessionIdRef.current;
@@ -258,6 +285,7 @@ export function useLessonInteractions({
             const controller = streamInteractWithRecipe(
               sid,
               input,
+              opts?.optionId,
               {
                 onMessage: (event: EventSourceMessage) => {
                   if (event.event === 'end') {
@@ -326,17 +354,23 @@ export function useLessonInteractions({
                   store.setStreamError(msg);
                 },
               },
+              opts?.activityResponse,
             );
             abortControllerRef.current = controller;
           });
         }
 
-        return (await api.interactWithRecipe(sid, input)) as LessonResponse;
+        return (await api.interactWithRecipe(
+          sid,
+          input,
+          opts?.optionId,
+          opts?.activityResponse,
+        )) as LessonResponse;
       } catch (err: unknown) {
         if (retries > 0 && err instanceof Error && err.message.includes('429')) {
           await new Promise((r) => setTimeout(r, 1000));
           releaseLock();
-          return doInteract(input, retries - 1);
+          return doInteract(input, opts, retries - 1);
         }
         throw err;
       } finally {

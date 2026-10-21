@@ -4,6 +4,8 @@ import type { IUserRepository } from '@/features/auth/domain/ports/user.reposito
 import type { IHashingService } from '@/features/auth/domain/ports/hashing.service.port.js';
 import type { ITokenService } from '@/features/auth/domain/ports/token.service.port.js';
 import type { User } from '@/features/auth/domain/entities/user.entity.js';
+import { getEventBus } from '@/shared/events/event-bus.port.js';
+import { GameDomainEvents } from '@/shared/events/game-events.js';
 
 const createMockUser = (overrides: Partial<User> = {}): User => ({
   id: 'user-123',
@@ -112,6 +114,52 @@ describe('LoginUseCase', () => {
         refreshToken: 'mock-jwt-token',
       });
       expect(result.user).not.toHaveProperty('passwordHash');
+    });
+
+    it('should emit the daily login so the streak counts the day', async () => {
+      // Given
+      const mockUser = createMockUser({ id: 'user-1', passwordHash: 'hashed_pw' });
+      userRepo.findByIdentifierWithPassword.mockResolvedValue(mockUser);
+      hashingService.compare.mockResolvedValue(true);
+
+      const received: Array<{ userId: string; loginDate: Date }> = [];
+      const unsubscribe = getEventBus().subscribe<{ userId: string; loginDate: Date }>(
+        GameDomainEvents.DAILY_LOGIN,
+        (payload) => {
+          received.push(payload);
+        },
+      );
+
+      try {
+        // When
+        await useCase.execute({ identifier: 'test@example.com', password: 'password' });
+      } finally {
+        unsubscribe();
+      }
+
+      // Then
+      expect(received).toHaveLength(1);
+      expect(received[0]).toMatchObject({ userId: 'user-1' });
+      expect(received[0].loginDate).toBeInstanceOf(Date);
+    });
+
+    it('should not emit the daily login when authentication fails', async () => {
+      const mockUser = createMockUser({ passwordHash: 'hashed_pw' });
+      userRepo.findByIdentifierWithPassword.mockResolvedValue(mockUser);
+      hashingService.compare.mockResolvedValue(false);
+
+      const handler = jest.fn();
+      const unsubscribe = getEventBus().subscribe(GameDomainEvents.DAILY_LOGIN, handler);
+
+      try {
+        await expect(
+          useCase.execute({ identifier: 'test@example.com', password: 'wrong' }),
+        ).rejects.toThrow(InvalidCredentialsError);
+      } finally {
+        unsubscribe();
+      }
+
+      expect(handler).not.toHaveBeenCalled();
     });
 
     it('should login successfully with username', async () => {

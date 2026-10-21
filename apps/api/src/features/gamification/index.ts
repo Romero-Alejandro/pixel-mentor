@@ -7,4 +7,6 @@ export { LEVEL_TITLES } from '@/features/gamification/domain/constants.js';
 
 // Application Services
 export * from '@/features/gamification/application/services/index.js';
-export * from '@/features/gamification/application/strategies/index.js';
+
+// Domain policies
+export * from '@/features/gamification/domain/lesson-xp.policy.js';

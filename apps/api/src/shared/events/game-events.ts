@@ -52,6 +52,10 @@ export interface LessonCompletedPayload {
     skippedActivities: number;
     accuracyPercent: number;
     allCorrectOnFirstAttempt: boolean;
+    /** Fase 2: true when any first attempt consumed an adaptivity hint. */
+    anyHintUsed?: boolean;
+    /** Fase 2: 0..100 average partial score of last attempts (multi-answer formats). */
+    partialCreditPercent?: number;
   };
 }
 
@@ -94,6 +98,8 @@ export interface BadgeEarnedPayload {
   badgeCode: string;
   badgeName: string;
   badgeIcon: string;
+  /** XP the badge paid through the ledger. */
+  xpReward: number;
   totalBadges: number;
 }
 
@@ -107,6 +113,8 @@ export interface LevelUpPayload {
   /** The title for the new level (e.g., "Brote", "Flor") */
   newLevelTitle: string;
   newIcon: string;
+  /** Total XP after the award that crossed the threshold. */
+  newTotalXP: number;
 }
 
 /**

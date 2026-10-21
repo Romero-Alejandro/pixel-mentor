@@ -1,6 +1,7 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import { z } from 'zod';
 import type pino from 'pino';
+import { ActivityResponseSchema, type ActivityResponse } from '@pixel-mentor/shared/activities';
 
 import {
   checkDedup,
@@ -32,6 +33,18 @@ import {
 
 // SSE heartbeat interval: 15 seconds (keeps connection alive through proxies)
 const SSE_HEARTBEAT_INTERVAL_MS = 15_000;
+
+/**
+ * Validates the Fase 1 `activityResponse` payload for the stream route
+ * (which reads the body manually instead of through the interact schema).
+ * Returns undefined for missing/invalid payloads — the grader then falls
+ * back to text-based grading.
+ */
+function gradeRoutesReadActivityResponse(raw: unknown): ActivityResponse | undefined {
+  if (raw === undefined || raw === null) return undefined;
+  const parsed = ActivityResponseSchema.safeParse(raw);
+  return parsed.success ? parsed.data : undefined;
+}
 
 // Create a local logger for route handlers
 const recipeRouterLogger = createLogger(undefined, { name: 'recipe-router', level: 'error' });
@@ -113,6 +126,8 @@ export function createRecipeRouter(
           sessionId,
           studentInput,
           appRequest.user?.id,
+          validated.optionId,
+          validated.activityResponse,
         );
 
         // Record LLM usage for governance tracking
@@ -158,6 +173,12 @@ export function createRecipeRouter(
         typeof appRequest.body?.studentInput === 'string'
           ? appRequest.body.studentInput
           : undefined;
+      const optionId =
+        typeof appRequest.body?.optionId === 'string' ? appRequest.body.optionId : undefined;
+      // Fase 1 formats (mcq_multi, true_false, ordering): structured payload
+      // (zod-validated on the interact schema when streaming validation runs;
+      // duck-typed here for the manual body reads this route performs).
+      const activityResponse = gradeRoutesReadActivityResponse(appRequest.body?.activityResponse);
 
       if (!sessionId || !studentInput) {
         response.status(400).json({ error: 'sessionId and studentInput required in request body' });
@@ -248,6 +269,8 @@ export function createRecipeRouter(
           sessionId,
           studentInput,
           appRequest.user?.id,
+          optionId,
+          activityResponse,
         );
 
         for await (const chunk of stream) {
@@ -266,6 +289,10 @@ export function createRecipeRouter(
                 lessonProgress: chunk.lessonProgress,
                 feedback: chunk.feedback,
                 isCorrect: chunk.isCorrect,
+                correctOptionId: chunk.correctOptionId,
+                correctAnswer: chunk.correctAnswer,
+                activityFormat: chunk.activityFormat,
+                score: chunk.score,
                 autoAdvance: chunk.autoAdvance,
                 xpEarned: chunk.xpEarned,
                 accuracy: chunk.accuracy,

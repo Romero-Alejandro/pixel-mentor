@@ -86,6 +86,7 @@ const mockFeatureFlagService = {
 const mockActivityAttemptRepo = {
   findByUserIdAndAtomId: jest.fn(),
   findByUserIdAndAtomIds: jest.fn(),
+  recordAttempt: jest.fn().mockResolvedValue(undefined),
 };
 
 // Mock the logger to prevent console output during tests
@@ -461,7 +462,9 @@ describe('OrchestrateRecipeUseCase - Flow Tests', () => {
       result = await orchestrator.interact(testSessionId, studentInput, studentId);
 
       expect(result.pedagogicalState).toBe('EVALUATION');
-      expect(result.voiceText).toBe('Good job!');
+      // Fase 2: adaptivity may enrich the feedback (e.g. fast-answer praise),
+      // so we assert the grader's own message is present rather than exact.
+      expect(result.voiceText).toContain('Good job!');
       expect(result.isCorrect).toBe(true);
 
       // Advance from activity to closure step (index 6)

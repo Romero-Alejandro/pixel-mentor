@@ -4,36 +4,25 @@
 const GAMIFICATION_BASE = '/api/gamification';
 
 /**
- * Gamification API endpoint constants
- * Use these to ensure consistency between frontend and backend
+ * Gamification API endpoint constants.
+ * Only endpoints that exist on the server live here, so the frontend cannot
+ * call a route that was never implemented.
  */
 export const GamificationEndpoints = {
-  // Profile endpoints
+  // Profile
   GET_PROFILE: `${GAMIFICATION_BASE}/profile`,
-  GET_PROFILE_BY_USER: (userId: string) => `${GAMIFICATION_BASE}/profile/${userId}`,
 
-  // Summary endpoint
-  GET_SUMMARY: `${GAMIFICATION_BASE}/summary`,
-
-  // Badge endpoints
+  // Badges
   GET_BADGES: `${GAMIFICATION_BASE}/badges`,
-  GET_USER_BADGES: (userId: string) => `${GAMIFICATION_BASE}/badges/${userId}`,
+  GET_USER_BADGES: `${GAMIFICATION_BASE}/badges/user`,
 
-  // XP endpoints
-  GET_XP_CHANGES: `${GAMIFICATION_BASE}/xp`,
-  GET_USER_XP_CHANGES: (userId: string) => `${GAMIFICATION_BASE}/xp/${userId}`,
-  ADD_XP: `${GAMIFICATION_BASE}/xp/add`,
+  // Progress and streaks
+  GET_PROGRESS: `${GAMIFICATION_BASE}/progress`,
+  GET_STREAK_HISTORY: `${GAMIFICATION_BASE}/streak-history`,
 
-  // Level endpoints
-  GET_LEVELS: `${GAMIFICATION_BASE}/levels`,
-  GET_LEVEL_INFO: (level: number) => `${GAMIFICATION_BASE}/levels/${level}`,
-
-  // Streak endpoints
-  GET_STREAK: `${GAMIFICATION_BASE}/streak`,
-  GET_USER_STREAK: (userId: string) => `${GAMIFICATION_BASE}/streak/${userId}`,
-
-  // Badge progress
-  GET_BADGE_PROGRESS: (userId: string) => `${GAMIFICATION_BASE}/progress/${userId}`,
+  // Session mission report
+  GET_MISSION_REPORT: (sessionId: string) =>
+    `${GAMIFICATION_BASE}/mission-report/${sessionId}`,
 } as const;
 
 // Type for endpoint keys

@@ -72,6 +72,16 @@ export function StepEditor({
   const [activityFeedbackCorrect, setActivityFeedbackCorrect] = useState('');
   const [activityFeedbackIncorrect, setActivityFeedbackIncorrect] = useState('');
 
+  // Fase 1: activity format + format-specific authoring fields
+  const [activityFormat, setActivityFormat] = useState<
+    'mcq_single' | 'mcq_multi' | 'true_false' | 'ordering'
+  >('mcq_single');
+  const [trueFalseAnswer, setTrueFalseAnswer] = useState(true);
+  const [orderingItems, setOrderingItems] = useState<Array<{ id: string; text: string }>>([
+    { id: crypto.randomUUID(), text: '' },
+    { id: crypto.randomUUID(), text: '' },
+  ]);
+
   // Question fields
   const [questionText, setQuestionText] = useState('');
   const [questionExpectedAnswer, setQuestionExpectedAnswer] = useState('');
@@ -106,6 +116,24 @@ export function StepEditor({
           const feedback = (scriptData.feedback as Record<string, string>) || {};
           setActivityFeedbackCorrect(feedback.correct || '');
           setActivityFeedbackIncorrect(feedback.incorrect || '');
+          const fmt = (scriptData.format as string) || 'mcq_single';
+          if (fmt === 'true_false') {
+            setActivityFormat('true_false');
+            setTrueFalseAnswer(scriptData.answer === true);
+          } else if (fmt === 'ordering') {
+            setActivityFormat('ordering');
+            const items = (scriptData.items as Array<{ id?: string; text: string }>) || [];
+            setOrderingItems(
+              items.length > 0
+                ? items.map((it) => ({ id: it.id ?? crypto.randomUUID(), text: it.text }))
+                : [
+                    { id: crypto.randomUUID(), text: '' },
+                    { id: crypto.randomUUID(), text: '' },
+                  ],
+            );
+          } else {
+            setActivityFormat(fmt === 'mcq_multi' ? 'mcq_multi' : 'mcq_single');
+          }
         } else if (kind === 'question') {
           // Load question fields
           setQuestionText(extractText(scriptData.question));
@@ -152,6 +180,12 @@ export function StepEditor({
       setActivityOptions([{ id: crypto.randomUUID(), text: '', isCorrect: false }]);
       setActivityFeedbackCorrect('');
       setActivityFeedbackIncorrect('');
+      setActivityFormat('mcq_single');
+      setTrueFalseAnswer(true);
+      setOrderingItems([
+        { id: crypto.randomUUID(), text: '' },
+        { id: crypto.randomUUID(), text: '' },
+      ]);
       setQuestionText('');
       setQuestionExpectedAnswer('');
       setQuestionFeedbackCorrect('');
@@ -172,9 +206,18 @@ export function StepEditor({
       if (!activityInstruction.trim()) {
         newErrors.activityInstruction = 'La instrucción es requerida';
       }
-      const hasCorrect = activityOptions.some((o) => o.isCorrect);
-      if (!hasCorrect) {
-        newErrors.activityOptions = 'Debe haber al menos una opción correcta';
+      if (activityFormat === 'true_false') {
+        // answer always has a boolean value; nothing extra to validate
+      } else if (activityFormat === 'ordering') {
+        const validItems = orderingItems.filter((it) => it.text.trim());
+        if (validItems.length < 2) {
+          newErrors.activityOptions = 'Se requieren al menos 2 ítems con texto';
+        }
+      } else {
+        const hasCorrect = activityOptions.some((o) => o.isCorrect);
+        if (!hasCorrect) {
+          newErrors.activityOptions = 'Debe haber al menos una opción correcta';
+        }
       }
     } else if (stepType === 'question') {
       if (!questionText.trim()) {
@@ -213,18 +256,50 @@ export function StepEditor({
         closure: ' ',
       };
     } else if (stepType === 'activity') {
-      // Activity is stored in the script field for backend compatibility
-      script = {
-        kind: 'activity',
-        transition: activityTransition,
-        instruction: activityInstruction,
-        options: activityOptions.filter((o) => o.text.trim()),
-        feedback: {
-          correct: activityFeedbackCorrect || '¡Correcto!',
-          incorrect: activityFeedbackIncorrect || 'Intenta de nuevo',
-        },
-        closure: '',
-      };
+      // Activity is stored in the script field for backend compatibility.
+      // Fase 1: `format` selects the grading/rendering plugin.
+      if (activityFormat === 'true_false') {
+        script = {
+          kind: 'activity',
+          format: 'true_false',
+          transition: activityTransition,
+          instruction: activityInstruction,
+          answer: trueFalseAnswer,
+          feedback: {
+            correct: activityFeedbackCorrect || '¡Correcto!',
+            incorrect: activityFeedbackIncorrect || 'Incorrecto.',
+          },
+          closure: '',
+        };
+      } else if (activityFormat === 'ordering') {
+        script = {
+          kind: 'activity',
+          format: 'ordering',
+          transition: activityTransition,
+          instruction: activityInstruction,
+          items: orderingItems
+            .filter((it) => it.text.trim())
+            .map((it) => ({ id: it.id, text: it.text })),
+          feedback: {
+            correct: activityFeedbackCorrect || '¡Correcto!',
+            incorrect: activityFeedbackIncorrect || 'Incorrecto.',
+          },
+          closure: '',
+        };
+      } else {
+        script = {
+          kind: 'activity',
+          format: activityFormat,
+          transition: activityTransition,
+          instruction: activityInstruction,
+          options: activityOptions.filter((o) => o.text.trim()),
+          feedback: {
+            correct: activityFeedbackCorrect || '¡Correcto!',
+            incorrect: activityFeedbackIncorrect || 'Intenta de nuevo',
+          },
+          closure: '',
+        };
+      }
     } else if (stepType === 'question') {
       // Question is stored in the script field for backend compatibility
       script = {
@@ -423,7 +498,106 @@ export function StepEditor({
                   className="min-h-[80px]"
                   error={errors.activityInstruction}
                 />
+
+                {/* Fase 1: activity format selector */}
                 <div>
+                  <label className="block text-sm font-bold text-slate-600 mb-2">Formato *</label>
+                  <select
+                    value={activityFormat}
+                    onChange={(e) =>
+                      setActivityFormat(
+                        e.target.value as 'mcq_single' | 'mcq_multi' | 'true_false' | 'ordering',
+                      )
+                    }
+                    className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-base focus:border-sky-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-100"
+                  >
+                    <option value="mcq_single">Opción múltiple (una correcta)</option>
+                    <option value="mcq_multi">Selección múltiple (varias correctas)</option>
+                    <option value="true_false">Verdadero / Falso</option>
+                    <option value="ordering">Ordenar secuencias</option>
+                  </select>
+                </div>
+
+                {activityFormat === 'true_false' ? (
+                  <div>
+                    <label className="block text-sm font-bold text-slate-600 mb-2">
+                      Respuesta correcta *
+                    </label>
+                    <div className="flex gap-3">
+                      {[true, false].map((v) => (
+                        <button
+                          key={String(v)}
+                          type="button"
+                          onClick={() => setTrueFalseAnswer(v)}
+                          className={`flex-1 py-3 rounded-xl border-2 font-bold transition-colors ${
+                            trueFalseAnswer === v
+                              ? 'border-sky-500 bg-sky-50 text-sky-700'
+                              : 'border-slate-200 bg-white text-slate-500 hover:border-sky-300'
+                          }`}
+                        >
+                          {v ? 'Verdadero' : 'Falso'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {activityFormat === 'ordering' ? (
+                  <div>
+                    <label className="block text-sm font-bold text-slate-600 mb-2">
+                      Ítems en el orden CORRECTO *
+                    </label>
+                    {orderingItems.map((item, index) => (
+                      <div key={item.id} className="flex gap-2 mb-2 items-center">
+                        <span className="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 flex items-center justify-center font-black text-sm shrink-0">
+                          {index + 1}
+                        </span>
+                        <Input
+                          value={item.text}
+                          onChange={(e) =>
+                            setOrderingItems(
+                              orderingItems.map((it) =>
+                                it.id === item.id ? { ...it, text: e.target.value } : it,
+                              ),
+                            )
+                          }
+                          placeholder={`Ítem ${index + 1}`}
+                          className="flex-1"
+                        />
+                        {orderingItems.length > 2 ? (
+                          <button
+                            onClick={() =>
+                              setOrderingItems(orderingItems.filter((it) => it.id !== item.id))
+                            }
+                            className="p-2 text-slate-400 hover:text-rose-500"
+                          >
+                            <IconTrash className="w-5 h-5" />
+                          </button>
+                        ) : null}
+                      </div>
+                    ))}
+                    <button
+                      onClick={() =>
+                        setOrderingItems([...orderingItems, { id: crypto.randomUUID(), text: '' }])
+                      }
+                      className="text-sm text-sky-500 font-medium flex items-center gap-1 mt-2"
+                    >
+                      <IconPlus className="w-4 h-4" />
+                      Añadir ítem
+                    </button>
+                    {errors.activityOptions ? (
+                      <p className="text-sm text-red-500 mt-1">{errors.activityOptions}</p>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                <div
+                  className={
+                    activityFormat === 'true_false' || activityFormat === 'ordering'
+                      ? 'hidden'
+                      : undefined
+                  }
+                >
                   <label className="block text-sm font-bold text-slate-600 mb-2">Opciones</label>
                   {activityOptions.map((option, index) => (
                     <div key={option.id} className="flex gap-2 mb-2 items-center">

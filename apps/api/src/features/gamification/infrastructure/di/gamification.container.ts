@@ -6,18 +6,13 @@ import { PrismaLevelConfigRepository } from '@/features/gamification/infrastruct
 import { PrismaDailyActivityRepository } from '@/features/gamification/infrastructure/persistence/prisma-daily-activity.repository.js';
 import { PrismaAuditRepository } from '@/features/gamification/infrastructure/persistence/prisma-audit.repository.js';
 import { LevelService } from '@/features/gamification/application/services/level.service.js';
+import { AwardXpService } from '@/features/gamification/application/services/award-xp.service.js';
 import { StreakService } from '@/features/gamification/application/services/streak.service.js';
+import { BadgeRuleEvaluator } from '@/features/gamification/application/services/badge-rule.evaluator.js';
+import { BadgeAwardService } from '@/features/gamification/application/services/badge-award.service.js';
 import { BadgeProgressCalculator } from '@/features/gamification/application/services/badge-progress.service.js';
 import { BadgeEngine } from '@/features/gamification/application/services/badge-engine.service.js';
-import { StrategyRegistry } from '@/features/gamification/application/strategies/strategy-registry.js';
 import { GameEngineCore } from '@/features/gamification/application/services/game-engine-core.service.js';
-import {
-  LessonCompletionStrategy,
-  FirstLessonBadgeStrategy,
-  StreakMilestone7Strategy,
-  StreakMilestone30Strategy,
-  StreakBonusStrategy,
-} from '@/features/gamification/application/strategies/index.js';
 import type { ProgressRepository } from '@/features/progress/domain/ports/progress.repository.port';
 import type { ActivityAttemptRepository } from '@/features/activity/domain/ports/activity-attempt.repository.port';
 import { prisma } from '@/database/client.js';
@@ -29,10 +24,12 @@ export interface GamificationContainer {
   levelConfigRepository: PrismaLevelConfigRepository;
   dailyActivityRepository: PrismaDailyActivityRepository;
   levelService: LevelService;
+  awardXpService: AwardXpService;
   streakService: StreakService;
+  badgeRuleEvaluator: BadgeRuleEvaluator;
+  badgeAwardService: BadgeAwardService;
   badgeProgressCalc: BadgeProgressCalculator;
   badgeEngine: BadgeEngine;
-  strategyRegistry: StrategyRegistry;
   gameEngine: GameEngineCore;
 }
 
@@ -41,47 +38,46 @@ export function buildGamificationContainer(
   progressRepo: ProgressRepository,
   activityAttemptRepo: ActivityAttemptRepository,
 ): GamificationContainer {
-  const userGamificationRepository = new PrismaUserGamificationRepository();
   const badgeRepository = new PrismaBadgeRepository();
   const levelConfigRepository = new PrismaLevelConfigRepository();
   const dailyActivityRepository = new PrismaDailyActivityRepository();
 
   const levelService = new LevelService(levelConfigRepository);
+  const userGamificationRepository = new PrismaUserGamificationRepository(levelService);
   const streakService = new StreakService(userGamificationRepository, dailyActivityRepository);
 
-  const badgeProgressCalc = new BadgeProgressCalculator(
-    badgeRepository,
+  const transactionService = new PrismaGamificationTransactionService();
+  const awardXpService = new AwardXpService(
+    transactionService,
+    userGamificationRepository,
+    levelService,
+  );
+
+  const badgeRuleEvaluator = new BadgeRuleEvaluator(
     userGamificationRepository,
     progressRepo,
     activityAttemptRepo,
   );
 
-  const badgeEngine = new BadgeEngine(
+  const badgeAwardService = new BadgeAwardService(
     badgeRepository,
     userGamificationRepository,
-    badgeProgressCalc,
-    progressRepo,
-    activityAttemptRepo,
-    undefined,
-    logger,
+    transactionService,
+    awardXpService,
+    badgeRuleEvaluator,
   );
 
-  const strategyRegistry = new StrategyRegistry(logger);
-  strategyRegistry.register(new LessonCompletionStrategy());
-  strategyRegistry.register(new FirstLessonBadgeStrategy());
-  strategyRegistry.register(new StreakMilestone7Strategy());
-  strategyRegistry.register(new StreakMilestone30Strategy());
-  strategyRegistry.register(new StreakBonusStrategy());
+  const badgeProgressCalc = new BadgeProgressCalculator(badgeRepository, badgeRuleEvaluator);
+  const badgeEngine = new BadgeEngine(badgeRepository, badgeProgressCalc);
 
   const auditRepository = new PrismaAuditRepository(prisma);
 
   const gameEngine = new GameEngineCore(
     userGamificationRepository,
-    badgeRepository,
-    strategyRegistry,
     streakService,
     progressRepo,
-    new PrismaGamificationTransactionService(),
+    awardXpService,
+    badgeAwardService,
     undefined,
     logger,
     auditRepository,
@@ -94,10 +90,12 @@ export function buildGamificationContainer(
     levelConfigRepository,
     dailyActivityRepository,
     levelService,
+    awardXpService,
     streakService,
+    badgeRuleEvaluator,
+    badgeAwardService,
     badgeProgressCalc,
     badgeEngine,
-    strategyRegistry,
     gameEngine,
   };
 }

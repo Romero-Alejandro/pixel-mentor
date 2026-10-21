@@ -9,15 +9,16 @@ import { logger } from '@/utils/logger';
 
 interface XPEarnedEvent {
   type: 'xp_earned';
+  /** XP added by this award (`delta`). */
   amount: number;
+  /** Balance after the award; this is what the profile shows. */
+  newTotal: number;
   reason: string;
-  version: number;
 }
 
 interface BadgeEarnedEvent {
   type: 'badge_earned';
   badge: EarnedBadge;
-  version: number;
 }
 
 interface LevelUpEvent {
@@ -26,14 +27,12 @@ interface LevelUpEvent {
   newLevelTitle: string;
   previousLevel: number;
   totalXP: number;
-  version: number;
 }
 
 interface StreakUpdatedEvent {
   type: 'streak_updated';
   currentStreak: number;
   longestStreak: number;
-  version: number;
 }
 
 const MAX_RECONNECT_DELAY = 30000;
@@ -52,7 +51,6 @@ export function useGamificationSSE(enabled = true) {
   const [isConnected, setIsConnected] = useState(false);
   const reconnectAttemptRef = useRef(0);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const connectionVersionRef = useRef(0);
 
   const cleanup = useCallback(() => {
     if (reconnectTimeoutRef.current) {
@@ -90,8 +88,6 @@ export function useGamificationSSE(enabled = true) {
 
       const controller = new AbortController();
       abortControllerRef.current = controller;
-      connectionVersionRef.current += 1;
-      const currentVersion = connectionVersionRef.current;
 
       fetchEventSource('/api/gamification/events', {
         method: 'GET',
@@ -106,40 +102,36 @@ export function useGamificationSSE(enabled = true) {
         },
         onmessage: (event: EventSourceMessage) => {
           try {
-            const data = JSON.parse(event.data);
-            const eventType = event.event;
+            const data = JSON.parse(event.data) as { type?: string };
+            // The server names the event (`event: xp_earned`); the `type` field
+            // inside the JSON is the fallback for clients that lose the name.
+            const eventType = event.event || data.type;
 
             switch (eventType) {
               case 'xp_earned': {
                 const eventData = data as XPEarnedEvent;
-                onXPEarned(eventData.amount, eventData.reason, eventData.version ?? currentVersion);
+                // `amount` is the delta; the profile shows the new balance.
+                onXPEarned(eventData.newTotal, eventData.reason);
                 break;
               }
               case 'badge_earned': {
                 const eventData = data as BadgeEarnedEvent;
-                onBadgeEarned(eventData.badge, eventData.version ?? currentVersion);
+                onBadgeEarned(eventData.badge);
                 break;
               }
               case 'level_up': {
                 const eventData = data as LevelUpEvent;
-                onLevelUp(
-                  {
-                    newLevel: eventData.newLevel,
-                    newLevelTitle: eventData.newLevelTitle,
-                    previousLevel: eventData.previousLevel,
-                    totalXP: eventData.totalXP,
-                  },
-                  eventData.version ?? currentVersion,
-                );
+                onLevelUp({
+                  newLevel: eventData.newLevel,
+                  newLevelTitle: eventData.newLevelTitle,
+                  previousLevel: eventData.previousLevel,
+                  totalXP: eventData.totalXP,
+                });
                 break;
               }
               case 'streak_updated': {
                 const eventData = data as StreakUpdatedEvent;
-                onStreakUpdated(
-                  eventData.currentStreak,
-                  eventData.longestStreak,
-                  eventData.version ?? currentVersion,
-                );
+                onStreakUpdated(eventData.currentStreak, eventData.longestStreak);
                 break;
               }
               default:

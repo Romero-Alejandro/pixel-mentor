@@ -16,6 +16,52 @@ jest.mock('@/shared/logger/logger.js', () => ({
 }));
 
 describe('MCQEvaluationService', () => {
+  describe('evaluateMCQ — optionId grading (Fase 0)', () => {
+    const scriptWithIds: ActivityScript = {
+      instruction: 'Select the correct answer',
+      options: [
+        { id: 'a1', text: 'Madrid', isCorrect: false },
+        { id: 'b2', text: 'Paris', isCorrect: true },
+        { id: 'c3', text: 'Roma', isCorrect: false },
+      ],
+      feedback: { correct: 'Excellent!', incorrect: 'Try again.' },
+    };
+
+    it('grades by option id when provided', () => {
+      const result = evaluateMCQ(scriptWithIds, 'cualquier texto', { optionId: 'b2' });
+      expect(result.isCorrect).toBe(true);
+      expect(result.selectedOptionId).toBe('b2');
+      expect(result.correctOptionId).toBe('b2');
+    });
+
+    it('grades incorrect when the option id points to a distractor (even with matching text)', () => {
+      const result = evaluateMCQ(scriptWithIds, 'Madrid', { optionId: 'a1' });
+      expect(result.isCorrect).toBe(false);
+      expect(result.selectedOptionId).toBe('a1');
+    });
+
+    it('falls back to positional ids (opt-<index>) for legacy clients', () => {
+      const result = evaluateMCQ(scriptWithIds, 'Paris', { optionId: 'opt-1' });
+      expect(result.isCorrect).toBe(true);
+      expect(result.selectedOptionId).toBe('b2');
+    });
+
+    it('falls back to text matching when the option id is unknown (legacy content)', () => {
+      const legacyScript: ActivityScript = {
+        instruction: 'Select the correct answer',
+        options: [
+          { text: 'Madrid', isCorrect: false },
+          { text: 'Paris', isCorrect: true },
+          { text: 'Roma', isCorrect: false },
+        ],
+        feedback: { correct: 'Excellent!', incorrect: 'Try again.' },
+      };
+      const result = evaluateMCQ(legacyScript, '  Paris  ', { optionId: 'unknown-id' });
+      expect(result.isCorrect).toBe(true);
+      expect(result.correctOptionId).toBeUndefined();
+    });
+  });
+
   describe('evaluateMCQ', () => {
     const baseScript: ActivityScript = {
       instruction: 'Select the correct answer',

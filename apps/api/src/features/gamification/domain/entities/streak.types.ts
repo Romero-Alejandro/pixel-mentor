@@ -47,19 +47,3 @@ export interface StreakInfo {
   /** The starting date of the longest streak */
   longestStreakStart?: Date;
 }
-
-/**
- * Configuration for streak behavior.
- */
-export const STREAK_CONFIG = {
-  /** Maximum hours without activity before streak breaks (24h + grace period) */
-  MAX_INACTIVE_HOURS: 25,
-  /** Minimum days in a streak to qualify for bonuses */
-  BONUS_THRESHOLD: 5,
-  /** Bonus XP for hitting 5+ day streak */
-  BONUS_XP_5_DAYS: 10,
-  /** Bonus XP for hitting 30+ day streak */
-  BONUS_XP_30_DAYS: 25,
-  /** Higher streak threshold for larger bonus */
-  HIGH_STREAK_THRESHOLD: 30,
-} as const;

@@ -379,6 +379,7 @@ exports.Prisma.ActivityAttemptScalarFieldEnum = {
   attemptNo: 'attemptNo',
   response: 'response',
   correct: 'correct',
+  score: 'score',
   elapsedMs: 'elapsedMs',
   hintUsed: 'hintUsed',
   meta: 'meta',
@@ -409,9 +410,18 @@ exports.Prisma.UserGamificationScalarFieldEnum = {
   currentStreak: 'currentStreak',
   longestStreak: 'longestStreak',
   lastActivityAt: 'lastActivityAt',
-  level: 'level',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
+};
+
+exports.Prisma.XpTransactionScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  amount: 'amount',
+  source: 'source',
+  sourceRef: 'sourceRef',
+  balanceAfter: 'balanceAfter',
+  createdAt: 'createdAt'
 };
 
 exports.Prisma.BadgeScalarFieldEnum = {
@@ -667,6 +677,14 @@ exports.EventType = exports.$Enums.EventType = {
   OTHER: 'OTHER'
 };
 
+exports.XpSource = exports.$Enums.XpSource = {
+  LESSON: 'LESSON',
+  BADGE: 'BADGE',
+  STREAK_DAILY: 'STREAK_DAILY',
+  STREAK_MILESTONE: 'STREAK_MILESTONE',
+  ADMIN_ADJUSTMENT: 'ADMIN_ADJUSTMENT'
+};
+
 exports.ClassStatus = exports.$Enums.ClassStatus = {
   DRAFT: 'DRAFT',
   UNDER_REVIEW: 'UNDER_REVIEW',
@@ -707,6 +725,7 @@ exports.Prisma.ModelName = {
   CompetencyMastery: 'CompetencyMastery',
   EventLog: 'EventLog',
   UserGamification: 'UserGamification',
+  XpTransaction: 'XpTransaction',
   Badge: 'Badge',
   UserBadge: 'UserBadge',
   LevelConfig: 'LevelConfig',

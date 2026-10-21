@@ -43,37 +43,38 @@ export function isConsecutiveDay(date1: Date, date2: Date): boolean {
   return diffMs === msPerDay;
 }
 
-/**
- * Get the number of days since a given date.
- * Returns 0 if the date is today or in the future.
- * Uses UTC for timezone consistency.
- */
-export function getDaysSince(date: Date, fromDate: Date = new Date()): number {
-  const from = getStartOfDayUTC(fromDate);
-  const d = getStartOfDayUTC(date);
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-  const diffMs = from.getTime() - d.getTime();
-  const msPerDay = 24 * 60 * 60 * 1000;
-
-  const days = Math.floor(diffMs / msPerDay);
-  return Math.max(0, days);
+/** Adds whole calendar days to a UTC day. */
+export function addDaysUTC(date: Date, days: number): Date {
+  const result = getStartOfDayUTC(date);
+  result.setUTCDate(result.getUTCDate() + days);
+  return result;
 }
 
 /**
- * Check if more than 24 hours have passed since the last activity.
- * Streak breaks if the user missed a day (more than 24 hours).
- * Uses UTC for timezone consistency.
+ * Returns the streak as of `referenceDate`.
+ *
+ * A streak survives when the last activity was today or yesterday: missing a
+ * full calendar day breaks it. This is the same rule
+ * `calculateStreakFromActivities` applies, expressed for a stored counter so
+ * read paths do not need the whole calendar.
  */
-export function isStreakBroken(lastActivityDate: Date, currentDate: Date = new Date()): boolean {
-  const lastActivity = new Date(lastActivityDate);
-  const current = new Date(currentDate);
+export function normalizeCurrentStreak(
+  streak: number,
+  lastActivityAt: Date | null,
+  referenceDate: Date = new Date(),
+): number {
+  if (!lastActivityAt || streak <= 0) {
+    return 0;
+  }
 
-  const diffMs = current.getTime() - lastActivity.getTime();
-  const msPerHour = 60 * 60 * 1000;
-  const MS_BREAK_THRESHOLD = 24 * msPerHour; // 24 hours
+  const daysSinceLastActivity = Math.floor(
+    (getStartOfDayUTC(referenceDate).getTime() - getStartOfDayUTC(lastActivityAt).getTime()) /
+      MS_PER_DAY,
+  );
 
-  // Streak is broken if more than 24 hours have passed
-  return diffMs > MS_BREAK_THRESHOLD;
+  return daysSinceLastActivity <= 1 ? streak : 0;
 }
 
 /**
@@ -196,17 +197,4 @@ export function calculateStreakBonus(currentStreak: number): number {
     return 10; // STREAK_5_BONUS_XP
   }
   return 0;
-}
-
-/**
- * Format a streak for display purposes.
- */
-export function formatStreak(streak: number): string {
-  if (streak === 0) {
-    return 'Sin racha';
-  }
-  if (streak === 1) {
-    return '1 día';
-  }
-  return `${streak} días`;
 }

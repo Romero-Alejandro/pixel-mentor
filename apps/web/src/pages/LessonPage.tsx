@@ -18,7 +18,8 @@ import { UI_STATES } from '@/features/lesson/constants/lesson.constants';
 import { LessonHeader } from '@/features/lesson/components/LessonHeader';
 import { ConcentrationPanel } from '@/features/lesson/components/ConcentrationPanel';
 import { QuestionPanel } from '@/features/lesson/components/QuestionPanel';
-import { ActivityPanel } from '@/features/lesson/components/ActivityPanel';
+import { ActivityRenderer } from '@/features/lesson/components/ActivityRenderer';
+import type { ActivityResponse } from '@pixel-mentor/shared/activities';
 import { FeedbackPanel } from '@/features/lesson/components/FeedbackPanel';
 import { CompletedPanel } from '@/features/lesson/components/CompletedPanel';
 import { ResumeToast } from '@/features/lesson/components/ResumeToast';
@@ -264,7 +265,14 @@ export function LessonPage() {
 
   const handleMCQ = (text: string, id: string) => {
     setSelectedId(id);
-    orchestrator.submitAnswer(text);
+    // optionId is authoritative for grading; text stays for legacy/voice fallback.
+    orchestrator.submitAnswer(text, id);
+  };
+
+  // Fase 1 formats (mcq_multi, true_false, ordering): the structured payload
+  // is authoritative; the joined label rides as text for history/voice logs.
+  const handleStructuredActivity = (payload: ActivityResponse, label: string) => {
+    orchestrator.submitAnswer(label || 'respuesta', undefined, payload);
   };
 
   const handleRepeatContent = () => {
@@ -337,13 +345,17 @@ export function LessonPage() {
 
       case UI_STATES.ACTIVITY:
         return (
-          <ActivityPanel
+          <ActivityRenderer
+            activityFormat={orchestrator.activityFormat}
             question={orchestrator.questionText}
             options={orchestrator.options}
+            orderingItems={orchestrator.orderingItems}
             onAnswer={handleMCQ}
+            onStructuredAnswer={handleStructuredActivity}
             isProcessing={orchestrator.isProcessing}
             selectedId={selectedId}
             isCorrect={activityCorrect}
+            correctOptionId={orchestrator.feedbackData?.correctOptionId}
           />
         );
 

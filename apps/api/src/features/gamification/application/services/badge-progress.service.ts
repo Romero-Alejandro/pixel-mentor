@@ -1,33 +1,30 @@
+/**
+ * Badge progress (read side).
+ *
+ * Delegates all rule interpretation to BadgeRuleEvaluator, so the progress a
+ * student sees is computed by exactly the same code that decides awards.
+ * One metrics load serves the whole catalog.
+ */
+
 import type {
+  BadgeDefinition,
   BadgeProgress,
-  BadgeRequirementType,
 } from '@/features/gamification/domain/entities/badge.types.js';
+import type { IBadgeRepository } from '@/features/gamification/domain/ports/gamification.ports.js';
 import type {
-  IBadgeRepository,
-  IUserGamificationRepository,
-} from '@/features/gamification/domain/ports/gamification.ports.js';
-import type { ProgressRepository } from '@/features/progress/domain/ports/progress.repository.port';
-import type { ActivityAttemptRepository } from '@/features/activity/domain/ports/activity-attempt.repository.port';
+  BadgeRuleEvaluator,
+  BadgeRuleProgress,
+} from '@/features/gamification/application/services/badge-rule.evaluator.js';
 
-export function parseBadgeRules(
-  rules: Record<string, unknown>,
-): { type: BadgeRequirementType; value: number } | null {
-  const type = rules['type'] as BadgeRequirementType | undefined;
-  const value = rules['value'] as number | undefined;
-
-  if (!type || value === undefined) {
-    return null;
-  }
-
-  return { type, value };
+interface OwnedBadge {
+  code: string;
+  earnedAt: Date;
 }
 
 export class BadgeProgressCalculator {
   constructor(
     private badgeRepo: IBadgeRepository,
-    private userGamificationRepo: IUserGamificationRepository,
-    private progressRepo: ProgressRepository,
-    private activityAttemptRepo: ActivityAttemptRepository,
+    private ruleEvaluator: BadgeRuleEvaluator,
   ) {}
 
   async calculateBadgeProgress(userId: string, badgeCode: string): Promise<BadgeProgress | null> {
@@ -37,72 +34,64 @@ export class BadgeProgressCalculator {
       return null;
     }
 
-    const parsedRules = parseBadgeRules(badge.rules as unknown as Record<string, unknown>);
-    if (!parsedRules) {
+    const [metrics, owned] = await Promise.all([
+      this.ruleEvaluator.loadMetrics(userId),
+      this.badgeRepo.getUserBadges(userId),
+    ]);
+
+    return this.toProgress(badge, this.ruleEvaluator.evaluate(badge.rules, metrics), owned);
+  }
+
+  async getAllBadgeProgress(userId: string): Promise<BadgeProgress[]> {
+    const [badges, owned] = await Promise.all([
+      this.badgeRepo.getActiveBadges(),
+      this.badgeRepo.getUserBadges(userId),
+    ]);
+
+    if (badges.length === 0) {
+      return [];
+    }
+
+    const metrics = await this.ruleEvaluator.loadMetrics(userId);
+
+    return badges
+      .map((badge) =>
+        this.toProgress(badge, this.ruleEvaluator.evaluate(badge.rules, metrics), owned),
+      )
+      .filter((progress): progress is BadgeProgress => progress !== null);
+  }
+
+  async getNearCompletionBadges(userId: string, minPercent = 50): Promise<BadgeProgress[]> {
+    const allProgress = await this.getAllBadgeProgress(userId);
+    return allProgress.filter((progress) => !progress.earned && progress.percent >= minPercent);
+  }
+
+  /**
+   * Builds the display model. A badge with an unusable rule is omitted instead
+   * of being shown as permanently unreachable.
+   */
+  private toProgress(
+    badge: BadgeDefinition,
+    rule: BadgeRuleProgress | null,
+    owned: readonly OwnedBadge[],
+  ): BadgeProgress | null {
+    if (!rule) {
       return null;
     }
 
-    const { type, value } = parsedRules;
-
-    const profileStats = await this.userGamificationRepo.getProfileStats(userId);
-    const completedLessons = await this.progressRepo.countByUserIdAndStatus(userId, [
-      'MASTERED',
-      'IN_PROGRESS',
-    ]);
-    const perfectAttempts = await this.activityAttemptRepo.countCorrectFirstAttempts(userId);
-
-    let current = 0;
-    const target = value;
-
-    switch (type) {
-      case 'STREAK':
-        current = profileStats?.currentStreak ?? 0;
-        break;
-      case 'LEVEL':
-        current = profileStats?.level ?? 1;
-        break;
-      case 'LESSON_COUNT':
-        current = completedLessons;
-        break;
-      case 'PERFECT_ATTEMPT':
-        current = perfectAttempts;
-        break;
-      default:
-        return null;
-    }
-
-    const earned = await this.badgeRepo.hasBadge(userId, badgeCode);
-    const percent = Math.min(100, Math.round((current / target) * 100));
-
-    const userBadges = await this.badgeRepo.getUserBadges(userId);
-    const userBadge = userBadges.find((b) => b.code === badgeCode);
+    const ownedBadge = owned.find((entry) => entry.code === badge.code);
+    const percent = Math.min(100, Math.round((rule.current / rule.target) * 100));
 
     return {
       badgeCode: badge.code,
       badgeName: badge.name,
       badgeIcon: badge.icon,
-      requirementType: type,
-      current: Math.min(current, target),
-      target,
-      percent: earned ? 100 : percent,
-      earned,
-      earnedAt: userBadge?.earnedAt,
+      requirementType: badge.rules.type,
+      current: rule.current,
+      target: rule.target,
+      percent: ownedBadge ? 100 : percent,
+      earned: ownedBadge !== undefined,
+      earnedAt: ownedBadge?.earnedAt,
     };
-  }
-
-  async getAllBadgeProgress(userId: string): Promise<BadgeProgress[]> {
-    const badges = await this.badgeRepo.getActiveBadges();
-
-    const progressPromises = badges.map(async (badge) => {
-      return this.calculateBadgeProgress(userId, badge.code);
-    });
-
-    const results = await Promise.all(progressPromises);
-    return results.filter((p): p is BadgeProgress => p !== null);
-  }
-
-  async getNearCompletionBadges(userId: string, minPercent = 50): Promise<BadgeProgress[]> {
-    const allProgress = await this.getAllBadgeProgress(userId);
-    return allProgress.filter((p) => !p.earned && p.percent >= minPercent);
   }
 }

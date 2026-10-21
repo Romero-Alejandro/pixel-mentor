@@ -32,7 +32,8 @@
     "./schemas/session": "./src/schemas/session/index.ts",
     "./schemas/session/session": "./src/schemas/session/session.schema.ts",
     "./schemas/clinical": "./src/schemas/clinical/index.ts",
-    "./schemas/validation": "./src/schemas/validation.schema.ts"
+    "./schemas/validation": "./src/schemas/validation.schema.ts",
+    "./activities": "./src/activities/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

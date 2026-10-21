@@ -65,6 +65,22 @@ const extractText = (val: unknown): string => {
   return '';
 };
 
+/** Fisher-Yates shuffle for ordering items; retries until order differs. */
+function shuffleItems(
+  items: Array<{ id: string; text: string }>,
+): Array<{ id: string; text: string }> {
+  if (items.length < 2) return items;
+  const out = [...items];
+  for (let attempt = 0; attempt < 5; attempt++) {
+    for (let i = out.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [out[i], out[j]] = [out[j], out[i]];
+    }
+    if (out.some((it, i) => it.id !== items[i].id)) break;
+  }
+  return out;
+}
+
 // ---- Types ----
 
 interface UseLessonAutoAdvanceParams {
@@ -194,6 +210,7 @@ export function useLessonAutoAdvance({
         lessonProgress,
         xpEarned,
         accuracy,
+        activityFormat,
       } = raw;
 
       // Support resolvedStaticContent, staticContent (backend), and contentSteps
@@ -223,10 +240,20 @@ export function useLessonAutoAdvance({
       if (pedagogicalState === 'EVALUATION') {
         const msg = feedback || (isCorrect ? 'Muy bien!' : 'Sigue intentando!');
         ls.addQuestionResult(ls.questionText, !!isCorrect);
-        ls.setFeedbackData({ isCorrect: !!isCorrect, message: msg });
+        ls.setFeedbackData({
+          isCorrect: !!isCorrect,
+          message: msg,
+          correctOptionId: raw.correctOptionId,
+          correctAnswer: raw.correctAnswer,
+          activityFormat: raw.activityFormat,
+          score: raw.score,
+        });
 
         if (ls.uiState === 'activity') {
-          await new Promise((r) => setTimeout(r, 2000)); // Dramatic pause
+          // Fase 2: backend-computed pacing (reading pace of the feedback text)
+          // with the legacy dramatic pause as fallback.
+          const delayMs = raw.autoAdvanceDelayMs ?? 2000;
+          await new Promise((r) => setTimeout(r, delayMs));
           if (isStale()) return;
         }
 
@@ -245,15 +272,22 @@ export function useLessonAutoAdvance({
       if (pedagogicalState === 'ACTIVITY_WAIT') {
         const { stepType, activity } = resolvedStaticContent || {};
         const hasOptions = activity?.options && activity.options.length > 0;
+        const isOrdering = activityFormat === 'ordering' && !!activity?.items;
 
         ls.setQuestionText(extractText(activity?.instruction));
         ls.setOptions(
           activity?.options?.map((o, i) => ({
-            id: `opt-${i}`,
+            id: o.id ?? `opt-${i}`,
             text: o.text,
-            isCorrect: o.isCorrect,
           })) || [],
         );
+        // ordering: shuffle items so the display order never equals the answer.
+        ls.setOrderingItems(
+          isOrdering
+            ? shuffleItems((activity?.items ?? []).map((it) => ({ id: it.id, text: it.text })))
+            : [],
+        );
+        ls.setActivityFormat(activityFormat ?? null);
         ls.setFeedbackData(null);
         const isActivityPanel = stepType === 'activity' || hasOptions;
         ls.setUIState(isActivityPanel ? 'activity' : 'question');

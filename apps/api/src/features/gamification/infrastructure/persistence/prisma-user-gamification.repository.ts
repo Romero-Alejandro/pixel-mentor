@@ -1,136 +1,109 @@
 /**
  * Prisma-based User Gamification Repository.
  *
- * Implements IUserGamificationRepository using Prisma ORM.
+ * `UserGamification` holds the cached aggregate (totalXP + streak state);
+ * `level` is never stored — it is derived from `totalXP` by LevelService.
  */
 
-import { LevelService } from '@/features/gamification/application/services/level.service.js';
+import type { LevelService } from '@/features/gamification/application/services/level.service.js';
 import type {
   IUserGamificationRepository,
   GamificationProfile,
 } from '@/features/gamification/domain/ports/gamification.ports.js';
 import { prisma } from '@/database/client.js';
+import { isUniqueConstraintError } from '@/database/prisma-error.js';
+import { normalizeCurrentStreak } from '@/features/gamification/application/services/streak-calculator.service.js';
+
+const BADGES_INCLUDE = {
+  badges: {
+    include: {
+      badge: true,
+    },
+  },
+} as const;
+
+interface UserGamificationRow {
+  userId: string;
+  totalXP: number;
+  currentStreak: number;
+  longestStreak: number;
+  lastActivityAt: Date | null;
+  badges: Array<{
+    earnedAt: Date;
+    badge: {
+      code: string;
+      name: string;
+      icon: string;
+      description: string;
+    };
+  }>;
+}
 
 export class PrismaUserGamificationRepository implements IUserGamificationRepository {
-  private levelService: LevelService;
-
-  constructor() {
-    this.levelService = new LevelService();
-  }
+  constructor(private readonly levelService: LevelService) {}
 
   async findByUserId(userId: string): Promise<GamificationProfile | null> {
-    const userGamification = await prisma.userGamification.findUnique({
+    const row = await prisma.userGamification.findUnique({
       where: { userId },
-      include: {
-        badges: {
-          include: {
-            badge: true,
-          },
-        },
-      },
+      include: BADGES_INCLUDE,
     });
 
-    if (!userGamification) {
+    if (!row) {
       return null;
     }
 
-    const levelsNeeded = [userGamification.level, userGamification.level + 1];
-    const levelConfigs = await prisma.levelConfig.findMany({
-      where: { level: { in: levelsNeeded } },
-    });
-
-    return this.mapToProfile(userGamification, levelConfigs);
+    return this.mapToProfile(row);
   }
 
   async getOrCreate(userId: string): Promise<GamificationProfile> {
-    let userGamification = await prisma.userGamification.findUnique({
-      where: { userId },
-      include: {
-        badges: {
-          include: {
-            badge: true,
-          },
-        },
-      },
-    });
-
-    if (!userGamification) {
-      userGamification = await prisma.userGamification.create({
-        data: {
-          userId,
-          totalXP: 0,
-          currentStreak: 0,
-          longestStreak: 0,
-          level: 1,
-        },
-        include: {
-          badges: {
-            include: {
-              badge: true,
-            },
-          },
-        },
-      });
-    }
-
-    return this.mapToProfile(userGamification);
-  }
-
-  async addXP(
-    userId: string,
-    amount: number,
-  ): Promise<{ newXP: number; leveledUp: boolean; newLevel?: number; newLevelTitle?: string }> {
-    await this.getOrCreate(userId);
-
-    const maxLevel = this.levelService.getMaxLevel();
-
-    const updated = await prisma.userGamification.update({
-      where: { userId },
-      data: {
-        totalXP: { increment: amount },
-      },
-    });
-
-    const newLevel = Math.min(updated.level, maxLevel);
-    const leveledUp = newLevel > 1;
-
-    if (updated.level !== newLevel) {
-      await prisma.userGamification.update({
+    try {
+      const row = await prisma.userGamification.upsert({
         where: { userId },
-        data: { level: newLevel },
+        create: { userId },
+        update: {},
+        include: BADGES_INCLUDE,
       });
+
+      return this.mapToProfile(row);
+    } catch (error) {
+      // Two concurrent first touches of the same user can both attempt the
+      // INSERT (Prisma emulates an upsert with an empty update). The loser gets
+      // P2002, and the row it wanted now exists — which is the postcondition.
+      if (!isUniqueConstraintError(error)) {
+        throw error;
+      }
+
+      const existing = await prisma.userGamification.findUnique({
+        where: { userId },
+        include: BADGES_INCLUDE,
+      });
+
+      if (!existing) {
+        throw error;
+      }
+
+      return this.mapToProfile(existing);
     }
-
-    const newLevelTitle = leveledUp ? this.levelService.getLevelTitle(newLevel) : undefined;
-
-    return {
-      newXP: updated.totalXP,
-      leveledUp,
-      newLevel: leveledUp ? newLevel : undefined,
-      newLevelTitle,
-    };
   }
 
   async updateStreak(
     userId: string,
     data: { currentStreak: number; longestStreak: number; lastActivityAt: Date },
   ): Promise<void> {
-    await prisma.userGamification.update({
+    const longestStreak = Math.max(data.currentStreak, data.longestStreak);
+
+    await prisma.userGamification.upsert({
       where: { userId },
-      data: {
+      create: {
+        userId,
         currentStreak: data.currentStreak,
-        longestStreak: Math.max(data.currentStreak, data.longestStreak),
+        longestStreak,
         lastActivityAt: data.lastActivityAt,
       },
-    });
-  }
-
-  async breakStreak(userId: string): Promise<void> {
-    await prisma.userGamification.update({
-      where: { userId },
-      data: {
-        currentStreak: 0,
-        lastActivityAt: null,
+      update: {
+        currentStreak: data.currentStreak,
+        longestStreak,
+        lastActivityAt: data.lastActivityAt,
       },
     });
   }
@@ -141,20 +114,20 @@ export class PrismaUserGamificationRepository implements IUserGamificationReposi
     totalXP: number;
     totalBadges: number;
   } | null> {
-    const profile = await prisma.userGamification.findUnique({
+    const row = await prisma.userGamification.findUnique({
       where: { userId },
-      include: { badges: true },
+      include: { badges: { select: { id: true } } },
     });
 
-    if (!profile) {
+    if (!row) {
       return null;
     }
 
     return {
-      currentStreak: profile.currentStreak,
-      level: profile.level,
-      totalXP: profile.totalXP,
-      totalBadges: profile.badges.length,
+      currentStreak: normalizeCurrentStreak(row.currentStreak, row.lastActivityAt),
+      level: await this.levelService.calculateLevel(row.totalXP),
+      totalXP: row.totalXP,
+      totalBadges: row.badges.length,
     };
   }
 
@@ -183,63 +156,26 @@ export class PrismaUserGamificationRepository implements IUserGamificationReposi
     return this.getLevelConfig(currentLevel + 1);
   }
 
-  private async mapToProfile(
-    entity: Awaited<ReturnType<typeof prisma.userGamification.findUnique>> & {
-      badges: Array<{
-        badge: {
-          code: string;
-          name: string;
-          icon: string;
-          description: string;
-        };
-        earnedAt: Date;
-      }>;
-    },
-    levelConfigs?: Awaited<ReturnType<typeof prisma.levelConfig.findMany>>,
-  ): Promise<GamificationProfile> {
-    let currentLevelConfig;
-    let nextLevelConfig;
-
-    if (levelConfigs && levelConfigs.length > 0) {
-      currentLevelConfig = levelConfigs.find((lc) => lc.level === entity.level);
-      nextLevelConfig = levelConfigs.find((lc) => lc.level === entity.level + 1);
-    } else {
-      const current = await this.getLevelConfig(entity.level);
-      const next = await this.getNextLevelConfig(entity.level);
-      currentLevelConfig = current
-        ? { level: current.level, title: current.title, minXP: current.minXP, icon: current.icon }
-        : undefined;
-      nextLevelConfig = next
-        ? { level: next.level, title: next.title, minXP: next.minXP, icon: next.icon }
-        : undefined;
-    }
-
-    const currentMinXP = currentLevelConfig?.minXP ?? 0;
-    const nextMinXP = nextLevelConfig?.minXP ?? currentMinXP;
-    const xpNeededForNext = nextMinXP - currentMinXP;
-    const xpInCurrentLevel = entity.totalXP - currentMinXP;
-    const xpProgressPercent =
-      xpNeededForNext > 0
-        ? Math.min(100, Math.round((xpInCurrentLevel / xpNeededForNext) * 100))
-        : 100;
+  private async mapToProfile(row: UserGamificationRow): Promise<GamificationProfile> {
+    const level = await this.levelService.describe(row.totalXP);
 
     return {
-      userId: entity.userId,
-      level: entity.level,
-      levelTitle: currentLevelConfig?.title ?? this.levelService.getLevelTitle(entity.level),
-      currentXP: entity.totalXP,
-      xpToNextLevel: xpNeededForNext,
-      xpProgressPercent,
-      streak: entity.currentStreak,
-      longestStreak: entity.longestStreak,
-      lastActivityAt: entity.lastActivityAt,
-      totalBadges: entity.badges.length,
-      badges: entity.badges.map((ub) => ({
-        code: ub.badge.code,
-        name: ub.badge.name,
-        icon: ub.badge.icon,
-        description: ub.badge.description,
-        earnedAt: ub.earnedAt,
+      userId: row.userId,
+      level: level.level,
+      levelTitle: level.title,
+      currentXP: row.totalXP,
+      xpToNextLevel: level.xpToNextLevel,
+      xpProgressPercent: level.progressPercent,
+      streak: normalizeCurrentStreak(row.currentStreak, row.lastActivityAt),
+      longestStreak: row.longestStreak,
+      lastActivityAt: row.lastActivityAt,
+      totalBadges: row.badges.length,
+      badges: row.badges.map((userBadge) => ({
+        code: userBadge.badge.code,
+        name: userBadge.badge.name,
+        icon: userBadge.badge.icon,
+        description: userBadge.badge.description,
+        earnedAt: userBadge.earnedAt,
       })),
     };
   }

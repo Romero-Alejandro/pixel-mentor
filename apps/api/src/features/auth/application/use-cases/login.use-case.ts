@@ -4,6 +4,7 @@ import type { ITokenService } from '@/features/auth/domain/ports/token.service.p
 import type { IRefreshTokenRepository } from '@/features/auth/domain/ports/refresh-token.repository.port.js';
 import type { User } from '@/features/auth/domain/entities/user.entity.js';
 import { InvalidCredentialsError } from '@/features/auth/domain/auth.errors.js';
+import { emitDailyLogin } from '@/shared/events/emit-daily-login.js';
 import { randomBytes } from 'node:crypto';
 
 export interface LoginInput {
@@ -38,6 +39,11 @@ export class LoginUseCase {
     }
 
     const { accessToken, refreshToken } = await this.generateAndStoreTokens(user);
+
+    // Logging in means the user showed up today: the gamification engine records
+    // the calendar day and recomputes the streak (idempotent per day, and it can
+    // never fail the login).
+    await emitDailyLogin(user.id);
 
     return {
       user: this.sanitizeUser(user),
