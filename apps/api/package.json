@@ -18,7 +18,8 @@
     "db:migrate": "prisma migrate dev",
     "prisma:seed": "tsx prisma/seed-test-data.ts",
     "db:seed:admin": "tsx prisma/seed-admin.ts",
-    "db:seed:gamification": "tsx prisma/seed-gamification.ts"
+    "db:seed:gamification": "tsx prisma/seed-gamification.ts",
+    "db:reconcile:xp": "tsx prisma/reconcile-xp.ts"
   },
   "dependencies": {
     "@google/generative-ai": "0.24.1",

@@ -283,7 +283,7 @@ export function MissionReportPage() {
             </div>
           ) : clinicalDiscrepancies.length > 0 && pragmaticData ? (
             <div className="space-y-4">
-              {report?.clinicalReportSimulated && (
+              {report?.clinicalReportSimulated ? (
                 <div
                   className="flex items-start gap-3 rounded-2xl border-2 border-amber-300 bg-amber-50 px-5 py-4"
                   role="note"
@@ -297,7 +297,7 @@ export function MissionReportPage() {
                     </p>
                   </div>
                 </div>
-              )}
+              ) : null}
               <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_0.9fr] gap-6 items-start">
                 <ClinicalDiscrepancySection discrepancies={clinicalDiscrepancies} />
                 <div className="lg:sticky lg:top-6">

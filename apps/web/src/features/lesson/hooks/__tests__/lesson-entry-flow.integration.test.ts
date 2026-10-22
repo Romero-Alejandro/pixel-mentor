@@ -146,9 +146,8 @@ function createSimulatedProcessResponse(ctx: {
         questionText: extractText(activity?.instruction),
         options:
           activity?.options?.map((o, i) => ({
-            id: `opt-${i}`,
+            id: o.id ?? `opt-${i}`,
             text: o.text,
-            isCorrect: o.isCorrect,
           })) || [],
         feedbackData: null,
         uiState: stepType === 'activity' || hasOptions ? 'activity' : 'question',
@@ -278,9 +277,9 @@ describe('Lesson Entry Flow Integration', () => {
         activity: {
           instruction: '¿Cuánto es 2 + 3?',
           options: [
-            { text: '4', isCorrect: false },
-            { text: '5', isCorrect: true },
-            { text: '6', isCorrect: false },
+            { id: 'opt-0', text: '4' },
+            { id: 'opt-1', text: '5' },
+            { id: 'opt-2', text: '6' },
           ],
         },
       },
@@ -320,7 +319,7 @@ describe('Lesson Entry Flow Integration', () => {
     // Verify: question and options extracted from staticContent
     expect(state.questionText).toBe('¿Cuánto es 2 + 3?');
     expect(state.options).toHaveLength(3);
-    expect(state.options[1]).toEqual({ id: 'opt-1', text: '5', isCorrect: true });
+    expect(state.options[1]).toEqual({ id: 'opt-1', text: '5' });
 
     // Verify: content from explanation step was set
     expect(state.contentText).toBe('La suma es la operación de combinar cantidades.');
@@ -390,7 +389,7 @@ describe('Lesson Entry Flow Integration', () => {
         stepType: 'activity',
         activity: {
           instruction: 'Pregunta de prueba',
-          options: [{ text: 'A', isCorrect: true }],
+          options: [{ id: 'opt-0', text: 'A' }],
         },
       },
       lessonProgress: { currentStep: 1, totalSteps: 5 },
@@ -415,7 +414,7 @@ describe('Lesson Entry Flow Integration', () => {
     // Verify: question and options extracted from staticContent (not resolvedStaticContent)
     expect(state.questionText).toBe('Pregunta de prueba');
     expect(state.options).toHaveLength(1);
-    expect(state.options[0]).toEqual({ id: 'opt-0', text: 'A', isCorrect: true });
+    expect(state.options[0]).toEqual({ id: 'opt-0', text: 'A' });
   });
 
   // ── Scenario 4: Multi-step chain with ref stability ────────────────────
@@ -455,8 +454,8 @@ describe('Lesson Entry Flow Integration', () => {
           activity: {
             instruction: '¿Cuánto es 1 + 1?',
             options: [
-              { text: '2', isCorrect: true },
-              { text: '3', isCorrect: false },
+              { id: 'opt-0', text: '2' },
+              { id: 'opt-1', text: '3' },
             ],
           },
         },
@@ -523,7 +522,7 @@ describe('Lesson Entry Flow Integration', () => {
           stepType: 'activity',
           activity: {
             instruction: 'Pregunta',
-            options: [{ text: 'X', isCorrect: true }],
+            options: [{ id: 'opt-0', text: 'X' }],
           },
         },
         lessonProgress: { currentStep: 2, totalSteps: 5 },
@@ -550,7 +549,7 @@ describe('Lesson Entry Flow Integration', () => {
           stepType: 'activity',
           activity: {
             instruction: 'Pregunta nueva',
-            options: [{ text: 'Y', isCorrect: true }],
+            options: [{ id: 'opt-0', text: 'Y' }],
           },
         },
         lessonProgress: { currentStep: 2, totalSteps: 5 },
@@ -627,7 +626,7 @@ describe('Lesson Entry Flow Integration', () => {
           stepType: 'activity',
           activity: {
             instruction: 'Nueva pregunta',
-            options: [{ text: 'Si', isCorrect: true }],
+            options: [{ id: 'opt-0', text: 'Si' }],
           },
         },
         lessonProgress: { currentStep: 3, totalSteps: 5 },

@@ -3,29 +3,24 @@ import { prisma } from '@/database/client.js';
 
 export class PrismaDailyActivityRepository implements IDailyActivityRepository {
   async recordActivity(userId: string, date: Date): Promise<void> {
-    const startOfDay = new Date(date);
-    startOfDay.setUTCHours(0, 0, 0, 0);
+    const day = new Date(date);
+    day.setUTCHours(0, 0, 0, 0);
 
-    // Verificar si el registro ya existe
-    const existingActivity = await prisma.dailyActivity.findUnique({
-      where: {
-        userId_date: {
-          userId,
-          date: startOfDay,
-        },
-      },
+    // The unique key does the dedupe in the database: a check-then-create would
+    // race with a concurrent request for the same day and throw P2002.
+    await prisma.dailyActivity.createMany({
+      data: [{ userId, date: day }],
+      skipDuplicates: true,
+    });
+  }
+
+  async getActivityDates(userId: string, since?: Date): Promise<Date[]> {
+    const rows = await prisma.dailyActivity.findMany({
+      where: { userId, ...(since ? { date: { gte: since } } : {}) },
+      orderBy: { date: 'asc' },
+      select: { date: true },
     });
 
-    if (existingActivity) {
-      // Si ya existe, no hacer nada - el registro ya está creado
-      return;
-    }
-    // Si no existe, crear el registro
-    await prisma.dailyActivity.create({
-      data: {
-        userId,
-        date: startOfDay,
-      },
-    });
+    return rows.map((row) => row.date);
   }
 }

@@ -13,17 +13,17 @@ export const gamificationApi = {
   },
 
   getBadges: async () => {
-    const { data } = await apiClient.get('/api/gamification/badges');
+    const { data } = await apiClient.get(GamificationEndpoints.GET_BADGES);
     return data;
   },
 
   getUserBadges: async () => {
-    const { data } = await apiClient.get('/api/gamification/badges/user');
+    const { data } = await apiClient.get(GamificationEndpoints.GET_USER_BADGES);
     return data;
   },
 
   getStreakHistory: async () => {
-    const { data } = await apiClient.get('/api/gamification/streak-history');
+    const { data } = await apiClient.get(GamificationEndpoints.GET_STREAK_HISTORY);
     return data;
   },
 };

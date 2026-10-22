@@ -50,6 +50,9 @@ import {
 } from '@/features/recipe/domain/entities/recipe-config.entity.js';
 import { isTerminalStatus } from '@/features/session/domain/entities/session.entity.js';
 import { evaluateMCQ } from '@/features/recipe/application/services/mcq-evaluation.service.js';
+import { gradeActivity } from '@/features/recipe/application/services/activity-grading.service.js';
+import { AttemptAdaptivityService } from '@/features/activity/application/services/attempt-adaptivity.service.js';
+import type { ActivityResponse } from '@pixel-mentor/shared/activities';
 import { detectNavigationInput } from '@/features/recipe/application/services/navigation.service.js';
 import type { LessonEvaluatorUseCase } from '@/features/evaluation/application/services/lesson.evaluator.js';
 import type { FeatureFlagService } from '@/shared/config/evaluation-flags.js';
@@ -81,6 +84,8 @@ export class OrchestrateRecipeUseCase {
 
   private readonly answerEvaluation: AnswerEvaluationService;
   private readonly lessonCompletion: LessonCompletionService;
+  private readonly activityAttemptRepo?: ActivityAttemptRepository;
+  private readonly attemptAdaptivity = new AttemptAdaptivityService();
 
   constructor(
     private sessionRepo: SessionRepository,
@@ -112,6 +117,7 @@ export class OrchestrateRecipeUseCase {
       featureFlagService,
     );
     this.lessonCompletion = new LessonCompletionService(activityAttemptRepo);
+    this.activityAttemptRepo = activityAttemptRepo;
   } // ─── Content mapping (delegated to step-script.mapper) ───────────────────
   private extractStaticContent(step: {
     stepType?: string | null;
@@ -245,6 +251,116 @@ export class OrchestrateRecipeUseCase {
         : null,
       pausedForQuestion: false,
     });
+  }
+
+  // ─── Attempt recording (Fase 0) ───────────────────────────────────────────
+
+  /**
+   * Persists a graded activity attempt. Failures never break the lesson flow:
+   * accuracy/gamification degrade gracefully instead of the student losing
+   * their session. Skipped when the attempt repo is not wired (mock/E2E).
+   */
+  private async recordActivityAttempt(params: {
+    studentId: string | undefined;
+    atomId: string;
+    response: unknown;
+    correct?: boolean;
+    /** Plugin format of the graded step (activity format or open_question). */
+    format: string;
+    elapsedMs?: number;
+    correctAnswer?: unknown;
+    score?: number;
+    /** 1 when this attempt consumed the one-time adaptivity hint. */
+    hintUsed?: number;
+  }): Promise<void> {
+    const {
+      studentId,
+      atomId,
+      response,
+      correct,
+      format,
+      elapsedMs,
+      correctAnswer,
+      score,
+      hintUsed,
+    } = params;
+    if (!this.activityAttemptRepo || !studentId || !atomId) return;
+    try {
+      await this.activityAttemptRepo.recordAttempt({
+        id: randomUUID(),
+        userId: studentId,
+        atomId,
+        response,
+        correct,
+        elapsedMs,
+        hintUsed: hintUsed ?? 0,
+        meta: {
+          format,
+          ...(score !== undefined ? { score } : {}),
+          ...(correctAnswer !== undefined ? { correctAnswer } : {}),
+        },
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      orchestrateLogger.warn({ err: message, atomId }, '[OrchestrateRecipe] Attempt not recorded');
+    }
+  }
+
+  private elapsedSinceStep(stepEnteredAt?: number): number | undefined {
+    return typeof stepEnteredAt === 'number' ? Math.max(0, Date.now() - stepEnteredAt) : undefined;
+  }
+
+  /**
+   * Fase 2: computes the adaptivity decision for a graded activity attempt
+   * (hint nudge, enriched feedback, pacing delay). Failure-tolerant: any
+   * error degrades to the raw grader feedback with no delay.
+   */
+  private async computeAdaptivity(params: {
+    studentId: string;
+    atomId: string;
+    graded: { format: string; isCorrect: boolean; score?: number };
+    elapsedMs?: number;
+    failedAttempts: number;
+    hintAlreadyUsed: boolean;
+    fallbackFeedback: string;
+  }): Promise<{ feedbackText: string; showHint: boolean; autoAdvanceDelayMs?: number }> {
+    try {
+      const history = this.activityAttemptRepo
+        ? await this.activityAttemptRepo.findByUserIdAndAtomId(params.studentId, params.atomId)
+        : [];
+      const decision = this.attemptAdaptivity.decide({
+        format: params.graded.format,
+        isCorrect: params.graded.isCorrect,
+        score: params.graded.score,
+        elapsedMs: params.elapsedMs,
+        hintAlreadyUsed: params.hintAlreadyUsed,
+        failedAttempts: params.failedAttempts,
+        atomHistory: history.map((h) => ({
+          atomId: h.atomId,
+          attemptNo: h.attemptNo,
+          ...(h.correct !== undefined ? { correct: h.correct } : {}),
+          ...(h.score !== undefined ? { score: h.score } : {}),
+          ...(h.elapsedMs !== undefined ? { elapsedMs: h.elapsedMs } : {}),
+          hintUsed: h.hintUsed ?? 0,
+          ...(h.format !== undefined ? { format: h.format } : {}),
+        })),
+      });
+      return {
+        feedbackText:
+          decision.feedbackText.trim().length > 0
+            ? `${params.fallbackFeedback} ${decision.feedbackText}`.trim()
+            : params.fallbackFeedback,
+        showHint: decision.showHint,
+        autoAdvanceDelayMs:
+          decision.autoAdvanceDelayMs > 0 ? decision.autoAdvanceDelayMs : undefined,
+      };
+    } catch {
+      return {
+        feedbackText: params.fallbackFeedback,
+        showHint: false,
+        autoAdvanceDelayMs: undefined,
+      };
+    }
   }
 
   // ─── Answer evaluation (delegated to AnswerEvaluationService) ────────────
@@ -433,6 +549,8 @@ export class OrchestrateRecipeUseCase {
     sessionId: string,
     studentInput: string,
     userId?: string,
+    optionId?: string,
+    activityResponse?: ActivityResponse,
   ): Promise<InteractRecipeOutput> {
     const session = await this.sessionRepo.findById(sessionId);
     orchestrateLogger.debug(
@@ -484,6 +602,7 @@ export class OrchestrateRecipeUseCase {
     let totalWrongAnswers = cp.totalWrongAnswers ?? 0;
     let savedStepIndex: number | undefined = cp.savedStepIndex ?? undefined;
     let doubtContext = cp.doubtContext ?? undefined;
+    let stepEnteredAt: number | undefined = cp.stepEnteredAt;
 
     // ── Loop detection: track recent step transitions ──────────────────────
     // If the same step index is returned too many times, force-advance
@@ -546,6 +665,8 @@ export class OrchestrateRecipeUseCase {
           ...cp,
           currentState: this.stateForStep(currentStep),
           currentStepIndex: currentIdx,
+          stepEnteredAt:
+            this.stateForStep(currentStep) === 'ACTIVITY_WAIT' ? Date.now() : undefined,
         });
         return {
           voiceText: vt,
@@ -610,6 +731,7 @@ export class OrchestrateRecipeUseCase {
           ...cp,
           currentState: 'ACTIVITY_WAIT',
           currentStepIndex: navNextIdx,
+          stepEnteredAt: Date.now(),
           savedStepIndex,
           doubtContext,
           questionCount,
@@ -633,6 +755,7 @@ export class OrchestrateRecipeUseCase {
           ...cp,
           currentState: 'ACTIVITY_WAIT',
           currentStepIndex: navNextIdx,
+          stepEnteredAt: Date.now(),
           savedStepIndex,
           doubtContext,
           questionCount,
@@ -657,6 +780,7 @@ export class OrchestrateRecipeUseCase {
         ...cp,
         currentState: navNextState,
         currentStepIndex: navNextIdx,
+        stepEnteredAt: undefined,
         savedStepIndex,
         doubtContext,
         questionCount,
@@ -736,6 +860,11 @@ export class OrchestrateRecipeUseCase {
     let nextIdx = currentIdx;
     let willComplete = false;
     let isCorrectValue: boolean | undefined;
+    let correctOptionIdValue: string | undefined;
+    let correctAnswerValue: unknown;
+    let activityFormatValue: string | undefined;
+    let scoreValue: number | undefined;
+    let autoAdvanceDelayMsValue: number | undefined;
 
     // ── Máquina de estados ────────────────────────────────────────────────
 
@@ -809,6 +938,16 @@ export class OrchestrateRecipeUseCase {
           stepIndex: currentIdx,
           studentId: userId,
         });
+
+        await this.recordActivityAttempt({
+          studentId: session.studentId,
+          atomId: currentStep.atomId,
+          response: { text: studentInput },
+          correct: evaluation.result === 'correct',
+          format: 'open_question',
+          elapsedMs: this.elapsedSinceStep(cp.stepEnteredAt),
+        });
+
         const qs = script as QuestionScript;
         // Determine event based on evaluation result
         const evalEvent = this.getEventForEvaluation(
@@ -861,17 +1000,52 @@ export class OrchestrateRecipeUseCase {
           };
         }
         const as = script as ActivityScript;
-        const mcqResult = evaluateMCQ(as, studentInput, {
-          stepIndex: currentIdx,
-          stateName: 'ACTIVITY_WAIT_interact',
+        const graded = gradeActivity({
+          script: as,
+          studentInput,
+          optionId,
+          structured: activityResponse,
         });
-        const isCorrect = mcqResult.isCorrect;
 
-        voiceText = mcqResult.feedback;
+        // Fase 2: adaptivity (hint nudge, enriched feedback, pacing)
+        const elapsedMs = this.elapsedSinceStep(cp.stepEnteredAt);
+        const hintAlreadyUsed = cp.activityHints?.includes(currentStep.atomId) ?? false;
+        const adapt = await this.computeAdaptivity({
+          studentId: session.studentId,
+          atomId: currentStep.atomId,
+          graded,
+          elapsedMs,
+          failedAttempts,
+          hintAlreadyUsed,
+          fallbackFeedback: graded.feedback,
+        });
+        voiceText = adapt.feedbackText;
         responseFeedback = voiceText;
-        isCorrectValue = isCorrect;
+        isCorrectValue = graded.isCorrect;
+        correctOptionIdValue =
+          typeof graded.correctAnswer === 'string' ? graded.correctAnswer : undefined;
+        correctAnswerValue = graded.correctAnswer;
+        activityFormatValue = graded.format;
+        scoreValue = graded.score;
+        autoAdvanceDelayMsValue = adapt.autoAdvanceDelayMs;
 
-        if (isCorrect) {
+        await this.recordActivityAttempt({
+          studentId: session.studentId,
+          atomId: currentStep.atomId,
+          response: {
+            optionId: graded.selectedOptionId ?? optionId,
+            text: studentInput,
+            ...(activityResponse ?? {}),
+          },
+          correct: graded.isCorrect,
+          format: graded.format,
+          elapsedMs,
+          correctAnswer: graded.correctAnswer,
+          score: graded.score,
+          hintUsed: adapt.showHint ? 1 : 0,
+        });
+
+        if (graded.isCorrect) {
           nextState = this.applyStateTransition('ACTIVITY_WAIT', 'EVALUATE_CORRECT');
           failedAttempts = 0;
         } else {
@@ -928,6 +1102,16 @@ export class OrchestrateRecipeUseCase {
             stepIndex: currentIdx,
             studentId: userId,
           });
+
+          await this.recordActivityAttempt({
+            studentId: session.studentId,
+            atomId: currentStep.atomId,
+            response: { text: studentInput },
+            correct: evaluation.result === 'correct',
+            format: 'open_question',
+            elapsedMs: this.elapsedSinceStep(cp.stepEnteredAt),
+          });
+
           const qs = script as QuestionScript;
           if (evaluation.result === 'correct') {
             voiceText = qs.feedback.correct;
@@ -966,14 +1150,51 @@ export class OrchestrateRecipeUseCase {
             };
           }
           const as = script as ActivityScript;
-          const mcqResult = evaluateMCQ(as, studentInput, {
-            stepIndex: currentIdx,
-            stateName: 'EVALUATION_interact',
+          const graded = gradeActivity({
+            script: as,
+            studentInput,
+            optionId,
+            structured: activityResponse,
           });
-          const isCorrect = mcqResult.isCorrect;
-          voiceText = mcqResult.feedback;
+          const isCorrect = graded.isCorrect;
+
+          // Fase 2: adaptivity (hint nudge, enriched feedback, pacing)
+          const elapsedMs = this.elapsedSinceStep(cp.stepEnteredAt);
+          const hintAlreadyUsed = cp.activityHints?.includes(currentStep.atomId) ?? false;
+          const adapt = await this.computeAdaptivity({
+            studentId: session.studentId,
+            atomId: currentStep.atomId,
+            graded,
+            elapsedMs,
+            failedAttempts,
+            hintAlreadyUsed,
+            fallbackFeedback: graded.feedback,
+          });
+          voiceText = adapt.feedbackText;
           responseFeedback = voiceText;
           isCorrectValue = isCorrect;
+          correctOptionIdValue =
+            typeof graded.correctAnswer === 'string' ? graded.correctAnswer : undefined;
+          correctAnswerValue = graded.correctAnswer;
+          activityFormatValue = graded.format;
+          scoreValue = graded.score;
+          autoAdvanceDelayMsValue = adapt.autoAdvanceDelayMs;
+
+          await this.recordActivityAttempt({
+            studentId: session.studentId,
+            atomId: currentStep.atomId,
+            response: {
+              optionId: graded.selectedOptionId ?? optionId,
+              text: studentInput,
+              ...(activityResponse ?? {}),
+            },
+            correct: graded.isCorrect,
+            format: graded.format,
+            elapsedMs,
+            correctAnswer: graded.correctAnswer,
+            score: graded.score,
+            hintUsed: adapt.showHint ? 1 : 0,
+          });
           if (isCorrect) {
             nextState = this.applyStateTransition('EVALUATION', 'EVALUATE_CORRECT');
             failedAttempts = 0;
@@ -1040,9 +1261,17 @@ export class OrchestrateRecipeUseCase {
     await this.record(sessionId, history.length, studentInput, null, currentIdx);
     await this.record(sessionId, history.length + 1, voiceText, 'answer', currentIdx);
 
+    // Track when the current step started requiring input (for attempt elapsedMs).
+    if (nextState === 'ACTIVITY_WAIT' && currentState !== 'ACTIVITY_WAIT') {
+      stepEnteredAt = Date.now();
+    } else if (nextState !== 'ACTIVITY_WAIT') {
+      stepEnteredAt = undefined;
+    }
+
     const newCp: SessionCheckpoint = {
       currentState: nextState,
       currentStepIndex: nextIdx,
+      stepEnteredAt,
       savedStepIndex,
       doubtContext,
       questionCount,
@@ -1103,8 +1332,17 @@ export class OrchestrateRecipeUseCase {
         skippedActivities,
       );
       const { calculateXPFromAccuracy } =
-        await import('@/features/gamification/application/strategies/xp-reward.strategy.js');
-      xpEarned = calculateXPFromAccuracy(accuracy.accuracyPercent);
+        await import('@/features/gamification/domain/lesson-xp.policy.js');
+      xpEarned = calculateXPFromAccuracy(
+        accuracy.accuracyPercent,
+        accuracy.allCorrectOnFirstAttempt,
+        {
+          accuracyPercent: accuracy.accuracyPercent,
+          allCorrectOnFirstAttempt: accuracy.allCorrectOnFirstAttempt,
+          anyHintUsed: accuracy.anyHintUsed,
+          partialCreditPercent: accuracy.partialCreditPercent,
+        },
+      );
       accuracyData = accuracy;
     }
 
@@ -1114,6 +1352,11 @@ export class OrchestrateRecipeUseCase {
       sessionCompleted: willComplete || undefined,
       feedback: responseFeedback,
       isCorrect: isCorrectValue ?? aiResponse.isCorrect,
+      correctOptionId: correctOptionIdValue,
+      correctAnswer: correctAnswerValue,
+      activityFormat: activityFormatValue,
+      score: scoreValue,
+      autoAdvanceDelayMs: autoAdvanceDelayMsValue,
       staticContent,
       lessonProgress: { currentStep: nextIdx, totalSteps: steps.length },
       xpEarned,
@@ -1130,6 +1373,8 @@ export class OrchestrateRecipeUseCase {
     sessionId: string,
     studentInput: string,
     userId?: string,
+    optionId?: string,
+    activityResponse?: ActivityResponse,
   ): AsyncGenerator<InteractionChunk> {
     // ── Load session ──────────────────────────────────────────────────────────
     const session = await this.sessionRepo.findById(sessionId);
@@ -1173,6 +1418,7 @@ export class OrchestrateRecipeUseCase {
     let totalWrongAnswers = cp.totalWrongAnswers ?? 0;
     let savedStepIndex: number | undefined = cp.savedStepIndex ?? undefined;
     let doubtContext = cp.doubtContext ?? undefined;
+    let stepEnteredAt: number | undefined = cp.stepEnteredAt;
 
     // ── Loop detection: track recent step transitions ──────────────────────
     // If the same step index is returned too many times, force-advance
@@ -1252,16 +1498,48 @@ export class OrchestrateRecipeUseCase {
           };
           return;
         }
-        // MCQ: deterministic comparison (NO LLM)
+        // MCQ: deterministic comparison (NO LLM) — format-plugin grading
         const as = script as ActivityScript;
-        const mcqResult = evaluateMCQ(as, studentInput, {
-          stepIndex: currentIdx,
-          stateName: 'ACTIVITY_WAIT_fast',
+        const graded = gradeActivity({
+          script: as,
+          studentInput,
+          optionId,
+          structured: activityResponse,
         });
-        const { isCorrect, feedback } = mcqResult;
+        const { isCorrect, feedback } = { isCorrect: graded.isCorrect, feedback: graded.feedback };
+
+        // Fase 2: adaptivity (hint nudge, enriched feedback, pacing)
+        const elapsedMs = this.elapsedSinceStep(cp.stepEnteredAt);
+        const hintAlreadyUsed = cp.activityHints?.includes(currentStep.atomId) ?? false;
+        const adapt = await this.computeAdaptivity({
+          studentId: session.studentId,
+          atomId: currentStep.atomId,
+          graded,
+          elapsedMs,
+          failedAttempts,
+          hintAlreadyUsed,
+          fallbackFeedback: feedback,
+        });
+        const enrichedFeedback = adapt.feedbackText;
+
+        await this.recordActivityAttempt({
+          studentId: session.studentId,
+          atomId: currentStep.atomId,
+          response: {
+            optionId: graded.selectedOptionId ?? optionId,
+            text: studentInput,
+            ...(activityResponse ?? {}),
+          },
+          correct: graded.isCorrect,
+          format: graded.format,
+          elapsedMs,
+          correctAnswer: graded.correctAnswer,
+          score: graded.score,
+          hintUsed: adapt.showHint ? 1 : 0,
+        });
 
         await this.record(sessionId, history.length, studentInput, null, currentIdx);
-        await this.record(sessionId, history.length + 1, feedback, 'answer', currentIdx);
+        await this.record(sessionId, history.length + 1, enrichedFeedback, 'answer', currentIdx);
 
         const nextState = isCorrect ? 'EVALUATION' : 'EVALUATION';
 
@@ -1274,18 +1552,27 @@ export class OrchestrateRecipeUseCase {
           questionCount,
           lastQuestionTime,
           skippedActivities,
+          ...(adapt.showHint
+            ? { activityHints: [...(cp.activityHints ?? []), currentStep.atomId] }
+            : {}),
           failedAttempts: isCorrect ? 0 : failedAttempts + 1,
           totalWrongAnswers: isCorrect ? totalWrongAnswers : totalWrongAnswers + 1,
         });
 
-        yield { type: 'chunk', text: feedback };
+        yield { type: 'chunk', text: enrichedFeedback };
         yield {
           type: 'end',
           reason: 'completed',
           pedagogicalState: nextState,
           sessionCompleted: false,
-          feedback,
+          feedback: enrichedFeedback,
           isCorrect,
+          correctOptionId:
+            typeof graded.correctAnswer === 'string' ? graded.correctAnswer : undefined,
+          correctAnswer: graded.correctAnswer,
+          activityFormat: graded.format,
+          score: graded.score,
+          autoAdvanceDelayMs: adapt.autoAdvanceDelayMs,
           staticContent: this.extractStaticContent(currentStep),
           lessonProgress: { currentStep: currentIdx, totalSteps: steps.length },
           autoAdvance: false, // Wait for user to continue
@@ -1338,6 +1625,8 @@ export class OrchestrateRecipeUseCase {
           ...cp,
           currentState: this.stateForStep(currentStep),
           currentStepIndex: currentIdx,
+          stepEnteredAt:
+            this.stateForStep(currentStep) === 'ACTIVITY_WAIT' ? Date.now() : undefined,
         });
         yield { type: 'chunk', text: vt };
         yield {
@@ -1391,8 +1680,17 @@ export class OrchestrateRecipeUseCase {
             skippedActivities,
           );
           const { calculateXPFromAccuracy } =
-            await import('@/features/gamification/application/strategies/xp-reward.strategy.js');
-          xpEarned = calculateXPFromAccuracy(accuracy.accuracyPercent);
+            await import('@/features/gamification/domain/lesson-xp.policy.js');
+          xpEarned = calculateXPFromAccuracy(
+            accuracy.accuracyPercent,
+            accuracy.allCorrectOnFirstAttempt,
+            {
+              accuracyPercent: accuracy.accuracyPercent,
+              allCorrectOnFirstAttempt: accuracy.allCorrectOnFirstAttempt,
+              anyHintUsed: accuracy.anyHintUsed,
+              partialCreditPercent: accuracy.partialCreditPercent,
+            },
+          );
           accuracyData = accuracy;
         }
 
@@ -1425,6 +1723,7 @@ export class OrchestrateRecipeUseCase {
           ...cp,
           currentState: 'ACTIVITY_WAIT',
           currentStepIndex: navNextIdx,
+          stepEnteredAt: Date.now(),
           savedStepIndex,
           doubtContext,
           questionCount,
@@ -1456,6 +1755,7 @@ export class OrchestrateRecipeUseCase {
           ...cp,
           currentState: 'ACTIVITY_WAIT',
           currentStepIndex: navNextIdx,
+          stepEnteredAt: Date.now(),
           savedStepIndex,
           doubtContext,
           questionCount,
@@ -1486,6 +1786,7 @@ export class OrchestrateRecipeUseCase {
         ...cp,
         currentState: navNextState,
         currentStepIndex: navNextIdx,
+        stepEnteredAt: undefined,
         savedStepIndex,
         doubtContext,
         questionCount,
@@ -1586,6 +1887,12 @@ export class OrchestrateRecipeUseCase {
     let nextState: PedagogicalState = currentState;
     let nextIdx = currentIdx;
     let willComplete = false;
+    let isCorrectValue: boolean | undefined;
+    let correctOptionIdValue: string | undefined;
+    let correctAnswerValue: unknown;
+    let activityFormatValue: string | undefined;
+    let scoreValue: number | undefined;
+    let autoAdvanceDelayMsValue: number | undefined;
 
     if (currentState === 'ACTIVE_CLASS' || currentState === 'EXPLANATION') {
       // AUTO-ADVANCE: For content steps (intro, content, closure), automatically advance
@@ -1662,8 +1969,18 @@ export class OrchestrateRecipeUseCase {
         const mcqResult = evaluateMCQ(as, studentInput, {
           stepIndex: currentIdx,
           stateName: 'ACTIVITY_WAIT',
+          optionId,
         });
         const isCorrect = mcqResult.isCorrect;
+
+        await this.recordActivityAttempt({
+          studentId: session.studentId,
+          atomId: currentStep.atomId,
+          response: { optionId: mcqResult.selectedOptionId ?? optionId, text: studentInput },
+          correct: isCorrect,
+          format: 'mcq_single',
+          elapsedMs: this.elapsedSinceStep(cp.stepEnteredAt),
+        });
 
         voiceText = mcqResult.feedback;
 
@@ -1718,6 +2035,16 @@ export class OrchestrateRecipeUseCase {
             stepIndex: currentIdx,
             studentId: userId,
           });
+
+          await this.recordActivityAttempt({
+            studentId: session.studentId,
+            atomId: currentStep.atomId,
+            response: { text: studentInput },
+            correct: evaluation.result === 'correct',
+            format: 'open_question',
+            elapsedMs: this.elapsedSinceStep(cp.stepEnteredAt),
+          });
+
           const qs = script as QuestionScript;
           if (evaluation.result === 'correct') {
             voiceText = qs.feedback.correct;
@@ -1757,12 +2084,50 @@ export class OrchestrateRecipeUseCase {
             return;
           }
           const as = script as ActivityScript;
-          const mcqResult = evaluateMCQ(as, studentInput, {
-            stepIndex: currentIdx,
-            stateName: 'EVALUATION',
+          const graded = gradeActivity({
+            script: as,
+            studentInput,
+            optionId,
+            structured: activityResponse,
           });
-          const isCorrect = mcqResult.isCorrect;
-          voiceText = mcqResult.feedback;
+          const isCorrect = graded.isCorrect;
+
+          // Fase 2: adaptivity (hint nudge, enriched feedback, pacing)
+          const elapsedMs = this.elapsedSinceStep(cp.stepEnteredAt);
+          const hintAlreadyUsed = cp.activityHints?.includes(currentStep.atomId) ?? false;
+          const adapt = await this.computeAdaptivity({
+            studentId: session.studentId,
+            atomId: currentStep.atomId,
+            graded,
+            elapsedMs,
+            failedAttempts,
+            hintAlreadyUsed,
+            fallbackFeedback: graded.feedback,
+          });
+          voiceText = adapt.feedbackText;
+          isCorrectValue = isCorrect;
+          correctOptionIdValue =
+            typeof graded.correctAnswer === 'string' ? graded.correctAnswer : undefined;
+          correctAnswerValue = graded.correctAnswer;
+          activityFormatValue = graded.format;
+          scoreValue = graded.score;
+          autoAdvanceDelayMsValue = adapt.autoAdvanceDelayMs;
+
+          await this.recordActivityAttempt({
+            studentId: session.studentId,
+            atomId: currentStep.atomId,
+            response: {
+              optionId: graded.selectedOptionId ?? optionId,
+              text: studentInput,
+              ...(activityResponse ?? {}),
+            },
+            correct: graded.isCorrect,
+            format: graded.format,
+            elapsedMs,
+            correctAnswer: graded.correctAnswer,
+            score: graded.score,
+            hintUsed: adapt.showHint ? 1 : 0,
+          });
 
           if (isCorrect) {
             nextState = 'EVALUATION';
@@ -1831,9 +2196,17 @@ export class OrchestrateRecipeUseCase {
     await this.record(sessionId, history.length + 1, voiceText, 'answer', currentIdx);
 
     // ── Persist checkpoint ───────────────────────────────────────────────────
+    // Track when the current step started requiring input (for attempt elapsedMs).
+    if (nextState === 'ACTIVITY_WAIT' && currentState !== 'ACTIVITY_WAIT') {
+      stepEnteredAt = Date.now();
+    } else if (nextState !== 'ACTIVITY_WAIT') {
+      stepEnteredAt = undefined;
+    }
+
     const newCp: SessionCheckpoint = {
       currentState: nextState,
       currentStepIndex: nextIdx,
+      stepEnteredAt,
       savedStepIndex,
       doubtContext,
       questionCount,
@@ -1880,8 +2253,17 @@ export class OrchestrateRecipeUseCase {
         skippedActivities,
       );
       const { calculateXPFromAccuracy } =
-        await import('@/features/gamification/application/strategies/xp-reward.strategy.js');
-      xpEarned = calculateXPFromAccuracy(accuracy.accuracyPercent);
+        await import('@/features/gamification/domain/lesson-xp.policy.js');
+      xpEarned = calculateXPFromAccuracy(
+        accuracy.accuracyPercent,
+        accuracy.allCorrectOnFirstAttempt,
+        {
+          accuracyPercent: accuracy.accuracyPercent,
+          allCorrectOnFirstAttempt: accuracy.allCorrectOnFirstAttempt,
+          anyHintUsed: accuracy.anyHintUsed,
+          partialCreditPercent: accuracy.partialCreditPercent,
+        },
+      );
       accuracyData = accuracy;
     }
 
@@ -1903,6 +2285,12 @@ export class OrchestrateRecipeUseCase {
       sessionCompleted: willComplete,
       staticContent: this.extractStaticContent(steps[nextIdx] ?? currentStep),
       lessonProgress: { currentStep: nextIdx, totalSteps: steps.length },
+      isCorrect: isCorrectValue,
+      correctOptionId: correctOptionIdValue,
+      correctAnswer: correctAnswerValue,
+      activityFormat: activityFormatValue,
+      score: scoreValue,
+      autoAdvanceDelayMs: autoAdvanceDelayMsValue,
       autoAdvance: !this.requiresStudentInput(currentStep.stepType),
       xpEarned,
       accuracy: accuracyData,

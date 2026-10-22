@@ -1,16 +1,30 @@
 import { useState, useCallback } from 'react';
 
+import type { ActivityFormat } from '@pixel-mentor/shared/activities';
+
 export type UIState = 'idle' | 'concentration' | 'question' | 'activity' | 'feedback' | 'completed';
 
 export interface Option {
   id: string;
   text: string;
-  isCorrect?: boolean;
+}
+
+export interface OrderingItemView {
+  id: string;
+  text: string;
 }
 
 export interface FeedbackData {
   isCorrect: boolean;
   message: string;
+  /** Id of the correct option, revealed by the backend AFTER grading. */
+  correctOptionId?: string;
+  /** Format-generic reveal for Fase 1 formats (ids/booleans/sequences). */
+  correctAnswer?: unknown;
+  /** Activity format of the graded step, when applicable. */
+  activityFormat?: ActivityFormat | string;
+  /** Partial score 0..1 for multi-answer formats. */
+  score?: number;
   encouragement?: string;
   xpAwarded?: number;
 }
@@ -27,6 +41,10 @@ const INITIAL_STATE = {
   contentText: '',
   questionText: '',
   options: [] as Option[],
+  /** ordering format: shuffled items for the student to reorder. */
+  orderingItems: [] as OrderingItemView[],
+  /** Activity plugin format of the current step (null = legacy mcq_single). */
+  activityFormat: null as ActivityFormat | string | null,
   feedbackData: null as FeedbackData | null,
   isProcessing: false,
   questionResults: [] as QuestionResult[],
@@ -70,6 +88,14 @@ export function useLessonState() {
     [updateState],
   );
   const setOptions = useCallback((val: Option[]) => updateState({ options: val }), [updateState]);
+  const setOrderingItems = useCallback(
+    (val: OrderingItemView[]) => updateState({ orderingItems: val }),
+    [updateState],
+  );
+  const setActivityFormat = useCallback(
+    (val: ActivityFormat | string | null) => updateState({ activityFormat: val }),
+    [updateState],
+  );
   const setFeedbackData = useCallback(
     (val: FeedbackData | null) => updateState({ feedbackData: val }),
     [updateState],
@@ -89,6 +115,8 @@ export function useLessonState() {
     setContentText,
     setQuestionText,
     setOptions,
+    setOrderingItems,
+    setActivityFormat,
     setFeedbackData,
     setIsProcessing,
     setError,

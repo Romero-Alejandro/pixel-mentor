@@ -1,4 +1,5 @@
 import { getEventBus } from '@/shared/events/event-bus.port.js';
+import { emitDailyLogin } from '@/shared/events/emit-daily-login.js';
 import { GameDomainEvents } from '@/shared/events/game-events.port.js';
 import type { LessonCompletedPayload } from '@/shared/events/game-events.port.js';
 import type { ActivityAttemptRepository } from '@/features/activity/domain/ports/activity-attempt.repository.port.js';
@@ -11,6 +12,12 @@ export interface LessonAccuracy {
   accuracyPercent: number;
   allCorrectOnFirstAttempt: boolean;
   tier: 'perfect' | 'high' | 'medium' | 'low';
+  /** Fase 2: 0..100 average partial score of last attempts (undefined when no scores). */
+  partialCreditPercent?: number;
+  /** Fase 2: first attempts correct WITHOUT consuming a hint (hint-free bonus). */
+  correctFirstAttemptsWithoutHints?: number;
+  /** Fase 2: true when ANY first attempt consumed a hint (downgrades the perfect bonus). */
+  anyHintUsed?: boolean;
 }
 
 /**
@@ -39,6 +46,10 @@ export class LessonCompletionService {
     let correctFirstAttempts = 0;
     let correctLastAttempts = 0;
     let allCorrectOnFirstAttempt = true;
+    let correctFirstAttemptsWithoutHints = 0;
+    let anyHintUsed = false;
+    let lastScoreSum = 0;
+    let lastScoreCount = 0;
 
     const attemptedSteps = activitySteps.filter((s) => !skippedAtomIds.includes(s.atomId));
 
@@ -57,6 +68,8 @@ export class LessonCompletionService {
         maxAttemptNo: number;
         firstCorrect: boolean;
         lastCorrect: boolean;
+        lastScore?: number;
+        firstHintUsed: boolean;
       }
       const attemptsByAtom = new Map<string, AtomAttemptSummary>();
       for (const attempt of attempts) {
@@ -70,16 +83,20 @@ export class LessonCompletionService {
             maxAttemptNo: attempt.attemptNo,
             firstCorrect: isCorrect,
             lastCorrect: isCorrect,
+            ...(attempt.score !== undefined ? { lastScore: attempt.score } : {}),
+            firstHintUsed: (attempt.hintUsed ?? 0) > 0,
           });
           continue;
         }
         if (attempt.attemptNo < entry.minAttemptNo) {
           entry.minAttemptNo = attempt.attemptNo;
           entry.firstCorrect = isCorrect;
+          entry.firstHintUsed = (attempt.hintUsed ?? 0) > 0;
         }
         if (attempt.attemptNo >= entry.maxAttemptNo) {
           entry.maxAttemptNo = attempt.attemptNo;
           entry.lastCorrect = isCorrect;
+          entry.lastScore = attempt.score;
         }
       }
 
@@ -89,13 +106,21 @@ export class LessonCompletionService {
         // Check first attempt (for bonus calculation)
         if (entry?.firstCorrect) {
           correctFirstAttempts++;
+          if (!entry.firstHintUsed) correctFirstAttemptsWithoutHints++;
         } else {
           allCorrectOnFirstAttempt = false;
         }
+        if (entry?.firstHintUsed) anyHintUsed = true;
 
         // Check last attempt (for accuracy calculation - mastery)
         if (entry?.lastCorrect) {
           correctLastAttempts++;
+        }
+
+        // Fase 2: partial credit from the last attempt's score (when present).
+        if (typeof entry?.lastScore === 'number') {
+          lastScoreSum += entry.lastScore;
+          lastScoreCount++;
         }
       }
     }
@@ -122,6 +147,11 @@ export class LessonCompletionService {
       accuracyPercent,
       allCorrectOnFirstAttempt,
       tier,
+      ...(lastScoreCount > 0
+        ? { partialCreditPercent: Math.round((lastScoreSum / lastScoreCount) * 100) }
+        : {}),
+      correctFirstAttemptsWithoutHints,
+      anyHintUsed: anyHintUsed || correctFirstAttemptsWithoutHints < correctFirstAttempts,
     };
   }
 
@@ -139,6 +169,10 @@ export class LessonCompletionService {
   ): Promise<void> {
     try {
       const eventBus = getEventBus();
+
+      // Announce the day before the lesson so the badge rules read a streak that
+      // already includes today, instead of yesterday's cached value.
+      await emitDailyLogin(userId);
 
       // Calculate accuracy
       const accuracyData = await this.calculateAccuracy(userId, steps, skippedAtomIds);

@@ -6,33 +6,48 @@
  * this file only declares the *shape* of the operations the engine needs,
  * so the application layer never imports prisma types.
  */
-import type { RewardResult } from '@/features/gamification/domain/ports/gamification.ports.js';
+
+/** Why an XP transaction happened. Mirrors the Prisma `XpSource` enum. */
+export type XpSourceName =
+  | 'LESSON'
+  | 'BADGE'
+  | 'STREAK_DAILY'
+  | 'STREAK_MILESTONE'
+  | 'ADMIN_ADJUSTMENT';
 
 /** Minimal user-gamification row operations used inside reward transactions. */
 export interface UserGamificationTxDelegate {
   update(args: {
     where: { userId: string };
-    data: { totalXP?: { increment: number }; level?: number };
-  }): Promise<{ totalXP: number; level: number }>;
-  findUnique(args: { where: { userId: string } }): Promise<{ id: string } | null>;
+    data: { totalXP?: { increment: number } };
+  }): Promise<{ totalXP: number }>;
+  findUnique(args: { where: { userId: string } }): Promise<{ id: string; totalXP: number } | null>;
+}
+
+/** Minimal XP ledger operations used inside reward transactions. */
+export interface XpTransactionTxDelegate {
+  findUnique(args: {
+    where: {
+      userId_source_sourceRef: {
+        userId: string;
+        source: XpSourceName;
+        sourceRef: string;
+      };
+    };
+  }): Promise<{ id: string } | null>;
   create(args: {
     data: {
       userId: string;
-      totalXP: number;
-      currentStreak: number;
-      longestStreak: number;
-      level: number;
+      amount: number;
+      source: XpSourceName;
+      sourceRef: string;
+      balanceAfter: number;
     };
-  }): Promise<{ id: string }>;
+  }): Promise<unknown>;
 }
 
 /** Minimal badge/user-badge row operations used inside reward transactions. */
 export interface BadgeTxDelegate {
-  findUnique(args: { where: { code: string } }): Promise<{
-    id: string;
-    name: string;
-    icon: string;
-  } | null>;
   /** Batched lookup by code; preserves no particular order. */
   findMany(args: {
     where: { code: { in: string[] } };
@@ -40,25 +55,21 @@ export interface BadgeTxDelegate {
 }
 
 export interface UserBadgeTxDelegate {
-  findUnique(args: {
-    where: { userId_badgeId: { userId: string; badgeId: string } };
-  }): Promise<{ id: string } | null>;
-  /** Batched lookup of the badges the user already owns. */
-  findMany(args: {
-    where: { userId: string; badgeId: { in: string[] } };
-  }): Promise<Array<{ badgeId: string }>>;
-  create(args: {
-    data: { userId: string; badgeId: string; userGamificationId: string };
-  }): Promise<unknown>;
-  /** Batched insert; duplicates must not throw (skipDuplicates semantics). */
-  createMany(args: {
+  /**
+   * Batched insert returning only the rows it actually created, so the caller
+   * knows which badges it won against a concurrent award.
+   */
+  createManyAndReturn(args: {
     data: Array<{ userId: string; badgeId: string; userGamificationId: string }>;
-  }): Promise<unknown>;
+    /** Concurrent inserts of the same badge must be a no-op, not a P2002. */
+    skipDuplicates?: boolean;
+  }): Promise<Array<{ badgeId: string }>>;
 }
 
 /** Transaction-scoped view of the gamification state stores. */
 export interface GamificationTxClient {
   userGamification: UserGamificationTxDelegate;
+  xpTransaction: XpTransactionTxDelegate;
   badge: BadgeTxDelegate;
   userBadge: UserBadgeTxDelegate;
 }
@@ -67,5 +78,3 @@ export interface IGamificationTransactionService {
   /** Run the reward transaction; rollback on throw. */
   execute<T>(fn: (tx: GamificationTxClient) => Promise<T>): Promise<T>;
 }
-
-export type { RewardResult };

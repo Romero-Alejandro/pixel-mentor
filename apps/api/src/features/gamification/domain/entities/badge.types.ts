@@ -14,7 +14,9 @@ export type BadgeRequirementType =
   | 'LESSON_COUNT' // Badge earned after completing N lessons
   | 'STREAK' // Badge earned after maintaining N-day streak
   | 'LEVEL' // Badge earned after reaching a level
-  | 'PERFECT_ATTEMPT'; // Badge earned on first perfect attempt
+  | 'PERFECT_ATTEMPT' // Badge earned on first perfect attempt
+  | 'HINT_FREE_PERFECT_LESSONS' // Fase 2: N lessons perfect on first attempt without hints
+  | 'HIGH_PARTIAL_CREDIT_LESSONS'; // Fase 2: N lessons with average partial credit >= 80%
 
 /**
  * The requirement needed to earn a badge.

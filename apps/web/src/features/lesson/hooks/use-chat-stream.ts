@@ -34,7 +34,7 @@ export function useChatStream(): UseChatStreamReturn {
         setChunks([]);
         setIsStreaming(true);
 
-        const controller = streamInteractWithRecipe(sessionId, studentInput, {
+        const controller = streamInteractWithRecipe(sessionId, studentInput, undefined, {
           onMessage: (event) => {
             try {
               const { text } = JSON.parse(event.data) as { text: string };

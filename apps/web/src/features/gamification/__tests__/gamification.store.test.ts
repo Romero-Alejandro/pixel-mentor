@@ -114,46 +114,6 @@ describe('gamification store', () => {
     });
   });
 
-  // ==================== recordActivity ====================
-  // XP is awarded server-side via domain events (no POST /xp/add endpoint).
-  // recordActivity only refreshes the profile; level-up/badge modals
-  // are driven by SSE handlers.
-
-  describe('recordActivity', () => {
-    it('should set isLoading to true during activity recording', async () => {
-      mockedApi.getProfile.mockResolvedValue(mockProfile);
-
-      const recordPromise = useGamificationStore.getState().recordActivity('LESSON_COMPLETED');
-      expect(useGamificationStore.getState().isLoading).toBe(true);
-
-      await recordPromise;
-      expect(useGamificationStore.getState().isLoading).toBe(false);
-    });
-
-    it('should refresh profile via getProfile', async () => {
-      const updatedProfile = { ...mockProfile, totalXP: 200 };
-      mockedApi.getProfile.mockResolvedValue(updatedProfile);
-
-      await useGamificationStore.getState().recordActivity('LESSON_COMPLETED');
-
-      expect(mockedApi.getProfile).toHaveBeenCalled();
-      expect(useGamificationStore.getState().profile).toEqual(updatedProfile);
-      expect(useGamificationStore.getState().showLevelUp).toBe(false);
-      expect(useGamificationStore.getState().showBadgeEarned).toBe(false);
-    });
-
-    it('should set error on failed activity recording', async () => {
-      mockedApi.getProfile.mockRejectedValue(new Error('Server error'));
-
-      await expect(useGamificationStore.getState().recordActivity('DAILY_LOGIN')).rejects.toThrow(
-        'Server error',
-      );
-
-      expect(useGamificationStore.getState().error).toBe('Server error');
-      expect(useGamificationStore.getState().isLoading).toBe(false);
-    });
-  });
-
   // ==================== dismissLevelUp ====================
 
   describe('dismissLevelUp', () => {

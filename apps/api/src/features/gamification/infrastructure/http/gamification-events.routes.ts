@@ -46,6 +46,7 @@ interface LevelUpSSEEvent {
   newLevel: number;
   newLevelTitle: string;
   previousLevel: number;
+  totalXP: number;
 }
 
 interface StreakUpdatedSSEEvent {
@@ -54,7 +55,7 @@ interface StreakUpdatedSSEEvent {
   longestStreak: number;
 }
 
-type GamificationSSEEvent =
+export type GamificationSSEEvent =
   | XPEarnedSSEEvent
   | BadgeEarnedSSEEvent
   | LevelUpSSEEvent
@@ -62,8 +63,22 @@ type GamificationSSEEvent =
 
 const HEARTBEAT_INTERVAL_MS = 30_000;
 
+/**
+ * Formats one SSE frame.
+ *
+ * The `event:` line names the event so the browser (and `fetch-event-source`)
+ * exposes it as `message.event`. Without it every frame arrives unnamed and a
+ * client that dispatches on the name silently ignores all of them.
+ *
+ * The `type` field inside the JSON repeats the name on purpose: it keeps the
+ * frame self-describing for logs and for clients that only parse the data.
+ */
+export function formatSSEFrame(event: GamificationSSEEvent): string {
+  return `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`;
+}
+
 function writeSSE(res: Response, event: GamificationSSEEvent): void {
-  res.write(`data: ${JSON.stringify(event)}\n\n`);
+  res.write(formatSSEFrame(event));
 }
 
 function writeHeartbeat(res: Response): void {
@@ -111,7 +126,7 @@ export function createGamificationEventsRouter(logger?: pino.Logger): Router {
             code: payload.badgeCode,
             name: payload.badgeName,
             icon: payload.badgeIcon,
-            xpReward: 0,
+            xpReward: payload.xpReward,
           },
         });
       }),
@@ -125,6 +140,7 @@ export function createGamificationEventsRouter(logger?: pino.Logger): Router {
           newLevel: payload.newLevel,
           newLevelTitle: payload.newLevelTitle,
           previousLevel: payload.previousLevel,
+          totalXP: payload.newTotalXP,
         });
       }),
     );

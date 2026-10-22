@@ -127,6 +127,7 @@ model User {
   userGamification UserGamification?
   userBadges       UserBadge[]
   dailyActivities  DailyActivity[]
+  xpTransactions   XpTransaction[]
   refreshTokens    RefreshToken[]
 
   // Class relations
@@ -565,6 +566,7 @@ model ActivityAttempt {
   attemptNo    Int      @default(1) @db.SmallInt
   response     Json?
   correct      Boolean?
+  score        Float?
   elapsedMs    Int?
   hintUsed     Int      @default(0) @db.SmallInt
   meta         Json?
@@ -574,6 +576,10 @@ model ActivityAttempt {
   atom           Atom        @relation(fields: [atomId], references: [id], onDelete: Cascade)
   selectedOption AtomOption? @relation(fields: [atomOptionId], references: [id], onDelete: SetNull)
 
+  // Monotonic attempt numbering per (user, atom): makes concurrent attempt
+  // writes fail fast (caller retries with the recomputed attemptNo) instead of
+  // persisting duplicates that would corrupt first/last-attempt accuracy.
+  @@unique([userId, atomId, attemptNo])
   @@index([userId, atomId, createdAt])
   @@map("activity_attempts")
 }
@@ -618,7 +624,6 @@ model UserGamification {
   currentStreak  Int       @default(0)
   longestStreak  Int       @default(0)
   lastActivityAt DateTime?
-  level          Int       @default(1)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -627,6 +632,33 @@ model UserGamification {
 
   @@index([userId])
   @@map("user_gamification")
+}
+
+/// Why an XP transaction happened. Also part of the idempotency key.
+enum XpSource {
+  LESSON
+  BADGE
+  STREAK_DAILY
+  STREAK_MILESTONE
+  ADMIN_ADJUSTMENT
+}
+
+/// Append-only XP ledger. Source of truth for a user's XP.
+/// `(userId, source, sourceRef)` makes every award idempotent.
+model XpTransaction {
+  id           String   @id @default(uuid())
+  userId       String
+  amount       Int
+  source       XpSource
+  sourceRef    String   @db.VarChar(255)
+  balanceAfter Int
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, source, sourceRef])
+  @@index([userId, createdAt])
+  @@map("xp_transactions")
 }
 
 model Badge {

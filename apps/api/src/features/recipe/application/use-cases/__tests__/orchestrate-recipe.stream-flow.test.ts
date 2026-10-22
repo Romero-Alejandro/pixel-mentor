@@ -84,6 +84,7 @@ const mockFeatureFlagService = {
 const mockActivityAttemptRepo = {
   findByUserIdAndAtomId: jest.fn().mockResolvedValue([]),
   findByUserIdAndAtomIds: jest.fn().mockResolvedValue([]),
+  recordAttempt: jest.fn().mockResolvedValue(undefined),
 };
 
 const mockContextWindowService = {

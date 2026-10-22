@@ -1,6 +1,7 @@
 import type { RecipeStep } from '@/features/recipe/domain/entities/recipe.entity.js';
 import type { KnowledgeChunk } from '@/features/knowledge/domain/entities/knowledge-chunk.entity.js';
-import type { StaticContent } from '@/shared/dto/index.js';
+import type { StaticContent, ActivityContent } from '@/shared/dto/index.js';
+import { detectScriptFormat, type ActivityFormat } from '@pixel-mentor/shared/activities';
 
 // Type for RAG service returned chunks with similarity scores
 export type RAGChunk = {
@@ -39,6 +40,8 @@ export interface QuestionScript extends ContentScript {
 }
 
 export interface ActivityOption {
+  /** Stable id (Fase 0 content). Legacy scripts omit it; `opt-<index>` is used then. */
+  id?: string;
   text: string;
   isCorrect: boolean;
 }
@@ -232,18 +235,45 @@ export function extractStaticContent(step: {
     const instructionText = isActivityScript(script)
       ? extractText((script as ActivityScript).instruction)
       : '';
+    // SECURITY: never ship `isCorrect` to the client — it leaked the answer in
+    // the staticContent payload. Options go out as { id, text } only; grading
+    // happens server-side and the reveal arrives via the end event's
+    // `correctOptionId` after the student answers.
     const safeOptions =
       isActivityScript(script) && Array.isArray((script as ActivityScript).options)
-        ? (script as ActivityScript).options.map((o) => ({
+        ? (script as ActivityScript).options.map((o, i) => ({
+            id: o.id ?? `opt-${i}`,
             text: o.text,
-            isCorrect: o.isCorrect,
           }))
         : [];
     const fb = isActivityScript(script)
       ? (script as ActivityScript).feedback
       : { correct: '', incorrect: '' };
+    // Fase 1: format-aware transport. Formats with no `options` (true_false,
+    // ordering) ship their UI payload through `activity.items` / `activity.answer`
+    // (answerless by construction); mcq formats ship safe `{ id, text }` options.
+    const format: ActivityFormat = detectScriptFormat(script);
+    const rawScript = script as Record<string, unknown>;
+    const formatItems = Array.isArray(rawScript.items)
+      ? (rawScript.items as Array<{ id?: string; text: string }>).map((it, i) => ({
+          id: it.id ?? `item-${i}`,
+          text: it.text,
+        }))
+      : undefined;
+
+    const activityPayload: ActivityContent = {
+      instruction: instructionText,
+      options: safeOptions.length > 0 ? safeOptions : undefined,
+      items: formatItems,
+      feedback: {
+        correct: fb.correct ?? '',
+        incorrect: fb.incorrect ?? '',
+      },
+    };
+
     return {
       stepType: 'activity',
+      activityFormat: format,
       script: {
         transition: extractText(
           isActivityScript(script) ? (script as ActivityScript).transition : '',
@@ -252,14 +282,7 @@ export function extractStaticContent(step: {
         examples: [],
         closure: extractText(isActivityScript(script) ? (script as ActivityScript).closure : ''),
       },
-      activity: {
-        instruction: instructionText,
-        options: safeOptions,
-        feedback: {
-          correct: fb.correct ?? '',
-          incorrect: fb.incorrect ?? '',
-        },
-      },
+      activity: activityPayload,
     };
   }
 

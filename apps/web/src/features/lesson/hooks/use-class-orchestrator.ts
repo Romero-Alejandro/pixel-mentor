@@ -22,6 +22,7 @@ import { useVoice } from '@/features/voice/hooks/use-voice';
 import { useLessonStore } from '@/features/lesson/stores/lesson.store';
 import { api, type SessionStatus } from '@/services/api';
 import { logger } from '@/utils/logger';
+import type { ActivityResponse } from '@pixel-mentor/shared/activities';
 
 // ---- Re-export shared types and hooks ----
 
@@ -140,11 +141,11 @@ export function useClassOrchestrator() {
   // ---- Submit Answer ----
 
   const submitAnswer = useCallback(
-    async (ans: string) => {
+    async (ans: string, optionId?: string, activityResponse?: ActivityResponse) => {
       lessonState.setError(null); // Clear previous error
       lessonState.setIsProcessing(true);
       try {
-        const res = await interactions.doInteract(ans);
+        const res = await interactions.doInteract(ans, { optionId, activityResponse });
         if (res) await autoAdvance.processResponse(res, false);
       } catch (err: unknown) {
         // Surface structured error message to UI

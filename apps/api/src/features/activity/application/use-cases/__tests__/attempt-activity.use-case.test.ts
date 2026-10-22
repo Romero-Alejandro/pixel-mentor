@@ -12,8 +12,11 @@ function createMockAttemptRepo(): ActivityAttemptRepository {
     findLatestByUserIdAndAtomId: jest.fn(),
     getMaxAttemptNoByUserIdAndAtomId: jest.fn(),
     create: jest.fn(),
+    recordAttempt: jest.fn(),
     update: jest.fn(),
     countCorrectFirstAttempts: jest.fn(),
+    countHintFreeCorrectFirstAttemptAtoms: jest.fn(),
+    countAtomsWithHighPartialCredit: jest.fn(),
   };
 }
 

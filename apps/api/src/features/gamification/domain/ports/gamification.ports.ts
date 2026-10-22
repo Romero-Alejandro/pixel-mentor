@@ -2,22 +2,6 @@ import type { BadgeDefinition } from '@/features/gamification/domain/entities/ba
 
 export type { BadgeDefinition };
 
-export interface RewardResult {
-  xpAwarded: number;
-  newTotalXP: number;
-  leveledUp: boolean;
-  newLevel?: number;
-  newLevelTitle?: string;
-  badgesEarned: Array<{
-    code: string;
-    name: string;
-    icon: string;
-  }>;
-  streakUpdated: boolean;
-  newStreak?: number;
-  isNewStreak?: boolean;
-}
-
 export interface GamificationProfile {
   userId: string;
   level: number;
@@ -41,15 +25,10 @@ export interface GamificationProfile {
 export interface IUserGamificationRepository {
   findByUserId(userId: string): Promise<GamificationProfile | null>;
   getOrCreate(userId: string): Promise<GamificationProfile>;
-  addXP(
-    userId: string,
-    amount: number,
-  ): Promise<{ newXP: number; leveledUp: boolean; newLevel?: number; newLevelTitle?: string }>;
   updateStreak(
     userId: string,
     data: { currentStreak: number; longestStreak: number; lastActivityAt: Date },
   ): Promise<void>;
-  breakStreak(userId: string): Promise<void>;
   getProfileStats(
     userId: string,
   ): Promise<{ currentStreak: number; level: number; totalXP: number; totalBadges: number } | null>;
@@ -65,12 +44,6 @@ export interface IBadgeRepository {
   findAll(): Promise<BadgeDefinition[]>;
   findByCode(code: string): Promise<BadgeDefinition | null>;
   getActiveBadges(): Promise<BadgeDefinition[]>;
-  awardBadge(userId: string, badgeCode: string): Promise<boolean>;
-  awardBadgeWithXP(
-    userId: string,
-    badgeCode: string,
-    xpReward: number,
-  ): Promise<{ awarded: boolean; newTotalXP: number }>;
   getUserBadges(
     userId: string,
   ): Promise<

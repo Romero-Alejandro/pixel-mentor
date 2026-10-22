@@ -246,32 +246,31 @@ describe('Lesson Progress', () => {
 // ---- Options Mapping Tests ----
 
 describe('Options Mapping', () => {
-  it('should map activity options to UI format', () => {
+  it('should map activity options to UI format (no isCorrect — the backend reveals it after grading)', () => {
     const options = [
-      { text: 'Paris', isCorrect: true },
-      { text: 'Madrid', isCorrect: false },
+      { id: 'opt-0', text: 'Paris' },
+      { id: 'opt-1', text: 'Madrid' },
     ];
 
     const mapped = options.map((o, i) => ({
-      id: `opt-${i}`,
+      id: o.id ?? `opt-${i}`,
       text: o.text,
-      isCorrect: o.isCorrect,
     }));
 
     expect(mapped).toEqual([
-      { id: 'opt-0', text: 'Paris', isCorrect: true },
-      { id: 'opt-1', text: 'Madrid', isCorrect: false },
+      { id: 'opt-0', text: 'Paris' },
+      { id: 'opt-1', text: 'Madrid' },
     ]);
   });
 
   it('should handle empty options array', () => {
-    const options: Array<{ text: string; isCorrect: boolean }> = [];
+    const options: Array<{ id: string; text: string }> = [];
     const hasOptions = options.length > 0;
     expect(hasOptions).toBe(false);
   });
 
   it('should handle undefined options', () => {
-    const options = undefined as Array<{ text: string; isCorrect: boolean }> | undefined;
+    const options = undefined as Array<{ id: string; text: string }> | undefined;
     const hasOptions = !!options && options.length > 0;
     expect(hasOptions).toBeFalsy();
   });

@@ -7,6 +7,15 @@ import { ActivityOptionSchema } from './activity-option.schema.js';
 export const ActivityContentSchema = z.object({
   instruction: z.string(),
   options: z.array(ActivityOptionSchema).optional(),
+  /** ordering format: items WITHOUT the correct order (client shuffles). */
+  items: z
+    .array(
+      z.object({
+        id: z.string(),
+        text: z.string(),
+      }),
+    )
+    .optional(),
   feedback: z.object({
     correct: z.string(),
     incorrect: z.string(),

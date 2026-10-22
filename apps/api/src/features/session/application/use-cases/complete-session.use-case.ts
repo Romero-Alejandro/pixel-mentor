@@ -1,6 +1,7 @@
 import { createLogger } from '@/shared/logger/logger.js';
 
 import { getEventBus } from '@/shared/events/event-bus.port';
+import { emitDailyLogin } from '@/shared/events/emit-daily-login.js';
 import { GameDomainEvents } from '@/shared/events/game-events.port';
 import type { LessonCompletedPayload } from '@/shared/events/game-events.port';
 import {
@@ -37,6 +38,7 @@ export class CompleteSessionUseCase {
 
     try {
       const eventBus = getEventBus();
+      await emitDailyLogin(result.studentId);
       const payload: LessonCompletedPayload = {
         userId: result.studentId,
         lessonId: result.recipeId,

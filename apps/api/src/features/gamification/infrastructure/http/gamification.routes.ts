@@ -9,7 +9,7 @@ import type pino from 'pino';
 import type { GameEngineCore } from '@/features/gamification/application/services/game-engine-core.service.js';
 import type { LevelService } from '@/features/gamification/application/services/level.service.js';
 import type { BadgeEngine } from '@/features/gamification/application/services/badge-engine.service.js';
-import { calculateXPFromAccuracy } from '@/features/gamification/application/strategies/xp-reward.strategy.js';
+import { calculateXPFromAccuracy } from '@/features/gamification/domain/lesson-xp.policy.js';
 import type {
   IUserGamificationRepository,
   IBadgeRepository,
@@ -329,10 +329,17 @@ export function createGamificationRouter(
           skippedActivities,
         );
         // Mirror the LessonCompletionStrategy payout so the displayed XP matches
-        // what the gamification engine awards for this lesson's accuracy.
+        // what the gamification engine awards for this lesson's accuracy
+        // (Fase 2: includes the hint-aware perfect bonus and partial credit).
         const xpEarned = calculateXPFromAccuracy(
           accuracy.accuracyPercent,
           accuracy.allCorrectOnFirstAttempt,
+          {
+            accuracyPercent: accuracy.accuracyPercent,
+            allCorrectOnFirstAttempt: accuracy.allCorrectOnFirstAttempt,
+            anyHintUsed: accuracy.anyHintUsed,
+            partialCreditPercent: accuracy.partialCreditPercent,
+          },
         );
 
         const newBadges = await prisma.userBadge.findMany({

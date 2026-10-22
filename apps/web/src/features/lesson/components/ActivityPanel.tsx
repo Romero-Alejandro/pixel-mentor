@@ -16,6 +16,7 @@ export function ActivityPanel({
   isProcessing,
   selectedId,
   isCorrect,
+  correctOptionId,
 }: {
   question: string;
   options: ActivityOption[];
@@ -23,6 +24,8 @@ export function ActivityPanel({
   isProcessing: boolean;
   selectedId: string | null;
   isCorrect: boolean | null;
+  /** Revealed by the backend AFTER grading — the client never receives `isCorrect` up front. */
+  correctOptionId?: string | null;
 }) {
   const { playSelect, playHover } = useAudio();
   const answered = selectedId !== null;
@@ -38,7 +41,7 @@ export function ActivityPanel({
         : 'border-rose-500 bg-rose-100 text-rose-900 shadow-none translate-y-1';
     }
 
-    if (opt.isCorrect && isCorrect === false) {
+    if (correctOptionId && opt.id === correctOptionId && isCorrect === false) {
       return 'border-emerald-400 bg-emerald-50 text-emerald-800 opacity-90 shadow-none translate-y-1';
     }
 
@@ -54,7 +57,7 @@ export function ActivityPanel({
         ? 'bg-emerald-500 text-white border-emerald-600'
         : 'bg-rose-500 text-white border-rose-600';
     }
-    if (opt.isCorrect && isCorrect === false) {
+    if (correctOptionId && opt.id === correctOptionId && isCorrect === false) {
       return 'bg-emerald-400 text-white border-emerald-500';
     }
     return 'bg-slate-100 text-slate-400 border-slate-200';
@@ -107,7 +110,11 @@ export function ActivityPanel({
               </span>
             ) : null}
 
-            {answered && isCorrect === false && opt.isCorrect && opt.id !== selectedId ? (
+            {answered &&
+            isCorrect === false &&
+            correctOptionId &&
+            opt.id === correctOptionId &&
+            opt.id !== selectedId ? (
               <span className="animate-bounce-in shrink-0 bg-white rounded-full p-2 shadow-sm border-4 border-slate-200">
                 <IconCheck className="w-10 h-10 text-emerald-400 opacity-80" stroke={4} />
               </span>

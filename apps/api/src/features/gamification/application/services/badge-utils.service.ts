@@ -11,7 +11,14 @@ import type {
  * Check if a badge requirement type is valid.
  */
 export function isValidRequirementType(type: string): type is BadgeRequirementType {
-  return ['LESSON_COUNT', 'STREAK', 'LEVEL', 'PERFECT_ATTEMPT'].includes(type);
+  return [
+    'LESSON_COUNT',
+    'STREAK',
+    'LEVEL',
+    'PERFECT_ATTEMPT',
+    'HINT_FREE_PERFECT_LESSONS',
+    'HIGH_PARTIAL_CREDIT_LESSONS',
+  ].includes(type);
 }
 
 /**
