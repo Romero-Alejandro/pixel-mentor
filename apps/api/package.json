@@ -16,6 +16,7 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed-test-data.ts",
     "db:seed:admin": "tsx prisma/seed-admin.ts",
     "db:seed:gamification": "tsx prisma/seed-gamification.ts"
