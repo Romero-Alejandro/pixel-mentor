@@ -128,6 +128,7 @@ model User {
   userBadges       UserBadge[]
   dailyActivities  DailyActivity[]
   xpTransactions   XpTransaction[]
+  gamificationAuditLogs GamificationAuditLog[]
   refreshTokens    RefreshToken[]
 
   // Class relations
@@ -733,6 +734,11 @@ model GamificationAuditLog {
   succeeded   Boolean  @default(true)
   errorMessage String? @db.Text
   createdAt   DateTime @default(now())
+
+  // Audit rows belong to the user they describe: deleting the account deletes
+  // its trail, like daily_activities and user_badges. Without the FK, deleting a
+  // user left unaddressable rows holding their data.
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, eventType, createdAt])
   @@index([userId])

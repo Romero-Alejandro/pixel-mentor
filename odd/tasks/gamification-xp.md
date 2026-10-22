@@ -4,6 +4,7 @@ Objective: make XP awarding work for every user (including fresh ones), make the
 level derive from XP, guarantee idempotent awards, make badges declarative with
 their `xpReward` actually paid, and derive streaks from a real activity calendar.
 Branch: main (working tree already has uncommitted Fase 2 changes — not touched).
+Delivered on `feat/gamification-xp` as two stacked PRs (#1 core, #2 audit FK).
 
 ## Specs
 
@@ -57,6 +58,13 @@ S25. `xp_earned` carries the balance after the award (`newTotal`), not only the 
 S26. The web client dispatches on the frame's event name and falls back to the payload
      `type` when the frame arrives unnamed.
 
+F5:
+S27. `gamification_audit_logs` belongs to its user: a FK with `ON DELETE CASCADE` means
+     deleting the account deletes its trail, like `daily_activities` and `user_badges`.
+     No audit row may reference a user that does not exist.
+S28. The audit repository is write-only: no read method exists on the port unless a
+     feature consumes it.
+
 ## Tasks
 
 - [x] T1 schema + migration (create XpTransaction, drop user_gamification.level, backfill) — inline
@@ -105,6 +113,12 @@ F4:
   - S24, S25, S26. `formatSSEFrame` exported and unit-tested; `BadgeEarnedPayload.xpReward`
     and `LevelUpPayload.newTotalXP` added; vestigial `requestVersion`/`version` guards removed
     from the web store and hook.
+
+F5:
+- [x] T22 audit log FK with cascade + orphan purge + dead read methods removed — inline
+  - S27, S28. Migration `20261021203000_audit_log_user_fk`. `Risk: item 1` (migration
+    that deletes 20 orphan rows and adds a cascade delete).
+  - commit: 4dfd063.
 
 ## Log
 
@@ -223,3 +237,46 @@ L35: Verification — API typecheck, web typecheck and both ESLint runs clean. N
  badge STREAK_3 with `xpReward: 25`, daily bonus delta 10 / balance 10, badge XP delta 25 /
  balance 35. DB restored to baseline (11 users, 3 gamification rows, 0 ledger, 0 user badges).
  Not committed (no commit requested).
+
+L36 (user): "Aplica lo sugerido" → commits, then F5.
+L37: Commit boundary. Slicing F0–F4 apart from the in-flight activity-grading work is not
+ possible at hunk level: `lesson-xp.policy.ts` is a new file that already contains that
+ work's hint-aware bonus and partial credit, and `gamification.routes.ts` calls it with the
+ extended signature. Verified before deciding, so the choice is data-backed: one commit
+ (`9ae3a42`, 123 files) carrying both efforts, with a body that enumerates F0–F4 and says why
+ the activity-grading work rides along. Branch `feat/gamification-xp` off `main` (`401d49a`),
+ nothing pushed.
+L38: F5 — audit rows had no FK, so `AdminUserService.deleteUser` (`prisma.user.delete`) left
+ rows whose `userId` pointed at nothing: personal data retained, unaddressable, and invisible
+ because nothing reads the log. 20 such rows already existed, all written today by my own
+ F2/F3 probes (LESSON_COMPLETED 8, DAILY_LOGIN 12, 250 phantom XP). Purged them inside the
+ migration (before the constraint, otherwise it cannot be applied) after asking the user, since
+ it is an irreversible delete. Also removed `getLogsByUserId`/`getLogsByEventType`: declared on
+ the port, implemented, called by nobody.
+L39: Verification — migration `20261021203000_audit_log_user_fk` applied; cascade proven
+ against the real DB (create user → 2 audit rows → delete user → 0 rows); FK delete rule is
+ CASCADE; 0 orphan rows left; API typecheck, ESLint and 63 suites / 1145 tests green.
+ Risk: item 1 (migration + cascade delete).
+L40: Independent verifier (gentle-ai-verify) on `9ae3a42..4dfd063`: PASS with advisories, no
+ blockers. It independently proved the cascade and that the FK rejects a non-existent user
+ (P2003), confirmed no drift, and confirmed the audit write path is byte-identical to baseline.
+ Advisories accepted: `badgesAwarded` has always been stored double-encoded (a jsonb string)
+ and predates this unit — nothing reads it now that the read methods are gone; and the
+ migration's orphan purge is irreversible by design (0 rows on this DB). No regression test was
+ added: the durable assertions are database-level (the repo only keeps skipped integration
+ placeholders) and the two unit tests proposed would pin either an over-fit method list or the
+ known double-encoding.
+L41: RDD preflight over `401d49a..4dfd063` returned `high_risk` (auth hot path, 125 files,
+ 12,550 lines). Consent was relayed verbatim and the user declined the review for this
+ candidate (`declined_this_candidate`, no review record created). STATUS keeps re-offering the
+ same target, which is expected for a candidate-scoped decline; it was not re-asked. Delivery
+ stays with ordinary repository policy: two commits on `feat/gamification-xp`, nothing pushed.
+L42: Delivery (user: "Limpia, push y PRs"). Scratch from the verifier removed with explicit
+ consent. Strategy: stacked PRs to `main`, one honest slicing pass, two slices.
+ - `feat/gamification-xp-core` @ 9ae3a42 → PR #1, base `main`, 116 authored files / 9,268
+   changed lines (generated Prisma client excluded from the budget).
+ - `feat/gamification-xp` @ 021fff4 → PR #2, base `feat/gamification-xp-core`, 5 authored
+   files / 136 changed lines.
+ PR #1 is far over the 400-line budget and cannot shrink further: the smallest cohesive unit is
+ the whole gamification rework plus the activity-grading work its shared policy file belongs to.
+ `size:exception` is requested in the PR body with a recommended review order.
