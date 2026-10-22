@@ -4,6 +4,7 @@ Objective: make XP awarding work for every user (including fresh ones), make the
 level derive from XP, guarantee idempotent awards, make badges declarative with
 their `xpReward` actually paid, and derive streaks from a real activity calendar.
 Branch: main (working tree already has uncommitted Fase 2 changes — not touched).
+Delivered on `feat/gamification-xp` as two stacked PRs (#1 core, #2 audit FK).
 
 ## Specs
 
@@ -270,3 +271,12 @@ L41: RDD preflight over `401d49a..4dfd063` returned `high_risk` (auth hot path, 
  candidate (`declined_this_candidate`, no review record created). STATUS keeps re-offering the
  same target, which is expected for a candidate-scoped decline; it was not re-asked. Delivery
  stays with ordinary repository policy: two commits on `feat/gamification-xp`, nothing pushed.
+L42: Delivery (user: "Limpia, push y PRs"). Scratch from the verifier removed with explicit
+ consent. Strategy: stacked PRs to `main`, one honest slicing pass, two slices.
+ - `feat/gamification-xp-core` @ 9ae3a42 → PR #1, base `main`, 116 authored files / 9,268
+   changed lines (generated Prisma client excluded from the budget).
+ - `feat/gamification-xp` @ 021fff4 → PR #2, base `feat/gamification-xp-core`, 5 authored
+   files / 136 changed lines.
+ PR #1 is far over the 400-line budget and cannot shrink further: the smallest cohesive unit is
+ the whole gamification rework plus the activity-grading work its shared policy file belongs to.
+ `size:exception` is requested in the PR body with a recommended review order.
